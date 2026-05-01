@@ -2,6 +2,15 @@
 
 Every non-trivial feature must follow the same workflow.
 
+Docs convention:
+
+- Use English kebab-case for file and folder names under `docs/`.
+- Use English names for routes, components, functions, models, schemas, services, APIs, and code identifiers.
+- Write docs content in Traditional Chinese by default.
+- Keep English technical terms when they are clearer, including marketplace, dashboard, route, permission, state machine, API, service layer, MVP, RWD, and mobile-first.
+- Document titles may be English or bilingual, but explanatory content should be primarily Traditional Chinese.
+- See `docs/harness/documentation-conventions.md`.
+
 ## 1. Spec
 
 Create a spec before implementation.

@@ -125,6 +125,20 @@ Use relevant agent-skills workflows when available:
 - ci-cd-and-automation
 - shipping-and-launch
 
+## Documentation Rules
+
+For the docs system under `docs/`:
+
+- File names and folder names must use English kebab-case for tool compatibility, URLs, Git diffs, and developer collaboration.
+- Route names, component names, function names, model names, schema names, and code identifiers must use English.
+- Document content should be written in Traditional Chinese by default, because the product owner reviews and decides in Chinese.
+- Technical terms can remain in English when clearer, including marketplace, dashboard, route, permission, state machine, API, service layer, MVP, RWD, and mobile-first.
+- Document titles can be English or bilingual, but explanatory content should be primarily Traditional Chinese.
+- If a document must include English content for code, identifiers, third-party service names, or external references, add Chinese explanation around it.
+- Do not rename existing docs only to translate file names into Chinese.
+- Do not translate programmatic names into Chinese because docs content is Chinese; code and system naming remain English.
+- When architecture, product behavior, permissions, state machines, or scope changes, update the related Chinese docs in the same change.
+
 ## Quality Gates
 
 Before merge:
