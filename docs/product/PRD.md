@@ -15,6 +15,7 @@ Free Soar Yoga 不是一般瑜伽網站、不是折扣課程平台、不是冷�
 - 支援老師建立 profile、設定 availability，並回應已發布的需求。
 - 支援團主從回覆中選擇老師，形成 class session。
 - 支援會員報名 class session。
+- Enrollment 只能透過同一個 `User` 的 Member 能力建立；Teacher 或 Organizer 若要報名，也使用 Member 能力。
 - 支援 Admin 審核老師、需求、課程與報名，維持品質與安全。
 - 支援 basic email notification，讓重要狀態變更可被追蹤。
 - 建立 mobile-first 的使用體驗，讓團主、老師與會員在手機上也能完成核心流程。
@@ -43,7 +44,7 @@ V1 不做以下內容，除非另行明確核准：
 
 ### Member
 
-想參加瑜伽團課的學員。需要清楚看見課程資訊、報名狀態與基本通知。
+想參加瑜伽團課的學員。所有登入者預設具備 Member 基本能力，需要清楚看見課程資訊、報名狀態與基本通知。
 
 ### Organizer
 
@@ -133,7 +134,9 @@ Admin 審核老師、需求、課程與報名，處理 publish、reject、suspen
 - Teacher response submitted
 - Teacher selected
 - Class session created
+- Class session changed / cancelled
 - Enrollment confirmed
+- Enrollment cancelled
 - Basic class reminder
 
 ## 7. Page List
@@ -144,7 +147,7 @@ Public pages:
 - `/about`
 - `/teachers/join`
 - `/organizers/request`
-- `/classes`
+- `/classes` optional / later
 - `/classes/[classSessionId]`
 - `/faq`
 
@@ -211,9 +214,11 @@ V1 核心資料模型包含：
 
 - Visitor 只能看公開資料與送出允許的公開表單。
 - Member 只能管理自己的 enrollment。
-- Organizer 只能管理自己的 organization、demand request、class session roster basics。
-- Teacher 只能管理自己的 teacher profile、availability、responses 與 class sessions。
+- Organizer 只能管理自己的 organization、demand request、class session roster basics；若要報名課程，使用同一個 User 的 Member 能力。
+- Teacher 只能管理自己的 teacher profile、availability、responses 與 class sessions；若要報名課程，使用同一個 User 的 Member 能力。
 - Admin 可管理平台核心資料，但 admin actions 必須受保護並可被審查。
+
+公開 class detail / share link 可在 V1 支援；公開 `/classes` 列表為 optional / later，不是 V1 必做。只有 `open_for_enrollment` 或 `confirmed` 且標記可公開的 class session 才可公開顯示。
 
 詳細權限以 `docs/domain/permissions.md` 與 `docs/domain/permissions-matrix.md` 為準。
 

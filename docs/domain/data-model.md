@@ -12,16 +12,18 @@ Suggested fields:
 - name
 - email
 - phone
-- role
+- isAdmin
 - createdAt
 - updatedAt
 
-Possible roles:
+Role model:
 
-- MEMBER
-- ORGANIZER
-- TEACHER
-- ADMIN
+- User is the base account.
+- All authenticated users have basic Member capabilities.
+- Teacher capabilities are enabled by TeacherProfile.
+- Organizer capabilities are enabled by OrganizerProfile.
+- Admin is a platform management permission, represented by isAdmin or an equivalent admin permission model.
+- V1 does not limit one user to only one identity.
 
 ## TeacherProfile
 
@@ -196,10 +198,13 @@ Status:
 - selected
 - declined
 - withdrawn
+- expired
 
 ## ClassSession
 
-Represents a class session created from a demand request or teacher-created class.
+Represents a class session created from a matched demand request in V1.
+
+Teacher-created classes are future scope / non-V1.
 
 Fields:
 
@@ -215,6 +220,7 @@ Fields:
 - endAt
 - location
 - capacity
+- isPublic
 - status
 - createdAt
 - updatedAt

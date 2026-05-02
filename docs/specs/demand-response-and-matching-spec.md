@@ -86,6 +86,8 @@ withdrawn
 expired
 ```
 
+`expired` 必須同步存在於 `DemandResponse` data model enum。
+
 `DemandRequest`：
 
 ```text

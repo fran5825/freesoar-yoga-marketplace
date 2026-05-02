@@ -24,7 +24,10 @@ V1 default:
 ## Class Formation
 
 - A ClassSession requires teacher, organizer, service type, time, location, capacity.
+- V1 ClassSession is created only from a matched DemandRequest.
+- Teacher-created classes are future scope / non-V1.
 - ClassSession can open for enrollment after required fields are complete.
+- Public class detail/share link is allowed only when ClassSession is open_for_enrollment or confirmed and marked public.
 - Enrollment must not exceed capacity.
 
 ## Calendar

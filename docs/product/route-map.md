@@ -14,8 +14,8 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 | `/about` | Free Soar Yoga 品牌與 marketplace 說明 | Visitor |
 | `/teachers/join` | 老師加入與申請入口 | Visitor, Teacher |
 | `/organizers/request` | 團主提出需求入口 | Visitor, Organizer |
-| `/classes` | 公開 class session 列表，如 V1 開放瀏覽 | Visitor, Member |
-| `/classes/[classSessionId]` | class session 詳情與 enrollment 入口 | Visitor, Member |
+| `/classes` | 公開 class session 列表，optional / later，不作為 V1 必做 | Visitor, Member |
+| `/classes/[classSessionId]` | class session 詳情、share link 與 enrollment 入口 | Visitor, Member |
 | `/faq` | 常見問題與信任說明 | Visitor |
 
 ## Auth Routes
@@ -72,7 +72,9 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 - `/teacher/*` 必須只允許 Teacher 或 Admin；未 approved 的 Teacher 只能進入 onboarding / profile 相關頁。
 - `/organizer/*` 必須只允許 Organizer 或 Admin。
 - `/member/*` 必須只允許登入會員或 Admin。
-- 公開 class session 是否可被 Visitor 看見，需依 class status 與 visibility policy 決定。
+- 所有登入者預設具備 Member 基本能力；Teacher 或 Organizer 若要報名課程，使用同一個 User 的 Member 能力。
+- 公開 class detail / share link 只允許 `open_for_enrollment` 或 `confirmed` 且標記可公開的 class session。
+- `/classes` 公開列表為 optional / later，不作為 V1 必做。
 
 ## RWD 原則
 

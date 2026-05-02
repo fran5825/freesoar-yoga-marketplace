@@ -38,8 +38,13 @@ V1 預設：
 | `demand_response_submitted` | Organizer, Admin | Teacher 提交 response | 通知團主有新的老師回覆 |
 | `demand_response_selected` | Teacher, Organizer | response 被選中 | 通知雙方 matching 成立 |
 | `class_session_created` | Teacher, Organizer | class session 建立 | 確認課程已形成 |
+| `class_session_changed` | Member, Teacher, Organizer | class session 重要資訊變更 | 通知時間、地點或狀態等重要變更 |
+| `class_session_cancelled` | Member, Teacher, Organizer | class session 取消 | 通知相關人員課程取消 |
 | `enrollment_confirmed` | Member | Member 報名成功 | 確認報名狀態 |
-| `class_reminder_basic` | Member, Teacher, Organizer | 課前提醒 | 提醒課程時間與地點 |
+| `enrollment_cancelled` | Member | Member 或 Admin 取消 enrollment | 確認報名已取消 |
+| `class_reminder_basic` | Member, Teacher | 課前提醒 | 提醒課程時間與地點 |
+
+Organizer 會收到 class created / changed / cancelled 類通知；V1 課前提醒先發給 Member 與 Teacher，不一定發給 Organizer。
 
 ## Email Copy 原則
 

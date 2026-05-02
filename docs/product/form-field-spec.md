@@ -28,7 +28,8 @@
 | `teachingFormats` | 是 | 到場、線上或其他形式；V1 以實體團課優先 |
 | `priceRange` | 建議 | 參考收費區間 |
 | `profilePhotoUrl` | 建議 | 老師照片 |
-| `contactPhone` | 是 | 聯絡電話，僅限管理與媒合必要使用 |
+
+老師聯絡電話在 V1 使用 `User.phone`，不在 `TeacherProfile` 重複存 phone。未來若需要公開電話，再另設 `publicContactPhone`，不放入 V1。
 
 ## Teacher Availability Form
 
@@ -71,6 +72,27 @@ Exception 欄位：
 | `frequency` | 是 | 單堂、每週、雙週等 |
 | `budgetRange` | 建議 | 預算區間 |
 
+### Organizer Form to Model Mapping
+
+| Form Field | Model Field |
+|---|---|
+| `organizationName` | `Organization.name` |
+| `organizationType` | `Organization.type` |
+| `contactName` | `Organization.contactName` |
+| `contactEmail` | `Organization.contactEmail` |
+| `contactPhone` | `Organization.contactPhone` |
+| `title` | `DemandRequest.title` |
+| `serviceTypeId` | `DemandRequest.serviceTypeId` |
+| `description` | `DemandRequest.description` |
+| `targetLevel` | `DemandRequest.targetLevel` |
+| `expectedParticipants` | `DemandRequest.expectedParticipants` |
+| `preferredAreas` | `DemandRequest.preferredAreas` |
+| `preferredTimeSlots` | `DemandRequest.preferredTimeSlots` |
+| `preferredStartDate` | `DemandRequest.preferredStartDate` |
+| `classLengthMinutes` | `DemandRequest.classLengthMinutes` |
+| `frequency` | `DemandRequest.frequency` |
+| `budgetRange` | `DemandRequest.budgetRange` |
+
 ## Demand Response Form
 
 | Field | 必填 | 說明 |
@@ -90,6 +112,7 @@ Exception 欄位：
 | `endAt` | 是 | 結束時間 |
 | `location` | 是 | 地點 |
 | `capacity` | 是 | 名額上限 |
+| `isPublic` | 否 | 是否允許公開 class detail / share link；預設 false |
 
 ## Enrollment Form
 
@@ -97,6 +120,9 @@ Exception 欄位：
 |---|---|---|
 | `classSessionId` | 是 | 報名課程 |
 | `notes` | 否 | 會員備註，例如身體狀況提醒；不可要求醫療診斷 |
+| `basicConsent` | 是 | 我了解此課程非醫療行為，會依自身身體狀況參與。 |
+
+V1 不收集醫療資料，不做健康問卷。
 
 ## Admin Review Form
 

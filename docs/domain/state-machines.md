@@ -98,13 +98,18 @@ Rules:
 ```text
 pending
   → confirmed
-  → attended
 ```
 
 Alternative terminal states:
 
 ```text
 cancelled
+```
+
+Future / admin-only states:
+
+```text
+attended
 no_show
 ```
 
@@ -113,3 +118,5 @@ Rules:
 - User cannot enroll twice in same class.
 - Enrollment cannot exceed class capacity.
 - Cancel rules depend on policy.
+- V1 primarily supports confirmed and cancelled.
+- Full teacher attendance workflow is not V1.

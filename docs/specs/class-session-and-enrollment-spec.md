@@ -22,14 +22,14 @@ V1 的重點是清楚、安全、可追蹤，不做複雜金流、refund automat
 ## User Flow
 
 1. DemandRequest 進入 matched。
-2. Organizer 或 Admin 從 selected DemandResponse 建立 ClassSession。
+2. Organizer 或 Admin 從 matched DemandRequest 的 selected DemandResponse 建立 ClassSession。
 3. ClassSession 補齊 teacher、organizer、time、location、capacity 等必要資訊。
 4. ClassSession 進入 open_for_enrollment 或 confirmed。
 5. Member 查看 class detail。
 6. Member 提交 enrollment。
 7. 系統檢查 capacity 與 duplicate enrollment。
 8. Enrollment confirmed。
-9. 課後 Admin 或 Teacher 可依政策標記 attended / no_show。
+9. V1 主要支援 enrollment confirmed / cancelled；attended / no_show 保留為 future 或 admin-only 後續能力。
 
 ## UI Requirements
 
@@ -62,6 +62,7 @@ V1 的重點是清楚、安全、可追蹤，不做複雜金流、refund automat
 - `endAt`
 - `location`
 - `capacity`
+- `isPublic`
 - `status`
 
 `Enrollment` 必要欄位：
@@ -70,9 +71,12 @@ V1 的重點是清楚、安全、可追蹤，不做複雜金流、refund automat
 - `userId`
 - `status`
 
+V1 Enrollment 需記錄 basic consent：使用者確認「我了解此課程非醫療行為，會依自身身體狀況參與。」此 consent 不代表收集醫療資料，也不建立健康問卷。
+
 ## Permission Requirements
 
 - Member 只能建立與查看自己的 enrollments。
+- Teacher 或 Organizer 若要報名課程，使用同一個 User 的 Member 能力，不使用 Teacher / Organizer 權限建立 enrollment。
 - Organizer 可查看自己 class session 的 roster basics。
 - Teacher 可查看自己授課 class session 的基本 roster。
 - Admin 可管理所有 class sessions 與 enrollments。
@@ -95,15 +99,23 @@ cancelled
 `Enrollment`：
 
 ```text
-pending → confirmed → attended
+pending → confirmed
 ```
 
 終止狀態：
 
 ```text
 cancelled
+```
+
+Future / admin-only 後續能力：
+
+```text
+attended
 no_show
 ```
+
+`attended` / `no_show` 保留為 future 或 admin-only 後續能力，V1 不做完整 Teacher attendance workflow。
 
 ## RWD Requirements
 
@@ -117,6 +129,7 @@ no_show
 - Matched demand 可以建立 ClassSession。
 - ClassSession 必要欄位完整後才能 open_for_enrollment。
 - Member 可以報名 open_for_enrollment 或 confirmed 的 class session。
+- Member 報名時需勾選 basic consent。
 - 同一 Member 不可重複報名同一 class session。
 - Enrollment confirmed 數量不可超過 capacity。
 - Cancelled class session 不可接受新 enrollment。

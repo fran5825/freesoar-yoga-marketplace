@@ -26,7 +26,7 @@ Free Soar Yoga 的信任感來自品質管理。老師未審核、需求未 revi
 3. Admin 進入 teacher review，approve / reject / suspend。
 4. Admin 進入 demand review，publish / reject / cancel。
 5. Admin 查看 class sessions，協助確認或取消。
-6. Admin 查看 enrollments，協助確認、取消、標記 attended / no_show。
+6. Admin 查看 enrollments，協助確認或取消；attended / no_show 保留為 future 或 admin-only 後續能力。
 7. 重要管理動作可留下 admin note。
 
 ## UI Requirements
@@ -65,7 +65,9 @@ Admin 可觸發：
 - `DemandRequest`: `submitted → under_review → published/rejected`
 - `DemandResponse`: `submitted → shortlisted/selected/declined`
 - `ClassSession`: `draft → pending_confirmation → open_for_enrollment → confirmed → completed/cancelled`
-- `Enrollment`: `pending → confirmed → attended/cancelled/no_show`
+- `Enrollment`: `pending → confirmed/cancelled`
+
+`attended` / `no_show` 不作為 V1 完整 Teacher attendance workflow，只保留為 future 或 admin-only 後續能力。
 
 ## RWD Requirements
 

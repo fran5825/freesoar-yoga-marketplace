@@ -116,7 +116,7 @@
 | `draft` | `pending_confirmation` | Organizer / Admin | teacher、organizer、service type、時間、地點、capacity 初步完整 | 等待確認 |
 | `pending_confirmation` | `open_for_enrollment` | Organizer / Admin | 必要欄位完整，無明顯排程衝突 | Member 可報名 |
 | `open_for_enrollment` | `confirmed` | Organizer / Admin | 開課條件成立 | 課程確認 |
-| `confirmed` | `completed` | Admin / Teacher | 課程時間已過且完成 | 可處理 attendance / review |
+| `confirmed` | `completed` | Admin | 課程時間已過且完成 | 可處理後續管理紀錄 |
 | Any active state | `cancelled` | Organizer / Admin | 取消原因成立 | 停止 enrollment，通知相關人員 |
 
 ### 禁止條件
@@ -132,8 +132,11 @@
 
 - `pending`
 - `confirmed`
-- `attended`
 - `cancelled`
+
+Future / admin-only 後續能力：
+
+- `attended`
 - `no_show`
 
 ### Transitions
@@ -142,9 +145,14 @@
 |---|---|---|---|---|
 | none | `pending` | Member | class session 可報名，尚有 capacity，未重複報名 | 建立 enrollment |
 | `pending` | `confirmed` | System / Admin | capacity 仍可用 | 通知 Member |
-| `confirmed` | `attended` | Admin / Teacher | 課程已完成，會員有出席 | attendance 完成 |
-| `confirmed` | `no_show` | Admin / Teacher | 課程已完成，會員未出席 | attendance 完成 |
 | `pending` / `confirmed` | `cancelled` | Member / Admin | 符合取消政策 | 釋放名額或保留紀錄 |
+
+Future / admin-only 後續能力：
+
+| From | To | Actor | 前置條件 | 後置效果 |
+|---|---|---|---|---|
+| `confirmed` | `attended` | Admin | 課程已完成，會員有出席 | attendance 完成 |
+| `confirmed` | `no_show` | Admin | 課程已完成，會員未出席 | attendance 完成 |
 
 ### 禁止條件
 
@@ -152,6 +160,7 @@
 - Confirmed enrollment 數量不可超過 class capacity。
 - `cancelled` enrollment 不可直接轉為 `attended`。
 - 已完成課程不應接受新的 enrollment。
+- V1 不做完整 Teacher attendance workflow。
 
 ## Notification Side Effects
 

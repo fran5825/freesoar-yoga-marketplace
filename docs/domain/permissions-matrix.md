@@ -2,21 +2,22 @@
 
 ## 目的
 
-本文件用矩陣方式整理 Free Soar Yoga V1 的 role、resource、action 權限。
+本文件用矩陣方式整理 Free Soar Yoga V1 的 capability、resource、action 權限。
 
 詳細實作時，所有權限都應在 server-side 檢查。Client UI 只負責隱藏或提示，不可作為安全依據。
 
-## Roles
+## Role Model
 
-V1 使用以下角色：
+V1 採用能力模型，而不是限制一個 `User` 只能有一種身分：
 
-- `VISITOR`
-- `MEMBER`
-- `ORGANIZER`
-- `TEACHER`
-- `ADMIN`
+- `User` 是基本帳號。
+- 所有登入者預設具備 Member 基本能力。
+- Teacher 能力由 `TeacherProfile` 開啟。
+- Organizer 能力由 `OrganizerProfile` 開啟。
+- Admin 是平台管理權限。
+- Teacher 或 Organizer 若要報名課程，是用同一個 `User` 的 Member 能力報名，不是用 Teacher / Organizer 權限報名。
 
-程式命名可使用既有 `MEMBER`、`ORGANIZER`、`TEACHER`、`ADMIN`，Visitor 代表未登入使用者。
+矩陣中的 `Teacher` 與 `Organizer` 代表該 User 已具備對應 profile 能力；`Visitor` 代表未登入使用者。
 
 ## Legend
 
@@ -39,6 +40,8 @@ V1 使用以下角色：
 
 公開資料仍需遵守 visibility policy；不是所有 teacher profile 或 class session 都一定公開。
 
+公開 class session 僅限 `open_for_enrollment` 或 `confirmed`，且已標記可公開。
+
 ## User / Account
 
 | Action | Visitor | Member | Organizer | Teacher | Admin |
@@ -47,7 +50,7 @@ V1 使用以下角色：
 | View own account | No | Own | Own | Own | Own |
 | Edit own account | No | Own | Own | Own | Own |
 | View all users | No | No | No | No | Admin |
-| Change user role | No | No | No | No | Admin |
+| Grant admin permission | No | No | No | No | Admin |
 
 ## TeacherProfile
 
@@ -127,22 +130,24 @@ V1 一個 demand request 只能有一個 selected response。
 | Edit draft class session | No | No | Own | No | Admin |
 | Open for enrollment | No | No | Own | No | Admin |
 | Cancel class session | No | No | Own | No | Admin |
-| Complete class session | No | No | No | Own | Admin |
+| Complete class session | No | No | No | No | Admin |
 
-Teacher 可查看自己的 class session；是否可 complete 需依營運政策確認，Admin 應保有最終管理權。
+Teacher 可查看自己的 class session；V1 由 Admin 保有 class session 完成與取消的最終管理權。
 
 ## Enrollment
 
 | Action | Visitor | Member | Organizer | Teacher | Admin |
 |---|---|---|---|---|---|
-| Create enrollment | No | Own | Own | Own | Admin |
-| View own enrollment | No | Own | Own | Own | Admin |
+| Create enrollment | No | Own | Member capability only | Member capability only | Admin |
+| View own enrollment | No | Own | Member capability only | Member capability only | Admin |
 | View class roster basics | No | No | Own | Own | Admin |
-| Cancel own enrollment | No | Own | Own | Own | Admin |
+| Cancel own enrollment | No | Own | Member capability only | Member capability only | Admin |
 | Confirm enrollment | No | No | No | No | Admin |
-| Mark attended / no_show | No | No | No | Own | Admin |
+| Mark attended / no_show | No | No | No | No | Admin |
 
 同一 user 不可重複報名同一 class session。Confirmed enrollments 不可超過 capacity。
+
+V1 不做完整 Teacher attendance workflow；`attended` / `no_show` 可保留為 future 或 admin-only 後續能力。
 
 ## Notification
 
@@ -169,7 +174,7 @@ AdminNote 只供內部管理使用，不應顯示給一般角色。
 以下變更必須做 security review：
 
 - auth provider 或 session 邏輯
-- role assignment
+- admin permission assignment
 - teacher approval
 - demand visibility
 - response selection

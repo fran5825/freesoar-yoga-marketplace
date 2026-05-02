@@ -12,6 +12,8 @@ Can:
 
 ## Member / Student
 
+All authenticated users have basic Member capabilities.
+
 Can:
 
 - Enroll in class sessions
@@ -22,6 +24,8 @@ Can:
 ## Organizer / Group Leader
 
 Company club leader, welfare committee member, community leader, class leader.
+
+Organizer capabilities are enabled by OrganizerProfile.
 
 Can:
 
@@ -34,6 +38,8 @@ Can:
 
 ## Teacher
 
+Teacher capabilities are enabled by TeacherProfile.
+
 Can:
 
 - Create/edit profile
@@ -45,6 +51,8 @@ Can:
 - View own calendar
 
 ## Admin
+
+Admin is a platform management permission.
 
 Can:
 

@@ -7,6 +7,11 @@
 - Teachers only see eligible demand requests.
 - Organizers only manage their own demands/classes.
 - Members only manage their own enrollments.
+- User is the base account, and every authenticated user has basic Member capabilities.
+- Teacher capabilities are enabled by TeacherProfile.
+- Organizer capabilities are enabled by OrganizerProfile.
+- Admin is a platform management permission.
+- V1 does not restrict one user to only one identity.
 
 ## Visitor
 
@@ -47,6 +52,7 @@ Can:
 - Edit own draft/submitted demand requests if allowed
 - View teacher responses to own demand requests
 - Manage own class roster basics
+- Enroll in class sessions only through the same User's Member capability
 
 Cannot:
 
@@ -65,6 +71,7 @@ Can:
 - Respond to eligible demand requests
 - View own class sessions
 - View own calendar
+- Enroll in class sessions only through the same User's Member capability
 
 Cannot:
 

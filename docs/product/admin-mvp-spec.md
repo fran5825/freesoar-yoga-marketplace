@@ -13,7 +13,7 @@ V1 Admin dashboard 應聚焦審核、狀態管理、資料邊界與基本 KPI，
 - 查看 demand responses 與 matching 狀態。
 - 管理 class session 基本狀態。
 - 管理 enrollment 基本狀態。
-- 查看 organizations 與 organizer profiles。
+- 查看、修正 organization 基本資料，並查看其關聯 demand / class。
 - 新增 admin note。
 - 查看 basic KPIs。
 
@@ -26,7 +26,7 @@ V1 Admin dashboard 應聚焦審核、狀態管理、資料邊界與基本 KPI，
 | `/admin/demands` | 管理 demand requests |
 | `/admin/classes` | 管理 class sessions |
 | `/admin/enrollments` | 管理 enrollments |
-| `/admin/organizations` | 查看 organizations |
+| `/admin/organizations` | 查看與修正 organizations 基本資料，查看關聯 demand / class |
 
 ## Basic KPIs
 
@@ -92,13 +92,29 @@ Admin 可以：
 
 - 查看 enrollment。
 - 協助確認或取消 enrollment。
-- 標記 attended 或 no_show。
+- 保留 admin-only 後續能力標記 attended 或 no_show；V1 主要支援 confirmed / cancelled。
 
 Admin 不應：
 
 - 讓 enrollment 超過 class capacity。
 - 建立同一會員對同一課程的重複 enrollment。
 - 對非必要人員揭露會員私人資料。
+
+## Organization Actions
+
+Admin V1 可以：
+
+- 查看 organization 基本資料。
+- 修正 organization 基本資料。
+- 查看 organization 關聯的 demand requests。
+- 查看 organization 關聯的 class sessions。
+
+Admin V1 不做：
+
+- CRM
+- 銷售流程
+- 複雜 organization management
+- 多層 organization hierarchy
 
 ## Security Requirements
 
@@ -116,3 +132,5 @@ Admin 不應：
 - 客服 ticket system
 - 複雜 financial reporting
 - Payment/refund automation
+- 複雜 organization management
+- 銷售流程
