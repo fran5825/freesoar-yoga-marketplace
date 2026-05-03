@@ -154,6 +154,27 @@ Before merge:
 - RWD/mobile review completed
 - App-readiness boundary not violated
 
+## Required Self Review
+
+After any docs or code modification, Codex must run a lightweight self review before reporting completion.
+
+Codex must report:
+
+- Which files were changed.
+- Whether the change stays within V1 scope.
+- Whether it avoids adding Wellness / Academy / Retreat modules, AI matching, complex payment/refund automation, or a native mobile app.
+- Whether it remains consistent with the role model, permissions, state machines, data model, and route map.
+- Whether there are security, RWD, or brand consistency concerns.
+- Whether any product owner decision is required.
+- Whether any unrelated files were modified.
+- Whether Codex did not auto commit or push.
+
+Codex self review is the first guardrail, not the final product decision.
+
+Any decision that affects Auth, Prisma schema, role / permission model, marketplace state machines, V1 scope, or core user flows requires product owner confirmation.
+
+Codex must not commit or push unless the product owner explicitly asks for it.
+
 ## AI Rules
 
 - Do not overbuild beyond V1.
