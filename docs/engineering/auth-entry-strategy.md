@@ -10,6 +10,7 @@
 
 目前已存在的相關 routes：
 
+- `/`
 - `/dev/auth`
 - `/dev/admin`
 - `/account`
@@ -18,6 +19,18 @@
 這些 routes 只支援目前 Auth / session / capability 的最小驗證，不代表完整 marketplace user flow 已完成。
 
 ## 3. Route 定位
+
+### `/`
+
+`/` 是 minimal product entry smoke。
+
+- 用來提供目前最小產品入口。
+- 目前只提供 `/sign-in` 與 `/account` links。
+- 不使用 `auth()`。
+- 不做登入狀態判斷。
+- 不是正式 landing page。
+- 不是正式品牌首頁。
+- 不承擔課程探索、老師導覽、完整品牌敘事或正式使用者 flow。
 
 ### `/dev/auth`
 
@@ -86,6 +99,9 @@ Teacher / Organizer capability 未來應依 `TeacherProfile` / `OrganizerProfile
 目前 Auth entry 階段不做：
 
 - 完整 Auth UI system
+- 正式 landing page
+- 正式品牌首頁
+- shared header / navigation
 - `/sign-up`
 - 多 provider UI
 - account linking
@@ -105,6 +121,7 @@ OAuth 登入目前可同時建立帳號，因此不急著實作完整 `/sign-up`
 
 後續需要產品主人確認：
 
+- 何時將 `/` 轉為正式 landing page / brand home。
 - 是否需要正式 `/sign-up`。
 - 是否需要正式 dashboard。
 - 是否讓 `/account` 轉為正式會員入口。
