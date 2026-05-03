@@ -1,6 +1,11 @@
 import { auth, signIn, signOut } from "@/auth";
+import { notFound } from "next/navigation";
 
 export default async function DevAuthSmokeTestPage() {
+  if (process.env.NODE_ENV === "production") {
+    notFound();
+  }
+
   const session = await auth();
   const hasGoogleCredentials = Boolean(
     process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET,
