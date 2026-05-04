@@ -1,4 +1,5 @@
 import { requireUser } from "@/lib/auth/session";
+import { redirect } from "next/navigation";
 
 export default async function AccountSmokePage() {
   let user:
@@ -14,25 +15,7 @@ export default async function AccountSmokePage() {
   try {
     user = await requireUser();
   } catch {
-    return (
-      <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-6 py-12">
-        <div>
-          <p className="text-sm font-medium text-amber-700">
-            Minimal account smoke page
-          </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-            Account
-          </h1>
-          <p className="mt-3 text-sm text-gray-600">
-            Not a production dashboard.
-          </p>
-        </div>
-
-        <section className="rounded border border-amber-300 bg-amber-50 p-4 text-sm font-medium text-amber-900">
-          Authentication required
-        </section>
-      </main>
-    );
+    redirect("/sign-in");
   }
 
   return (
