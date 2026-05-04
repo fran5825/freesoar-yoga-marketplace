@@ -68,12 +68,16 @@
 
 ### `/sign-in`
 
-`/sign-in` 是 minimal sign-in entry。
+`/sign-in` 是 product-facing minimal sign-in entry。
 
 - 提供 Google sign-in。
 - 已登入時顯示簡單登入狀態。
 - 提供前往 `/account` 的 link。
 - 提供 sign out button。
+- 不顯示 smoke/debug wording。
+- 以 Free Soar Yoga 最小產品化文案呈現。
+- sign in 後仍導向 `/account`。
+- sign out 後仍導向 `/sign-in`。
 - 不是完整 Auth UI system。
 - 不包含 `/sign-up`、多 provider UI、account linking 或完整錯誤處理頁。
 
