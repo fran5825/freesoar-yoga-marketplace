@@ -55,6 +55,7 @@
 `/account` 是 minimal authenticated account smoke page。
 
 - 用來驗證 `requireUser()`。
+- 未登入進入 `/account` 時會 redirect 到 `/sign-in`。
 - 顯示目前登入 user 的 basic info。
 - 顯示最小 capability smoke。
 - 不是正式會員中心。
@@ -89,8 +90,10 @@ Teacher / Organizer capability 未來應依 `TeacherProfile` / `OrganizerProfile
 
 目前最小 Auth entry 階段採用：
 
+- 未登入進入 `/account` 時 redirect 到 `/sign-in`。
 - sign in 後導向 `/account`。
 - sign out 後導向 `/sign-in`。
+- 目前不做 `callbackUrl` / `returnTo` 系統。
 
 這只是目前階段的最小策略。未來若導入正式 dashboard、onboarding 或 account landing flow，可再調整 redirect 目標。
 
@@ -104,6 +107,7 @@ Teacher / Organizer capability 未來應依 `TeacherProfile` / `OrganizerProfile
 - shared header / navigation
 - `/sign-up`
 - 多 provider UI
+- `callbackUrl` / `returnTo` 系統
 - account linking
 - 完整錯誤處理頁
 - 正式會員中心
