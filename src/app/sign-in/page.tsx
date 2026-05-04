@@ -8,13 +8,13 @@ export default async function SignInPage() {
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-6 py-12">
       <div>
         <p className="text-sm font-medium text-amber-700">
-          Minimal sign-in page
+          Free Soar Yoga
         </p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">
           Sign in
         </h1>
         <p className="mt-3 text-sm text-gray-600">
-          Not a production auth experience.
+          Sign in to continue to your account.
         </p>
       </div>
 
@@ -23,8 +23,8 @@ export default async function SignInPage() {
           <section className="rounded border border-gray-200 p-4 text-sm">
             <h2 className="text-lg font-medium">Signed in</h2>
             <p className="mt-4">
-              <span className="font-medium">User: </span>
-              {session.user.email ?? session.user.name ?? "Unknown user"}
+              <span className="font-medium">Signed in as: </span>
+              {session.user.email ?? session.user.name ?? "Signed-in member"}
             </p>
           </section>
 
@@ -54,9 +54,9 @@ export default async function SignInPage() {
       ) : (
         <>
           <section className="rounded border border-gray-200 p-4 text-sm">
-            <h2 className="text-lg font-medium">Google sign-in</h2>
+            <h2 className="text-lg font-medium">Continue with Google</h2>
             <p className="mt-4 text-gray-600">
-              After sign-in, you will be redirected to <code>/account</code>.
+              After sign-in, you can continue to your account.
             </p>
           </section>
 
