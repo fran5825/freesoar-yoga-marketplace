@@ -16,7 +16,7 @@
 - `/account`
 - `/sign-in`
 
-這些 routes 只支援目前 Auth / session / capability 的最小驗證，不代表完整 marketplace user flow 已完成。
+這些 routes 只支援目前 Auth / session / capability 的最小驗證與最小 account view，不代表完整 marketplace user flow 已完成。
 
 ## 3. Route 定位
 
@@ -52,12 +52,16 @@
 
 ### `/account`
 
-`/account` 是 minimal authenticated account smoke page。
+`/account` 是 product-facing minimal authenticated account view。
 
 - 用來驗證 `requireUser()`。
 - 未登入進入 `/account` 時會 redirect 到 `/sign-in`。
-- 顯示目前登入 user 的 basic info。
-- 顯示最小 capability smoke。
+- 顯示目前登入 user 的 minimal account info，例如 name、email。
+- 顯示 signed-in / member active 狀態。
+- 不顯示 internal user id。
+- 不顯示 raw image URL。
+- 不顯示 `User.isAdmin`。
+- 不顯示 Teacher / Organizer unloaded debug wording。
 - 不是正式會員中心。
 - 不是正式 dashboard。
 - 不包含 account editing、enrollment、Teacher onboarding、Organizer onboarding 或 dashboard navigation。
@@ -75,10 +79,14 @@
 
 ## 4. Capability Smoke 邊界
 
-目前 capability smoke 只顯示最小狀態：
+目前 capability smoke 不再由 `/account` product-facing 畫面顯示。
 
-- Member：登入者預設 `yes`。
-- Admin：依 `User.isAdmin` 顯示 `yes` / `no`。
+目前 capability / guard smoke 的邊界如下：
+
+- `/account`：只顯示 signed-in / member active 狀態，不顯示 internal capability debug。
+- `/dev/admin`：仍保留 development-only 的 admin guard smoke，用來驗證 `requireAdmin()` 與 `User.isAdmin` 判斷。
+- Member：登入者預設具備 member capability，但 product-facing 畫面只顯示 member active 狀態。
+- Admin：仍由 `User.isAdmin` 判斷，但不在 `/account` 顯示。
 - Teacher：目前不載入 relation。
 - Organizer：目前不載入 relation。
 
