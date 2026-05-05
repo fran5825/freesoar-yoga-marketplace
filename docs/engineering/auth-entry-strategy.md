@@ -22,12 +22,15 @@
 
 ### `/`
 
-`/` 是 minimal product entry smoke。
+`/` 是 product-facing minimal product entry。
 
 - 用來提供目前最小產品入口。
 - 目前只提供 `/sign-in` 與 `/account` links。
 - 不使用 `auth()`。
 - 不做登入狀態判斷。
+- 不顯示 smoke/debug wording。
+- 以 Free Soar Yoga 最小產品化文案呈現。
+- link label 可為使用者導向文案，但 route 仍是 `/sign-in` 與 `/account`。
 - 不是正式 landing page。
 - 不是正式品牌首頁。
 - 不承擔課程探索、老師導覽、完整品牌敘事或正式使用者 flow。
