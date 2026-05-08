@@ -88,3 +88,33 @@ Codex 應根據變更風險執行適當測試：
 - 只有在使用者明確要求時才 commit。
 - Push 必須另行明確要求，即使 commit 已建立也不可自動 push。
 - Commit 時只 stage 使用者要求的檔案，避免帶入不相關變更。
+
+## 8. Docs-only Commit / Push Exception
+
+低風險 docs-only change 可以有 commit + push 例外，但只有在產品主人明確要求「commit + push」時才可執行。
+
+此例外只適用於 docs-only changes，例如：
+
+- `docs/**/*.md`
+- `README.md`
+- `AGENTS.md`
+
+此例外不適用於：
+
+- `src/**`
+- `prisma/**`
+- `package.json`
+- `package-lock.json`
+- config files
+- migrations
+- Auth / permission / capability logic
+- environment files
+- production / deploy settings
+
+即使是 docs-only change，Codex 仍必須：
+
+1. 回報 changed files。
+2. 確認沒有 stage 不相關檔案。
+3. 使用清楚 commit message。
+4. 只有在明確批准後 push。
+5. Push 後回報 `git status -sb`。
