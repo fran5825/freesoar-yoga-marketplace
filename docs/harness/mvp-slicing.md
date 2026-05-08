@@ -9,10 +9,19 @@
 ## 2. 切片原則
 
 - One minimal slice at a time：一次只完成一個最小可驗證切片。
+- One coherent slice at a time：一個 slice 可以包含多個檔案，但必須服務同一個明確目的。
 - 每個 slice 都要有清楚目標、修改範圍與驗收方式。
 - 不把多個 domain、UI、Auth、Prisma、admin flow 混在同一輪。
 - 優先選擇可驗證、可 rollback 的小步驟。
 - 非 trivial slice 應先 plan，再 build、test、self-review、report。
+
+切片不是越小越好，而是風險要可控、驗收要清楚。一個合理的 slice 應具備：
+
+- 同一個明確目的。
+- 同一組驗收標準。
+- 同一個主要風險等級。
+- 可行的 rollback 方式。
+- 不混合多個高風險邊界。
 
 ## 3. Free Soar Yoga 專案情境
 
@@ -25,7 +34,44 @@ Free Soar Yoga 是 brand-driven yoga marketplace，初期聚焦 V1 yoga group-cl
 - 不把 marketplace 做成 generic SaaS、generic booking tool 或 discount marketplace。
 - 不為了工程完整而提前建立 complex RBAC、enterprise permissions 或大型架構。
 
-## 4. Slice 大小判斷
+## 4. Risk-based Slice Size
+
+Codex 在提出 plan 時，應先判斷本任務屬於哪一種 slice，並說明原因。
+
+### Micro slice
+
+適合高風險邊界，應盡量小、可單獨 review：
+
+- Auth
+- Prisma schema
+- migration
+- permissions / capability model
+- state machines
+- core user flows
+
+### Standard slice
+
+適合一般產品或工程實作，通常可以包含同一目的下的少量檔案：
+
+- 一般 UI
+- helper
+- 單一 route
+- 單一 domain rule + test
+- 小型 docs + implementation 對齊
+
+### Batch slice
+
+適合低風險 docs-only 或協作文件整理，可以一次處理同類型多份文件：
+
+- docs-only updates
+- 文案調整
+- prompt
+- checklist
+- 文件入口整理
+
+Batch slice 仍必須維持同一目的、清楚驗收標準，且不可混入 source code、Prisma、migration、Auth 或 permission logic。
+
+## 5. Slice 大小判斷
 
 ### 好的 slice 範例
 
@@ -49,7 +95,7 @@ Free Soar Yoga 是 brand-driven yoga marketplace，初期聚焦 V1 yoga group-cl
 - rollback 需要手動修資料庫或回復 migration。
 - Codex 需要替產品主人決定核心 user flow、permission 或 V1 scope。
 
-## 5. 高風險切片規則
+## 6. 高風險切片規則
 
 以下切片必須先 plan，說明影響，並取得產品主人確認後才實作：
 
@@ -67,13 +113,16 @@ Free Soar Yoga 是 brand-driven yoga marketplace，初期聚焦 V1 yoga group-cl
 3. UI or route integration。
 4. Tests and review。
 
-## 6. Codex 回報格式
+## 7. Codex 回報格式
 
 Codex 在提出或完成 slice 時，建議使用以下格式：
 
 ```text
 Slice goal:
 - 本次切片要完成什麼。
+
+Slice type:
+- Micro slice / standard slice / batch slice，並說明原因。
 
 Files to change:
 - 預計或實際修改的檔案。
