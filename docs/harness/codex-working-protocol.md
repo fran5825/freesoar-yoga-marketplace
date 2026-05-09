@@ -61,7 +61,40 @@ Codex 實作時必須：
 
 若無法確認 database environment，必須停止，不可執行 migration 或資料更新。
 
-## 6. 測試與回報
+## 6. High-risk Planning Gate
+
+當 Codex 擔任 Planning / Orchestrator，並判斷下一步任務涉及以下任一高風險邊界時，不得直接產出 Builder implementation prompt：
+
+- Auth
+- Prisma schema
+- migration
+- `db push`
+- permissions / capability model
+- state machines
+- core user flows
+- production / deploy
+- secrets / `.env`
+
+Planning / Orchestrator 必須先產出 planning-only decision prompt，要求下一輪只做只讀分析，不修改檔案。
+
+Decision plan 必須包含：
+
+1. 目前狀態。
+2. 可選方案。
+3. 推薦方案。
+4. 風險。
+5. 需要產品主人確認的決策。
+6. 確認後才可進入 implementation slice。
+
+Planning / Orchestrator 每次建議下一個 slice 時，都應先說明：
+
+- `slice type`: micro / standard / batch。
+- 是否觸發 high-risk planning gate。
+- 如果觸發，只產出 planning-only prompt，不產出 implementation prompt。
+
+只有在產品主人明確確認 decision plan 後，才可產出 Builder implementation prompt。若尚未取得確認，Codex 應停在 planning-only 狀態，不得修改檔案、執行 migration、`db push`、commit 或 push。
+
+## 7. 測試與回報
 
 Codex 應根據變更風險執行適當測試：
 
@@ -81,7 +114,7 @@ Codex 應根據變更風險執行適當測試：
 
 如果檔案是 untracked，需說明 `git diff --stat` 可能不會顯示該檔案，並搭配 `git status --short` 回報。
 
-## 7. Commit / Push 規則
+## 8. Commit / Push 規則
 
 - Codex 不自動 commit。
 - Codex 不自動 push。
@@ -89,7 +122,7 @@ Codex 應根據變更風險執行適當測試：
 - Push 必須另行明確要求，即使 commit 已建立也不可自動 push。
 - Commit 時只 stage 使用者要求的檔案，避免帶入不相關變更。
 
-## 8. Docs-only Commit / Push Exception
+## 9. Docs-only Commit / Push Exception
 
 低風險 docs-only change 可以有 commit + push 例外，但只有在產品主人明確要求「commit + push」時才可執行。
 

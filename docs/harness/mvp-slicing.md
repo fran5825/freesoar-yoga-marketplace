@@ -113,7 +113,40 @@ Batch slice 仍必須維持同一目的、清楚驗收標準，且不可混入 s
 3. UI or route integration。
 4. Tests and review。
 
-## 7. Codex 回報格式
+## 7. High-risk Planning Gate
+
+Planning / Orchestrator 在判斷下一步任務時，如果任務涉及以下任一高風險邊界，不得直接產出 Builder implementation prompt：
+
+- Auth
+- Prisma schema
+- migration
+- `db push`
+- permissions / capability model
+- state machines
+- core user flows
+- production / deploy
+- secrets / `.env`
+
+Planning / Orchestrator 必須先產出 planning-only decision prompt，要求下一輪只做只讀分析，不修改檔案。
+
+Decision plan 必須包含：
+
+1. 目前狀態。
+2. 可選方案。
+3. 推薦方案。
+4. 風險。
+5. 需要產品主人確認的決策。
+6. 確認後才可進入 implementation slice。
+
+Planning / Orchestrator 每次建議下一個 slice 時，都應先說明：
+
+- `slice type`: micro / standard / batch。
+- 是否觸發 high-risk planning gate。
+- 如果觸發，只產出 planning-only prompt，不產出 implementation prompt。
+
+只有在產品主人明確確認 decision plan 後，才可產出 Builder implementation prompt。
+
+## 8. Codex 回報格式
 
 Codex 在提出或完成 slice 時，建議使用以下格式：
 
