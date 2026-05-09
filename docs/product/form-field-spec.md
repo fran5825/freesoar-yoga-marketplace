@@ -31,6 +31,23 @@
 
 老師聯絡電話在 V1 使用 `User.phone`，不在 `TeacherProfile` 重複存 phone。未來若需要公開電話，再另設 `publicContactPhone`，不放入 V1。
 
+### Teacher Application Form to Model Mapping
+
+| Form Field | Model Field | Phase 1 validation |
+|---|---|---|
+| `displayName` | `TeacherProfile.displayName` | submit 時必填 |
+| `bio` | `TeacherProfile.bio` | submit 時必填 |
+| `teachingStyle` | `TeacherProfile.teachingStyle` | submit 時必填 |
+| `experienceYears` | `TeacherProfile.experienceYears` | submit 時必填 |
+| `certifications` | `TeacherProfile.certifications` | 建議，可留空 |
+| `specialties` | `TeacherProfile.specialties` | submit 時至少一項 |
+| `serviceAreas` | `TeacherProfile.serviceAreas` | submit 時至少一項 |
+| `teachingFormats` | `TeacherProfile.teachingFormats` | submit 時至少一項 |
+| `priceRange` | `TeacherProfile.priceRange` | 建議，可留空 |
+| `profilePhotoUrl` | `TeacherProfile.profilePhotoUrl` | 建議，可留空 |
+
+`TeacherProfile` 在 `draft` 狀態可保存未完成資料；送出審核時才要求上述必要欄位完整。這讓 schema 支援草稿，同時不降低 submitted application 的資料品質。
+
 ## Teacher Availability Form
 
 | Field | 必填 | 說明 |

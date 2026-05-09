@@ -63,6 +63,20 @@ Free Soar Yoga 需要確保進入 demand pool 的老師具備基本可信任資�
 - `teachingFormats`
 - `status`
 
+Phase 1 建議欄位：
+
+- `certifications`
+- `priceRange`
+- `profilePhotoUrl`
+
+Schema / validation 邊界：
+
+- `TeacherProfile` 可以先以 `draft` 狀態保存部分資料，避免老師必須一次填完長表單。
+- `submit application` 時必須由 server-side validation 檢查必要欄位完整。
+- `specialties`、`serviceAreas`、`teachingFormats` 使用 string list 保存 Phase 1 選項，不在本 slice 建立 taxonomy model。
+- 老師聯絡電話使用 `User.phone`，不在 `TeacherProfile` 重複保存。
+- `TeacherProfile` 存在只代表具備 teacher area 的基礎 capability；回應 demand request 仍需要 `status = approved`。
+
 ## Permission Requirements
 
 - Visitor 可看 teacher join page。

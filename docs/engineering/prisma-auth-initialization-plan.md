@@ -92,6 +92,22 @@ Prisma schema 應以 V1 必要模型為主，不過度工程化。
 - `OrganizerProfile`
 - `Organization`
 
+`TeacherProfile` Phase 1 應對齊 teacher onboarding 表單的基礎欄位：
+
+- `displayName`
+- `bio`
+- `teachingStyle`
+- `experienceYears`
+- `certifications`
+- `specialties`
+- `serviceAreas`
+- `teachingFormats`
+- `priceRange`
+- `profilePhotoUrl`
+- `status`
+
+為支援 draft application，schema 可讓 profile 先保存部分欄位；submitted application 的必要欄位完整性應由 server-side validation 與 state transition rule 檢查，不應只依賴 nullable / non-nullable 欄位表達。
+
 後續 marketplace vertical slice 再建立：
 
 - `ServiceType`

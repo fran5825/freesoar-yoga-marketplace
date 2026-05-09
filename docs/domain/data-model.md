@@ -47,6 +47,16 @@ Fields:
 - createdAt
 - updatedAt
 
+Phase 1 schema notes:
+
+- `TeacherProfile` 是 Teacher capability 的基礎資料，不代表老師已可回應需求。
+- 能否回應 demand request 仍必須檢查 `status = approved`。
+- Prisma schema 允許 draft profile 先保存部分欄位；submit application 時由 server-side validation 要求必要欄位完整。
+- `displayName`、`bio`、`teachingStyle`、`experienceYears`、`specialties`、`serviceAreas`、`teachingFormats` 是 submit application 的必要欄位。
+- `certifications`、`priceRange`、`profilePhotoUrl` 是 Phase 1 建議欄位，可留空。
+- `specialties`、`serviceAreas`、`teachingFormats`、`certifications` 在 schema 中以 string list 表示，讓 Phase 1 不需要額外建立分類表或複雜 taxonomy。
+- 老師聯絡電話在 V1 使用 `User.phone`，不在 `TeacherProfile` 重複存放。
+
 Status:
 
 - draft
