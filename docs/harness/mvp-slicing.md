@@ -113,7 +113,40 @@ Batch slice 仍必須維持同一目的、清楚驗收標準，且不可混入 s
 3. UI or route integration。
 4. Tests and review。
 
-## 7. High-risk Planning Gate
+## 7. Risk Isolation Before Gate
+
+Planning / Orchestrator 不應只因為某個 feature 最終會碰 Auth、Prisma、permissions、state machines 或 core user flows，就把整個 feature 都判成 high-risk。
+
+在觸發 High-risk Planning Gate 前，應先拆出子切片，並判斷每個子切片實際會碰哪些邊界。
+
+低風險子切片可以作為 standard slice 先做，例如：
+
+- public page
+- static UI
+- route shell
+- copy / content
+- read-only display
+- docs update
+
+高風險子切片仍需觸發 High-risk Planning Gate，例如：
+
+- Auth mutation
+- Prisma mutation
+- migration
+- permissions / capability model
+- state machines
+- core user flow mutation
+- production / deploy
+- secrets / `.env`
+
+Planning / Orchestrator 每次規劃下一步時，應回答：
+
+1. 這個 feature 可以拆成哪些子切片？
+2. 哪些子切片是 low-risk / standard？
+3. 哪些子切片是真的 high-risk / micro？
+4. 是否可以先做一個不碰高風險邊界、但仍推進產品的 standard slice？
+
+## 8. High-risk Planning Gate
 
 Planning / Orchestrator 在判斷下一步任務時，如果任務涉及以下任一高風險邊界，不得直接產出 Builder implementation prompt：
 
@@ -146,7 +179,7 @@ Planning / Orchestrator 每次建議下一個 slice 時，都應先說明：
 
 只有在產品主人明確確認 decision plan 後，才可產出 Builder implementation prompt。
 
-## 8. Codex 回報格式
+## 9. Codex 回報格式
 
 Codex 在提出或完成 slice 時，建議使用以下格式：
 
