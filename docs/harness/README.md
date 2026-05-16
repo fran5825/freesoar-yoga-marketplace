@@ -22,6 +22,10 @@ Free Soar Yoga 是 Free Soar master brand 下的 brand-driven yoga marketplace�
 - `docs/harness/risk-based-workflow.md`：依任務風險選擇 Light / Standard / Heavy / Planning-only workflow。
 - `docs/harness/review-packet-spec.md`：定義 triage、planning、builder、final review packet 的必要材料。
 - `docs/harness/chatgpt-governance-review.md`：ChatGPT 作為上層治理 reviewer 時的品牌、scope、風險、verdict 與 prompt 校正準則。
+- `docs/prompts/codex-repo-aware-triage-prompt.md`：任務開始前讓 Codex 先做 repo-aware triage 的操作 prompt。
+- `docs/prompts/chatgpt-governance-review-prompt.md`：讓 ChatGPT review Codex triage / planning draft 並產出治理 verdict 的操作 prompt。
+- `docs/harness/builder-review-packet-template.md`：Codex Builder 完成後交給 ChatGPT final review 的回報格式。
+- `docs/harness/ai-runs-current-spec.md`：定義 `.ai-runs/current/` local-only run folder 的最小規格。
 - `docs/harness/codex-working-protocol.md`：Codex 在本 repo 的實際工作方式。
 - `docs/harness/codex-self-review-checklist.md`：Codex 修改後的自我檢查。
 - `docs/harness/review-checklist.md`：產品、品牌、工程、RWD、app-readiness review。
@@ -91,8 +95,23 @@ Free Soar Yoga 是 Free Soar master brand 下的 brand-driven yoga marketplace�
 - `docs/harness/chatgpt-governance-review.md`
 - `docs/harness/codex-working-protocol.md`
 - `docs/harness/codex-self-review-checklist.md`
+- `docs/prompts/codex-repo-aware-triage-prompt.md`
+- `docs/prompts/chatgpt-governance-review-prompt.md`
+- `docs/harness/builder-review-packet-template.md`
+- `docs/harness/ai-runs-current-spec.md`
 
-## 4. AI 協作原則摘要
+## 4. 操作 Prompt 與 Run Folder
+
+本 Harness 可使用下列最小操作文件支援手動 ChatGPT ↔ Codex App 流程：
+
+- `docs/prompts/codex-repo-aware-triage-prompt.md`：讓 Codex 在不改檔的前提下先讀 repo、判斷任務類型、風險、workflow mode、human gate 與 Builder prompt candidate。
+- `docs/prompts/chatgpt-governance-review-prompt.md`：讓 ChatGPT review Codex triage / planning draft，檢查品牌精神、founder intent、low-pressure UX、MVP slicing、scope creep 與風險分類。
+- `docs/harness/builder-review-packet-template.md`：定義 Builder 完成後必須提供的 task request、approved prompt、changed files、git diff、checks result、summary、risk notes 與 unfinished items。
+- `docs/harness/ai-runs-current-spec.md`：定義 `.ai-runs/current/` local-only 暫存資料夾，用來保存單次任務的手動協作紀錄。
+
+`.ai-runs/current/` 不屬於正式 docs，也不應 commit；可用來暫存本次任務的 triage、governance review、approved Builder prompt、Builder review packet、final review 與 human decision record。
+
+## 5. AI 協作原則摘要
 
 - MVP-first：先完成最小可驗證 V1 marketplace slice。
 - One minimal slice at a time：避免一次打開過多產品、資料、權限與 UI surface。

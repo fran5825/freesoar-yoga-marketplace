@@ -41,6 +41,21 @@ Triage should include:
 - Human gate requirement
 - Required review packets
 
+For Codex App handoff, use `docs/prompts/codex-repo-aware-triage-prompt.md` when the task needs repo-aware classification before implementation.
+
+Codex triage should not modify files. It should produce:
+
+- Task type
+- Risk level
+- Recommended workflow mode
+- Required reading
+- Possible files to modify
+- Files / areas not to touch
+- Risk flags
+- Human gate requirement
+- Suggested next step
+- Builder prompt candidate when appropriate
+
 ## 3. Plan
 
 Break the spec into small tasks.
@@ -55,6 +70,19 @@ Plan should include:
 - Tests
 - Risks
 
+For governance-sensitive work, send Codex triage / planning draft to ChatGPT using `docs/prompts/chatgpt-governance-review-prompt.md` before Builder implementation.
+
+ChatGPT governance review should check:
+
+- Brand spirit
+- Founder intent
+- Low-pressure UX
+- MVP slicing
+- Scope creep
+- Risk classification
+- Human gate requirement
+- Prompt quality
+
 ## 4. Build
 
 Implement incrementally.
@@ -66,6 +94,12 @@ Rules:
 - Keep business logic out of page components.
 - Keep components reusable.
 - Keep mobile-first layout.
+
+Before implementation, Builder should follow the approved Builder prompt. If `.ai-runs/current/` is used, store the approved prompt in:
+
+```txt
+.ai-runs/current/03-approved-builder-prompt.md
+```
 
 ## 5. Test
 
@@ -92,6 +126,28 @@ Review scope:
 - App-readiness review if API/domain logic changed
 - Packet completeness review: changed files, diff, checks, human decision record when needed
 
+Builder completion must include a Builder Review Packet using `docs/harness/builder-review-packet-template.md`.
+
+Minimum packet requirements:
+
+- Task request
+- Approved prompt
+- Changed files
+- Git diff
+- Checks result
+- Implementation summary
+- Risk notes
+- Unfinished items
+
+No diff, no final approval.
+
+When `.ai-runs/current/` is used, store the packet and final review in:
+
+```txt
+.ai-runs/current/04-builder-review-packet.md
+.ai-runs/current/05-chatgpt-final-review.md
+```
+
 ## 7. Ship
 
 Before shipping:
@@ -100,3 +156,8 @@ Before shipping:
 - Preview deploy checked
 - Release checklist completed
 - Admin/user flows manually checked
+If the task used `.ai-runs/current/`, record the final human decision before commit / push:
+
+```txt
+.ai-runs/current/06-human-decision-record.md
+```
