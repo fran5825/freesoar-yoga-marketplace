@@ -318,6 +318,8 @@ Next allowed action:
 
 ## 9. 建議 Run Folder 對應
 
+以下是較完整的 per-run / archival / expanded model，適合需要長期保存或完整審計的任務紀錄。若只是目前手動 ChatGPT ↔ Codex App 的單次 current run，可使用 `docs/harness/ai-runs-current-spec.md` 定義的 `.ai-runs/current/` local-only minimal model；兩者不是互相取代關係。
+
 ```text
 .ai-runs/
   2026-05-16-001-task-name/

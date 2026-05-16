@@ -85,6 +85,8 @@ ChatGPT 最後 review Builder result、diff、checks 與 Codex Reviewer draft。
 
 每個任務建立一個 run folder。可先放在 local，不一定 commit。
 
+本節描述的是較完整的 per-run / archival model；目前手動 MVP flow 可優先使用 `docs/harness/ai-runs-current-spec.md` 定義的 `.ai-runs/current/` minimal current-run model，不需要 automation。
+
 ```text
 .ai-runs/
   2026-05-16-001-task-name/
@@ -324,9 +326,11 @@ ChatGPT final review 至少需要：
 
 若缺少 diff 或 checks，ChatGPT 只能給 provisional review，不可建議 commit / push。
 
-## 11. Telegram / Human Gate 建議
+## 11. Future Automation / Human Gate 建議
 
-可以由 Hermes Agent 或其他 runner 在以下情況通知產品主人：
+本節只描述未來 automation 可能支援的通知方向，不是目前 manual ChatGPT ↔ Codex App flow 的必要條件；目前流程不需要接 Hermes，也不需要接 Telegram。
+
+未來若產品主人明確批准 automation，可以由 Hermes Agent 或其他 runner 在以下情況通知產品主人：
 
 - Planning 被 ChatGPT 判斷為 high-risk。
 - ChatGPT verdict 是 `HUMAN_DECISION_REQUIRED`。
