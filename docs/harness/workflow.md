@@ -28,7 +28,20 @@ Spec must include:
 - Acceptance criteria
 - Non-goals
 
-## 2. Plan
+## 2. Triage
+
+Before planning or building, classify task risk using `docs/harness/risk-based-workflow.md`.
+
+Triage should include:
+
+- Workflow mode: LIGHT / STANDARD / HEAVY / PLANNING_ONLY
+- Risk level
+- Slice type
+- Risk flags
+- Human gate requirement
+- Required review packets
+
+## 3. Plan
 
 Break the spec into small tasks.
 
@@ -42,7 +55,7 @@ Plan should include:
 - Tests
 - Risks
 
-## 3. Build
+## 4. Build
 
 Implement incrementally.
 
@@ -54,7 +67,7 @@ Rules:
 - Keep components reusable.
 - Keep mobile-first layout.
 
-## 4. Test
+## 5. Test
 
 Run appropriate tests:
 
@@ -64,18 +77,22 @@ Run appropriate tests:
 - Integration tests if domain logic changed
 - Playwright smoke test for key flows
 
-## 5. Review
+## 6. Review
 
-Run reviews:
+Run reviews. For ChatGPT / Codex handoff, use `docs/harness/review-packet-spec.md`.
+
+Review scope:
 
 - Code review
 - Security review
 - Marketplace logic review
 - Brand review
+- Low-pressure UX review
 - RWD review
 - App-readiness review if API/domain logic changed
+- Packet completeness review: changed files, diff, checks, human decision record when needed
 
-## 6. Ship
+## 7. Ship
 
 Before shipping:
 

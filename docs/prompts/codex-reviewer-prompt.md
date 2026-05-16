@@ -36,6 +36,7 @@ Review 前請先閱讀：
 - 是否引入 complex RBAC 或偏離 capability-based model。
 - 是否不必要碰 Auth、Prisma、migration、permissions、state machines。
 - 是否符合 Free Soar Yoga brand、founder intent 與 V1 yoga marketplace。
+- 是否維持 low-pressure UX，避免焦慮式行銷、恐懼式 urgency、強迫稀缺感、hard-sell CTA 或過度轉化導向。
 - Tests 是否足夠對應變更風險。
 - Docs 是否需要同步更新。
 - 是否可以 commit，或需要先 request changes。
@@ -43,6 +44,7 @@ Review 前請先閱讀：
 特別注意：
 
 - 不要讓產品變成 generic SaaS、pure booking tool 或 discount marketplace。
+- 不要讓 CTA、表單、empty state、error state 變成壓迫式或焦慮式轉化流程。
 - 不要讓 V1 偷偷擴張到 Wellness / Academy / Retreat / advanced AI matching / native app。
 - 任何 Auth、Prisma schema、permissions、state machines、core user flows 變更，都需要產品主人確認。
 

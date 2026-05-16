@@ -50,6 +50,8 @@ Reviewer 應先閱讀：
 - 是否符合 founder intent。
 - 是否尊重 teachers、organizers、members、admins。
 - 是否避免焦慮式行銷、低價促銷、未證實療癒宣稱。
+- 是否維持 low-pressure UX：CTA 清楚但不壓迫，流程安定、低摩擦、不過度催促。
+- 是否避免恐懼式 urgency、強迫稀缺感、hard-sell copy 或過度轉化導向。
 - 對外 UI / copy 是否符合 voice-and-tone 與 visual-direction。
 
 ## 6. Engineering Review

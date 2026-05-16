@@ -13,6 +13,8 @@
 - Does it express freedom, growth, wellness, community?
 - Does it avoid pure discount marketplace tone?
 - Does it avoid generic fitness website feeling?
+- Does it preserve low-pressure UX: clear but not pushy, reassuring but not overpromising?
+- Does it avoid anxiety-driven CTA, fear-based urgency, forced scarcity, or excessive conversion pressure?
 
 ## Marketplace Logic Review
 
