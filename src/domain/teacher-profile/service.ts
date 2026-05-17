@@ -1,0 +1,186 @@
+import { requireUser } from "@/lib/auth/session";
+import { prisma } from "@/lib/prisma";
+
+import {
+  type TeacherProfileApplicationInput,
+  type TeacherProfileValidationError,
+  validateTeacherProfileDraft,
+} from "./validation";
+
+export type TeacherProfileDraftSaveProfile = {
+  id: string;
+  userId: string;
+  displayName: string | null;
+  bio: string | null;
+  teachingStyle: string | null;
+  experienceYears: number | null;
+  certifications: string[];
+  specialties: string[];
+  serviceAreas: string[];
+  teachingFormats: string[];
+  priceRange: string | null;
+  profilePhotoUrl: string | null;
+  status: "draft" | "submitted" | "approved" | "rejected" | "suspended";
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type TeacherProfileDraftSaveErrorCode =
+  | "authentication_required"
+  | "draft_validation_failed"
+  | "rejected_profile_policy_not_decided"
+  | "submitted_profile_cannot_save_draft"
+  | "approved_profile_cannot_save_draft"
+  | "suspended_profile_cannot_save_draft"
+  | "draft_save_failed";
+
+export type TeacherProfileDraftSaveResult =
+  | {
+      ok: true;
+      profile: TeacherProfileDraftSaveProfile;
+    }
+  | {
+      ok: false;
+      code: TeacherProfileDraftSaveErrorCode;
+      message: string;
+      validationErrors?: TeacherProfileValidationError[];
+    };
+
+const teacherProfileDraftSelect = {
+  id: true,
+  userId: true,
+  displayName: true,
+  bio: true,
+  teachingStyle: true,
+  experienceYears: true,
+  certifications: true,
+  specialties: true,
+  serviceAreas: true,
+  teachingFormats: true,
+  priceRange: true,
+  profilePhotoUrl: true,
+  status: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
+
+export async function saveOwnTeacherProfileDraft(
+  input: TeacherProfileApplicationInput,
+): Promise<TeacherProfileDraftSaveResult> {
+  const validation = validateTeacherProfileDraft(input);
+
+  if (!validation.valid) {
+    return {
+      ok: false,
+      code: "draft_validation_failed",
+      message: "草稿資料格式需要調整後才能儲存。",
+      validationErrors: validation.errors,
+    };
+  }
+
+  try {
+    const currentUser = await requireUser();
+    const existingProfile = await prisma.teacherProfile.findUnique({
+      where: { userId: currentUser.id },
+      select: teacherProfileDraftSelect,
+    });
+
+    if (!existingProfile) {
+      const profile = await prisma.teacherProfile.create({
+        data: {
+          userId: currentUser.id,
+          ...toTeacherProfileDraftData(input),
+          status: "draft",
+        },
+        select: teacherProfileDraftSelect,
+      });
+
+      return {
+        ok: true,
+        profile,
+      };
+    }
+
+    if (existingProfile.status === "draft") {
+      const profile = await prisma.teacherProfile.update({
+        where: { userId: currentUser.id },
+        data: toTeacherProfileDraftData(input),
+        select: teacherProfileDraftSelect,
+      });
+
+      return {
+        ok: true,
+        profile,
+      };
+    }
+
+    return createStatusBlockedResult(existingProfile.status);
+  } catch (error) {
+    if (isAuthenticationRequiredError(error)) {
+      return {
+        ok: false,
+        code: "authentication_required",
+        message: "請先登入後再儲存老師申請草稿。",
+      };
+    }
+
+    return {
+      ok: false,
+      code: "draft_save_failed",
+      message: "草稿暫時無法儲存，請稍後再試。",
+    };
+  }
+}
+
+function toTeacherProfileDraftData(input: TeacherProfileApplicationInput) {
+  return {
+    displayName: input.displayName ?? null,
+    bio: input.bio ?? null,
+    teachingStyle: input.teachingStyle ?? null,
+    experienceYears: input.experienceYears ?? null,
+    certifications: input.certifications ?? [],
+    specialties: input.specialties ?? [],
+    serviceAreas: input.serviceAreas ?? [],
+    teachingFormats: input.teachingFormats ?? [],
+    priceRange: input.priceRange ?? null,
+    profilePhotoUrl: input.profilePhotoUrl ?? null,
+  };
+}
+
+function createStatusBlockedResult(
+  status: TeacherProfileDraftSaveProfile["status"],
+): TeacherProfileDraftSaveResult {
+  if (status === "rejected") {
+    return {
+      ok: false,
+      code: "rejected_profile_policy_not_decided",
+      message: "退回後的草稿編輯規則尚未開放，請等待後續流程。",
+    };
+  }
+
+  if (status === "submitted") {
+    return {
+      ok: false,
+      code: "submitted_profile_cannot_save_draft",
+      message: "申請已送審，目前不能儲存草稿。",
+    };
+  }
+
+  if (status === "approved") {
+    return {
+      ok: false,
+      code: "approved_profile_cannot_save_draft",
+      message: "已通過審核的老師資料需要走正式編輯流程。",
+    };
+  }
+
+  return {
+    ok: false,
+    code: "suspended_profile_cannot_save_draft",
+    message: "帳號目前暫停中，暫時不能儲存老師申請草稿。",
+  };
+}
+
+function isAuthenticationRequiredError(error: unknown): boolean {
+  return error instanceof Error && error.message === "Authentication required";
+}
