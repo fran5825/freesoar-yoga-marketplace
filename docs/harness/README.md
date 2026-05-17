@@ -19,6 +19,7 @@ Free Soar Yoga 是 Free Soar master brand 下的 brand-driven yoga marketplace�
 - `docs/engineering/*`：Auth、Prisma、local development、capability helper、first admin 等工程邊界。
 - `docs/harness/workflow.md`：spec → plan → build → test → review → ship 工作流程。
 - `docs/harness/codex-first-chatgpt-reviewed-control-loop.md`：Codex 先產生 repo-aware draft，ChatGPT 再做治理 review 的 AI 開發控制迴路。
+- `docs/harness/controlled-automation-loop.md`：定義 Codex 在本 repo 可使用的受控自動化層級，包括 Planning-only、Approved Builder、低風險 docs cleanup、human gate、high-risk 降級與 commit / push governance。
 - `docs/harness/risk-based-workflow.md`：依任務風險選擇 Light / Standard / Heavy / Planning-only workflow。
 - `docs/harness/review-packet-spec.md`：定義 triage、planning、builder、final review packet 的必要材料。
 - `docs/harness/chatgpt-governance-review.md`：ChatGPT 作為上層治理 reviewer 時的品牌、scope、風險、verdict 與 prompt 校正準則。
@@ -90,6 +91,7 @@ Free Soar Yoga 是 Free Soar master brand 下的 brand-driven yoga marketplace�
 - `AGENTS.md`
 - `docs/harness/workflow.md`
 - `docs/harness/codex-first-chatgpt-reviewed-control-loop.md`
+- `docs/harness/controlled-automation-loop.md`
 - `docs/harness/risk-based-workflow.md`
 - `docs/harness/review-packet-spec.md`
 - `docs/harness/chatgpt-governance-review.md`
@@ -99,6 +101,8 @@ Free Soar Yoga 是 Free Soar master brand 下的 brand-driven yoga marketplace�
 - `docs/prompts/chatgpt-governance-review-prompt.md`
 - `docs/harness/builder-review-packet-template.md`
 - `docs/harness/ai-runs-current-spec.md`
+
+當任務要從手動協作升級到較自動化流程時，Codex 應先閱讀 `docs/harness/controlled-automation-loop.md`，判斷本輪任務適合的 automation level，並確認是否需要 Planning-only、human gate 或降級處理。
 
 ## 4. 操作 Prompt 與 Run Folder
 
