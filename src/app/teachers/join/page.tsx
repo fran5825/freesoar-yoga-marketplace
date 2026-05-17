@@ -3,6 +3,11 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import {
+  saveTeacherProfileDraftAction,
+  type TeacherProfileDraftSaveActionResult,
+} from "./actions";
+
 type TeacherApplicationFormState = {
   displayName: string;
   bio: string;
@@ -17,6 +22,13 @@ type TeacherApplicationFormState = {
 };
 
 type FormFieldName = keyof TeacherApplicationFormState;
+
+type DraftSaveFeedback = {
+  kind: "success" | "error";
+  message: string;
+  result?: Extract<TeacherProfileDraftSaveActionResult, { ok: false }>;
+  showSignInLink?: boolean;
+};
 
 type TextField = {
   name: FormFieldName;
@@ -35,10 +47,12 @@ const collaborationPrinciples = [
 ];
 
 const nextSteps = [
-  "這個 slice 先讓老師在本頁整理申請內容，資料只保留在目前瀏覽器畫面中。",
-  "後續 draft save 會把草稿儲存流程、登入身分與 server-side validation 分開實作。",
+  "你可以先手動儲存草稿，讓申請內容不必一次完成。",
+  "儲存草稿只會建立或更新 draft，不會送出審核，也不會進入 Admin review。",
   "正式 submit application 會在後續 slice 加上確認步驟，送出後才進入 Admin review。",
 ];
+
+const draftSaveRequestTimeoutMs = 10000;
 
 const initialFormState: TeacherApplicationFormState = {
   displayName: "",
@@ -222,6 +236,48 @@ function getReadinessMessage(fieldName: FormFieldName) {
   return `請補上「${fieldLabels[fieldName]}」，讓申請內容更完整、也更容易被理解。`;
 }
 
+function getDraftSaveErrorMessage(
+  result: Extract<TeacherProfileDraftSaveActionResult, { ok: false }>,
+) {
+  switch (result.code) {
+    case "authentication_required":
+      return "請先登入後再儲存草稿。登入後，你可以回到這裡繼續整理老師申請資料。";
+    case "draft_validation_failed":
+      return "有些草稿資料格式需要調整後才能儲存。請依提示慢慢修正即可。";
+    case "rejected_profile_policy_not_decided":
+      return "退回後的重新整理流程尚未開放。之後會提供清楚的補件與重新送審方式。";
+    case "submitted_profile_cannot_save_draft":
+      return "你的申請已送審，目前先不開放修改草稿。我們會在審核流程中提供下一步說明。";
+    case "approved_profile_cannot_save_draft":
+      return "你的老師資料已通過審核，後續會走正式資料編輯流程。";
+    case "suspended_profile_cannot_save_draft":
+      return "此帳號目前暫時無法儲存老師申請草稿。若需要協助，請聯繫平台管理者。";
+    case "draft_save_failed":
+      return "草稿暫時無法儲存，請稍後再試。你目前畫面中的內容仍會保留。";
+  }
+}
+
+function formatLastSavedAt(value: string) {
+  const savedAt = new Date(value);
+
+  if (Number.isNaN(savedAt.getTime())) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat("zh-TW", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(savedAt);
+}
+
+function createDraftSaveTimeout() {
+  return new Promise<"timeout">((resolve) => {
+    window.setTimeout(() => resolve("timeout"), draftSaveRequestTimeoutMs);
+  });
+}
+
 function RequirementBadge({
   requirement,
 }: {
@@ -246,6 +302,10 @@ export default function TeacherJoinPage() {
   const [formState, setFormState] =
     useState<TeacherApplicationFormState>(initialFormState);
   const [hasCheckedReadiness, setHasCheckedReadiness] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [draftSaveFeedback, setDraftSaveFeedback] =
+    useState<DraftSaveFeedback | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
 
   const missingRequiredFields = useMemo(
     () => getMissingRequiredFields(formState),
@@ -262,6 +322,7 @@ export default function TeacherJoinPage() {
     [formState],
   );
   const isReadyForFutureSubmit = missingRequiredFields.length === 0;
+  const lastSavedAtLabel = lastSavedAt ? formatLastSavedAt(lastSavedAt) : null;
 
   function updateField(fieldName: FormFieldName, value: string) {
     setFormState((currentState) => ({
@@ -272,6 +333,55 @@ export default function TeacherJoinPage() {
 
   function handleReadinessCheck() {
     setHasCheckedReadiness(true);
+  }
+
+  async function handleSaveDraft() {
+    if (isSavingDraft) {
+      return;
+    }
+
+    setIsSavingDraft(true);
+    setDraftSaveFeedback(null);
+
+    try {
+      const result = await Promise.race([
+        saveTeacherProfileDraftAction(formState),
+        createDraftSaveTimeout(),
+      ]);
+
+      if (result === "timeout") {
+        setDraftSaveFeedback({
+          kind: "error",
+          message:
+            "請先登入後再儲存草稿。登入後，你可以回到這裡繼續整理老師申請資料。你目前畫面中的內容仍會保留。",
+          showSignInLink: true,
+        });
+        return;
+      }
+
+      if (result.ok) {
+        setLastSavedAt(result.profile.updatedAt);
+        setDraftSaveFeedback({
+          kind: "success",
+          message:
+            "草稿已儲存。這還不是正式送審，你可以慢慢調整內容。",
+        });
+        return;
+      }
+
+      setDraftSaveFeedback({
+        kind: "error",
+        message: getDraftSaveErrorMessage(result),
+        result,
+      });
+    } catch {
+      setDraftSaveFeedback({
+        kind: "error",
+        message: "草稿暫時無法儲存，請稍後再試。你目前畫面中的內容仍會保留。",
+      });
+    } finally {
+      setIsSavingDraft(false);
+    }
   }
 
   return (
@@ -288,12 +398,12 @@ export default function TeacherJoinPage() {
             Free Soar Yoga 重視老師的專業、風格與教學界線。我們希望讓團主的需求被清楚整理，也讓老師能被正確理解，回應真正適合自己的團課機會。
           </p>
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-            <Link
+            <a
               className="rounded bg-gray-950 px-5 py-3 text-center text-sm font-medium text-white"
               href="/sign-in"
             >
               登入並準備加入
-            </Link>
+            </a>
             <Link
               className="rounded border border-gray-300 px-5 py-3 text-center text-sm font-medium text-gray-900"
               href="/"
@@ -302,7 +412,7 @@ export default function TeacherJoinPage() {
             </Link>
           </div>
           <p className="mt-4 text-sm leading-6 text-gray-500">
-            下方表單目前是 local-only 準備區，不會儲存資料，也不會送出審核；正式 draft save 與 submit application 會在後續 slice 實作。
+            下方表單可手動儲存草稿，但不會正式送審，也不會進入 Admin review；正式 submit application 會在後續 slice 實作。
           </p>
         </div>
 
@@ -345,7 +455,7 @@ export default function TeacherJoinPage() {
           </div>
           <div className="text-sm leading-6 text-gray-600">
             <p>
-              你可以先在這裡整理 Phase 1 TeacherProfile 需要的內容。這個表單只在目前畫面中互動，不會儲存資料、不會送出審核，也不會連接登入、資料庫或 Admin review。
+              你可以先在這裡整理 Phase 1 TeacherProfile 需要的內容，並在登入後手動儲存草稿。儲存草稿只會建立或更新 draft，不會送出審核，也不會進入 Admin review。
             </p>
             <p className="mt-2">
               按下「檢查準備狀態」只會顯示溫和提醒，幫助你看見正式送審前還可以補充的地方。
@@ -461,8 +571,52 @@ export default function TeacherJoinPage() {
             <div>
               <h3 className="text-lg font-medium text-gray-950">準備狀態</h3>
               <p className="mt-2 text-sm leading-6 text-gray-600">
-                這不是正式送出，也不會建立 draft。它只是協助你用低壓方式檢查 Phase 1 送審必填欄位是否已有內容。
+                「檢查準備狀態」不是正式送出；「儲存草稿」也不會送審。這裡只是協助你用低壓方式整理 Phase 1 申請內容。
               </p>
+              <div aria-live="polite">
+                {isSavingDraft ? (
+                  <p className="mt-4 rounded border border-sky-100 bg-sky-50 px-4 py-3 text-sm leading-6 text-sky-900">
+                    正在儲存草稿...
+                  </p>
+                ) : null}
+
+                {draftSaveFeedback ? (
+                  <div
+                    className={
+                      draftSaveFeedback.kind === "success"
+                        ? "mt-4 rounded border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
+                        : "mt-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
+                    }
+                  >
+                    <p>{draftSaveFeedback.message}</p>
+                    {draftSaveFeedback.kind === "success" &&
+                    lastSavedAtLabel ? (
+                      <p className="mt-2">上次儲存：{lastSavedAtLabel}</p>
+                    ) : null}
+                    {draftSaveFeedback.result?.code ===
+                      "authentication_required" ||
+                    draftSaveFeedback.showSignInLink ? (
+                      <a
+                        className="mt-2 inline-flex font-medium text-gray-950 underline underline-offset-4"
+                        href="/sign-in"
+                      >
+                        前往登入
+                      </a>
+                    ) : null}
+                    {draftSaveFeedback.result?.validationErrors?.length ? (
+                      <ul className="mt-2 list-disc space-y-1 pl-5">
+                        {draftSaveFeedback.result.validationErrors.map(
+                          (error) => (
+                            <li key={`${error.field}-${error.code}`}>
+                              {error.message}
+                            </li>
+                          ),
+                        )}
+                      </ul>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
               {hasCheckedReadiness ? (
                 <div className="mt-4 rounded border border-sky-100 bg-sky-50 px-4 py-3 text-sm leading-6 text-gray-700">
                   {isReadyForFutureSubmit ? (
@@ -490,12 +644,22 @@ export default function TeacherJoinPage() {
               ) : null}
             </div>
 
-            <button
-              className="w-full rounded bg-gray-950 px-5 py-3 text-center text-sm font-medium text-white md:w-auto"
-              type="submit"
-            >
-              檢查準備狀態
-            </button>
+            <div className="flex w-full flex-col gap-3 md:w-auto">
+              <button
+                className="w-full rounded bg-gray-950 px-5 py-3 text-center text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-600 md:w-auto"
+                disabled={isSavingDraft}
+                onClick={handleSaveDraft}
+                type="button"
+              >
+                {isSavingDraft ? "正在儲存..." : "儲存草稿"}
+              </button>
+              <button
+                className="w-full rounded border border-gray-300 px-5 py-3 text-center text-sm font-medium text-gray-900 md:w-auto"
+                type="submit"
+              >
+                檢查準備狀態
+              </button>
+            </div>
           </div>
         </form>
       </section>
