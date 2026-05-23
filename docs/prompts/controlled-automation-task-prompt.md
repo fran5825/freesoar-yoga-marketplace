@@ -202,6 +202,30 @@ Level 1 不得產生 diff，不能宣稱完成實作，也不能要求 final app
 
 只有在 RD / product owner / ChatGPT governance review 明確 approve 後，才能進 Level 2 Builder。
 
+### Level 2 Candidate Shortcut
+
+如果 RD 在任務啟動時已明確提供：
+
+- allowed files
+- forbidden files
+- required checks
+- explicit non-goals / 禁止事項
+- no commit / no push 限制
+
+Codex 可以將該任務視為 Level 2 candidate。
+
+但即使是 Level 2 candidate，Codex 仍必須先回報：
+
+- task classification
+- automation level classification
+- risk level
+- human gate 是否需要
+- allowed files / forbidden files 摘要
+
+確認沒有 high-risk 未授權事項後，才可開始修改檔案。
+
+如果任務牽涉 Auth / Prisma / DB mutation / permissions / state machine / public UX change / payment / admin review / package / env / deploy / CI，仍必須停下來等 human gate，除非 approved prompt 已明確授權該範圍。
+
 Builder 必須：
 
 - 只修改 approved files。

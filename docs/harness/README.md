@@ -23,6 +23,7 @@ Free Soar Yoga 是 Free Soar master brand 下的 brand-driven yoga marketplace�
 - `docs/harness/risk-based-workflow.md`：依任務風險選擇 Light / Standard / Heavy / Planning-only workflow。
 - `docs/harness/review-packet-spec.md`：定義 triage、planning、builder、final review packet 的必要材料。
 - `docs/harness/chatgpt-governance-review.md`：ChatGPT 作為上層治理 reviewer 時的品牌、scope、風險、verdict 與 prompt 校正準則。
+- `docs/prompts/controlled-automation-task-prompt.md`：通用任務啟動 prompt，讓 RD 用短任務描述要求 Codex 依 Controlled Automation Loop 自行判斷 automation level、human gate、Planning-only 或 Approved Builder 流程。
 - `docs/prompts/codex-repo-aware-triage-prompt.md`：任務開始前讓 Codex 先做 repo-aware triage 的操作 prompt。
 - `docs/prompts/chatgpt-governance-review-prompt.md`：讓 ChatGPT review Codex triage / planning draft 並產出治理 verdict 的操作 prompt。
 - `docs/harness/builder-review-packet-template.md`：Codex Builder 完成後交給 ChatGPT final review 的回報格式。
@@ -109,6 +110,7 @@ Free Soar Yoga 是 Free Soar master brand 下的 brand-driven yoga marketplace�
 本 Harness 可使用下列最小操作文件支援手動 ChatGPT ↔ Codex App 流程：
 
 - `docs/prompts/codex-repo-aware-triage-prompt.md`：讓 Codex 在不改檔的前提下先讀 repo、判斷任務類型、風險、workflow mode、human gate 與 Builder prompt candidate。
+- `docs/prompts/controlled-automation-task-prompt.md`：通用任務啟動 prompt；當 RD 只提供短任務描述時，Codex 應先做 repo status check、task classification 與 automation level decision，再決定本輪只能 Planning-only，或是否可依明確授權進入 Approved Builder。
 - `docs/prompts/chatgpt-governance-review-prompt.md`：讓 ChatGPT review Codex triage / planning draft，檢查品牌精神、founder intent、low-pressure UX、MVP slicing、scope creep 與風險分類。
 - `docs/harness/builder-review-packet-template.md`：定義 Builder 完成後必須提供的 task request、approved prompt、changed files、git diff、checks result、summary、risk notes 與 unfinished items。
 - `docs/harness/ai-runs-current-spec.md`：定義 `.ai-runs/current/` local-only 暫存資料夾，用來保存單次任務的手動協作紀錄。
