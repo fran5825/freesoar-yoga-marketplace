@@ -5,6 +5,7 @@ import {
   type TeacherProfileApplicationInput,
   type TeacherProfileValidationError,
   validateTeacherProfileDraft,
+  validateTeacherProfileSubmit,
 } from "./validation";
 
 export type TeacherProfileDraftSaveProfile = {
@@ -42,6 +43,46 @@ export type TeacherProfileDraftSaveResult =
   | {
       ok: false;
       code: TeacherProfileDraftSaveErrorCode;
+      message: string;
+      validationErrors?: TeacherProfileValidationError[];
+    };
+
+export type TeacherProfileSubmitProfile = {
+  id: string;
+  userId: string;
+  displayName: string | null;
+  bio: string | null;
+  teachingStyle: string | null;
+  experienceYears: number | null;
+  certifications: string[];
+  specialties: string[];
+  serviceAreas: string[];
+  teachingFormats: string[];
+  priceRange: string | null;
+  profilePhotoUrl: string | null;
+  status: "draft" | "submitted" | "approved" | "rejected" | "suspended";
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type TeacherProfileSubmitErrorCode =
+  | "authentication_required"
+  | "teacher_profile_draft_required"
+  | "submit_validation_failed"
+  | "rejected_profile_policy_not_decided"
+  | "submitted_profile_cannot_submit_again"
+  | "approved_profile_cannot_submit_again"
+  | "suspended_profile_cannot_submit"
+  | "teacher_profile_submit_failed";
+
+export type TeacherProfileSubmitResult =
+  | {
+      ok: true;
+      profile: TeacherProfileSubmitProfile;
+    }
+  | {
+      ok: false;
+      code: TeacherProfileSubmitErrorCode;
       message: string;
       validationErrors?: TeacherProfileValidationError[];
     };
@@ -132,6 +173,69 @@ export async function saveOwnTeacherProfileDraft(
   }
 }
 
+export async function submitOwnTeacherProfileApplication(
+  input: TeacherProfileApplicationInput,
+): Promise<TeacherProfileSubmitResult> {
+  try {
+    const currentUser = await requireUser();
+    const existingProfile = await prisma.teacherProfile.findUnique({
+      where: { userId: currentUser.id },
+      select: teacherProfileDraftSelect,
+    });
+
+    if (!existingProfile) {
+      return {
+        ok: false,
+        code: "teacher_profile_draft_required",
+        message: "請先建立老師申請草稿後再送出審核。",
+      };
+    }
+
+    if (existingProfile.status !== "draft") {
+      return createSubmitStatusBlockedResult(existingProfile.status);
+    }
+
+    const validation = validateTeacherProfileSubmit(input);
+
+    if (!validation.valid) {
+      return {
+        ok: false,
+        code: "submit_validation_failed",
+        message: "送出審核前，請先補齊必填的老師申請資料。",
+        validationErrors: validation.errors,
+      };
+    }
+
+    const profile = await prisma.teacherProfile.update({
+      where: { userId: currentUser.id },
+      data: {
+        ...toTeacherProfileDraftData(input),
+        status: "submitted",
+      },
+      select: teacherProfileDraftSelect,
+    });
+
+    return {
+      ok: true,
+      profile,
+    };
+  } catch (error) {
+    if (isAuthenticationRequiredError(error)) {
+      return {
+        ok: false,
+        code: "authentication_required",
+        message: "請先登入後再送出老師申請。",
+      };
+    }
+
+    return {
+      ok: false,
+      code: "teacher_profile_submit_failed",
+      message: "老師申請暫時無法送出，請稍後再試。",
+    };
+  }
+}
+
 function toTeacherProfileDraftData(input: TeacherProfileApplicationInput) {
   return {
     displayName: input.displayName ?? null,
@@ -178,6 +282,40 @@ function createStatusBlockedResult(
     ok: false,
     code: "suspended_profile_cannot_save_draft",
     message: "帳號目前暫停中，暫時不能儲存老師申請草稿。",
+  };
+}
+
+function createSubmitStatusBlockedResult(
+  status: TeacherProfileSubmitProfile["status"],
+): TeacherProfileSubmitResult {
+  if (status === "rejected") {
+    return {
+      ok: false,
+      code: "rejected_profile_policy_not_decided",
+      message: "退回後重新送審的規則尚未開放，請等待後續流程。",
+    };
+  }
+
+  if (status === "submitted") {
+    return {
+      ok: false,
+      code: "submitted_profile_cannot_submit_again",
+      message: "老師申請已送審，不能重複送出。",
+    };
+  }
+
+  if (status === "approved") {
+    return {
+      ok: false,
+      code: "approved_profile_cannot_submit_again",
+      message: "已通過審核的老師資料不能重新送出申請。",
+    };
+  }
+
+  return {
+    ok: false,
+    code: "suspended_profile_cannot_submit",
+    message: "帳號目前暫停中，暫時不能送出老師申請。",
   };
 }
 
