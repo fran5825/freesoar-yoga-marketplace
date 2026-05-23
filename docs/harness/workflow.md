@@ -101,6 +101,8 @@ Before implementation, Builder should follow the approved Builder prompt. If `.a
 .ai-runs/current/03-approved-builder-prompt.md
 ```
 
+Reusable run folder templates can be copied from `docs/harness/ai-runs-current-templates/`; the filled `.ai-runs/current/` folder remains local-only and should not be committed.
+
 ## 5. Test
 
 Run appropriate tests:

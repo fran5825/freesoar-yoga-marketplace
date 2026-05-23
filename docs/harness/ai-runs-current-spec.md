@@ -6,6 +6,14 @@
 
 目前不接 automation、不接 Hermes、不接 Telegram、不要求機器讀寫。
 
+Reusable templates 的正式來源是：
+
+```txt
+docs/harness/ai-runs-current-templates/
+```
+
+每次任務可以手動複製 templates 到 `.ai-runs/current/` 後填寫；`.ai-runs/current/` 本身不應 commit。
+
 ---
 
 ## 目標
@@ -13,12 +21,13 @@
 `.ai-runs/current/` 的目標是：
 
 1. 保存本次任務的原始需求
-2. 保存 Codex triage 結果
+2. 保存 Codex planning report
 3. 保存 ChatGPT governance review
 4. 保存 approved Builder prompt
 5. 保存 Builder review packet
 6. 保存 ChatGPT final review
-7. 讓人類可以回看一次 AI 協作任務是如何被判斷、執行與審核的
+7. 保存 human decision record
+8. 讓人類可以回看一次 AI 協作任務是如何被判斷、執行與審核的
 
 ---
 
@@ -36,12 +45,13 @@
 - 不放 token / key / credential
 - 不放個資或客戶敏感資料
 - 不放大型 build output
+- 不 commit `.ai-runs/current/`
 
 ---
 
 ## 建議 `.gitignore`
 
-建議在 `.gitignore` 加入：
+`.ai-runs/current/` 必須維持 local-only。Repo 應在 `.gitignore` 保留：
 
 ```txt
 .ai-runs/
@@ -61,13 +71,32 @@ docs/harness/cases/
 ```txt
 .ai-runs/current/
   00-task-request.md
-  01-codex-triage.md
+  01-planning-report.md
   02-chatgpt-governance-review.md
   03-approved-builder-prompt.md
   04-builder-review-packet.md
   05-chatgpt-final-review.md
   06-human-decision-record.md
 ```
+
+---
+
+## Reusable Template Source
+
+正式可 commit 的模板檔放在：
+
+```txt
+docs/harness/ai-runs-current-templates/
+  00-task-request.md
+  01-planning-report.md
+  02-chatgpt-governance-review.md
+  03-approved-builder-prompt.md
+  04-builder-review-packet.md
+  05-chatgpt-final-review.md
+  06-human-decision-record.md
+```
+
+建議每次開始新任務時，先清空或封存 local `.ai-runs/current/`，再手動複製以上模板到 `.ai-runs/current/` 填寫。
 
 ---
 
@@ -104,14 +133,14 @@ YYYY-MM-DD
 
 ---
 
-### `01-codex-triage.md`
+### `01-planning-report.md`
 
-保存 Codex repo-aware triage 結果。
+保存 Codex 依 controlled automation 流程產出的 Planning Report。
 
 來源：
 
 ```txt
-docs/prompts/codex-repo-aware-triage-prompt.md
+docs/prompts/controlled-automation-task-prompt.md
 ```
 
 ---
@@ -223,8 +252,8 @@ Verdict:
 1. 人類寫任務
    -> .ai-runs/current/00-task-request.md
 
-2. Codex 做 repo-aware triage
-   -> .ai-runs/current/01-codex-triage.md
+2. Codex 做 Planning Report
+   -> .ai-runs/current/01-planning-report.md
 
 3. ChatGPT 做 governance review
    -> .ai-runs/current/02-chatgpt-governance-review.md

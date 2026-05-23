@@ -28,6 +28,7 @@ Free Soar Yoga 是 Free Soar master brand 下的 brand-driven yoga marketplace�
 - `docs/prompts/chatgpt-governance-review-prompt.md`：讓 ChatGPT review Codex triage / planning draft 並產出治理 verdict 的操作 prompt。
 - `docs/harness/builder-review-packet-template.md`：Codex Builder 完成後交給 ChatGPT final review 的回報格式。
 - `docs/harness/ai-runs-current-spec.md`：定義 `.ai-runs/current/` local-only run folder 的最小規格。
+- `docs/harness/ai-runs-current-templates/`：`.ai-runs/current/` 的可複製模板來源，正式 tracked templates 放在這裡，local run records 仍放在 ignored `.ai-runs/current/`。
 - `docs/harness/codex-working-protocol.md`：Codex 在本 repo 的實際工作方式。
 - `docs/harness/codex-self-review-checklist.md`：Codex 修改後的自我檢查。
 - `docs/harness/review-checklist.md`：產品、品牌、工程、RWD、app-readiness review。
@@ -114,6 +115,7 @@ Free Soar Yoga 是 Free Soar master brand 下的 brand-driven yoga marketplace�
 - `docs/prompts/chatgpt-governance-review-prompt.md`：讓 ChatGPT review Codex triage / planning draft，檢查品牌精神、founder intent、low-pressure UX、MVP slicing、scope creep 與風險分類。
 - `docs/harness/builder-review-packet-template.md`：定義 Builder 完成後必須提供的 task request、approved prompt、changed files、git diff、checks result、summary、risk notes 與 unfinished items。
 - `docs/harness/ai-runs-current-spec.md`：定義 `.ai-runs/current/` local-only 暫存資料夾，用來保存單次任務的手動協作紀錄。
+- `docs/harness/ai-runs-current-templates/`：提供可複製到 `.ai-runs/current/` 的 task、planning report、governance review、approved Builder prompt、Builder review packet、final review 與 human decision record 模板。
 
 `.ai-runs/current/` 不屬於正式 docs，也不應 commit；可用來暫存本次任務的 triage、governance review、approved Builder prompt、Builder review packet、final review 與 human decision record。
 
