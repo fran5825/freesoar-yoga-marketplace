@@ -5,7 +5,9 @@ import { useMemo, useState } from "react";
 
 import {
   saveTeacherProfileDraftAction,
+  submitTeacherProfileApplicationAction,
   type TeacherProfileDraftSaveActionResult,
+  type TeacherProfileSubmitActionResult,
 } from "./actions";
 
 type TeacherApplicationFormState = {
@@ -30,6 +32,13 @@ type DraftSaveFeedback = {
   showSignInLink?: boolean;
 };
 
+type SubmitFeedback = {
+  kind: "success" | "error";
+  message: string;
+  result?: Extract<TeacherProfileSubmitActionResult, { ok: false }>;
+  showSignInLink?: boolean;
+};
+
 type TextField = {
   name: FormFieldName;
   label: string;
@@ -49,7 +58,7 @@ const collaborationPrinciples = [
 const nextSteps = [
   "你可以先手動儲存草稿，讓申請內容不必一次完成。",
   "儲存草稿只會建立或更新 draft，不會送出審核，也不會進入 Admin review。",
-  "正式 submit application 會在後續 slice 加上確認步驟，送出後才進入 Admin review。",
+  "準備好後，可以經過二次確認正式送出審核，接下來會等待平台確認。",
 ];
 
 const draftSaveRequestTimeoutMs = 10000;
@@ -257,6 +266,29 @@ function getDraftSaveErrorMessage(
   }
 }
 
+function getSubmitErrorMessage(
+  result: Extract<TeacherProfileSubmitActionResult, { ok: false }>,
+) {
+  switch (result.code) {
+    case "authentication_required":
+      return "請先登入後再送出老師申請。登入後，你可以回到這裡確認內容並送出審核。";
+    case "teacher_profile_draft_required":
+      return "請先儲存老師申請草稿，再送出審核。這能讓平台確認你的申請資料已建立。";
+    case "submit_validation_failed":
+      return "送出審核前，還需要補齊以下欄位。你可以慢慢調整，畫面中的內容會保留。";
+    case "rejected_profile_policy_not_decided":
+      return "退回後重新送審的規則尚未開放。之後會提供清楚的補件與重新送審方式。";
+    case "submitted_profile_cannot_submit_again":
+      return "老師申請已送審，不能重複送出。接下來請等待平台確認。";
+    case "approved_profile_cannot_submit_again":
+      return "你的老師資料已通過審核，不需要重新送出申請。後續資料調整會走正式編輯流程。";
+    case "suspended_profile_cannot_submit":
+      return "此帳號目前暫時無法送出老師申請。若需要協助，請聯繫平台管理者。";
+    case "teacher_profile_submit_failed":
+      return "老師申請暫時無法送出，請稍後再試。你目前畫面中的內容仍會保留。";
+  }
+}
+
 function formatLastSavedAt(value: string) {
   const savedAt = new Date(value);
 
@@ -305,6 +337,13 @@ export default function TeacherJoinPage() {
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [draftSaveFeedback, setDraftSaveFeedback] =
     useState<DraftSaveFeedback | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isConfirmingSubmit, setIsConfirmingSubmit] = useState(false);
+  const [submitFeedback, setSubmitFeedback] = useState<SubmitFeedback | null>(
+    null,
+  );
+  const [hasSubmittedApplication, setHasSubmittedApplication] =
+    useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
 
   const missingRequiredFields = useMemo(
@@ -323,12 +362,15 @@ export default function TeacherJoinPage() {
   );
   const isReadyForFutureSubmit = missingRequiredFields.length === 0;
   const lastSavedAtLabel = lastSavedAt ? formatLastSavedAt(lastSavedAt) : null;
+  const isDraftSaveDisabled =
+    isSavingDraft || isSubmitting || hasSubmittedApplication;
 
   function updateField(fieldName: FormFieldName, value: string) {
     setFormState((currentState) => ({
       ...currentState,
       [fieldName]: value,
     }));
+    setIsConfirmingSubmit(false);
   }
 
   function handleReadinessCheck() {
@@ -336,7 +378,7 @@ export default function TeacherJoinPage() {
   }
 
   async function handleSaveDraft() {
-    if (isSavingDraft) {
+    if (isDraftSaveDisabled) {
       return;
     }
 
@@ -384,6 +426,69 @@ export default function TeacherJoinPage() {
     }
   }
 
+  function handleOpenSubmitConfirmation() {
+    if (isSubmitting || hasSubmittedApplication) {
+      return;
+    }
+
+    setHasCheckedReadiness(true);
+    setSubmitFeedback(null);
+    setIsConfirmingSubmit(true);
+  }
+
+  function handleCancelSubmitConfirmation() {
+    if (isSubmitting) {
+      return;
+    }
+
+    setIsConfirmingSubmit(false);
+  }
+
+  async function handleSubmitApplication() {
+    if (isSubmitting || hasSubmittedApplication) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitFeedback(null);
+
+    try {
+      const result = await submitTeacherProfileApplicationAction(formState);
+
+      if (result.ok) {
+        setHasSubmittedApplication(true);
+        setIsConfirmingSubmit(false);
+        setLastSavedAt(result.profile.updatedAt);
+        setDraftSaveFeedback(null);
+        setSubmitFeedback({
+          kind: "success",
+          message:
+            "已送出審核，接下來會等待平台確認。審核期間暫時不需要再儲存草稿。",
+        });
+        return;
+      }
+
+      if (result.code === "submit_validation_failed") {
+        setHasCheckedReadiness(true);
+      }
+
+      setSubmitFeedback({
+        kind: "error",
+        message: getSubmitErrorMessage(result),
+        result,
+        showSignInLink: result.code === "authentication_required",
+      });
+    } catch {
+      setSubmitFeedback({
+        kind: "error",
+        message:
+          "老師申請暫時無法送出，請稍後再試。你目前畫面中的內容仍會保留。",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-10 px-5 py-10 sm:px-8 sm:py-14">
       <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
@@ -412,7 +517,7 @@ export default function TeacherJoinPage() {
             </Link>
           </div>
           <p className="mt-4 text-sm leading-6 text-gray-500">
-            下方表單可手動儲存草稿，但不會正式送審，也不會進入 Admin review；正式 submit application 會在後續 slice 實作。
+            下方表單可手動儲存草稿；準備好後，請經過二次確認再正式送出審核。
           </p>
         </div>
 
@@ -458,7 +563,7 @@ export default function TeacherJoinPage() {
               你可以先在這裡整理 Phase 1 TeacherProfile 需要的內容，並在登入後手動儲存草稿。儲存草稿只會建立或更新 draft，不會送出審核，也不會進入 Admin review。
             </p>
             <p className="mt-2">
-              按下「檢查準備狀態」只會顯示溫和提醒，幫助你看見正式送審前還可以補充的地方。
+              按下「檢查準備狀態」只會顯示溫和提醒；正式送出審核前，系統會再請你確認一次。
             </p>
           </div>
         </div>
@@ -574,6 +679,12 @@ export default function TeacherJoinPage() {
                 「檢查準備狀態」不是正式送出；「儲存草稿」也不會送審。這裡只是協助你用低壓方式整理 Phase 1 申請內容。
               </p>
               <div aria-live="polite">
+                {hasSubmittedApplication ? (
+                  <p className="mt-4 rounded border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900">
+                    申請已送審，目前暫時不需要再儲存草稿。接下來請等待平台確認。
+                  </p>
+                ) : null}
+
                 {isSavingDraft ? (
                   <p className="mt-4 rounded border border-sky-100 bg-sky-50 px-4 py-3 text-sm leading-6 text-sky-900">
                     正在儲存草稿...
@@ -616,6 +727,41 @@ export default function TeacherJoinPage() {
                     ) : null}
                   </div>
                 ) : null}
+
+                {isSubmitting ? (
+                  <p className="mt-4 rounded border border-sky-100 bg-sky-50 px-4 py-3 text-sm leading-6 text-sky-900">
+                    正在送出審核...
+                  </p>
+                ) : null}
+
+                {submitFeedback ? (
+                  <div
+                    className={
+                      submitFeedback.kind === "success"
+                        ? "mt-4 rounded border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
+                        : "mt-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
+                    }
+                  >
+                    <p>{submitFeedback.message}</p>
+                    {submitFeedback.showSignInLink ? (
+                      <a
+                        className="mt-2 inline-flex font-medium text-gray-950 underline underline-offset-4"
+                        href="/sign-in"
+                      >
+                        前往登入
+                      </a>
+                    ) : null}
+                    {submitFeedback.result?.validationErrors?.length ? (
+                      <ul className="mt-2 list-disc space-y-1 pl-5">
+                        {submitFeedback.result.validationErrors.map((error) => (
+                          <li key={`${error.field}-${error.code}`}>
+                            {error.message}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
               {hasCheckedReadiness ? (
                 <div className="mt-4 rounded border border-sky-100 bg-sky-50 px-4 py-3 text-sm leading-6 text-gray-700">
@@ -642,22 +788,65 @@ export default function TeacherJoinPage() {
                   </p>
                 </div>
               ) : null}
+
+              {isConfirmingSubmit ? (
+                <div className="mt-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950">
+                  <p className="font-medium text-gray-950">確認送出審核</p>
+                  <p className="mt-2">
+                    送出後，這份老師申請會進入平台審核。審核期間暫時不需要再儲存草稿；請確認主要資料已準備好，再送出。
+                  </p>
+                  <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                    <button
+                      className="rounded bg-gray-950 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-600"
+                      disabled={isSubmitting}
+                      onClick={handleSubmitApplication}
+                      type="button"
+                    >
+                      {isSubmitting ? "正在送出..." : "確認送出審核"}
+                    </button>
+                    <button
+                      className="rounded border border-amber-300 bg-white px-4 py-2 text-sm font-medium text-gray-900 disabled:cursor-not-allowed disabled:text-gray-500"
+                      disabled={isSubmitting}
+                      onClick={handleCancelSubmitConfirmation}
+                      type="button"
+                    >
+                      先回來調整
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <div className="flex w-full flex-col gap-3 md:w-auto">
               <button
                 className="w-full rounded bg-gray-950 px-5 py-3 text-center text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-600 md:w-auto"
-                disabled={isSavingDraft}
+                disabled={isDraftSaveDisabled}
                 onClick={handleSaveDraft}
                 type="button"
               >
-                {isSavingDraft ? "正在儲存..." : "儲存草稿"}
+                {hasSubmittedApplication
+                  ? "申請已送審"
+                  : isSavingDraft
+                    ? "正在儲存..."
+                    : "儲存草稿"}
               </button>
               <button
                 className="w-full rounded border border-gray-300 px-5 py-3 text-center text-sm font-medium text-gray-900 md:w-auto"
                 type="submit"
               >
                 檢查準備狀態
+              </button>
+              <button
+                className="w-full rounded border border-sky-700 bg-sky-700 px-5 py-3 text-center text-sm font-medium text-white disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-300 disabled:text-gray-600 md:w-auto"
+                disabled={isSubmitting || hasSubmittedApplication}
+                onClick={handleOpenSubmitConfirmation}
+                type="button"
+              >
+                {isSubmitting
+                  ? "正在送出..."
+                  : hasSubmittedApplication
+                    ? "已送出審核"
+                    : "送出審核"}
               </button>
             </div>
           </div>
