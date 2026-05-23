@@ -35,6 +35,7 @@ Codex 收到後，必須依本文件執行，不可直接假設可以修改檔�
 - 完成 Builder 後提供完整 diff 與 Builder Review Packet。
 - 不自動 commit。
 - 不自動 push。
+- 所有回應、Planning Report、Builder Prompt Draft、Builder Review Packet 與 human decision questions 必須以繁體中文為主；工具名稱、檔案路徑、程式指令、code block、type name、function name、error code 可保留英文。
 
 ---
 
@@ -291,6 +292,33 @@ human gate 結果應明確記錄為：
 
 ## 11. Output Formats
 
+### Output Language Rule
+
+除非 RD 明確要求其他語言，Codex 依本文件產出的所有內容必須使用繁體中文，包括：
+
+- task classification
+- automation level classification
+- Planning Report
+- Builder Prompt Draft
+- Builder Review Packet
+- risk analysis
+- verification plan
+- human decision questions
+- summary / self-review
+
+以下內容可以保留英文原文：
+
+- 檔案路徑
+- 程式指令
+- code block
+- type / interface / function / variable name
+- error code
+- package name
+- framework / library 名稱
+- git / terminal output
+
+不要要求把 code、command、file path、type name、function name、error code 翻成中文。
+
 ### Planning Report Format
 
 ```text
@@ -393,6 +421,7 @@ git diff --no-index -- /dev/null path/to/new-file.md
 - 不可自行新增 full payment / refund automation。
 - 不可自行新增 native mobile app。
 - 不可移除 Free Soar brand context。
+- Codex 依本文件產出的 prompt、report、review packet 與 human decision questions 必須以繁體中文為主；技術名詞、檔案路徑、指令與程式碼可保留英文。
 
 ---
 
