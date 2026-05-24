@@ -1,6 +1,7 @@
-import { requireUser } from "@/lib/auth/session";
+import { getCurrentUser, requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
+import type { TeacherProfileStatus } from "./state";
 import {
   type TeacherProfileApplicationInput,
   type TeacherProfileValidationError,
@@ -21,7 +22,7 @@ export type TeacherProfileDraftSaveProfile = {
   teachingFormats: string[];
   priceRange: string | null;
   profilePhotoUrl: string | null;
-  status: "draft" | "submitted" | "approved" | "rejected" | "suspended";
+  status: TeacherProfileStatus;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -60,7 +61,7 @@ export type TeacherProfileSubmitProfile = {
   teachingFormats: string[];
   priceRange: string | null;
   profilePhotoUrl: string | null;
-  status: "draft" | "submitted" | "approved" | "rejected" | "suspended";
+  status: TeacherProfileStatus;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -87,6 +88,24 @@ export type TeacherProfileSubmitResult =
       validationErrors?: TeacherProfileValidationError[];
     };
 
+export type TeacherProfileApplicationSnapshot = {
+  id: string;
+  userId: string;
+  displayName: string | null;
+  bio: string | null;
+  teachingStyle: string | null;
+  experienceYears: number | null;
+  certifications: string[];
+  specialties: string[];
+  serviceAreas: string[];
+  teachingFormats: string[];
+  priceRange: string | null;
+  profilePhotoUrl: string | null;
+  status: TeacherProfileStatus;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 const teacherProfileDraftSelect = {
   id: true,
   userId: true,
@@ -104,6 +123,19 @@ const teacherProfileDraftSelect = {
   createdAt: true,
   updatedAt: true,
 } as const;
+
+export async function getOwnTeacherProfileApplicationSnapshot(): Promise<TeacherProfileApplicationSnapshot | null> {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser) {
+    return null;
+  }
+
+  return prisma.teacherProfile.findUnique({
+    where: { userId: currentUser.id },
+    select: teacherProfileDraftSelect,
+  });
+}
 
 export async function saveOwnTeacherProfileDraft(
   input: TeacherProfileApplicationInput,

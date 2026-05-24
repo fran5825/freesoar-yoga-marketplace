@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
+  getInitialTeacherProfileApplicationSnapshotAction,
   saveTeacherProfileDraftAction,
   submitTeacherProfileApplicationAction,
+  type TeacherProfileApplicationSnapshotActionProfile,
   type TeacherProfileDraftSaveActionResult,
   type TeacherProfileSubmitActionResult,
 } from "./actions";
@@ -24,6 +26,8 @@ type TeacherApplicationFormState = {
 };
 
 type FormFieldName = keyof TeacherApplicationFormState;
+type HydratedTeacherProfileStatus =
+  TeacherProfileApplicationSnapshotActionProfile["status"];
 
 type DraftSaveFeedback = {
   kind: "success" | "error";
@@ -74,6 +78,40 @@ const initialFormState: TeacherApplicationFormState = {
   teachingFormats: "",
   priceRange: "",
   profilePhotoUrl: "",
+};
+
+const mutationBlockedStatusLabels: Record<
+  Exclude<HydratedTeacherProfileStatus, "draft">,
+  {
+    notice: string;
+    saveButton: string;
+    submitButton: string;
+  }
+> = {
+  submitted: {
+    notice:
+      "已送出審核，接下來會等待平台確認。審核期間暫時不需要再儲存草稿或重複送出。",
+    saveButton: "已送出審核",
+    submitButton: "已送出審核",
+  },
+  approved: {
+    notice:
+      "老師資料已通過審核，後續資料調整會走正式編輯流程。此加入表單暫時不開放更新或重新送出。",
+    saveButton: "已通過審核",
+    submitButton: "已通過審核",
+  },
+  rejected: {
+    notice:
+      "退回後重新整理與重新送審規則尚未開放。此階段先不提供重新送出或草稿更新。",
+    saveButton: "退回規則未開放",
+    submitButton: "暫不開放重新送審",
+  },
+  suspended: {
+    notice:
+      "帳號目前暫停中，暫時不能更新或送出老師申請。若需要協助，請聯繫平台管理者。",
+    saveButton: "帳號暫停中",
+    submitButton: "帳號暫停中",
+  },
 };
 
 const requiredFields: FormFieldName[] = [
@@ -310,6 +348,26 @@ function createDraftSaveTimeout() {
   });
 }
 
+function toTeacherApplicationFormState(
+  profile: TeacherProfileApplicationSnapshotActionProfile,
+): TeacherApplicationFormState {
+  return {
+    displayName: profile.displayName ?? "",
+    bio: profile.bio ?? "",
+    teachingStyle: profile.teachingStyle ?? "",
+    experienceYears:
+      typeof profile.experienceYears === "number"
+        ? String(profile.experienceYears)
+        : "",
+    certifications: profile.certifications.join("\n"),
+    specialties: profile.specialties.join("\n"),
+    serviceAreas: profile.serviceAreas.join("\n"),
+    teachingFormats: profile.teachingFormats.join("\n"),
+    priceRange: profile.priceRange ?? "",
+    profilePhotoUrl: profile.profilePhotoUrl ?? "",
+  };
+}
+
 function RequirementBadge({
   requirement,
 }: {
@@ -345,6 +403,32 @@ export default function TeacherJoinPage() {
   const [hasSubmittedApplication, setHasSubmittedApplication] =
     useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [hydratedProfileStatus, setHydratedProfileStatus] =
+    useState<HydratedTeacherProfileStatus | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function hydrateOwnTeacherProfile() {
+      const profile =
+        await getInitialTeacherProfileApplicationSnapshotAction();
+
+      if (!isMounted || !profile) {
+        return;
+      }
+
+      setFormState(toTeacherApplicationFormState(profile));
+      setHydratedProfileStatus(profile.status);
+      setLastSavedAt(profile.updatedAt);
+      setHasSubmittedApplication(profile.status === "submitted");
+    }
+
+    void hydrateOwnTeacherProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const missingRequiredFields = useMemo(
     () => getMissingRequiredFields(formState),
@@ -362,8 +446,16 @@ export default function TeacherJoinPage() {
   );
   const isReadyForFutureSubmit = missingRequiredFields.length === 0;
   const lastSavedAtLabel = lastSavedAt ? formatLastSavedAt(lastSavedAt) : null;
+  const mutationBlockedStatus =
+    hydratedProfileStatus && hydratedProfileStatus !== "draft"
+      ? hydratedProfileStatus
+      : null;
+  const mutationBlockedCopy = mutationBlockedStatus
+    ? mutationBlockedStatusLabels[mutationBlockedStatus]
+    : null;
   const isDraftSaveDisabled =
-    isSavingDraft || isSubmitting || hasSubmittedApplication;
+    isSavingDraft || isSubmitting || mutationBlockedStatus !== null;
+  const isSubmitDisabled = isSubmitting || mutationBlockedStatus !== null;
 
   function updateField(fieldName: FormFieldName, value: string) {
     setFormState((currentState) => ({
@@ -427,7 +519,7 @@ export default function TeacherJoinPage() {
   }
 
   function handleOpenSubmitConfirmation() {
-    if (isSubmitting || hasSubmittedApplication) {
+    if (isSubmitDisabled) {
       return;
     }
 
@@ -445,7 +537,7 @@ export default function TeacherJoinPage() {
   }
 
   async function handleSubmitApplication() {
-    if (isSubmitting || hasSubmittedApplication) {
+    if (isSubmitDisabled) {
       return;
     }
 
@@ -457,6 +549,7 @@ export default function TeacherJoinPage() {
 
       if (result.ok) {
         setHasSubmittedApplication(true);
+        setHydratedProfileStatus(result.profile.status);
         setIsConfirmingSubmit(false);
         setLastSavedAt(result.profile.updatedAt);
         setDraftSaveFeedback(null);
@@ -517,7 +610,9 @@ export default function TeacherJoinPage() {
             </Link>
           </div>
           <p className="mt-4 text-sm leading-6 text-gray-500">
-            下方表單可手動儲存草稿；準備好後，請經過二次確認再正式送出審核。
+            {mutationBlockedCopy
+              ? "下方會顯示目前老師申請資料與狀態；此狀態暫時不開放草稿儲存或送出審核。"
+              : "下方表單可手動儲存草稿；準備好後，請經過二次確認再正式送出審核。"}
           </p>
         </div>
 
@@ -559,12 +654,20 @@ export default function TeacherJoinPage() {
             </h2>
           </div>
           <div className="text-sm leading-6 text-gray-600">
-            <p>
-              你可以先在這裡整理 Phase 1 TeacherProfile 需要的內容，並在登入後手動儲存草稿。儲存草稿只會建立或更新 draft，不會送出審核，也不會進入 Admin review。
-            </p>
-            <p className="mt-2">
-              按下「檢查準備狀態」只會顯示溫和提醒；正式送出審核前，系統會再請你確認一次。
-            </p>
+            {mutationBlockedCopy ? (
+              <p>
+                這份 TeacherProfile 目前已有狀態紀錄。此頁只做初始資料與狀態呈現，不開放此狀態的草稿儲存、重新送審或 Admin review 操作。
+              </p>
+            ) : (
+              <>
+                <p>
+                  你可以先在這裡整理 Phase 1 TeacherProfile 需要的內容，並在登入後手動儲存草稿。儲存草稿只會建立或更新 draft，不會送出審核，也不會進入 Admin review。
+                </p>
+                <p className="mt-2">
+                  按下「檢查準備狀態」只會顯示溫和提醒；正式送出審核前，系統會再請你確認一次。
+                </p>
+              </>
+            )}
           </div>
         </div>
 
@@ -625,7 +728,8 @@ export default function TeacherJoinPage() {
                           aria-describedby={
                             showReminder ? `${inputId}-reminder` : undefined
                           }
-                          className="mt-3 min-h-28 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                          className="mt-3 min-h-28 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-600"
+                          disabled={mutationBlockedStatus !== null}
                           id={inputId}
                           onChange={(event) =>
                             updateField(field.name, event.target.value)
@@ -638,7 +742,8 @@ export default function TeacherJoinPage() {
                           aria-describedby={
                             showReminder ? `${inputId}-reminder` : undefined
                           }
-                          className="mt-3 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                          className="mt-3 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-600"
+                          disabled={mutationBlockedStatus !== null}
                           id={inputId}
                           inputMode={field.inputMode}
                           min={
@@ -676,10 +781,18 @@ export default function TeacherJoinPage() {
             <div>
               <h3 className="text-lg font-medium text-gray-950">準備狀態</h3>
               <p className="mt-2 text-sm leading-6 text-gray-600">
-                「檢查準備狀態」不是正式送出；「儲存草稿」也不會送審。這裡只是協助你用低壓方式整理 Phase 1 申請內容。
+                {mutationBlockedCopy
+                  ? "目前狀態不開放在加入表單中更新或送出。你仍可查看已保存的 Phase 1 TeacherProfile 內容。"
+                  : "「檢查準備狀態」不是正式送出；「儲存草稿」也不會送審。這裡只是協助你用低壓方式整理 Phase 1 申請內容。"}
               </p>
               <div aria-live="polite">
-                {hasSubmittedApplication ? (
+                {mutationBlockedCopy ? (
+                  <p className="mt-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950">
+                    {mutationBlockedCopy.notice}
+                  </p>
+                ) : null}
+
+                {hasSubmittedApplication && !mutationBlockedCopy ? (
                   <p className="mt-4 rounded border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900">
                     申請已送審，目前暫時不需要再儲存草稿。接下來請等待平台確認。
                   </p>
@@ -824,8 +937,10 @@ export default function TeacherJoinPage() {
                 onClick={handleSaveDraft}
                 type="button"
               >
-                {hasSubmittedApplication
-                  ? "申請已送審"
+                {mutationBlockedCopy
+                  ? mutationBlockedCopy.saveButton
+                  : hasSubmittedApplication
+                    ? "申請已送審"
                   : isSavingDraft
                     ? "正在儲存..."
                     : "儲存草稿"}
@@ -838,14 +953,16 @@ export default function TeacherJoinPage() {
               </button>
               <button
                 className="w-full rounded border border-sky-700 bg-sky-700 px-5 py-3 text-center text-sm font-medium text-white disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-300 disabled:text-gray-600 md:w-auto"
-                disabled={isSubmitting || hasSubmittedApplication}
+                disabled={isSubmitDisabled}
                 onClick={handleOpenSubmitConfirmation}
                 type="button"
               >
                 {isSubmitting
                   ? "正在送出..."
-                  : hasSubmittedApplication
-                    ? "已送出審核"
+                  : mutationBlockedCopy
+                    ? mutationBlockedCopy.submitButton
+                    : hasSubmittedApplication
+                      ? "已送出審核"
                     : "送出審核"}
               </button>
             </div>
@@ -861,7 +978,14 @@ export default function TeacherJoinPage() {
           </h2>
         </div>
         <ol className="space-y-4">
-          {nextSteps.map((step, index) => (
+          {(mutationBlockedCopy
+            ? [
+                mutationBlockedCopy.notice,
+                "此頁不導向 dashboard，也不新增 Admin review、通知或重新送審流程。",
+                "後續資料調整會依正式產品流程另行開放。",
+              ]
+            : nextSteps
+          ).map((step, index) => (
             <li className="flex gap-3 text-sm leading-6 text-gray-700" key={step}>
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-gray-300 text-xs font-medium text-gray-700">
                 {index + 1}

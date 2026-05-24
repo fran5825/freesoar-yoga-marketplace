@@ -5,6 +5,8 @@ import {
   type TeacherProfileDraftFormInput,
 } from "@/domain/teacher-profile/input";
 import {
+  getOwnTeacherProfileApplicationSnapshot,
+  type TeacherProfileApplicationSnapshot,
   saveOwnTeacherProfileDraft,
   type TeacherProfileDraftSaveErrorCode,
   type TeacherProfileDraftSaveProfile,
@@ -53,6 +55,28 @@ export type TeacherProfileSubmitActionResult =
       message: string;
       validationErrors?: TeacherProfileValidationError[];
     };
+
+export type TeacherProfileApplicationSnapshotActionProfile = Omit<
+  TeacherProfileApplicationSnapshot,
+  "createdAt" | "updatedAt"
+> & {
+  createdAt: string;
+  updatedAt: string;
+};
+
+export async function getInitialTeacherProfileApplicationSnapshotAction(): Promise<TeacherProfileApplicationSnapshotActionProfile | null> {
+  try {
+    const profile = await getOwnTeacherProfileApplicationSnapshot();
+
+    if (!profile) {
+      return null;
+    }
+
+    return serializeTeacherProfileApplicationSnapshot(profile);
+  } catch {
+    return null;
+  }
+}
 
 export async function saveTeacherProfileDraftAction(
   input: TeacherProfileDraftFormInput,
@@ -115,6 +139,16 @@ function serializeTeacherProfileDraftSaveProfile(
 function serializeTeacherProfileSubmitProfile(
   profile: TeacherProfileSubmitProfile,
 ): TeacherProfileSubmitActionProfile {
+  return {
+    ...profile,
+    createdAt: profile.createdAt.toISOString(),
+    updatedAt: profile.updatedAt.toISOString(),
+  };
+}
+
+function serializeTeacherProfileApplicationSnapshot(
+  profile: TeacherProfileApplicationSnapshot,
+): TeacherProfileApplicationSnapshotActionProfile {
   return {
     ...profile,
     createdAt: profile.createdAt.toISOString(),
