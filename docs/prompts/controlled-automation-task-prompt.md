@@ -126,6 +126,7 @@ Codex 必須分類任務，可複選：
 - 本輪 level
 - risk level：low / medium / high
 - 是否需要 human gate
+- Auto Builder Decision
 - 是否可修改檔案
 - 是否可進 Builder
 - 是否只允許輸出 planning
@@ -137,6 +138,55 @@ Level 判斷規則摘要：
 - Level 1：需要 repo-aware triage、planning、risk map、Builder prompt draft，但不能修改檔案。
 - Level 2：已有明確 approved Builder prompt，且 allowed files / forbidden files 清楚。
 - Level 3：只適用極低風險 docs-only cleanup，不改 product behavior，不新增功能承諾。
+
+Auto Builder Decision 必須使用以下格式：
+
+```text
+Auto Builder Decision:
+- Can auto-enter Builder: yes/no
+- Risk level:
+- Required human gate: yes/no
+- Reason:
+- If yes: produce a complete executable Builder Prompt with Output Report Requirement.
+- If no: produce Builder Prompt Draft only, and stop at Human Gate for RD approval.
+```
+
+只有 low risk slice 可以 `Can auto-enter Builder: yes`。medium、medium-high、high risk 都必須是 `no`，並停在 Human Gate 等 RD approval。
+
+Auto-enter Builder allowed only if all are true:
+
+1. Risk level = low
+2. No Prisma schema / migration
+3. No Auth / session / permission boundary
+4. No payment / email / notification
+5. No production data access
+6. No public UX policy decision
+7. Allowed files are narrow and explicit
+8. Forbidden files are listed
+9. Required checks are listed
+10. Builder must not commit / push
+11. Builder must output Review Packet
+
+只要涉及以下任一項，`Can auto-enter Builder` 必須是 `no`：
+
+- Auth
+- session
+- permission boundary
+- Prisma schema
+- migration
+- DB write behavior
+- role / capability
+- Admin
+- payment
+- email
+- notification
+- public onboarding policy
+- teacher application status flow
+- rejected / approved / suspended policy
+- production data
+- package.json / package-lock.json
+- ambiguous scope
+- missing verification plan
 
 ---
 
@@ -156,6 +206,14 @@ Planning Report 至少包含：
 - Can modify files:
 - Can enter Builder:
 - Reason:
+
+## 1A. Auto Builder Decision
+- Can auto-enter Builder: yes/no
+- Risk level:
+- Required human gate: yes/no
+- Reason:
+- If yes: produce a complete executable Builder Prompt with Output Report Requirement.
+- If no: produce Builder Prompt Draft only, and stop at Human Gate for RD approval.
 
 ## 2. Repo-aware Findings
 - 已讀文件：
@@ -190,6 +248,17 @@ Planning Report 至少包含：
 
 ## 8. Builder Prompt Draft
 - 可交給 Codex Builder 的最小 prompt draft：
+
+Builder Prompt Draft 的最後必須固定包含：
+
+Output Report Requirement:
+完成後請不要 commit / push，並回報：
+1. Changed files
+2. Full git diff
+3. Checks result
+4. Manual smoke result
+5. Self review
+6. Scope drift check：是否有任何超出本任務範圍的修改或判斷
 
 ## 9. Open Questions / Human Decisions
 - 需要 RD / product owner 判斷的事項：
@@ -269,10 +338,17 @@ Level 3 只允許極低風險 docs cleanup。
 以下情況必須停下來，等待 RD / product owner / governance review：
 
 - high-risk task
+- medium / medium-high risk task
 - Auth / Prisma / DB mutation / permission / state machine
+- session / permission boundary / DB write behavior / role / capability
 - public UX change
-- payment / admin review
+- Admin / payment / email / notification / admin review
+- public onboarding policy / teacher application status flow / rejected / approved / suspended policy
+- production data
 - package / env / deploy / CI
+- package.json / package-lock.json
+- ambiguous scope
+- missing verification plan
 - 需要修改不在 allowed files 的檔案
 - checks fail 且修復會擴 scope
 - 需要 commit / push
@@ -325,6 +401,7 @@ human gate 結果應明確記錄為：
 # Planning Report
 
 ## 1. Automation Level Classification
+## 1A. Auto Builder Decision
 ## 2. Repo-aware Findings
 ## 3. Current Behavior / Current Docs State
 ## 4. Existing Contract / Architecture

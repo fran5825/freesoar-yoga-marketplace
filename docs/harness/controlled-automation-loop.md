@@ -74,6 +74,59 @@ Level 2 允許 Codex 在明確 approve 的 Builder prompt 內修改檔案、執�
 
 Level 2 不等於可以自動 commit / push。Builder 完成後必須輸出 review packet，並交由 RD / product owner 或 ChatGPT final review layer 判斷下一步。
 
+### Auto Builder Decision Rule
+
+Planning / Orchestrator 產出 Planning Report 時，必須明確包含：
+
+```text
+Auto Builder Decision:
+- Can auto-enter Builder: yes/no
+- Risk level:
+- Required human gate: yes/no
+- Reason:
+- If yes: produce a complete executable Builder Prompt with Output Report Requirement.
+- If no: produce Builder Prompt Draft only, and stop at Human Gate for RD approval.
+```
+
+Auto Builder Decision 是進入 Builder 前的 gate。`Can auto-enter Builder: yes` 只代表 Planning / Orchestrator 可以直接產出可執行 Builder Prompt，並進入 Builder execution；不代表可以自動 merge、commit 或 push。RD / product owner 仍保留最後 review、commit 與 push 決策權。
+
+若 low-risk source-code slice 被允許 auto-enter Builder，它仍屬於 Level 2 Builder execution，必須遵守 approved prompt、allowed files、checks 與 review packet 要求。Level 3 只限 low-risk docs cleanup，不是 source-code slice 的執行層級。
+
+只有 low risk slice 可以 `Can auto-enter Builder: yes`。Auto-enter Builder 必須同時符合以下條件：
+
+1. Risk level = low
+2. No Prisma schema / migration
+3. No Auth / session / permission boundary
+4. No payment / email / notification
+5. No production data access
+6. No public UX policy decision
+7. Allowed files are narrow and explicit
+8. Forbidden files are listed
+9. Required checks are listed
+10. Builder must not commit / push
+11. Builder must output Review Packet
+
+只要涉及以下任一項，`Can auto-enter Builder` 必須是 `no`，並停在 Human Gate 等 RD approval：
+
+- Auth
+- session
+- permission boundary
+- Prisma schema
+- migration
+- DB write behavior
+- role / capability
+- Admin
+- payment
+- email
+- notification
+- public onboarding policy
+- teacher application status flow
+- rejected / approved / suspended policy
+- production data
+- package.json / package-lock.json
+- ambiguous scope
+- missing verification plan
+
 ### Level 3: Low-risk autonomous docs cleanup
 
 Level 3 只適用於非常低風險的 docs cleanup，例如：
@@ -117,6 +170,7 @@ Level 3 必須同時符合：
 
 以下情況必須停下來等 human gate：
 
+- Risk level 是 medium、medium-high 或 high。
 - 任務被判斷為 high-risk。
 - ChatGPT governance review verdict 是 `HUMAN_DECISION_REQUIRED`、`REQUEST_PLAN_CHANGES`、`STOP` 或等價判斷。
 - Codex 需要超出 approved prompt。
@@ -124,9 +178,10 @@ Level 3 必須同時符合：
 - Checks fail，但仍想繼續。
 - 需要 commit。
 - 需要 push。
-- 需要改 Auth、Prisma schema、migration、DB mutation、permissions、state machine、payment、admin review、public UX change。
+- 需要改高風險邊界：Auth、session、permission boundary、role / capability、Admin、Prisma schema、migration、DB mutation / DB write behavior、state machine、payment、email、notification、production data、package / env / deploy / CI / secrets、`package.json` 或 `package-lock.json`。
+- 需要改產品政策或公開流程：public UX change、public onboarding policy、teacher application status flow、rejected / approved / suspended policy。
 - 需要決定 V1 scope、non-goals 或 core user flow。
-- 需要改 package、env、deploy、CI、secrets。
+- Scope ambiguous 或 missing verification plan。
 
 human gate 的結果應明確記錄為 approve、request changes、defer、reject 或 stop。
 
@@ -204,6 +259,23 @@ Builder 完成後必須輸出 Builder Review Packet。至少包含：
 Final review 必須看過 diff。沒有 diff 就沒有 final approval。
 
 如果缺少 changed files、diff、checks result 或 high-risk human decision record，ChatGPT governance review 只能給 provisional review 或 request more materials，不應建議 commit / push。
+
+## 10A. Builder Prompt Draft 固定結尾要求
+
+所有 Planning / Orchestrator 產出的 Builder Prompt Draft，最後都必須固定包含以下段落，且不得刪改為較弱版本：
+
+```text
+Output Report Requirement:
+完成後請不要 commit / push，並回報：
+1. Changed files
+2. Full git diff
+3. Checks result
+4. Manual smoke result
+5. Self review
+6. Scope drift check：是否有任何超出本任務範圍的修改或判斷
+```
+
+若 Builder Prompt Draft 缺少此段，ChatGPT governance review 或 RD review 應要求補齊後才可進 Builder。
 
 ## 11. Commit / Push Governance
 

@@ -15,6 +15,15 @@
 - Can enter Builder:
 - Reason:
 
+## 1A. Auto Builder Decision
+
+- Can auto-enter Builder: yes/no
+- Risk level:
+- Required human gate: yes/no
+- Reason:
+- If yes: produce a complete executable Builder Prompt with Output Report Requirement.
+- If no: produce Builder Prompt Draft only, and stop at Human Gate for RD approval.
+
 ## 2. Repo-aware Findings
 
 - 已讀文件：
@@ -56,7 +65,16 @@
 ## 8. Builder Prompt Draft
 
 ```txt
-[貼上可交給 Codex Builder 的最小 prompt draft]
+[貼上可交給 Codex Builder 的最小 prompt draft。最後必須固定包含以下段落：]
+
+Output Report Requirement:
+完成後請不要 commit / push，並回報：
+1. Changed files
+2. Full git diff
+3. Checks result
+4. Manual smoke result
+5. Self review
+6. Scope drift check：是否有任何超出本任務範圍的修改或判斷
 ```
 
 ## 9. Open Questions / Human Decisions

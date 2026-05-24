@@ -39,6 +39,7 @@ Triage should include:
 - Slice type
 - Risk flags
 - Human gate requirement
+- Auto Builder Decision：`Can auto-enter Builder` 只有 low risk slice 可以是 `yes`；medium、medium-high、high risk 必須停在 Human Gate 等 RD approval
 - Required review packets
 
 For Codex App handoff, use `docs/prompts/codex-repo-aware-triage-prompt.md` when the task needs repo-aware classification before implementation.
@@ -53,6 +54,7 @@ Codex triage should not modify files. It should produce:
 - Files / areas not to touch
 - Risk flags
 - Human gate requirement
+- Auto Builder Decision
 - Suggested next step
 - Builder prompt candidate when appropriate
 
@@ -81,6 +83,7 @@ ChatGPT governance review should check:
 - Scope creep
 - Risk classification
 - Human gate requirement
+- Auto Builder Decision 是否正確，且沒有讓 medium / high / medium-high risk 自動進 Builder
 - Prompt quality
 
 ## 4. Build
@@ -102,6 +105,19 @@ Before implementation, Builder should follow the approved Builder prompt. If `.a
 ```
 
 Reusable run folder templates can be copied from `docs/harness/ai-runs-current-templates/`; the filled `.ai-runs/current/` folder remains local-only and should not be committed.
+
+All Builder Prompt Drafts must end with the fixed Output Report Requirement:
+
+```txt
+Output Report Requirement:
+完成後請不要 commit / push，並回報：
+1. Changed files
+2. Full git diff
+3. Checks result
+4. Manual smoke result
+5. Self review
+6. Scope drift check：是否有任何超出本任務範圍的修改或判斷
+```
 
 ## 5. Test
 

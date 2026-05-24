@@ -46,11 +46,14 @@
 
 ## Output Requirements
 
-- Provide changed files.
-- Provide full git diff or patch.
-- Provide checks result or not-run reason.
-- Provide Builder Review Packet.
-- Report any scope issue before continuing.
+Output Report Requirement:
+完成後請不要 commit / push，並回報：
+1. Changed files
+2. Full git diff
+3. Checks result
+4. Manual smoke result
+5. Self review
+6. Scope drift check：是否有任何超出本任務範圍的修改或判斷
 
 ## No Commit / No Push Reminder
 

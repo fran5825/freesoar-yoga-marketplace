@@ -65,6 +65,14 @@ Risk flags:
 Human gate:
 - 是否需要產品主人 approve，原因是什麼。
 
+Auto Builder Decision:
+- Can auto-enter Builder: yes/no。
+- Risk level。
+- Required human gate: yes/no。
+- Reason。
+- If yes：產出完整可執行 Builder Prompt，且最後包含固定 Output Report Requirement。
+- If no：只產出 Builder Prompt Draft，停在 Human Gate 等 RD approval。
+
 Recommended next step:
 - 直接 small change / 進 planning draft / planning-only / 停止並要求 human decision。
 ```
@@ -277,12 +285,35 @@ Brand / low-pressure UX risk 不一定升級為 Heavy，但必須在 ChatGPT gov
 以下情況必須停下來等產品主人決策：
 
 - ChatGPT verdict 是 `HUMAN_DECISION_REQUIRED`。
+- Risk level 是 medium、medium-high 或 high。
 - 任務被分類為 Heavy。
 - Builder 需要超出 approved prompt 的修改。
 - 需要改 Auth、Prisma schema、migration、permission、state machine、package、env、deploy 或 production data。
+- 需要改 session、permission boundary、DB write behavior、role / capability、Admin、payment、email、notification、public onboarding policy、teacher application status flow、rejected / approved / suspended policy、`package.json` 或 `package-lock.json`。
+- Scope ambiguous 或 missing verification plan。
 - Checks fail 但 Codex 建議繼續。
 - Diff 顯示未要求的檔案或 scope creep。
 - 準備 commit / push。
+
+## 6A. Auto-enter Builder Conditions
+
+Auto-enter Builder 只適用於 low risk slice。它不是 commit / push 授權，也不是 merge 授權。
+
+只有以下條件全部成立時，Planning / Orchestrator 才可以判斷 `Can auto-enter Builder: yes`：
+
+1. Risk level = low
+2. No Prisma schema / migration
+3. No Auth / session / permission boundary
+4. No payment / email / notification
+5. No production data access
+6. No public UX policy decision
+7. Allowed files are narrow and explicit
+8. Forbidden files are listed
+9. Required checks are listed
+10. Builder must not commit / push
+11. Builder must output Review Packet
+
+若任一條件不成立，`Can auto-enter Builder` 必須是 `no`，只能產出 Builder Prompt Draft，並停在 Human Gate 等 RD approval。
 
 ## 7. Mode Selection Matrix
 
@@ -311,6 +342,13 @@ Slice type: micro / standard / batch
 Risk flags:
 - ...
 Human gate: yes / no
+Auto Builder Decision:
+- Can auto-enter Builder: yes/no
+- Risk level:
+- Required human gate: yes/no
+- Reason:
+- If yes: produce a complete executable Builder Prompt with Output Report Requirement.
+- If no: produce Builder Prompt Draft only, and stop at Human Gate for RD approval.
 Reason:
 - ...
 Next action:

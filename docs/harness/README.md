@@ -125,5 +125,7 @@ Free Soar Yoga 是 Free Soar master brand 下的 brand-driven yoga marketplace�
 - One minimal slice at a time：避免一次打開過多產品、資料、權限與 UI surface。
 - No complex RBAC：V1 採 capability-based model，不提前建立複雜 RBAC。
 - No scope expansion：不自動擴大到 Wellness、Academy、Retreat、advanced AI matching、native app、完整金流或 Teacher SaaS。
+- Auto Builder is low-risk only：只有 low risk slice 可以 auto-enter Builder；medium、medium-high、high risk 必須停在 Human Gate 等 RD approval。
+- Builder Prompt Draft fixed ending：所有 Builder Prompt Draft 最後必須包含 Output Report Requirement，要求 Builder 不 commit / push，並回報 changed files、full git diff、checks、manual smoke、self review 與 scope drift check。
 - No automatic migration / commit / push：Codex 不自動執行 migration、commit 或 push。
 - Product owner confirmation required：任何影響 Auth、Prisma schema、permissions / capability model、state machines、V1 scope 或核心 user flows 的變更，都必須先說明影響並取得產品主人確認。

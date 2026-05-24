@@ -143,11 +143,31 @@ Risk gates:
 - 是否涉及 high-risk 項目。
 - 是否需要 human approval。
 
+Auto Builder Decision:
+- Can auto-enter Builder: yes/no。
+- Risk level。
+- Required human gate: yes/no。
+- Reason。
+- If yes：產出完整可執行 Builder Prompt，且最後包含固定 Output Report Requirement。
+- If no：只產出 Builder Prompt Draft，停在 Human Gate 等 RD approval。
+
 Verification scope:
 - lint / typecheck / test / build / manual check / docs read-back。
 
 Suggested Builder prompt:
 - Codex 建議的 Builder prompt。
+- 最後必須固定包含：
+
+```text
+Output Report Requirement:
+完成後請不要 commit / push，並回報：
+1. Changed files
+2. Full git diff
+3. Checks result
+4. Manual smoke result
+5. Self review
+6. Scope drift check：是否有任何超出本任務範圍的修改或判斷
+```
 
 Suggested Reviewer prompt:
 - Codex 建議的 Reviewer prompt。

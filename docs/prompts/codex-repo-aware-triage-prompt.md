@@ -165,7 +165,25 @@ Reason:
 
 如果需要 human gate，請列出需要人類決策的問題。
 
-## 10. Suggested Next Step
+## 10. Auto Builder Decision
+
+請判斷是否可以 auto-enter Builder。
+
+格式：
+
+```txt
+Auto Builder Decision:
+- Can auto-enter Builder: yes/no
+- Risk level:
+- Required human gate: yes/no
+- Reason:
+- If yes: produce a complete executable Builder Prompt with Output Report Requirement.
+- If no: produce Builder Prompt Draft only, and stop at Human Gate for RD approval.
+```
+
+只有 low risk slice 可以 `Can auto-enter Builder: yes`。medium、medium-high、high risk，或涉及 Auth、session、permission boundary、Prisma schema、migration、DB write behavior、role / capability、Admin、payment、email、notification、public onboarding policy、teacher application status flow、rejected / approved / suspended policy、production data、`package.json` / `package-lock.json`、ambiguous scope、missing verification plan 時，必須是 `no`。
+
+## 11. Suggested Next Step
 
 請建議下一步：
 
@@ -178,7 +196,7 @@ Reason:
 
 請附上理由。
 
-## 11. Draft Builder Prompt Candidate
+## 12. Draft Builder Prompt Candidate
 
 如果任務已足夠清楚，請產出一份 Builder prompt candidate。
 
@@ -189,3 +207,15 @@ Reason:
 - 必須要求 Builder 完成後輸出 Builder Review Packet
 - 不可要求 Builder commit / push，除非任務明確要求
 - 不可要求 Builder 自行擴 scope
+- 最後必須固定包含以下段落：
+
+```txt
+Output Report Requirement:
+完成後請不要 commit / push，並回報：
+1. Changed files
+2. Full git diff
+3. Checks result
+4. Manual smoke result
+5. Self review
+6. Scope drift check：是否有任何超出本任務範圍的修改或判斷
+```
