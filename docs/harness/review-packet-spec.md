@@ -12,6 +12,12 @@ Review packet 的目的，是讓 ChatGPT 不依賴長 session 記憶，也不只
 
 如果沒有 diff / patch，ChatGPT 只能做 planning review 或 provisional review，不得建議 commit / push。
 
+## 1A. Packet 語言規則
+
+除非使用者明確要求英文，Codex 產出的 review packet、final report、self review、scope drift check 與 implementation summary 應以繁體中文為主。
+
+技術名稱、檔案路徑、指令、Git command、package name、第三方服務名稱、程式碼識別字與 error code 可保留英文，不需要硬翻成中文。
+
 ## 2. Packet 類型
 
 本 repo 使用四種主要 packet：

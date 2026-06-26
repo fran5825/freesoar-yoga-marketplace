@@ -8,6 +8,8 @@
 
 本 workflow 適合低風險 docs-only、小 UI、小 helper 或邊界清楚的 standard slice；高風險任務仍應先做 plan review 或另開 Reviewer thread。
 
+除非使用者明確要求英文，回報內容請以繁體中文為主；技術名稱、檔案路徑、指令與程式碼識別字可保留英文。
+
 ## 2. 使用方式
 
 使用者可直接貼以下格式：

@@ -139,6 +139,12 @@ For the docs system under `docs/`:
 - Do not translate programmatic names into Chinese because docs content is Chinese; code and system naming remain English.
 - When architecture, product behavior, permissions, state machines, or scope changes, update the related Chinese docs in the same change.
 
+## Response Language
+
+除非使用者明確要求英文，Codex 的 final report、self review、review packet、scope drift check 與 implementation summary 應以繁體中文為主。
+
+Code identifier、route name、file path、command name、Git command、package name、第三方服務名稱與 error code 可在較清楚時保留英文。
+
 ## Quality Gates
 
 Before merge:
