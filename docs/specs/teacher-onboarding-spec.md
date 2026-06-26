@@ -98,6 +98,27 @@ rejected → submitted
 
 `rejected → submitted` 代表老師可在允許情況下修改後重新送審。
 
+## TeacherProfile Status Definitions
+
+V1 只讓 Member / Organizer 看見 `approved` teacher。`draft`、`submitted`、`rejected`、`suspended` 都不公開顯示，也不可進入 demand response flow。
+
+| Status | 狀態語意 | Teacher editability | Admin action | Member / Organizer visibility | Demand response permission | Notification / reason expectation |
+|---|---|---|---|---|---|---|
+| `draft` | 老師正在建立未完成 profile，尚未送審。 | Teacher 可建立與編輯自己的未完成 profile。 | 無需 review；Admin 可在後台需要時查看 draft 紀錄，但 V1 不要求主動處理。 | 不公開。 | 不可回應 demand。 | 不需通知 Admin review。 |
+| `submitted` | 老師已送出申請，profile 進入 Admin review list。 | V1 先定義核心申請欄位不可由 Teacher 直接編輯，避免 Admin review 資料漂移；若未來需要 edit-after-submit，需另開 product decision。 | `approve`、`reject`。 | 不公開。 | 不可回應 demand。 | 需告知 Teacher「正在審核」，並通知 Admin review。 |
+| `approved` | 老師已通過審核，可進入 marketplace 核心流程。 | Teacher 可維護 profile 與 availability；會影響公開呈現或媒合判斷的重大欄位變更，未來可再定義是否需重新 review。 | `suspend`。 | 可公開顯示在 V1 允許的老師展示場景。 | 可查看 eligible demand requests 並提交 response。 | 需通知 Teacher 已通過，可開始使用 teacher dashboard 與需求回應能力。 |
+| `rejected` | Admin 判斷申請資料不足或不符合平台要求。 | Teacher 可依 reason 修改後重新送審。V1 不限制重新送審次數，不新增 counter / lockout。 | view reason / history；Teacher 可重新 submit，不需要 Admin 主動重開。 | 不公開。 | 不可回應 demand。 | 需顯示溫和且具體的修正方向，避免羞辱或壓迫語氣。 |
+| `suspended` | Admin 因品質、安全或營運原因暫停已 approved teacher。 | Teacher 不可用自行編輯繞過 suspension；是否允許補充資料或申訴屬 future slice / admin-manual decision。 | `restore to approved` 是 allowed policy，但正式 restore UI / API 是否納入 V1 需 product owner 另行批准。 | 不公開。 | 不可回應新 demand。 | 需保留 reason / admin note；對 Teacher 的通知需清楚、溫和並避免公開揭露內部原因。 |
+
+### Admin Action Matrix
+
+| Current status | V1 Admin actions |
+|---|---|
+| `submitted` | `approve`, `reject` |
+| `approved` | `suspend` |
+| `rejected` | view reason / history；Teacher 可重新 submit，不需要 Admin 主動重開 |
+| `suspended` | `restore to approved` 可在 policy 上允許；正式 UI / API 是否實作由 product owner 另行批准 |
+
 ## RWD Requirements
 
 - 360px 與 390px 手機寬度可完成表單。

@@ -25,12 +25,30 @@
 | `submitted` | `rejected` | Admin | profile 不符合要求 | 通知 Teacher 修正方向 |
 | `rejected` | `submitted` | Teacher | Teacher 修改資料後重新送審 | 通知 Admin review |
 | `approved` | `suspended` | Admin | 品質、安全或營運原因 | Teacher 不可公開或回應新需求 |
-| `suspended` | `approved` | Admin | Admin 確認可恢復 | Teacher 恢復 marketplace 權限 |
+| `suspended` | `approved` | Admin | Admin 確認可恢復 | Teacher 恢復 marketplace 權限；正式 restore UI / API 是否納入 V1 需 product owner 另行批准 |
+
+### V1 policy notes
+
+- Member / Organizer 在 V1 只可看見 `approved` teacher。
+- `draft`、`submitted`、`rejected`、`suspended` teacher 都不公開顯示，也不可建立 demand response。
+- `submitted` 後核心申請欄位不可由 Teacher 直接編輯；若未來需要 edit-after-submit，需另開 product decision。
+- `rejected` teacher 可依 Admin reason 修改後重新送審；V1 不限制重新送審次數，不新增 counter / lockout。
+- `suspended → approved` 是 allowed policy，但完整 restore flow 可作為 future slice / admin-manual decision，不代表 V1 必須立即實作正式 restore UI / API。
+
+### Admin action matrix
+
+| Current status | V1 Admin actions |
+|---|---|
+| `submitted` | `approve`, `reject` |
+| `approved` | `suspend` |
+| `rejected` | view reason / history；Teacher 可重新 submit，不需要 Admin 主動重開 |
+| `suspended` | `restore to approved` 可在 policy 上允許；正式 UI / API 是否實作由 product owner 另行批准 |
 
 ### 禁止條件
 
 - Teacher 不可 approve 自己。
 - `draft` 或 `submitted` teacher 不可回應 demand request。
+- `rejected` teacher 不可回應 demand request。
 - `suspended` teacher 不可公開顯示或建立新 response。
 
 ## DemandRequest
