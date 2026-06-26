@@ -2,6 +2,8 @@
 
 本 prompt 用於任務開始前，讓 Codex 先做 repo-aware triage。
 
+本文件也是 Builder execution 前的 repo-aware triage / Planning-Orchestrator entrypoint。此階段預設 read-only，負責 task triage、risk check、source-of-truth check、next smallest actionable slice、human gate、recommended next work mode 與 suggested next prompt。
+
 此階段只允許閱讀與分析，不允許修改 code、docs、設定檔、migration、package files，也不允許 commit / push。
 
 ---
@@ -185,16 +187,16 @@ Auto Builder Decision:
 
 ## 11. Suggested Next Step
 
-請建議下一步：
+請建議下一步，並避免只給空泛方向。如果下一步不是 Builder，不要硬產出 Builder Prompt；請改為產出適合的 suggested next prompt。
 
-- proceed to ChatGPT governance review
-- ask human for decision
-- create planning draft
-- create Builder prompt
-- split into smaller slice
-- stop / do not proceed
+必須包含：
 
-請附上理由。
+- Recommended next work mode:
+- Next smallest actionable slice:
+- Why this should be next:
+- Can Codex execute directly:
+- Requires product owner decision:
+- Suggested next prompt:
 
 ## 12. Draft Builder Prompt Candidate
 

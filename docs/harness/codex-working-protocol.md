@@ -127,6 +127,31 @@ Planning / Orchestrator 每次建議下一個 slice 時，都應先說明：
 
 只有在產品主人明確確認 decision plan 後，才可產出 Builder implementation prompt。若尚未取得確認，Codex 應停在 planning-only 狀態，不得修改檔案、執行 migration、`db push`、commit 或 push。
 
+## 7A. Work Mode Selection / Handoff Rule
+
+每次任務結束時，Codex 必須交代 recommended next work mode 與 suggested next prompt。這個接棒段落適用於 completed、partially completed、blocked、no-op 與 planning-only。
+
+Work mode 判斷規則：
+
+- `Planning / Orchestrator`：當 scope、風險、source of truth、產品決策或最小切片尚不清楚時使用；預設 read-only。
+- `Builder`：只有在 allowed files、forbidden files、scope、checks、stop conditions 都清楚，且沒有未處理 human gate 時才進入。
+- `Reviewer`：在 Builder 完成後、使用者要求 review 時，或變更涉及風險需要第二層檢查時使用。
+- `Product Owner Decision`：當下一步會影響 V1 scope、Auth、Prisma、permissions、marketplace state machine、core user flow 或產品政策時使用。
+- `Commit Gate`：只有在 checks / review 可接受，且產品主人明確要求 commit 時才使用。
+- `Push Gate`：只有在 commit 已建立，且產品主人另行明確要求 push 時才使用。
+- `Stop`：當缺少必要 context、需要修改 forbidden files、必須新增未授權文件、規則互相衝突，或繼續執行會超出授權時使用。
+
+`Recommended Next Step` 必須包含：
+
+- Recommended next work mode。
+- Next smallest actionable slice。
+- Why this should be next。
+- Can Codex execute directly。
+- Requires product owner decision。
+- Suggested next prompt。
+
+Codex 不得自動 commit 或 push；即使 Recommended Next Step 指向 `Commit Gate` 或 `Push Gate`，也必須等待產品主人明確要求。
+
 ## 8. 測試與回報
 
 Codex 應根據變更風險執行適當測試：
@@ -144,6 +169,7 @@ Codex 應根據變更風險執行適當測試：
 - Risks / follow-ups。
 - 是否有未完成事項。
 - 是否沒有自動 commit / push。
+- Recommended Next Step。
 
 如果檔案是 untracked，需說明 `git diff --stat` 可能不會顯示該檔案，並搭配 `git status --short` 回報。
 

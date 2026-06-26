@@ -92,3 +92,14 @@ Reason:
 - Product owner decision required:
 - Unrelated files modified:
 - Commit / push:
+
+## 13. Recommended Next Step / Handoff
+
+- Recommended next work mode:
+- Next smallest actionable slice:
+- Why this should be next:
+- Can Codex execute directly:
+- Requires product owner decision:
+- Suggested next prompt:
+
+如果沒有下一步，請寫 `None`，並說明為什麼可以停止。

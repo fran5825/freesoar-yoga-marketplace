@@ -145,6 +145,23 @@ For the docs system under `docs/`:
 
 Code identifier、route name、file path、command name、Git command、package name、第三方服務名稱與 error code 可在較清楚時保留英文。
 
+## Completion Report
+
+Codex 每次 final report 都必須包含 `Recommended Next Step`，即使本輪結果是 completed、partially completed、blocked、no-op 或 planning-only。
+
+`Recommended Next Step` 必須具體回答：
+
+- Recommended next work mode。
+- Next smallest actionable slice。
+- Why this should be next。
+- Can Codex execute directly。
+- Requires product owner decision。
+- Suggested next prompt。
+
+不得只給空泛建議，例如「可以繼續優化」。若沒有合理下一步，必須寫 `None`，並說明為什麼可以停止。
+
+本規則不改變 V1 scope、product owner decision gate、commit gate 或 push gate；Codex 仍不得在未經產品主人明確要求時自動 commit 或 push。
+
 ## Quality Gates
 
 Before merge:

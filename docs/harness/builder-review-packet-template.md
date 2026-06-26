@@ -167,12 +167,15 @@ None.
 - 是否需要 human gate
 - 是否可 rollback
 
-## 11. Recommended Next Step
+## 11. Recommended Next Step / Handoff
 
-請選一個：
+請具體交代下一棒，不要只寫「可以繼續優化」。
 
-- Ready for ChatGPT final review
-- Needs human decision
-- Needs another Builder pass
-- Needs smaller slice
-- Stop here
+- Recommended next work mode:
+- Next smallest actionable slice:
+- Why this should be next:
+- Can Codex execute directly:
+- Requires product owner decision:
+- Suggested next prompt:
+
+如果沒有下一步，必須寫 `None`，並說明為什麼可以停止。
