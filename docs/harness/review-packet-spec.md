@@ -50,6 +50,11 @@ Recommended Next Step:
 - Can Codex execute directly:
 - Requires product owner decision:
 - Suggested next prompt:
+- Auto-continue allowed:
+- Auto-continue reason:
+- Stop condition triggered:
+- Notify human:
+- Notification reason:
 ```
 
 不得只寫「可以繼續優化」。若沒有合理下一步，必須寫 `None`，並說明為什麼可以停止。

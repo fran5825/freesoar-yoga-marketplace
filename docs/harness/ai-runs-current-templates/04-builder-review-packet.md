@@ -101,5 +101,10 @@ Reason:
 - Can Codex execute directly:
 - Requires product owner decision:
 - Suggested next prompt:
+- Auto-continue allowed:
+- Auto-continue reason:
+- Stop condition triggered:
+- Notify human:
+- Notification reason:
 
 如果沒有下一步，請寫 `None`，並說明為什麼可以停止。

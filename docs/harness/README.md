@@ -54,7 +54,7 @@ Source of truth map：
 - `docs/engineering/*`：Auth、Prisma、local development、capability helper、first admin 等工程邊界。
 - `docs/harness/workflow.md`：spec → plan → build → test → review → ship 工作流程。
 - `docs/harness/codex-first-chatgpt-reviewed-control-loop.md`：Codex 先產生 repo-aware draft，ChatGPT 再做治理 review 的 AI 開發控制迴路。
-- `docs/harness/controlled-automation-loop.md`：定義 Codex 在本 repo 可使用的受控自動化層級，包括 Planning-only、Approved Builder、低風險 docs cleanup、human gate、high-risk 降級與 commit / push governance。
+- `docs/harness/controlled-automation-loop.md`：Controlled Auto Loop 的 source of truth，定義 Codex 在本 repo 可使用的受控自動化層級、auto-continue 條件、stop / notify 條件、human gate、high-risk 降級與 commit / push governance。
 - `docs/harness/risk-based-workflow.md`：依任務風險選擇 Light / Standard / Heavy / Planning-only workflow。
 - `docs/harness/review-packet-spec.md`：定義 triage、planning、builder、final review packet 的必要材料。
 - `docs/harness/chatgpt-governance-review.md`：ChatGPT 作為上層治理 reviewer 時的品牌、scope、風險、verdict 與 prompt 校正準則。
@@ -140,6 +140,8 @@ Source of truth map：
 - `docs/harness/ai-runs-current-spec.md`
 
 當任務要從手動協作升級到較自動化流程時，Codex 應先閱讀 `docs/harness/controlled-automation-loop.md`，判斷本輪任務適合的 automation level，並確認是否需要 Planning-only、human gate 或降級處理。
+
+`README.md` 只作為 harness 導覽與文件地圖，不重複定義完整 Controlled Auto Loop 規則；auto-continue、stop condition、notify human 與 mobile notification trigger candidates 以 `docs/harness/controlled-automation-loop.md` 為準。
 
 ## 4. 操作 Prompt 與 Run Folder
 

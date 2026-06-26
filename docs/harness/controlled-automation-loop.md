@@ -14,6 +14,41 @@
 
 Controlled Automation Loop 不是讓 Codex 自動接管專案，而是讓 Codex 在明確 level、明確 diff、明確 review packet、明確 human gate 下工作。
 
+本文件是 Controlled Auto Loop 的 source of truth。其他 harness 文件可以導覽、引用或補充使用方式，但不應另行定義一套相互競爭的 auto-continue / stop / notify 規則。
+
+## 1A. Controlled Auto Loop Definition
+
+Controlled Auto Loop 是受控接棒流程，不是 fully autonomous loop。
+
+它不代表：
+
+- Codex 可以 auto approve。
+- Codex 可以 auto commit。
+- Codex 可以 auto push。
+- Codex 可以 auto merge。
+- Codex 可以跳過 Product Owner Decision、Human Gate、Commit Gate、Push Gate 或 Stop Condition。
+
+它只允許 Codex 在低風險、已批准、allowed scope 明確、checks 與 review packet 要求清楚的範圍內自動接棒。只要遇到 Product Owner Decision、Human Gate、Commit Gate、Push Gate 或 Stop Condition，Codex 必須停止自動接棒，回報原因，並等待 human / product owner 明確指示。
+
+## 1B. Auto-continue Matrix
+
+| Situation | Auto-continue allowed | Reason | Must stop? | Notify human? |
+| --- | --- | --- | --- | --- |
+| read-only triage | yes | 只讀取 repo context、分類風險與建議 next slice，不改檔。 | no | no |
+| planning-only audit | yes | 只產出 options、tradeoffs、risk map、Builder Prompt Draft，不進入 Builder。 | no | 視是否有 human decision 而定 |
+| approved docs-only Builder | yes | 已有明確 allowed files、forbidden files、scope、checks，且只改 docs。 | no | no，除非觸發 stop condition |
+| approved low-risk Builder | yes | 已有 approved Builder prompt，且不碰 high-risk boundary。 | no | no，除非 checks fail 或 scope drift |
+| Reviewer read-only review | yes | Reviewer 預設不改檔，只檢查 diff、scope、風險與 tests。 | no | no，除非 verdict 需要 human decision |
+| checks / read-back | yes | 在 approved scope 內執行驗證或 docs read-back。 | no | no，除非 checks fail |
+| missing allowed files | no | 無法確認 Builder 可修改範圍。 | yes | yes |
+| scope ambiguity | no | 無法確認是否超出 V1 scope 或 approved prompt。 | yes | yes |
+| failed checks | no | 需要判斷是否修復、降級或 request changes。 | yes | yes |
+| requested file outside allowed files | no | 代表需要擴大授權或重新切 slice。 | yes | yes |
+| Prisma / Auth / permissions / state machine changes | no | 觸及 high-risk boundary 與 product owner decision。 | yes | yes |
+| Product Owner Decision needed | no | 需要產品主人做不可由 Codex 代替的決策。 | yes | yes |
+| Commit Gate | no | commit 必須由 product owner 明確要求。 | yes | yes |
+| Push Gate | no | push 必須獨立於 commit approval 另行明確要求。 | yes | yes |
+
 ## 2. 適用範圍
 
 本流程適用於 Free Soar Yoga marketplace repo 內的 AI 協作任務，包括：
@@ -184,6 +219,41 @@ Level 3 必須同時符合：
 - Scope ambiguous 或 missing verification plan。
 
 human gate 的結果應明確記錄為 approve、request changes、defer、reject 或 stop。
+
+## 6A. Stop and Notify Conditions
+
+以下情況必須停止自動接棒，並通知 human / product owner。通知可以是人工回報、ChatGPT reminder、GitHub PR comment、Slack 或未來手機通知；本文件只定義 trigger candidates，不宣稱目前已完成任何手機推播整合。
+
+- V1 scope、non-goals 或 core user flow 需要變更。
+- Auth、session、Prisma schema、migration、permissions、role 或 marketplace state machine 需要變更。
+- payment、email、notification、production data、package、env、deploy 或 CI 需要變更。
+- public UX policy change，特別是 teacher onboarding、organizer demand、member enrollment 或 admin review 流程。
+- scope ambiguous，無法確認是否仍在 approved prompt 內。
+- missing verification plan，無法確認應執行哪些 checks 或 read-back。
+- requested file outside allowed files。
+- checks failed，且修復會擴大 scope 或觸及未批准檔案。
+- scope drift detected。
+- unintended behavior change。
+- Reviewer verdict 是 `REQUEST CHANGES`、`BLOCKED`、`STOP`，或等價判斷。
+- Commit Gate。
+- Push Gate。
+
+## 6B. Mobile Notification Trigger Candidates
+
+以下是未來可接手機通知、Slack、GitHub PR comment、ChatGPT reminder 或其他 human notification channel 的 trigger candidates。本文件不宣稱目前已完成手機推播整合，也不要求 Codex 自行發送外部通知。
+
+- Product Owner Decision required。
+- Human Gate reached。
+- Stop Condition triggered。
+- Checks failed。
+- Scope drift detected。
+- Builder completed and review materials ready。
+- Final Review ready for Commit Gate。
+- Commit Gate pending approval。
+- Push Gate pending approval。
+- Missing materials blocks review。
+- Dirty working tree blocks auto-continue。
+- Codex downgraded from Builder to Planning-only。
 
 ## 7. High-risk Task 條件
 
