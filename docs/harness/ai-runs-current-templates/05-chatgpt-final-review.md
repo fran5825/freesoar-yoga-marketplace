@@ -49,6 +49,18 @@
 - Push readiness: `[ready / not ready / human decision required]`
 - Reminder: Codex must not commit or push unless explicitly asked by product owner.
 
-## Follow-up Slice Suggestion
+## Final Review Decision
 
-- `[列出建議下一個 micro slice；若無，寫 None.]`
+- Decision: `[Ready for Commit Gate / Needs Builder fix / Needs Product Owner Decision / Needs Planning / Orchestrator / Stop]`
+- Reason:
+
+## Recommended Next Step
+
+- Recommended next work mode:
+- Next smallest actionable slice:
+- Why this should be next:
+- Can Codex execute directly:
+- Requires product owner decision:
+- Suggested next prompt:
+
+如果沒有合理下一步，請寫 `None`，並說明為什麼可以停止。不得只寫「可以繼續優化」。

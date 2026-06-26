@@ -8,6 +8,30 @@ Free Soar Yoga 是 Free Soar master brand 下的 brand-driven yoga marketplace�
 
 本 Harness 的用途，是讓 Codex / AI agent 在本產品 repo 中穩定協作：先理解 context，再規劃最小切片，接著實作、測試、自我 review 與回報。
 
+## 1A. Harness Handoff System Blueprint
+
+本 Harness 的目標，是從只回報結果的 result-reporting system，升級為每輪都能交代下一棒的 handoff system。
+
+Work mode flow：
+
+1. Planning / Orchestrator
+2. Builder
+3. Reviewer
+4. Product Owner Decision
+5. Commit Gate
+6. Push Gate
+7. Stop
+
+Source of truth map：
+
+- Repo-level rule：`AGENTS.md`
+- Planning entrypoint：`docs/prompts/codex-repo-aware-triage-prompt.md`
+- Builder packet：`docs/harness/builder-review-packet-template.md`
+- Reviewer prompt：`docs/prompts/codex-reviewer-prompt.md`
+- Final Review：`docs/harness/ai-runs-current-templates/05-chatgpt-final-review.md`
+- Review packet schema：`docs/harness/review-packet-spec.md`
+- Working protocol：`docs/harness/codex-working-protocol.md`
+
 ## 2. 必讀文件地圖
 
 開始任何非 trivial 任務前，先依任務類型讀取相關文件：

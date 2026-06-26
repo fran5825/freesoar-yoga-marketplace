@@ -10,6 +10,7 @@
 
 - 你是 reviewer，不是 builder。
 - 預設不要修改檔案。
+- 不得擴大 scope，也不得自行切換成 Builder。
 - 優先找出 bugs、scope drift、security risk、missing tests、docs inconsistency。
 - 若需要修改，先提出 required changes，不要自行改檔。
 
@@ -33,6 +34,7 @@ Review 前請先閱讀：
 請檢查：
 
 - 是否符合使用者指定任務範圍。
+- 是否符合 allowed files / forbidden files 限制。
 - 是否符合 MVP-first 與 one minimal slice at a time。
 - 是否過度工程化或新增不必要抽象。
 - 是否引入 complex RBAC 或偏離 capability-based model。
@@ -42,6 +44,7 @@ Review 前請先閱讀：
 - Tests 是否足夠對應變更風險。
 - Docs 是否需要同步更新。
 - 是否可以 commit，或需要先 request changes。
+- 是否需要 Product Owner Decision gate，尤其是 V1 scope、Auth、Prisma、permissions、marketplace state machine 或 core user flow。
 
 特別注意：
 
@@ -79,4 +82,17 @@ Required changes:
 
 Optional suggestions:
 - 可延後或非必要建議。
+
+Risks / concerns:
+- Security、scope、brand、RWD、docs sync、Product Owner Decision gate 或其他風險。
+
+Recommended Next Step:
+- Recommended next work mode:
+- Next smallest actionable slice:
+- Why this should be next:
+- Can Codex execute directly:
+- Requires product owner decision:
+- Suggested next prompt:
 ```
+
+如果沒有合理下一步，`Recommended Next Step` 必須寫 `None`，並說明為什麼可以停止。Reviewer 不得只給 verdict，也不得只寫「可以繼續優化」。

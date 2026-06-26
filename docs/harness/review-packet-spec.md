@@ -36,6 +36,24 @@ Review packet 的目的，是讓 ChatGPT 不依賴長 session 記憶，也不只
 | Heavy | Triage Packet, Planning Review Packet, Builder Review Packet, Final Review Packet, Human Decision Record |
 | Planning-only | Triage Packet, Planning Review Packet |
 
+## 2A. Common Handoff Schema
+
+所有 Builder Review Packet、Reviewer output、Final Review output 都應包含 handoff section，讓每一輪完成後都能交代下一棒。此規則適用於 completed、partially completed、blocked、no-op 與 planning-only。
+
+Handoff section 必填欄位：
+
+```text
+Recommended Next Step:
+- Recommended next work mode:
+- Next smallest actionable slice:
+- Why this should be next:
+- Can Codex execute directly:
+- Requires product owner decision:
+- Suggested next prompt:
+```
+
+不得只寫「可以繼續優化」。若沒有合理下一步，必須寫 `None`，並說明為什麼可以停止。
+
 ## 3. Triage Packet
 
 ### 3.1 使用時機
@@ -234,6 +252,9 @@ Known limitations:
 
 Builder self-review:
 - Codex 對本次變更的自我檢查。
+
+Recommended Next Step:
+- 依 Common Handoff Schema 填寫完整下一步。
 ```
 
 ## 6. Final Review Packet
@@ -294,6 +315,9 @@ Push readiness:
 
 Recommended next action:
 - approve / request changes / stop / ask human decision / commit gate / push gate。
+
+Recommended Next Step:
+- 依 Common Handoff Schema 填寫完整下一步。
 ```
 
 ## 7. Human Decision Record

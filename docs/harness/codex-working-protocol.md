@@ -150,6 +150,8 @@ Work mode 判斷規則：
 - Requires product owner decision。
 - Suggested next prompt。
 
+Review packet 欄位的共同格式以 `docs/harness/review-packet-spec.md` 為 source of truth；本文件定義 work mode 與 gate 判斷規則。
+
 Codex 不得自動 commit 或 push；即使 Recommended Next Step 指向 `Commit Gate` 或 `Push Gate`，也必須等待產品主人明確要求。
 
 ## 8. 測試與回報
