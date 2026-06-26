@@ -2,7 +2,7 @@
 
 本 prompt 用於任務開始前，讓 Codex 先做 repo-aware triage。
 
-本文件也是 Builder execution 前的 repo-aware triage / Planning-Orchestrator entrypoint。此階段預設 read-only，負責 task triage、risk check、source-of-truth check、next smallest actionable slice、human gate、recommended next work mode 與 suggested next prompt。
+本文件也是 Builder execution 前的 repo-aware triage / Planning / Orchestrator entrypoint。此階段預設 read-only，負責 task triage、risk check、source-of-truth check、next smallest actionable slice、human gate、recommended next work mode 與 suggested next prompt。
 
 此階段只允許閱讀與分析，不允許修改 code、docs、設定檔、migration、package files，也不允許 commit / push。
 

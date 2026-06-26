@@ -32,6 +32,17 @@ Source of truth map：
 - Review packet schema：`docs/harness/review-packet-spec.md`
 - Working protocol：`docs/harness/codex-working-protocol.md`
 
+## 1B. Gates Checklist
+
+本 Harness 的 gate 是 handoff decision，不是 Codex 自動執行授權。詳細 work mode 與 gate 規則以 `docs/harness/codex-working-protocol.md` 為準。
+
+| Gate | 進入時機 | AI 可否直接執行 | 是否需要 product owner 明確批准 | Suggested next prompt 寫法 |
+| --- | --- | --- | --- | --- |
+| Product Owner Decision | 下一步會影響 V1 scope、Auth、Prisma、permissions、marketplace state machine、core user flow 或產品政策 | 不可直接實作，只能整理 options / tradeoffs | 是 | 請產品主人選擇方案，確認後再產出 Builder prompt |
+| Commit Gate | Builder / Reviewer / Final Review 已確認 checks 與 diff 可接受 | 不可自動 commit | 是 | 請明確要求 commit，並指定要 stage 的檔案 |
+| Push Gate | commit 已建立，且準備推送遠端 | 不可自動 push | 是，且需獨立於 commit approval | 請明確要求 push，並指定 branch / remote |
+| Stop | 缺必要 context、需要 forbidden files、規則衝突、未授權新增檔案，或繼續會超出 scope | 不可繼續 build | 視情況需要 | 請先補足決策或重新定義最小切片 |
+
 ## 2. 必讀文件地圖
 
 開始任何非 trivial 任務前，先依任務類型讀取相關文件：

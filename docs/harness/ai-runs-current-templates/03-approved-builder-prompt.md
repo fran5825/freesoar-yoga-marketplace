@@ -6,6 +6,24 @@
 
 請不要在本檔放入 token、credential、production data、客戶敏感資料或 `.env` 內容。
 
+本模板只保存已批准的 Builder prompt，不取代 `Planning / Orchestrator`。若尚未取得 product owner 或 ChatGPT governance review 的明確批准，Codex 不得使用本模板直接進入 Builder。
+
+## Builder Prompt Checklist
+
+每份 approved Builder prompt 至少必須包含：
+
+- approved goal
+- allowed files
+- forbidden files
+- completion criteria
+- stop conditions
+- checks
+- final report requirement
+- no commit / push
+- Recommended Next Step
+
+若上述任一項不清楚，Builder 不得開始實作，應回到 `Planning / Orchestrator` 或 `Product Owner Decision`。
+
 ## Approved Task
 
 ```txt
