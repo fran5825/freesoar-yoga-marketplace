@@ -2,12 +2,14 @@ import { getCurrentUser, requireAdmin, requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
 import type { TeacherProfileStatus } from "./state";
-import { validateTeacherProfileApproveTransition } from "./state";
+import {
+  validateTeacherProfileApproveTransition,
+  validateTeacherProfileSubmitTransition,
+} from "./state";
 import {
   type TeacherProfileApplicationInput,
   type TeacherProfileValidationError,
   validateTeacherProfileDraft,
-  validateTeacherProfileSubmit,
 } from "./validation";
 
 export type TeacherProfileDraftSaveProfile = {
@@ -31,7 +33,6 @@ export type TeacherProfileDraftSaveProfile = {
 export type TeacherProfileDraftSaveErrorCode =
   | "authentication_required"
   | "draft_validation_failed"
-  | "rejected_profile_policy_not_decided"
   | "submitted_profile_cannot_save_draft"
   | "approved_profile_cannot_save_draft"
   | "suspended_profile_cannot_save_draft"
@@ -71,7 +72,6 @@ export type TeacherProfileSubmitErrorCode =
   | "authentication_required"
   | "teacher_profile_draft_required"
   | "submit_validation_failed"
-  | "rejected_profile_policy_not_decided"
   | "submitted_profile_cannot_submit_again"
   | "approved_profile_cannot_submit_again"
   | "suspended_profile_cannot_submit"
@@ -225,7 +225,10 @@ export async function saveOwnTeacherProfileDraft(
       };
     }
 
-    if (existingProfile.status === "draft") {
+    if (
+      existingProfile.status === "draft" ||
+      existingProfile.status === "rejected"
+    ) {
       const profile = await prisma.teacherProfile.update({
         where: { userId: currentUser.id },
         data: toTeacherProfileDraftData(input),
@@ -274,18 +277,33 @@ export async function submitOwnTeacherProfileApplication(
       };
     }
 
-    if (existingProfile.status !== "draft") {
-      return createSubmitStatusBlockedResult(existingProfile.status);
-    }
+    const transition = validateTeacherProfileSubmitTransition(
+      existingProfile.status,
+      input,
+    );
 
-    const validation = validateTeacherProfileSubmit(input);
+    if (!transition.allowed) {
+      if (transition.code === "submit_validation_failed") {
+        return {
+          ok: false,
+          code: "submit_validation_failed",
+          message: "送出審核前，請先補齊必填的老師申請資料。",
+          validationErrors: transition.validationErrors,
+        };
+      }
 
-    if (!validation.valid) {
+      if (
+        existingProfile.status === "submitted" ||
+        existingProfile.status === "approved" ||
+        existingProfile.status === "suspended"
+      ) {
+        return createSubmitStatusBlockedResult(existingProfile.status);
+      }
+
       return {
         ok: false,
-        code: "submit_validation_failed",
-        message: "送出審核前，請先補齊必填的老師申請資料。",
-        validationErrors: validation.errors,
+        code: "teacher_profile_submit_failed",
+        message: "老師申請暫時無法送出，請稍後再試。",
       };
     }
 
@@ -403,16 +421,8 @@ function toTeacherProfileDraftData(input: TeacherProfileApplicationInput) {
 }
 
 function createStatusBlockedResult(
-  status: TeacherProfileDraftSaveProfile["status"],
+  status: Exclude<TeacherProfileDraftSaveProfile["status"], "draft" | "rejected">,
 ): TeacherProfileDraftSaveResult {
-  if (status === "rejected") {
-    return {
-      ok: false,
-      code: "rejected_profile_policy_not_decided",
-      message: "退回後的草稿編輯規則尚未開放，請等待後續流程。",
-    };
-  }
-
   if (status === "submitted") {
     return {
       ok: false,
@@ -437,16 +447,8 @@ function createStatusBlockedResult(
 }
 
 function createSubmitStatusBlockedResult(
-  status: TeacherProfileSubmitProfile["status"],
+  status: Exclude<TeacherProfileSubmitProfile["status"], "draft" | "rejected">,
 ): TeacherProfileSubmitResult {
-  if (status === "rejected") {
-    return {
-      ok: false,
-      code: "rejected_profile_policy_not_decided",
-      message: "退回後重新送審的規則尚未開放，請等待後續流程。",
-    };
-  }
-
   if (status === "submitted") {
     return {
       ok: false,

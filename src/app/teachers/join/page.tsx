@@ -81,7 +81,7 @@ const initialFormState: TeacherApplicationFormState = {
 };
 
 const mutationBlockedStatusLabels: Record<
-  Exclude<HydratedTeacherProfileStatus, "draft">,
+  Exclude<HydratedTeacherProfileStatus, "draft" | "rejected">,
   {
     notice: string;
     saveButton: string;
@@ -99,12 +99,6 @@ const mutationBlockedStatusLabels: Record<
       "老師資料已通過審核，後續資料調整會走正式編輯流程。此加入表單暫時不開放更新或重新送出。",
     saveButton: "已通過審核",
     submitButton: "已通過審核",
-  },
-  rejected: {
-    notice:
-      "退回後重新整理與重新送審規則尚未開放。此階段先不提供重新送出或草稿更新。",
-    saveButton: "退回規則未開放",
-    submitButton: "暫不開放重新送審",
   },
   suspended: {
     notice:
@@ -291,8 +285,6 @@ function getDraftSaveErrorMessage(
       return "請先登入後再儲存草稿。登入後，你可以回到這裡繼續整理老師申請資料。";
     case "draft_validation_failed":
       return "有些草稿資料格式需要調整後才能儲存。請依提示慢慢修正即可。";
-    case "rejected_profile_policy_not_decided":
-      return "退回後的重新整理流程尚未開放。之後會提供清楚的補件與重新送審方式。";
     case "submitted_profile_cannot_save_draft":
       return "你的申請已送審，目前先不開放修改草稿。我們會在審核流程中提供下一步說明。";
     case "approved_profile_cannot_save_draft":
@@ -314,8 +306,6 @@ function getSubmitErrorMessage(
       return "請先儲存老師申請草稿，再送出審核。這能讓平台確認你的申請資料已建立。";
     case "submit_validation_failed":
       return "送出審核前，還需要補齊以下欄位。你可以慢慢調整，畫面中的內容會保留。";
-    case "rejected_profile_policy_not_decided":
-      return "退回後重新送審的規則尚未開放。之後會提供清楚的補件與重新送審方式。";
     case "submitted_profile_cannot_submit_again":
       return "老師申請已送審，不能重複送出。接下來請等待平台確認。";
     case "approved_profile_cannot_submit_again":
@@ -446,8 +436,11 @@ export default function TeacherJoinPage() {
   );
   const isReadyForFutureSubmit = missingRequiredFields.length === 0;
   const lastSavedAtLabel = lastSavedAt ? formatLastSavedAt(lastSavedAt) : null;
+  const isRejectedProfile = hydratedProfileStatus === "rejected";
   const mutationBlockedStatus =
-    hydratedProfileStatus && hydratedProfileStatus !== "draft"
+    hydratedProfileStatus &&
+    hydratedProfileStatus !== "draft" &&
+    hydratedProfileStatus !== "rejected"
       ? hydratedProfileStatus
       : null;
   const mutationBlockedCopy = mutationBlockedStatus
@@ -497,8 +490,9 @@ export default function TeacherJoinPage() {
         setLastSavedAt(result.profile.updatedAt);
         setDraftSaveFeedback({
           kind: "success",
-          message:
-            "草稿已儲存。這還不是正式送審，你可以慢慢調整內容。",
+          message: isRejectedProfile
+            ? "修正內容已儲存。你可以依退回說明慢慢調整，準備好後再重新送審。"
+            : "草稿已儲存。這還不是正式送審，你可以慢慢調整內容。",
         });
         return;
       }
@@ -612,6 +606,8 @@ export default function TeacherJoinPage() {
           <p className="mt-4 text-sm leading-6 text-gray-500">
             {mutationBlockedCopy
               ? "下方會顯示目前老師申請資料與狀態；此狀態暫時不開放草稿儲存或送出審核。"
+              : isRejectedProfile
+                ? "下方會顯示被退回的申請資料；你可以依修正方向調整後重新送審。"
               : "下方表單可手動儲存草稿；準備好後，請經過二次確認再正式送出審核。"}
           </p>
         </div>
@@ -657,6 +653,10 @@ export default function TeacherJoinPage() {
             {mutationBlockedCopy ? (
               <p>
                 這份 TeacherProfile 目前已有狀態紀錄。此頁只做初始資料與狀態呈現，不開放此狀態的草稿儲存、重新送審或 Admin review 操作。
+              </p>
+            ) : isRejectedProfile ? (
+              <p>
+                這份 TeacherProfile 已退回修正。你可以依平台提供的修正方向更新內容，儲存修正後再重新送出審核。
               </p>
             ) : (
               <>
@@ -783,6 +783,8 @@ export default function TeacherJoinPage() {
               <p className="mt-2 text-sm leading-6 text-gray-600">
                 {mutationBlockedCopy
                   ? "目前狀態不開放在加入表單中更新或送出。你仍可查看已保存的 Phase 1 TeacherProfile 內容。"
+                  : isRejectedProfile
+                    ? "這份申請已退回修正。你可以更新內容、儲存修正，準備好後重新送出審核。"
                   : "「檢查準備狀態」不是正式送出；「儲存草稿」也不會送審。這裡只是協助你用低壓方式整理 Phase 1 申請內容。"}
               </p>
               <div aria-live="polite">
@@ -906,7 +908,9 @@ export default function TeacherJoinPage() {
                 <div className="mt-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950">
                   <p className="font-medium text-gray-950">確認送出審核</p>
                   <p className="mt-2">
-                    送出後，這份老師申請會進入平台審核。審核期間暫時不需要再儲存草稿；請確認主要資料已準備好，再送出。
+                    {isRejectedProfile
+                      ? "重新送出後，這份老師申請會再次進入平台審核。請確認修正內容已準備好，再送出。"
+                      : "送出後，這份老師申請會進入平台審核。審核期間暫時不需要再儲存草稿；請確認主要資料已準備好，再送出。"}
                   </p>
                   <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                     <button
@@ -939,6 +943,10 @@ export default function TeacherJoinPage() {
               >
                 {mutationBlockedCopy
                   ? mutationBlockedCopy.saveButton
+                  : isRejectedProfile
+                    ? isSavingDraft
+                      ? "正在儲存..."
+                      : "儲存修正"
                   : hasSubmittedApplication
                     ? "申請已送審"
                   : isSavingDraft
@@ -961,6 +969,8 @@ export default function TeacherJoinPage() {
                   ? "正在送出..."
                   : mutationBlockedCopy
                     ? mutationBlockedCopy.submitButton
+                    : isRejectedProfile
+                      ? "重新送出審核"
                     : hasSubmittedApplication
                       ? "已送出審核"
                     : "送出審核"}
@@ -984,6 +994,12 @@ export default function TeacherJoinPage() {
                 "此頁不導向 dashboard，也不新增 Admin review、通知或重新送審流程。",
                 "後續資料調整會依正式產品流程另行開放。",
               ]
+            : isRejectedProfile
+              ? [
+                  "依照退回說明更新需要修正的欄位。",
+                  "可以先儲存修正，確認主要資料完整後再重新送出審核。",
+                  "重新送出後，申請會回到平台審核流程。",
+                ]
             : nextSteps
           ).map((step, index) => (
             <li className="flex gap-3 text-sm leading-6 text-gray-700" key={step}>
