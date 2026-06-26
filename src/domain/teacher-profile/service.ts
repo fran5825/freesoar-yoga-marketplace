@@ -1,7 +1,8 @@
-import { getCurrentUser, requireUser } from "@/lib/auth/session";
+import { getCurrentUser, requireAdmin, requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
 import type { TeacherProfileStatus } from "./state";
+import { validateTeacherProfileApproveTransition } from "./state";
 import {
   type TeacherProfileApplicationInput,
   type TeacherProfileValidationError,
@@ -106,6 +107,32 @@ export type TeacherProfileApplicationSnapshot = {
   updatedAt: Date;
 };
 
+export type SubmittedTeacherProfileApplication = TeacherProfileApplicationSnapshot & {
+  user: {
+    id: string;
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+  };
+};
+
+export type TeacherProfileApproveErrorCode =
+  | "admin_permission_required"
+  | "teacher_profile_not_found"
+  | "teacher_profile_not_submitted"
+  | "teacher_profile_approve_failed";
+
+export type TeacherProfileApproveResult =
+  | {
+      ok: true;
+      profile: TeacherProfileApplicationSnapshot;
+    }
+  | {
+      ok: false;
+      code: TeacherProfileApproveErrorCode;
+      message: string;
+    };
+
 const teacherProfileDraftSelect = {
   id: true,
   userId: true,
@@ -124,6 +151,18 @@ const teacherProfileDraftSelect = {
   updatedAt: true,
 } as const;
 
+const submittedTeacherProfileApplicationSelect = {
+  ...teacherProfileDraftSelect,
+  user: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+    },
+  },
+} as const;
+
 export async function getOwnTeacherProfileApplicationSnapshot(): Promise<TeacherProfileApplicationSnapshot | null> {
   const currentUser = await getCurrentUser();
 
@@ -134,6 +173,18 @@ export async function getOwnTeacherProfileApplicationSnapshot(): Promise<Teacher
   return prisma.teacherProfile.findUnique({
     where: { userId: currentUser.id },
     select: teacherProfileDraftSelect,
+  });
+}
+
+export async function listSubmittedTeacherProfileApplicationsForAdmin(): Promise<
+  SubmittedTeacherProfileApplication[]
+> {
+  await requireAdmin();
+
+  return prisma.teacherProfile.findMany({
+    where: { status: "submitted" },
+    orderBy: { updatedAt: "asc" },
+    select: submittedTeacherProfileApplicationSelect,
   });
 }
 
@@ -268,6 +319,74 @@ export async function submitOwnTeacherProfileApplication(
   }
 }
 
+export async function approveSubmittedTeacherProfileApplication(
+  teacherProfileId: string,
+): Promise<TeacherProfileApproveResult> {
+  try {
+    await requireAdmin();
+
+    const approveResult = await prisma.teacherProfile.updateMany({
+      where: {
+        id: teacherProfileId,
+        status: "submitted",
+      },
+      data: { status: "approved" },
+    });
+
+    if (approveResult.count === 0) {
+      const existingProfile = await prisma.teacherProfile.findUnique({
+        where: { id: teacherProfileId },
+        select: teacherProfileDraftSelect,
+      });
+
+      if (!existingProfile) {
+        return {
+          ok: false,
+          code: "teacher_profile_not_found",
+          message: "TeacherProfile application was not found.",
+        };
+      }
+
+      const transition = validateTeacherProfileApproveTransition(
+        existingProfile.status,
+      );
+
+      if (!transition.allowed) {
+        return {
+          ok: false,
+          code: "teacher_profile_not_submitted",
+          message:
+            "Only submitted TeacherProfile applications can be approved.",
+        };
+      }
+    }
+
+    const profile = await prisma.teacherProfile.findUniqueOrThrow({
+      where: { id: teacherProfileId },
+      select: teacherProfileDraftSelect,
+    });
+
+    return {
+      ok: true,
+      profile,
+    };
+  } catch (error) {
+    if (isAdminPermissionRequiredError(error)) {
+      return {
+        ok: false,
+        code: "admin_permission_required",
+        message: "Admin permission is required to approve TeacherProfile.",
+      };
+    }
+
+    return {
+      ok: false,
+      code: "teacher_profile_approve_failed",
+      message: "TeacherProfile application could not be approved.",
+    };
+  }
+}
+
 function toTeacherProfileDraftData(input: TeacherProfileApplicationInput) {
   return {
     displayName: input.displayName ?? null,
@@ -353,4 +472,12 @@ function createSubmitStatusBlockedResult(
 
 function isAuthenticationRequiredError(error: unknown): boolean {
   return error instanceof Error && error.message === "Authentication required";
+}
+
+function isAdminPermissionRequiredError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.message === "Authentication required" ||
+      error.message === "Admin access required")
+  );
 }

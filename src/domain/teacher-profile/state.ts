@@ -17,6 +17,12 @@ export type TeacherProfileSubmitTransitionErrorCode =
   | "approved_profile_cannot_resubmit"
   | "suspended_profile_cannot_resubmit";
 
+export type TeacherProfileApproveTransitionErrorCode =
+  | "draft_profile_cannot_approve"
+  | "approved_profile_cannot_approve_again"
+  | "rejected_profile_cannot_approve"
+  | "suspended_profile_cannot_approve";
+
 export type TeacherProfileSubmitTransitionResult =
   | {
       allowed: true;
@@ -29,6 +35,19 @@ export type TeacherProfileSubmitTransitionResult =
       to: "submitted";
       code: TeacherProfileSubmitTransitionErrorCode;
       validationErrors?: TeacherProfileValidationError[];
+    };
+
+export type TeacherProfileApproveTransitionResult =
+  | {
+      allowed: true;
+      from: "submitted";
+      to: "approved";
+    }
+  | {
+      allowed: false;
+      from: TeacherProfileStatus;
+      to: "approved";
+      code: TeacherProfileApproveTransitionErrorCode;
     };
 
 export function validateTeacherProfileSubmitTransition(
@@ -78,5 +97,51 @@ export function validateTeacherProfileSubmitTransition(
     allowed: true,
     from,
     to: "submitted",
+  };
+}
+
+export function validateTeacherProfileApproveTransition(
+  from: TeacherProfileStatus,
+): TeacherProfileApproveTransitionResult {
+  if (from === "submitted") {
+    return {
+      allowed: true,
+      from,
+      to: "approved",
+    };
+  }
+
+  if (from === "draft") {
+    return {
+      allowed: false,
+      from,
+      to: "approved",
+      code: "draft_profile_cannot_approve",
+    };
+  }
+
+  if (from === "approved") {
+    return {
+      allowed: false,
+      from,
+      to: "approved",
+      code: "approved_profile_cannot_approve_again",
+    };
+  }
+
+  if (from === "rejected") {
+    return {
+      allowed: false,
+      from,
+      to: "approved",
+      code: "rejected_profile_cannot_approve",
+    };
+  }
+
+  return {
+    allowed: false,
+    from,
+    to: "approved",
+    code: "suspended_profile_cannot_approve",
   };
 }
