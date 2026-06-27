@@ -30,7 +30,7 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 
 | Route | 目的 |
 |---|---|
-| `/teacher/dashboard` | 老師 dashboard，顯示 profile status、近期需求與課程摘要 |
+| `/teacher/dashboard` | 老師 onboarding / status dashboard；已登入使用者可查看自己的 TeacherProfile status，尚未建立 TeacherProfile 時可前往建立申請。本 status slice 不開放 demand、availability、response 或 class session 功能。 |
 | `/teacher/profile` | 編輯 teacher profile |
 | `/teacher/availability` | 管理固定 availability 與 exception |
 | `/teacher/demands` | 查看 eligible demand requests |
@@ -69,7 +69,8 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 ## Route Guard 原則
 
 - `/admin/*` 必須只允許 Admin。
-- `/teacher/*` 必須只允許 Teacher 或 Admin；未 approved 的 Teacher 只能進入 onboarding / profile 相關頁。
+- `/teacher/dashboard` 是登入後 teacher onboarding / status route，允許 signed-in user 進入並建立 teacher application；頁面只能顯示自己的 TeacherProfile status 與申請下一步，不可開放 demand、availability、response 或 class session 功能。
+- 其他 `/teacher/*` workspace routes 必須只允許 Teacher 或 Admin；未 approved 的 Teacher 只能進入 onboarding / profile 相關頁。Demand response、eligible demand pool、availability 與 class session 能力必須另外檢查 TeacherProfile status 與 service-layer permission。
 - `/organizer/*` 必須只允許 Organizer 或 Admin。
 - `/member/*` 必須只允許登入會員或 Admin。
 - 所有登入者預設具備 Member 基本能力；Teacher 或 Organizer 若要報名課程，使用同一個 User 的 Member 能力。
