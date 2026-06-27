@@ -49,6 +49,33 @@ Controlled Auto Loop 是受控接棒流程，不是 fully autonomous loop。
 | Commit Gate | no | commit 必須由 product owner 明確要求。 | yes | yes |
 | Push Gate | no | push 必須獨立於 commit approval 另行明確要求。 | yes | yes |
 
+## 1C. Approval Noise Reduction
+
+Approval Noise Reduction 的目標，是在已批准任務的 allowed scope 內，減少低風險、重複性的 approval noise，讓 Codex 可以連續完成必要的 read-only 檢查、已授權檔案讀取、已列明 checks 與 review packet 輸出。
+
+Approval Noise Reduction 不等於 fully autonomous loop，不等於 auto approve，不等於 auto commit，也不等於 auto push。它只適用於 approved task、allowed files、allowed commands、required checks 與 stop conditions 都已清楚定義的情況。
+
+在 approved task 的 allowed scope 內，Codex 不需要每一步重新詢問 approval：
+
+- 執行 read-only commands，例如 `git status --short`、`git diff`、`rg`、讀取指定 docs。
+- 閱讀 allowed files 與任務明確要求檢查的 source-of-truth 文件。
+- 修改 approved prompt 明確列出的 allowed files。
+- 執行 prompt 已列明的 checks，例如 lint、typecheck、test、build 或 docs read-back。
+- 產出 planning report、Builder review packet、final report、self review 與 scope drift check。
+- 在明確授權範圍內執行 formatting-only cleanup。
+
+以下情況必須停止並詢問 human / product owner：
+
+- 需要讀寫 allowed files 以外且非 read-only audit 所需的檔案。
+- 需要修改 forbidden files。
+- 需要修改 source code、tests、Prisma、migration、package、env、Auth、permissions、state machine、role model 或 core user flow，但 approved prompt 未明確授權。
+- 需要做 product policy decision 或 V1 scope decision。
+- 需要 destructive command。
+- checks failed，且修復會擴大 scope 或碰到未授權檔案。
+- 發現 scope drift、規則衝突或缺少必要 context。
+- 需要 commit。
+- 需要 push。
+
 ## 2. 適用範圍
 
 本流程適用於 Free Soar Yoga marketplace repo 內的 AI 協作任務，包括：

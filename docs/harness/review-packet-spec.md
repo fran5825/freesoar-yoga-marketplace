@@ -55,9 +55,13 @@ Recommended Next Step:
 - Stop condition triggered:
 - Notify human:
 - Notification reason:
+- Approval noise reduction applied:
+- Approval boundary note:
 ```
 
 不得只寫「可以繼續優化」。若沒有合理下一步，必須寫 `None`，並說明為什麼可以停止。
+
+`Approval noise reduction applied` 只記錄本輪是否在 approved scope 內減少重複 approval；不得用來取代 Product Owner Decision、Human Gate、Commit Gate、Push Gate 或 Stop Condition。`Approval boundary note` 應簡短說明本輪是否仍停留在 allowed scope，以及是否有任何需要 human / product owner 的邊界。
 
 ## 3. Triage Packet
 

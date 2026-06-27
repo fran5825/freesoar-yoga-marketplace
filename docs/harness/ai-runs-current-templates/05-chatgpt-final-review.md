@@ -53,6 +53,8 @@
 
 - Decision: `[Ready for Commit Gate / Needs Builder fix / Needs Product Owner Decision / Needs Planning / Orchestrator / Stop]`
 - Reason:
+- Approval noise reduction check:
+- Approval boundary note:
 
 ## Recommended Next Step
 
@@ -67,5 +69,7 @@
 - Stop condition triggered:
 - Notify human:
 - Notification reason:
+- Approval noise reduction applied:
+- Approval boundary note:
 
 如果沒有合理下一步，請寫 `None`，並說明為什麼可以停止。不得只寫「可以繼續優化」。Final Review 不得暗示 Codex 可以 auto commit、auto push 或略過 Product Owner Decision / Commit Gate / Push Gate。

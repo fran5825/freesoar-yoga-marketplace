@@ -159,6 +159,14 @@ Review packet 欄位的共同格式以 `docs/harness/review-packet-spec.md` 為 
 
 若任一 gate 需要 human approval，Codex 不得自動進入下一步。Codex 不得自動 commit 或 push；即使 Recommended Next Step 指向 `Commit Gate` 或 `Push Gate`，也必須等待產品主人明確要求。
 
+### 7B. Approval Noise Reduction 使用規則
+
+Approval Noise Reduction 的 source of truth 是 `docs/harness/controlled-automation-loop.md`。本 protocol 只定義日常使用方式，不重複完整 policy。
+
+在 approved task 的 allowed scope 內，Codex 可以不逐步詢問 approval，直接執行 read-only commands、讀取 allowed files、修改明確授權的 allowed files、執行 prompt 列明的 checks、做 docs read-back，並輸出必要 review packet。
+
+只要遇到 forbidden files、allowed files 以外的修改、scope drift、Product Owner Decision、Human Gate、Commit Gate、Push Gate、Stop Condition、destructive command，或 checks repair 會擴大 scope，Codex 必須停止並回報，不得把 Approval Noise Reduction 解讀成 auto approve、auto commit、auto push 或 fully autonomous loop。
+
 ## 8. 測試與回報
 
 Codex 應根據變更風險執行適當測試：

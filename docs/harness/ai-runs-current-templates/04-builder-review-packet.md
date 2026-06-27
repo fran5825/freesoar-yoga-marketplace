@@ -66,6 +66,8 @@ Reason:
 
 ## 9. Risk Notes
 
+- Approval noise reduction applied:
+- Approval boundary note:
 - Auth / Prisma / DB / migration:
 - Permission / role model:
 - State machine:
@@ -106,5 +108,7 @@ Reason:
 - Stop condition triggered:
 - Notify human:
 - Notification reason:
+- Approval noise reduction applied:
+- Approval boundary note:
 
 如果沒有下一步，請寫 `None`，並說明為什麼可以停止。
