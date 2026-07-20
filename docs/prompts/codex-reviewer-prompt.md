@@ -87,12 +87,21 @@ Risks / concerns:
 - Security、scope、brand、RWD、docs sync、Product Owner Decision gate 或其他風險。
 
 Recommended Next Step:
+- Level:
 - Recommended next work mode:
 - Next smallest actionable slice:
 - Why this should be next:
 - Can Codex execute directly:
+- Suggested execution location:
 - Requires product owner decision:
 - Suggested next prompt:
+- Auto-continue allowed:
+- Auto-continue reason:
+- Stop condition triggered:
+- Notify human:
+- Notification reason:
+- Approval noise reduction applied:
+- Approval boundary note:
 ```
 
-如果沒有合理下一步，`Recommended Next Step` 必須寫 `None`，並說明為什麼可以停止。Reviewer 不得只給 verdict，也不得只寫「可以繼續優化」。
+Reviewer output 屬於正式 handoff packet，必須依 `docs/harness/review-packet-spec.md` 使用完整 Common Handoff Schema。Level 與 Suggested execution location 請依 `docs/harness/next-step-handoff-levels.md` 填寫。如果沒有合理下一步，`Recommended Next Step` 必須寫 `None`，並說明為什麼可以停止。若 `Suggested next prompt` 不是 `None`，final report 最後必須用 1 / 2 選項格式詢問產品主人要在目前 task 執行該 prompt，或開新 task 執行該 prompt。Reviewer 不得只給 verdict，也不得只寫「可以繼續優化」。

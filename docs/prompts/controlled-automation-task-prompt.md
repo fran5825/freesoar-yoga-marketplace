@@ -121,6 +121,8 @@ Codex 必須分類任務，可複選：
 - Level 2 Approved Builder automation
 - Level 3 Low-risk autonomous docs cleanup
 
+注意：本段的 Automation Level 0-3 與 `docs/harness/next-step-handoff-levels.md` 的 L1 / L2 / L3 Handoff Level 是不同維度。Automation Level 判斷本輪 Codex 可自動做到哪裡；Handoff Level 判斷 final report 的下一步 prompt 要多正式。輸出 Recommended Next Step 時，仍必須另行標示 Handoff Level：L1 Quick Answer / Quick Fix、L2 Harness Preflight 或 L3 Template Prompt Handoff。一般 final report 可使用輕量欄位；Builder Review Packet、Reviewer output 或 Final Review output 必須依 `docs/harness/review-packet-spec.md` 使用完整 Common Handoff Schema。若 `Suggested next prompt` 不是 `None`，final report 最後必須用 1 / 2 選項格式詢問產品主人要在目前 task 執行該 prompt，或開新 task 執行該 prompt。
+
 必須說明：
 
 - 本輪 level

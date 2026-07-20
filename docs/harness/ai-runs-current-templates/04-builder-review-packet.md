@@ -97,10 +97,12 @@ Reason:
 
 ## 13. Recommended Next Step / Handoff
 
+- Level:
 - Recommended next work mode:
 - Next smallest actionable slice:
 - Why this should be next:
 - Can Codex execute directly:
+- Suggested execution location:
 - Requires product owner decision:
 - Suggested next prompt:
 - Auto-continue allowed:
@@ -110,5 +112,7 @@ Reason:
 - Notification reason:
 - Approval noise reduction applied:
 - Approval boundary note:
+
+若 `Suggested next prompt` 不是 `None`，final report 最後必須用 1 / 2 選項格式詢問產品主人要在目前 task 執行該 prompt，或開新 task 執行該 prompt；不得自動建立新 task。
 
 如果沒有下一步，請寫 `None`，並說明為什麼可以停止。

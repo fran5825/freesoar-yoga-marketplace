@@ -58,10 +58,12 @@
 
 ## Recommended Next Step
 
+- Level:
 - Recommended next work mode:
 - Next smallest actionable slice:
 - Why this should be next:
 - Can Codex execute directly:
+- Suggested execution location:
 - Requires product owner decision:
 - Suggested next prompt:
 - Auto-continue allowed:
@@ -71,5 +73,7 @@
 - Notification reason:
 - Approval noise reduction applied:
 - Approval boundary note:
+
+若 `Suggested next prompt` 不是 `None`，final report 最後必須用 1 / 2 選項格式詢問產品主人要在目前 task 執行該 prompt，或開新 task 執行該 prompt；不得自動建立新 task。
 
 如果沒有合理下一步，請寫 `None`，並說明為什麼可以停止。不得只寫「可以繼續優化」。Final Review 不得暗示 Codex 可以 auto commit、auto push 或略過 Product Owner Decision / Commit Gate / Push Gate。

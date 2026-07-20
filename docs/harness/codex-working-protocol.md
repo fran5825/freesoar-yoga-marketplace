@@ -141,19 +141,28 @@ Work mode 判斷規則：
 - `Push Gate`：只有在 commit 已建立，且產品主人另行明確要求 push 時才使用。
 - `Stop`：當缺少必要 context、需要修改 forbidden files、必須新增未授權文件、規則互相衝突，或繼續執行會超出授權時使用。
 
-`Recommended Next Step` 必須包含：
+一般 final report 的 `Recommended Next Step` 至少必須包含：
 
+- Level：`L1 Quick Answer / Quick Fix`、`L2 Harness Preflight` 或 `L3 Template Prompt Handoff`。
 - Recommended next work mode。
 - Next smallest actionable slice。
 - Why this should be next。
 - Can Codex execute directly。
+- Suggested execution location：`current task`、`new task` 或 `either`。
 - Requires product owner decision。
 - Suggested next prompt。
+
+若輸出內容是 Builder Review Packet、Reviewer output、Final Review output 或正式 handoff packet，必須再補齊完整 Common Handoff Schema：
+
 - Auto-continue allowed。
 - Auto-continue reason。
 - Stop condition triggered。
 - Notify human。
 - Notification reason。
+- Approval noise reduction applied。
+- Approval boundary note。
+
+Level、execution location、輕量 final report schema、完整 handoff packet schema 與 Suggested next prompt 的收尾詢問規則以 `docs/harness/next-step-handoff-levels.md` 為準。Codex 應優先用 L1 快速解決低風險問題；需要 repo-aware 風險判斷時升級 L2；需要 Planning / Builder / Reviewer / Product Owner Decision 接棒時才升級 L3。
 
 Review packet 欄位的共同格式以 `docs/harness/review-packet-spec.md` 為 source of truth；本文件定義 work mode 與 gate 判斷規則。
 

@@ -149,14 +149,26 @@ Code identifier、route name、file path、command name、Git command、package 
 
 Codex 每次 final report 都必須包含 `Recommended Next Step`，即使本輪結果是 completed、partially completed、blocked、no-op 或 planning-only。
 
-`Recommended Next Step` 必須具體回答：
+一般 final report 的 `Recommended Next Step` 至少必須具體回答：
 
+- Level：L1 快速解決問題 / L2 Harness Preflight / L3 需要啟動 template prompt。
 - Recommended next work mode。
 - Next smallest actionable slice。
 - Why this should be next。
 - Can Codex execute directly。
+- Suggested execution location：在現有 task 執行、開新 task 執行，或兩者皆可。
 - Requires product owner decision。
 - Suggested next prompt。
+
+`Suggested next prompt` 必須可直接複製使用，並依任務等級對齊 `docs/harness/next-step-handoff-levels.md`：
+
+- L1 可提供一句輕量 prompt。
+- L2 應提供 Harness Preflight prompt。
+- L3 必須提供符合 planning、builder、reviewer 或 product owner decision template 的 prompt。
+
+若有產出 `Suggested next prompt` 且不是 `None`，Codex 的 final report 最後必須用 1 / 2 選項格式詢問產品主人是否要在目前 task 執行該 prompt，或開新 task 執行該 prompt。Codex 不得在未被明確要求時自動建立新 task。
+
+正式 Builder Review Packet、Reviewer output 或 Final Review output 若作為 handoff packet，必須依 `docs/harness/review-packet-spec.md` 補齊完整 Common Handoff Schema，包括 auto-continue、stop / notify 與 approval boundary 欄位。
 
 不得只給空泛建議，例如「可以繼續優化」。若沒有合理下一步，必須寫 `None`，並說明為什麼可以停止。
 

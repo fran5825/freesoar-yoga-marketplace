@@ -189,14 +189,28 @@ Auto Builder Decision:
 
 請建議下一步，並避免只給空泛方向。如果下一步不是 Builder，不要硬產出 Builder Prompt；請改為產出適合的 suggested next prompt。
 
-必須包含：
+請先依 `docs/harness/next-step-handoff-levels.md` 判斷下一步屬於：
 
+- L1 Quick Answer / Quick Fix
+- L2 Harness Preflight
+- L3 Template Prompt Handoff
+
+一般 final report 至少必須包含：
+
+- Level:
 - Recommended next work mode:
 - Next smallest actionable slice:
 - Why this should be next:
 - Can Codex execute directly:
+- Suggested execution location: current task / new task / either
 - Requires product owner decision:
 - Suggested next prompt:
+
+`Suggested next prompt` 必須可直接複製使用。若為 L1，可用一句輕量 prompt；若為 L2，請提供 Harness Preflight prompt；若為 L3，請提供符合 planning、builder、reviewer 或 product owner decision template 的完整 prompt。
+
+若 `Suggested next prompt` 不是 `None`，final report 最後必須用 1 / 2 選項格式詢問產品主人要在目前 task 執行該 prompt，或開新 task 執行該 prompt；不得自動建立新 task。
+
+若本輪輸出同時作為正式 review packet / handoff packet，請依 `docs/harness/review-packet-spec.md` 補齊完整 Common Handoff Schema。
 
 ## 12. Draft Builder Prompt Candidate
 

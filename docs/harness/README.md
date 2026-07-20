@@ -31,6 +31,7 @@ Source of truth map：
 - Final Review：`docs/harness/ai-runs-current-templates/05-chatgpt-final-review.md`
 - Review packet schema：`docs/harness/review-packet-spec.md`
 - Working protocol：`docs/harness/codex-working-protocol.md`
+- Next step handoff levels：`docs/harness/next-step-handoff-levels.md`
 
 ## 1B. Gates Checklist
 
@@ -57,6 +58,7 @@ Source of truth map：
 - `docs/harness/controlled-automation-loop.md`：Controlled Auto Loop 的 source of truth，定義 Codex 在本 repo 可使用的受控自動化層級、auto-continue 條件、stop / notify 條件、human gate、high-risk 降級與 commit / push governance。
 - `docs/harness/risk-based-workflow.md`：依任務風險選擇 Light / Standard / Heavy / Planning-only workflow。
 - `docs/harness/review-packet-spec.md`：定義 triage、planning、builder、final review packet 的必要材料。
+- `docs/harness/next-step-handoff-levels.md`：定義每輪 `Recommended Next Step` 的 L1 / L2 / L3 判斷、是否建議 current task / new task，以及符合 template 的 suggested next prompt。
 - `docs/harness/chatgpt-governance-review.md`：ChatGPT 作為上層治理 reviewer 時的品牌、scope、風險、verdict 與 prompt 校正準則。
 - `docs/prompts/controlled-automation-task-prompt.md`：通用任務啟動 prompt，讓 RD 用短任務描述要求 Codex 依 Controlled Automation Loop 自行判斷 automation level、human gate、Planning-only 或 Approved Builder 流程。
 - `docs/prompts/codex-repo-aware-triage-prompt.md`：任務開始前讓 Codex 先做 repo-aware triage 的操作 prompt。

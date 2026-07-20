@@ -38,16 +38,20 @@ Review packet 的目的，是讓 ChatGPT 不依賴長 session 記憶，也不只
 
 ## 2A. Common Handoff Schema
 
-所有 Builder Review Packet、Reviewer output、Final Review output 都應包含 handoff section，讓每一輪完成後都能交代下一棒。此規則適用於 completed、partially completed、blocked、no-op 與 planning-only。
+所有 Builder Review Packet、Reviewer output、Final Review output 都應包含完整 handoff section，讓每一輪完成後都能交代下一棒。此規則適用於 completed、partially completed、blocked、no-op 與 planning-only。
+
+一般 final report 可使用 `docs/harness/next-step-handoff-levels.md` 定義的 Lightweight Final Report Schema，以保留 L1 快速處理小問題的彈性；正式 review packet / handoff packet 則必須使用下列完整 Common Handoff Schema。
 
 Handoff section 必填欄位：
 
 ```text
 Recommended Next Step:
+- Level:
 - Recommended next work mode:
 - Next smallest actionable slice:
 - Why this should be next:
 - Can Codex execute directly:
+- Suggested execution location:
 - Requires product owner decision:
 - Suggested next prompt:
 - Auto-continue allowed:
@@ -60,6 +64,8 @@ Recommended Next Step:
 ```
 
 不得只寫「可以繼續優化」。若沒有合理下一步，必須寫 `None`，並說明為什麼可以停止。
+
+`Level` 與 `Suggested execution location` 應依 `docs/harness/next-step-handoff-levels.md` 填寫。L1 可給輕量 prompt；L2 應給 Harness Preflight prompt；L3 必須給符合 planning、builder、reviewer 或 product owner decision template 的完整 prompt。若 `Suggested next prompt` 不是 `None`，final report 最後必須用 1 / 2 選項格式詢問使用者要在 current task 或 new task 執行該 prompt，但不得未經明確要求自動建立新 task。
 
 `Approval noise reduction applied` 只記錄本輪是否在 approved scope 內減少重複 approval；不得用來取代 Product Owner Decision、Human Gate、Commit Gate、Push Gate 或 Stop Condition。`Approval boundary note` 應簡短說明本輪是否仍停留在 allowed scope，以及是否有任何需要 human / product owner 的邊界。
 
