@@ -16,6 +16,14 @@ Controlled Automation Loop 不是讓 Codex 自動接管專案，而是讓 Codex 
 
 本文件是 Controlled Auto Loop 的 source of truth。其他 harness 文件可以導覽、引用或補充使用方式，但不應另行定義一套相互競爭的 auto-continue / stop / notify 規則。
 
+### 與 Loop Engineering 的關係
+
+Loop Engineering 是通用工程原則，指的是在明確目標、acceptance criteria、verification、repair path 與 stop / escalation condition 之下，讓 AI agent 或工程流程持續執行、驗證、修正，直到達成停止條件。
+
+Controlled Auto Loop 是 Free Soar Yoga repo 對 Loop Engineering 原則的專案級實作，也是本 repo 的 source of truth。任何 Builder loop、Reviewer loop、ChatGPT governance review、agent session helper 或 automation script，都必須遵守本文件定義的 automation level、auto-continue 條件、stop condition、human gate、commit gate 與 push gate。
+
+`/goal`、Claude command、Codex command 或其他 vendor-specific agent command 只能作為 optional session-level helper，用來協助單一 agent 在已批准的 allowed scope 內持續執行與驗證。這些 command 不得覆蓋、放寬或跳過本文件定義的 Stop Condition、Product Owner Decision、Human Gate、Commit Gate、Push Gate、allowed files、forbidden files 或 review packet 要求。
+
 ## 1A. Controlled Auto Loop Definition
 
 Controlled Auto Loop 是受控接棒流程，不是 fully autonomous loop。
