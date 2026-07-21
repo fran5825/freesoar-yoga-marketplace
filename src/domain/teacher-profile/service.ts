@@ -4,12 +4,15 @@ import { prisma } from "@/lib/prisma";
 import type { TeacherProfileStatus } from "./state";
 import {
   validateTeacherProfileApproveTransition,
+  validateTeacherProfileRejectTransition,
   validateTeacherProfileSubmitTransition,
 } from "./state";
 import {
   type TeacherProfileApplicationInput,
+  type TeacherProfileRejectionReasonErrorCode,
   type TeacherProfileValidationError,
   validateTeacherProfileDraft,
+  validateTeacherProfileRejectionReason,
 } from "./validation";
 
 export type TeacherProfileDraftSaveProfile = {
@@ -26,6 +29,7 @@ export type TeacherProfileDraftSaveProfile = {
   priceRange: string | null;
   profilePhotoUrl: string | null;
   status: TeacherProfileStatus;
+  rejectionReason: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -64,6 +68,7 @@ export type TeacherProfileSubmitProfile = {
   priceRange: string | null;
   profilePhotoUrl: string | null;
   status: TeacherProfileStatus;
+  rejectionReason: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -103,6 +108,7 @@ export type TeacherProfileApplicationSnapshot = {
   priceRange: string | null;
   profilePhotoUrl: string | null;
   status: TeacherProfileStatus;
+  rejectionReason: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -133,6 +139,25 @@ export type TeacherProfileApproveResult =
       message: string;
     };
 
+export type TeacherProfileRejectErrorCode =
+  | "admin_permission_required"
+  | "teacher_profile_not_found"
+  | "teacher_profile_not_submitted"
+  | "rejection_reason_invalid"
+  | "teacher_profile_reject_failed";
+
+export type TeacherProfileRejectResult =
+  | {
+      ok: true;
+      profile: TeacherProfileApplicationSnapshot;
+    }
+  | {
+      ok: false;
+      code: TeacherProfileRejectErrorCode;
+      message: string;
+      rejectionReasonError?: TeacherProfileRejectionReasonErrorCode;
+    };
+
 const teacherProfileDraftSelect = {
   id: true,
   userId: true,
@@ -147,6 +172,7 @@ const teacherProfileDraftSelect = {
   priceRange: true,
   profilePhotoUrl: true,
   status: true,
+  rejectionReason: true,
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -312,6 +338,8 @@ export async function submitOwnTeacherProfileApplication(
       data: {
         ...toTeacherProfileDraftData(input),
         status: "submitted",
+        // D4: rejected → submitted 重新送審時清空舊退回原因，審核中不再顯示。
+        rejectionReason: null,
       },
       select: teacherProfileDraftSelect,
     });
@@ -348,7 +376,8 @@ export async function approveSubmittedTeacherProfileApplication(
         id: teacherProfileId,
         status: "submitted",
       },
-      data: { status: "approved" },
+      // D4: approve 時清空退回原因，避免已通過的老師殘留舊 rejectionReason。
+      data: { status: "approved", rejectionReason: null },
     });
 
     if (approveResult.count === 0) {
@@ -401,6 +430,91 @@ export async function approveSubmittedTeacherProfileApplication(
       ok: false,
       code: "teacher_profile_approve_failed",
       message: "TeacherProfile application could not be approved.",
+    };
+  }
+}
+
+export async function rejectSubmittedTeacherProfileApplication(
+  teacherProfileId: string,
+  rejectionReason: string | null | undefined,
+): Promise<TeacherProfileRejectResult> {
+  try {
+    await requireAdmin();
+
+    // D3: reason 必填、以 trim 後值驗證且持久化（10–1000 字）；權限先於 reason 檢查。
+    const reasonValidation =
+      validateTeacherProfileRejectionReason(rejectionReason);
+
+    if (!reasonValidation.valid) {
+      return {
+        ok: false,
+        code: "rejection_reason_invalid",
+        message: reasonValidation.message,
+        rejectionReasonError: reasonValidation.code,
+      };
+    }
+
+    const rejectResult = await prisma.teacherProfile.updateMany({
+      where: {
+        id: teacherProfileId,
+        status: "submitted",
+      },
+      data: {
+        status: "rejected",
+        rejectionReason: reasonValidation.normalizedReason,
+      },
+    });
+
+    if (rejectResult.count === 0) {
+      const existingProfile = await prisma.teacherProfile.findUnique({
+        where: { id: teacherProfileId },
+        select: teacherProfileDraftSelect,
+      });
+
+      if (!existingProfile) {
+        return {
+          ok: false,
+          code: "teacher_profile_not_found",
+          message: "TeacherProfile application was not found.",
+        };
+      }
+
+      const transition = validateTeacherProfileRejectTransition(
+        existingProfile.status,
+      );
+
+      if (!transition.allowed) {
+        return {
+          ok: false,
+          code: "teacher_profile_not_submitted",
+          message:
+            "Only submitted TeacherProfile applications can be rejected.",
+        };
+      }
+    }
+
+    const profile = await prisma.teacherProfile.findUniqueOrThrow({
+      where: { id: teacherProfileId },
+      select: teacherProfileDraftSelect,
+    });
+
+    return {
+      ok: true,
+      profile,
+    };
+  } catch (error) {
+    if (isAdminPermissionRequiredError(error)) {
+      return {
+        ok: false,
+        code: "admin_permission_required",
+        message: "Admin permission is required to reject TeacherProfile.",
+      };
+    }
+
+    return {
+      ok: false,
+      code: "teacher_profile_reject_failed",
+      message: "TeacherProfile application could not be rejected.",
     };
   }
 }
