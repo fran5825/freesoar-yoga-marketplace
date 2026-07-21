@@ -174,6 +174,51 @@ test.describe("/teacher/dashboard smoke", () => {
     await expect(page.getByText(longToken).first()).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
+
+  test("shows the rejection reason for a rejected teacher", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-reason-${Date.now()}`,
+    );
+    const reason = `教學經歷需要更具體，請補充帶領團課的實際經驗與時數 ${testRunId}。`;
+    const sessionToken = await createTeacherProfileSession({
+      email: `rejected-reason-${testRunId}@${testEmailDomain}`,
+      displayName: `Rejected Reason ${testRunId}`,
+      status: "rejected",
+      rejectionReason: reason,
+    });
+
+    await addAuthSessionCookie(context, sessionToken);
+    await page.goto(dashboardPath);
+
+    await expect(page.getByText("平台的退回說明")).toBeVisible();
+    await expect(page.getByText(reason)).toBeVisible();
+  });
+
+  test("keeps a long rejection reason within the mobile viewport", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-long-reason-${Date.now()}`,
+    );
+    const longReason = "LongRejectionReasonValue".repeat(12);
+    const sessionToken = await createTeacherProfileSession({
+      email: `long-reason-${testRunId}@${testEmailDomain}`,
+      displayName: `Long Reason ${testRunId}`,
+      status: "rejected",
+      rejectionReason: longReason,
+    });
+
+    await addAuthSessionCookie(context, sessionToken);
+    await page.goto(dashboardPath);
+
+    await expect(page.getByText("平台的退回說明")).toBeVisible();
+    await expect(page.getByText(longReason).first()).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+  });
 });
 
 async function createUserSession({ email }: { email: string }) {
@@ -205,12 +250,14 @@ async function createTeacherProfileSession({
   specialties = ["Hatha", "Stretch"],
   serviceAreas = ["Taipei"],
   status,
+  rejectionReason = null,
 }: {
   email: string;
   displayName: string;
   specialties?: string[];
   serviceAreas?: string[];
   status: TeacherProfileStatus;
+  rejectionReason?: string | null;
 }) {
   const sessionToken = await createUserSession({ email });
   const user = await prisma.user.findUniqueOrThrow({
@@ -229,6 +276,7 @@ async function createTeacherProfileSession({
       serviceAreas,
       teachingFormats: ["Group class"],
       status,
+      rejectionReason,
     },
   });
 

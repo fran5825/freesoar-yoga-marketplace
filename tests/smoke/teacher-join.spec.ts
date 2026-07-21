@@ -80,9 +80,11 @@ test.describe("/teachers/join smoke", () => {
       `${testInfo.project.name}-${testInfo.workerIndex}-${Date.now()}`,
     );
     const email = `rejected-${testRunId}@${testEmailDomain}`;
+    const rejectionReason = `教學經歷需要更具體，請補充帶領團課的實際經驗與時數 ${testRunId}。`;
     const sessionToken = await createRejectedTeacherProfileSession({
       email,
       displayName: `Rejected Teacher ${testRunId}`,
+      rejectionReason,
     });
 
     await context.addCookies([
@@ -99,6 +101,9 @@ test.describe("/teachers/join smoke", () => {
     await page.goto("/teachers/join");
 
     await expect(page.getByText("已退回修正").first()).toBeVisible();
+    // Teacher 在 join 頁看得到 Admin 填寫的退回原因。
+    await expect(page.getByText("平台的退回說明")).toBeVisible();
+    await expect(page.getByText(rejectionReason)).toBeVisible();
     await expect(page.getByRole("button", { name: "儲存修正" })).toBeVisible();
     await expect(
       page.getByRole("button", { name: "重新送出審核" }),
@@ -122,12 +127,15 @@ test.describe("/teachers/join smoke", () => {
       select: {
         displayName: true,
         status: true,
+        rejectionReason: true,
       },
     });
 
+    // D4: rejected → submitted 重新送審後，退回原因被清空。
     expect(profile).toEqual({
       displayName: revisedDisplayName,
       status: "submitted",
+      rejectionReason: null,
     });
   });
 });
@@ -135,9 +143,11 @@ test.describe("/teachers/join smoke", () => {
 async function createRejectedTeacherProfileSession({
   email,
   displayName,
+  rejectionReason = null,
 }: {
   email: string;
   displayName: string;
+  rejectionReason?: string | null;
 }) {
   createdEmails.push(email);
 
@@ -168,6 +178,7 @@ async function createRejectedTeacherProfileSession({
       serviceAreas: ["Taipei"],
       teachingFormats: ["Group class"],
       status: "rejected",
+      rejectionReason,
     },
   });
 
