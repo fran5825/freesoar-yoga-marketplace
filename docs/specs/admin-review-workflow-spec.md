@@ -34,7 +34,8 @@ Free Soar Yoga 的信任感來自品質管理。老師未審核、需求未 revi
 - Admin dashboard 要優先呈現待處理事項。
 - Review list 要能依 status 篩選。
 - 每個 destructive 或 negative action 需確認，例如 reject、suspend、cancel。
-- Admin note 不應顯示給一般使用者。
+- Teacher reject 時需填寫**必填**的 rejection reason（trim 後 10–1000 字），且 UI 需明示「此說明會顯示給老師」；此 reason 是 teacher-facing，與內部 admin note 分離。
+- Admin note 不應顯示給一般使用者。（注意：teacher-facing 的 rejection reason 保存於 `TeacherProfile.rejectionReason` 並顯示給該老師，不屬於 internal admin note。）
 - Admin UI 要清楚但不需要華麗，不做過度複雜的後台。
 
 ## Data Requirements
@@ -61,7 +62,7 @@ Free Soar Yoga 的信任感來自品質管理。老師未審核、需求未 revi
 
 Admin 可觸發：
 
-- `TeacherProfile`: `submitted → approved/rejected`、`approved → suspended`
+- `TeacherProfile`: `submitted → approved/rejected`、`approved → suspended`。`submitted → rejected` 需保存 teacher-facing rejection reason 於 `TeacherProfile.rejectionReason`（必填、trim 後 10–1000 字）；`rejected → submitted` 與 `approve` 時清空該 reason。V1 以站內顯示告知老師，email 為後續切片。
 - `DemandRequest`: `submitted → under_review → published/rejected`
 - `DemandResponse`: `submitted → shortlisted/selected/declined`
 - `ClassSession`: `draft → pending_confirmation → open_for_enrollment → confirmed → completed/cancelled`
@@ -78,7 +79,7 @@ Admin 可觸發：
 ## Acceptance Criteria
 
 - Admin 可以查看待審老師。
-- Admin 可以 approve、reject、suspend teacher。
+- Admin 可以 approve、reject、suspend teacher；reject 需填寫必填 rejection reason（trim 後 10–1000 字），reason 保存於 `TeacherProfile.rejectionReason` 並顯示給該老師。
 - Admin 可以查看待 review demand requests。
 - Admin 可以 publish 或 reject demand request。
 - Admin 可以查看 class sessions 與 enrollments。

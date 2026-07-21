@@ -44,6 +44,7 @@ Fields:
 - priceRange
 - profilePhotoUrl
 - status
+- rejectionReason
 - createdAt
 - updatedAt
 
@@ -56,6 +57,7 @@ Phase 1 schema notes:
 - `certifications`、`priceRange`、`profilePhotoUrl` 是 Phase 1 建議欄位，可留空。
 - `specialties`、`serviceAreas`、`teachingFormats`、`certifications` 在 schema 中以 string list 表示，讓 Phase 1 不需要額外建立分類表或複雜 taxonomy。
 - 老師聯絡電話在 V1 使用 `User.phone`，不在 `TeacherProfile` 重複存放。
+- `rejectionReason` 是 nullable 欄位（`String?`），保存 Admin 在 `submitted → rejected` 時填寫、**面向老師的退回說明**。它與內部 `AdminNote` 語意分離：`rejectionReason` 會顯示給該老師，`AdminNote` 不對外。V1 只保存「最新一次」reason，不保留歷史（audit trail 屬 V1 之外）。reason 由 Admin 動作寫入，非 Teacher 可編輯欄位；lifecycle 見 `state-transition-details.md`（`rejected` 期間保留、`rejected → submitted` 與 `approve` 時清空、再次 reject 覆蓋）。
 
 Status:
 
@@ -299,6 +301,8 @@ Fields:
 ## AdminNote
 
 Internal admin note.
+
+`AdminNote` 是**內部備註**，不對一般使用者顯示。它與 `TeacherProfile.rejectionReason` 是不同概念：teacher-facing 的退回說明用 `TeacherProfile.rejectionReason` 保存並顯示給老師；`AdminNote` 仍維持不對外。V1 的 teacher rejection reason **不**使用 `AdminNote`。此 model 目前仍是設計稿，尚未落地到 Prisma schema。
 
 Fields:
 
