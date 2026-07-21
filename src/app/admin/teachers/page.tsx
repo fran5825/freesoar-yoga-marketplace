@@ -2,7 +2,10 @@ import { listSubmittedTeacherProfileApplicationsForAdmin } from "@/domain/teache
 import { requireAdmin } from "@/lib/auth/session";
 import { notFound } from "next/navigation";
 
-import { approveTeacherProfileApplicationAction } from "./actions";
+import {
+  approveTeacherProfileApplicationAction,
+  rejectTeacherProfileApplicationAction,
+} from "./actions";
 
 type AdminTeachersPageProps = {
   searchParams?: Promise<{
@@ -126,19 +129,73 @@ export default async function AdminTeachersPage({
                   </dl>
                 </div>
 
-                <form action={approveTeacherProfileApplicationAction}>
-                  <input
-                    name="teacherProfileId"
-                    type="hidden"
-                    value={application.id}
-                  />
-                  <button
-                    className="w-full rounded bg-gray-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-800 md:w-auto"
-                    type="submit"
-                  >
-                    Approve
-                  </button>
-                </form>
+                <div className="flex w-full flex-col gap-3 md:w-72">
+                  <form action={approveTeacherProfileApplicationAction}>
+                    <input
+                      name="teacherProfileId"
+                      type="hidden"
+                      value={application.id}
+                    />
+                    <button
+                      className="w-full rounded bg-gray-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-800"
+                      type="submit"
+                    >
+                      Approve
+                    </button>
+                  </form>
+
+                  <details className="rounded border border-rose-200 bg-rose-50/60">
+                    <summary className="cursor-pointer list-none rounded px-4 py-2 text-sm font-medium text-rose-800 marker:hidden">
+                      Reject…
+                    </summary>
+                    <form
+                      action={rejectTeacherProfileApplicationAction}
+                      className="grid gap-3 border-t border-rose-100 p-4"
+                    >
+                      <input
+                        name="teacherProfileId"
+                        type="hidden"
+                        value={application.id}
+                      />
+                      <div>
+                        <label
+                          className="text-sm font-medium text-gray-950"
+                          htmlFor={`reject-reason-${application.id}`}
+                        >
+                          退回原因
+                        </label>
+                        <p className="mt-1 text-xs leading-5 text-gray-600">
+                          此說明會顯示給老師，請具體、溫和地寫出需要修正的方向（10–1000 字）。
+                        </p>
+                        <textarea
+                          className="mt-2 min-h-24 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
+                          id={`reject-reason-${application.id}`}
+                          maxLength={1000}
+                          minLength={10}
+                          name="rejectionReason"
+                          placeholder="例如：教學經歷需要更具體，請補充帶領團課的實際經驗與時數。"
+                          required
+                        />
+                      </div>
+                      <label className="flex items-start gap-2 text-sm leading-6 text-gray-700">
+                        <input
+                          className="mt-1 shrink-0"
+                          name="confirmReject"
+                          required
+                          type="checkbox"
+                          value="yes"
+                        />
+                        我確認要退回這位老師，且以上原因會顯示給老師。
+                      </label>
+                      <button
+                        className="w-full rounded bg-rose-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-800"
+                        type="submit"
+                      >
+                        確認退回
+                      </button>
+                    </form>
+                  </details>
+                </div>
               </div>
 
               <div className="grid gap-4 border-t border-gray-100 pt-4 md:grid-cols-2">
