@@ -24,12 +24,12 @@ V1 的重點是收集足夠形成媒合的資訊，不是建立複雜企業採�
 1. Visitor 進入 `/organizers/request`。
 2. Visitor 了解 Free Soar Yoga 如何協助團體開課。
 3. Visitor 註冊或登入成為 Organizer。
-4. Organizer 建立或確認 `Organization` 與 `OrganizerProfile`。
-5. Organizer 填寫 demand request form。
+4. Organizer 於 `/organizer/profile` 建立或確認 `Organization` 與 `OrganizerProfile`（任何 signed-in user 皆可自助建立，見 Permission Requirements）。
+5. Organizer 於 `/organizer/demands/new` 填寫 demand request form，或於 `/organizer/demands/[id]/edit` 重新開啟既有 draft 續填。
 6. Organizer 儲存 draft 或 submit demand request。
-7. Admin review submitted demand request。
-8. Admin publish 或 reject。
-9. Published demand request 進入 teacher demand pool。
+7. Admin 於 `/admin/demands` review submitted demand request。
+8. Admin publish 或 reject（reject 需填 organizer-facing reason）。
+9. Published demand request **未來**才進入 teacher demand pool——**`organizer-demand-request-foundation` 這一輪 foundation 只保證「published 才是 eligible 前提」這個資料/狀態事實，不建立任何 teacher-facing 查詢介面**；demand pool 查詢本身是後續獨立 slice 的 scope。
 
 ## UI Requirements
 
@@ -46,16 +46,16 @@ V1 的重點是收集足夠形成媒合的資訊，不是建立複雜企業採�
 - `OrganizerProfile`
 - `Organization`
 - `DemandRequest`
-- `ServiceType`
-- `AdminNote`
-- `Notification`
+- `Notification`（V1 foundation 延後，見 Non-goals）
 
-`DemandRequest` 必要欄位：
+`organizer-demand-request-foundation` 已確認：`ServiceType` **不**落地為獨立 model，V1 改採應用層受控字串（`DemandRequest.serviceType`，見 `docs/domain/data-model.md`）；`AdminNote` 本輪**不建立**，reject reason 走 `DemandRequest.rejectionReason` 專用欄位（teacher-facing 語意，與內部 admin note 分離）。
 
-- `organizerProfileId`
-- `organizationId`
+`DemandRequest` 必要欄位（submit 時）：
+
+- `organizerProfileId`（server 解析，不接受 client 傳入）
+- `organizationId`（server 解析，不接受 client 傳入）
 - `title`
-- `serviceTypeId`
+- `serviceType`
 - `description`
 - `targetLevel`
 - `expectedParticipants`
@@ -64,18 +64,21 @@ V1 的重點是收集足夠形成媒合的資訊，不是建立複雜企業採�
 - `classLengthMinutes`
 - `frequency`
 - `status`
+- `rejectionReason`（admin 於 reject 時寫入，organizer 不可自行編輯）
 
 ## Permission Requirements
 
-- Visitor 可看 organizer request entry。
-- Organizer 只能建立與查看自己的 demand requests。
-- Organizer 可編輯 draft；submitted 後是否可編輯需依 policy。
-- Admin 可 review、publish、reject demand request。
-- Teacher 只能看 published 且 eligible 的 demand request。
+- Visitor 可看 organizer request entry（`/organizers/request`，唯讀導引，不含表單提交）。
+- 任何 signed-in user 可自助建立自己的 `OrganizerProfile` + `Organization`（`organizer-demand-request-foundation` D1 已確認，見 `docs/domain/permissions.md`）。
+- Organizer 只能建立與查看自己的 demand requests；不可藉由傳入他人 `organizerProfileId`/`organizationId` 存取他人資料。
+- Organizer 可編輯 `draft` demand（含重新開啟續編）；**submitted 後不可編輯**（V1 policy，非 policy TBD）。
+- Admin 可 review、publish、reject demand request；只有 Admin 可執行 publish/reject。
+- Teacher 只能看 published 且 eligible 的 demand request——**本輪 foundation 不建立此查詢介面**，屬未來 demand pool slice scope。
+- draft / submitted / rejected 的 demand 不可被其他 Organizer 或 Teacher 看見。
 
 ## State Transitions
 
-`DemandRequest`：
+`DemandRequest` 完整最終設計：
 
 ```text
 draft → submitted → under_review → published
@@ -91,6 +94,14 @@ rejected
 completed
 ```
 
+**`organizer-demand-request-foundation` V1 已接線範圍**（詳見 `docs/domain/state-machines.md`、`docs/domain/state-transition-details.md`）：
+
+```text
+draft → submitted → published | rejected
+```
+
+V1 **跳過** `under_review`（Admin 直接 publish 或 reject，不設「審查中」中間狀態）；`rejected` 為**終局狀態**，不提供重新送審路徑，organizer 需另建新 demand；`teacher_responded` 之後的所有 transition 與 `cancelled`/`expired` 皆不在本輪 scope，enum 值保留供未來 slice 使用。
+
 ## RWD Requirements
 
 - 手機版可以完成 demand request form。
@@ -104,8 +115,8 @@ completed
 - Organizer 可以 submit demand request。
 - Submitted demand request 會出現在 Admin review list。
 - Admin 可以 publish demand request。
-- Admin 可以 reject demand request 並填寫 reason。
-- Published demand request 才能被 approved teacher 看見。
+- Admin 可以 reject demand request 並填寫必填的 organizer-facing reason（trim 後 10–1000 字）；`rejected` 為終局狀態，reason 永久保留、不提供 resubmit。
+- Published demand request 才是未來 approved teacher 可見的資料前提（本輪不建 teacher 查詢介面本身）。
 - Organizer 可以看見自己需求的所有狀態。
 - Organizer 不可看見其他 organizer 的私人 demand request。
 
@@ -117,6 +128,7 @@ completed
 - 自動 AI matching
 - 付款與報價合約自動化
 - Google Calendar two-way sync
+- **`organizer-demand-request-foundation` 這一輪額外明確不做**：Teacher demand pool 查詢介面、`DemandResponse`/teacher matching、`ClassSession`、`Enrollment`、email/notification（V1 以站內 status 顯示告知，見 D14）、`under_review` transition、demand cancel/expire flow、`AdminNote`。
 
 ## Risks
 

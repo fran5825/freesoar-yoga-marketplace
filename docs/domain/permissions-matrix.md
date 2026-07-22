@@ -89,13 +89,15 @@ Organizer 只能在已媒合或合適流程中看到必要的可約時間，不�
 
 Teacher 只有在 published demand 或 matched class 需要時，才可看到必要的 organization 資訊。
 
+**Organizer capability bootstrap 例外**（`organizer-demand-request-foundation` D1 已確認）：`Create organizer profile` 這一列的「Organizer=Own」在建立當下有一個先天的循環——建立前這位 user 還不具備 Organizer 能力。比照 `TeacherProfile` 既有的 onboarding 模式，V1 明確允許：**任何 signed-in user（Member 基本能力）皆可自助建立自己的 `OrganizerProfile` + `Organization`**（不需要 Admin 指派或審核），建立後即具備 Organizer 能力，且僅能管理自己的 own 資料。此例外只適用於「建立」動作本身；建立後的 `View` / `Edit organization` / `Edit organizer profile` 仍嚴格限定 Own。對應的 route 層例外見 `docs/product/route-map.md` 的 `/organizer/profile` 標注。
+
 ## DemandRequest
 
 | Action | Visitor | Member | Organizer | Teacher | Admin |
 |---|---|---|---|---|---|
 | Create demand request | No | No | Own | No | Admin |
 | View draft demand request | No | No | Own | No | Admin |
-| View submitted / under review demand | No | No | Own | No | Admin |
+| View submitted demand | No | No | Own | No | Admin |
 | View published demand | No | No | Own | Eligible | Admin |
 | Edit draft demand | No | No | Own | No | Admin |
 | Submit demand | No | No | Own | No | Admin |
@@ -104,6 +106,8 @@ Teacher 只有在 published demand 或 matched class 需要時，才可看到必
 | Cancel demand | No | No | Own | No | Admin |
 
 Organizer 不可查看其他 organizer 的私人 demand request。
+
+**V1 落地範圍**（`organizer-demand-request-foundation` 已確認）：`under_review` 狀態本輪不接線（見 `state-transition-details.md`），故上表已將原「View submitted / under review demand」併為「View submitted demand」。`Cancel demand` 這一列描述的是完整狀態機的最終能力，**本輪 foundation 不實作** cancel 的 UI/API（non-goal），保留於表中作為未來 slice 的權限參考。
 
 ## DemandResponse
 
