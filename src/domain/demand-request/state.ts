@@ -88,3 +88,135 @@ export function validateDemandRequestSubmitTransition(
     to: "submitted",
   };
 }
+
+export type DemandRequestPublishTransitionErrorCode =
+  | "draft_demand_cannot_publish"
+  | "published_demand_cannot_publish_again"
+  | "rejected_demand_cannot_publish"
+  // 涵蓋 D9 保留但本輪未接線的其餘狀態。
+  | "demand_not_submitted";
+
+export type DemandRequestPublishTransitionResult =
+  | {
+      allowed: true;
+      from: "submitted";
+      to: "published";
+    }
+  | {
+      allowed: false;
+      from: DemandRequestStatus;
+      to: "published";
+      code: DemandRequestPublishTransitionErrorCode;
+    };
+
+export function validateDemandRequestPublishTransition(
+  from: DemandRequestStatus,
+): DemandRequestPublishTransitionResult {
+  if (from === "submitted") {
+    return {
+      allowed: true,
+      from,
+      to: "published",
+    };
+  }
+
+  if (from === "draft") {
+    return {
+      allowed: false,
+      from,
+      to: "published",
+      code: "draft_demand_cannot_publish",
+    };
+  }
+
+  if (from === "published") {
+    return {
+      allowed: false,
+      from,
+      to: "published",
+      code: "published_demand_cannot_publish_again",
+    };
+  }
+
+  if (from === "rejected") {
+    return {
+      allowed: false,
+      from,
+      to: "published",
+      code: "rejected_demand_cannot_publish",
+    };
+  }
+
+  return {
+    allowed: false,
+    from,
+    to: "published",
+    code: "demand_not_submitted",
+  };
+}
+
+export type DemandRequestRejectTransitionErrorCode =
+  | "draft_demand_cannot_reject"
+  | "published_demand_cannot_reject"
+  | "rejected_demand_cannot_reject_again"
+  // 涵蓋 D9 保留但本輪未接線的其餘狀態。
+  | "demand_not_submitted";
+
+export type DemandRequestRejectTransitionResult =
+  | {
+      allowed: true;
+      from: "submitted";
+      to: "rejected";
+    }
+  | {
+      allowed: false;
+      from: DemandRequestStatus;
+      to: "rejected";
+      code: DemandRequestRejectTransitionErrorCode;
+    };
+
+export function validateDemandRequestRejectTransition(
+  from: DemandRequestStatus,
+): DemandRequestRejectTransitionResult {
+  if (from === "submitted") {
+    return {
+      allowed: true,
+      from,
+      to: "rejected",
+    };
+  }
+
+  if (from === "draft") {
+    return {
+      allowed: false,
+      from,
+      to: "rejected",
+      code: "draft_demand_cannot_reject",
+    };
+  }
+
+  if (from === "published") {
+    return {
+      allowed: false,
+      from,
+      to: "rejected",
+      code: "published_demand_cannot_reject",
+    };
+  }
+
+  if (from === "rejected") {
+    return {
+      allowed: false,
+      from,
+      to: "rejected",
+      code: "rejected_demand_cannot_reject_again",
+    };
+  }
+
+  return {
+    allowed: false,
+    from,
+    to: "rejected",
+    code: "demand_not_submitted",
+  };
+}
