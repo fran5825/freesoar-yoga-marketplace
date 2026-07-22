@@ -67,6 +67,7 @@ Source of truth map：
 - `docs/harness/ai-runs-current-spec.md`：定義 `.ai-runs/current/` local-only run folder 的最小規格。
 - `docs/harness/ai-runs-current-templates/`：`.ai-runs/current/` 的可複製模板來源，正式 tracked templates 放在這裡，local run records 仍放在 ignored `.ai-runs/current/`。
 - `docs/harness/codex-working-protocol.md`：Codex 在本 repo 的實際工作方式。
+- `docs/harness/codex-peer-review-sop.md`：Claude Code 使用 `codex-peer-review` 與 Stop hook 的 Quick Start、標準作業流程、覆蓋範圍及故障排除。
 - `docs/harness/codex-self-review-checklist.md`：Codex 修改後的自我檢查。
 - `docs/harness/review-checklist.md`：產品、品牌、工程、RWD、app-readiness review。
 - `docs/harness/security-checklist.md`：Auth、data access、forms、admin、secrets 安全檢查。

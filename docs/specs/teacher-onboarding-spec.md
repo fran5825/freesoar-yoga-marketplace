@@ -96,7 +96,7 @@ approved → suspended
 rejected → submitted
 ```
 
-`rejected → submitted` 代表老師可在允許情況下修改後重新送審。
+`rejected → submitted` 代表老師可在允許情況下修改後重新送審。詳見下方「Rejection Reason（V1）」對 reason 保存、可見性與 lifecycle 的定義。
 
 ## TeacherProfile Status Definitions
 
@@ -119,6 +119,17 @@ V1 只讓 Member / Organizer 看見 `approved` teacher。`draft`、`submitted`�
 | `rejected` | view reason / history；Teacher 可重新 submit，不需要 Admin 主動重開 |
 | `suspended` | `restore to approved` 可在 policy 上允許；正式 UI / API 是否實作由 product owner 另行批准 |
 
+## Rejection Reason（V1）
+
+本節定義 Teacher application reject 時 rejection reason 的行為（產品主人已確認的 D1–D7）。
+
+- **存哪（D1）**：保存於 `TeacherProfile.rejectionReason`（nullable `String?`）專用欄位，不使用 `AdminNote`。
+- **誰可見（D2）**：reason 是**面向老師**的退回說明，原文顯示給該老師（dashboard 與 join 頁）；與內部 `AdminNote`（不對外）分離。本輪不建立內部 admin note。Admin 輸入時 UI 需明示「此說明會顯示給老師」。
+- **必填與長度（D3）**：reject 時 reason **必填**。以 `normalizedReason = input.trim()` 為單一基準，server-side **驗證且持久化** trim 後值，長度 **10–1000 字**（以 trim 後計算）；前端 `required` + `minLength=10` + `maxLength=1000`，後端為權威驗證。
+- **lifecycle（D4）**：`rejected` 期間**保留**（供老師邊看邊改）；於 `rejected → submitted` 與 `approve` 時**清空**；再次 reject **覆蓋**。單欄位、只留最新一次、不保留歷史。
+- **告知方式（D7）**：V1 以站內顯示 reason 作為對老師的告知，**不寄 email**；email/notification 為後續切片 `teacher-application-rejection-notification`。
+- **audit（D5）**：V1 不記錄審核人 / 時間（`reviewedBy` / `reviewedAt`），以 `TeacherProfile.updatedAt` 作粗略時間。
+
 ## RWD Requirements
 
 - 360px 與 390px 手機寬度可完成表單。
@@ -132,7 +143,8 @@ V1 只讓 Member / Organizer 看見 `approved` teacher。`draft`、`submitted`�
 - Teacher 可以 submit application。
 - Submitted profile 會出現在 Admin review list。
 - Admin 可以 approve teacher。
-- Admin 可以 reject teacher 並留下 reason。
+- Admin 可以 reject teacher 並留下**必填** reason（trim 後 10–1000 字），reason 保存於 `TeacherProfile.rejectionReason`。
+- Rejected teacher 可在 dashboard 與 join 頁看見具體 rejection reason；`rejected → submitted` 或 approve 後 reason 被清空。
 - Approved teacher 可以進入 demand pool。
 - 未 approved teacher 不可回應 demand request。
 - Suspended teacher 不可公開顯示或回應新需求。

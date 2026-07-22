@@ -21,9 +21,9 @@
 | From | To | Actor | 前置條件 | 後置效果 |
 |---|---|---|---|---|
 | `draft` | `submitted` | Teacher | 必填 profile 欄位完成 | 通知 Admin review |
-| `submitted` | `approved` | Admin | profile 通過審核 | Teacher 可看 eligible demand requests |
-| `submitted` | `rejected` | Admin | profile 不符合要求 | 通知 Teacher 修正方向 |
-| `rejected` | `submitted` | Teacher | Teacher 修改資料後重新送審 | 通知 Admin review |
+| `submitted` | `approved` | Admin | profile 通過審核 | 清空 `rejectionReason`；Teacher 可看 eligible demand requests |
+| `submitted` | `rejected` | Admin | profile 不符合要求，且 Admin 已填寫具體 rejection reason（必填） | 保存 `rejectionReason`；Teacher 於 dashboard / join 看見 reason（V1 以站內顯示告知，email 為後續切片） |
+| `rejected` | `submitted` | Teacher | Teacher 依 reason 修改資料後重新送審 | 清空 `rejectionReason`（進入審核中不再顯示舊原因）；通知 Admin review |
 | `approved` | `suspended` | Admin | 品質、安全或營運原因 | Teacher 不可公開或回應新需求 |
 | `suspended` | `approved` | Admin | Admin 確認可恢復 | Teacher 恢復 marketplace 權限；正式 restore UI / API 是否納入 V1 需 product owner 另行批准 |
 
@@ -33,6 +33,7 @@
 - `draft`、`submitted`、`rejected`、`suspended` teacher 都不公開顯示，也不可建立 demand response。
 - `submitted` 後核心申請欄位不可由 Teacher 直接編輯；若未來需要 edit-after-submit，需另開 product decision。
 - `rejected` teacher 可依 Admin reason 修改後重新送審；V1 不限制重新送審次數，不新增 counter / lockout。
+- **Rejection reason（V1）**：Admin 執行 `submitted → rejected` 時**必填** rejection reason，保存於 `TeacherProfile.rejectionReason`（面向老師的退回說明，與內部 `AdminNote` 分離）。reason 以 `normalizedReason = input.trim()` 為準：驗證且持久化 trim 後值，長度 10–1000 字。lifecycle：`rejected` 期間**保留**（供老師邊看邊改）、`rejected → submitted` 與 `approve` 時**清空**、再次 reject **覆蓋**（單欄位、只留最新、不保留歷史）。V1 以站內顯示（dashboard / join）作為對老師的告知，**不寄 email**；email/notification 為後續切片 `teacher-application-rejection-notification`。
 - `suspended → approved` 是 allowed policy，但完整 restore flow 可作為 future slice / admin-manual decision，不代表 V1 必須立即實作正式 restore UI / API。
 
 ### Admin action matrix
@@ -184,7 +185,7 @@ Future / admin-only 後續能力：
 
 狀態變更可能觸發 notification：
 
-- TeacherProfile submitted / approved / rejected
+- TeacherProfile submitted / approved / rejected（**V1 落地範圍**：`submitted → rejected` 對老師的告知在 V1 以站內顯示 `rejectionReason` 實現，email 為後續切片 `teacher-application-rejection-notification`）
 - DemandRequest submitted / published / rejected
 - DemandResponse submitted / selected
 - ClassSession created / open_for_enrollment / confirmed / cancelled

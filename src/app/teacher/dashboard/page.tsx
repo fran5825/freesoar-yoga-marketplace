@@ -121,6 +121,20 @@ export default async function TeacherDashboardPage() {
             </p>
           </div>
 
+          {profileStatus.profile.status === "rejected" ? (
+            <div className="min-w-0 rounded border border-amber-200 bg-amber-50 p-4">
+              <h3 className="text-sm font-medium text-amber-950">
+                平台的退回說明
+              </h3>
+              <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-amber-900">
+                {profileStatus.profile.rejectionReason &&
+                profileStatus.profile.rejectionReason.trim().length > 0
+                  ? profileStatus.profile.rejectionReason
+                  : "平台尚未提供具體說明。你可以先檢查必填欄位並補充教學經歷，準備好後再重新送審。"}
+              </p>
+            </div>
+          ) : null}
+
           <div className="grid gap-3 rounded border border-gray-100 bg-gray-50 p-4 text-sm md:grid-cols-2">
             <ReadOnlyItem
               label="Display name"

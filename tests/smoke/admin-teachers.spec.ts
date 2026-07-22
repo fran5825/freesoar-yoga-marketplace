@@ -136,6 +136,151 @@ test.describe("/admin/teachers smoke", () => {
       page.getByRole("button", { name: "已通過審核" }).first(),
     ).toBeVisible();
   });
+
+  test("lets admin reject a submitted application with a required reason", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-reject-${Date.now()}`,
+    );
+    const adminSessionToken = await createUserSession({
+      email: `admin-reject-${testRunId}@${testEmailDomain}`,
+      isAdmin: true,
+    });
+    const rejectedEmail = `to-reject-${testRunId}@${testEmailDomain}`;
+    await createTeacherProfileWithSession({
+      email: rejectedEmail,
+      displayName: `Reject Target ${testRunId}`,
+      status: "submitted",
+    });
+
+    await addAuthSessionCookie(context, adminSessionToken);
+    await page.goto("/admin/teachers");
+
+    const application = page.getByRole("article").filter({
+      has: page.getByRole("heading", { name: `Reject Target ${testRunId}` }),
+    });
+    await expect(
+      application.getByRole("heading", { name: `Reject Target ${testRunId}` }),
+    ).toBeVisible();
+
+    await application.locator("summary").click();
+
+    // D3: reason 必填 —— native required 會擋住空白送出，卡片仍在 queue。
+    await application.getByRole("button", { name: "確認退回" }).click();
+    await expect(
+      application.getByRole("heading", { name: `Reject Target ${testRunId}` }),
+    ).toBeVisible();
+
+    // 前後空白應在持久化前被 trim（D3）。
+    const reason =
+      "  教學經歷需要更具體，請補充帶領團課的實際經驗與時數，方便後續媒合。  ";
+    await application.getByLabel("退回原因").fill(reason);
+    await application.getByRole("checkbox").check();
+    await application.getByRole("button", { name: "確認退回" }).click();
+
+    await expect(
+      page.getByText("TeacherProfile application rejected."),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: `Reject Target ${testRunId}` }),
+    ).toBeHidden();
+
+    const rejectedProfile = await prisma.teacherProfile.findFirstOrThrow({
+      where: { user: { email: rejectedEmail } },
+      select: { status: true, rejectionReason: true },
+    });
+
+    expect(rejectedProfile.status).toBe("rejected");
+    expect(rejectedProfile.rejectionReason).toBe(reason.trim());
+  });
+
+  test("clears rejectionReason when an application is approved", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-approve-clear-${Date.now()}`,
+    );
+    const adminSessionToken = await createUserSession({
+      email: `admin-approve-clear-${testRunId}@${testEmailDomain}`,
+      isAdmin: true,
+    });
+    const email = `approve-clear-${testRunId}@${testEmailDomain}`;
+    await createTeacherProfileWithSession({
+      email,
+      displayName: `Approve Clear ${testRunId}`,
+      status: "submitted",
+      rejectionReason: "舊的退回原因，approve 後應被清空。",
+    });
+
+    await addAuthSessionCookie(context, adminSessionToken);
+    await page.goto("/admin/teachers");
+
+    const application = page.getByRole("article").filter({
+      has: page.getByRole("heading", { name: `Approve Clear ${testRunId}` }),
+    });
+    await application.getByRole("button", { name: "Approve" }).click();
+
+    await expect(
+      page.getByText("TeacherProfile application approved."),
+    ).toBeVisible();
+
+    const profile = await prisma.teacherProfile.findFirstOrThrow({
+      where: { user: { email } },
+      select: { status: true, rejectionReason: true },
+    });
+
+    expect(profile.status).toBe("approved");
+    expect(profile.rejectionReason).toBeNull();
+  });
+
+  test("overwrites an existing reason when rejecting again", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-rereject-${Date.now()}`,
+    );
+    const adminSessionToken = await createUserSession({
+      email: `admin-rereject-${testRunId}@${testEmailDomain}`,
+      isAdmin: true,
+    });
+    const email = `rereject-${testRunId}@${testEmailDomain}`;
+    await createTeacherProfileWithSession({
+      email,
+      displayName: `Re-reject ${testRunId}`,
+      status: "submitted",
+      rejectionReason: "第一次的退回原因 A，應被覆蓋。",
+    });
+
+    await addAuthSessionCookie(context, adminSessionToken);
+    await page.goto("/admin/teachers");
+
+    const application = page.getByRole("article").filter({
+      has: page.getByRole("heading", { name: `Re-reject ${testRunId}` }),
+    });
+    await application.locator("summary").click();
+
+    const newReason =
+      "第二次的退回原因 B，請補充教學時數與實際帶團經歷，方便判斷適合的團課。";
+    await application.getByLabel("退回原因").fill(newReason);
+    await application.getByRole("checkbox").check();
+    await application.getByRole("button", { name: "確認退回" }).click();
+
+    await expect(
+      page.getByText("TeacherProfile application rejected."),
+    ).toBeVisible();
+
+    const profile = await prisma.teacherProfile.findFirstOrThrow({
+      where: { user: { email } },
+      select: { status: true, rejectionReason: true },
+    });
+
+    expect(profile.status).toBe("rejected");
+    expect(profile.rejectionReason).toBe(newReason);
+  });
 });
 
 async function createUserSession({
@@ -172,10 +317,12 @@ async function createTeacherProfileWithSession({
   email,
   displayName,
   status,
+  rejectionReason = null,
 }: {
   email: string;
   displayName: string;
   status: TeacherProfileStatus;
+  rejectionReason?: string | null;
 }) {
   const sessionToken = await createUserSession({ email, isAdmin: false });
   const user = await prisma.user.findUniqueOrThrow({
@@ -194,6 +341,7 @@ async function createTeacherProfileWithSession({
       serviceAreas: ["Taipei"],
       teachingFormats: ["Group class"],
       status,
+      rejectionReason,
     },
   });
 

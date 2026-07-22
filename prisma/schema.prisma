@@ -71,6 +71,7 @@ model TeacherProfile {
   priceRange      String?
   profilePhotoUrl String?
   status          TeacherProfileStatus @default(draft)
+  rejectionReason String?
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
 

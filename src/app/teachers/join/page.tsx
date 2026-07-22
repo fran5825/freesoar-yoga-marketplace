@@ -395,6 +395,7 @@ export default function TeacherJoinPage() {
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [hydratedProfileStatus, setHydratedProfileStatus] =
     useState<HydratedTeacherProfileStatus | null>(null);
+  const [rejectionReason, setRejectionReason] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -409,6 +410,7 @@ export default function TeacherJoinPage() {
 
       setFormState(toTeacherApplicationFormState(profile));
       setHydratedProfileStatus(profile.status);
+      setRejectionReason(profile.rejectionReason);
       setLastSavedAt(profile.updatedAt);
       setHasSubmittedApplication(profile.status === "submitted");
     }
@@ -670,6 +672,19 @@ export default function TeacherJoinPage() {
             )}
           </div>
         </div>
+
+        {isRejectedProfile ? (
+          <div className="min-w-0 rounded border border-amber-200 bg-amber-50 p-4">
+            <h3 className="text-sm font-medium text-amber-950">
+              平台的退回說明
+            </h3>
+            <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-amber-900">
+              {rejectionReason && rejectionReason.trim().length > 0
+                ? rejectionReason
+                : "平台尚未提供具體說明。你可以先檢查必填欄位並補充教學經歷，準備好後再重新送審。"}
+            </p>
+          </div>
+        ) : null}
 
         <form
           className="grid gap-5"

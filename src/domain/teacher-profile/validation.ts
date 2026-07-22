@@ -140,3 +140,58 @@ function hasExperienceYears(value: number | null | undefined): boolean {
 function hasAtLeastOneValue(values: string[] | null | undefined): boolean {
   return Array.isArray(values) && values.some((value) => value.trim().length > 0);
 }
+
+export const REJECTION_REASON_MIN_LENGTH = 10;
+export const REJECTION_REASON_MAX_LENGTH = 1000;
+
+export type TeacherProfileRejectionReasonErrorCode =
+  | "rejection_reason_required"
+  | "rejection_reason_too_short"
+  | "rejection_reason_too_long";
+
+export type TeacherProfileRejectionReasonValidationResult =
+  | {
+      valid: true;
+      normalizedReason: string;
+    }
+  | {
+      valid: false;
+      code: TeacherProfileRejectionReasonErrorCode;
+      message: string;
+    };
+
+// D3: rejection reason 以 trim 後值為單一基準，驗證且持久化 trim 後值，長度 10–1000 字。
+export function validateTeacherProfileRejectionReason(
+  reason: string | null | undefined,
+): TeacherProfileRejectionReasonValidationResult {
+  const normalizedReason = typeof reason === "string" ? reason.trim() : "";
+
+  if (normalizedReason.length === 0) {
+    return {
+      valid: false,
+      code: "rejection_reason_required",
+      message: "退回原因為必填。",
+    };
+  }
+
+  if (normalizedReason.length < REJECTION_REASON_MIN_LENGTH) {
+    return {
+      valid: false,
+      code: "rejection_reason_too_short",
+      message: `退回原因至少需要 ${REJECTION_REASON_MIN_LENGTH} 個字。`,
+    };
+  }
+
+  if (normalizedReason.length > REJECTION_REASON_MAX_LENGTH) {
+    return {
+      valid: false,
+      code: "rejection_reason_too_long",
+      message: `退回原因不可超過 ${REJECTION_REASON_MAX_LENGTH} 個字。`,
+    };
+  }
+
+  return {
+    valid: true,
+    normalizedReason,
+  };
+}
