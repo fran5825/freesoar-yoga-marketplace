@@ -24,7 +24,7 @@ Free Soar Yoga 的信任感來自品質管理。老師未審核、需求未 revi
 1. Admin 進入 `/admin/dashboard`。
 2. Admin 查看 pending teacher applications、pending demand requests、upcoming class sessions、basic KPIs。
 3. Admin 進入 teacher review，approve / reject / suspend。
-4. Admin 進入 demand review，publish / reject / cancel。
+4. Admin 進入 demand review，publish / reject（`organizer-demand-request-foundation` V1：demand cancel 不在本輪 scope，見 Non-goals）。
 5. Admin 查看 class sessions，協助確認或取消。
 6. Admin 查看 enrollments，協助確認或取消；attended / no_show 保留為 future 或 admin-only 後續能力。
 7. 重要管理動作可留下 admin note。
@@ -35,7 +35,8 @@ Free Soar Yoga 的信任感來自品質管理。老師未審核、需求未 revi
 - Review list 要能依 status 篩選。
 - 每個 destructive 或 negative action 需確認，例如 reject、suspend、cancel。
 - Teacher reject 時需填寫**必填**的 rejection reason（trim 後 10–1000 字），且 UI 需明示「此說明會顯示給老師」；此 reason 是 teacher-facing，與內部 admin note 分離。
-- Admin note 不應顯示給一般使用者。（注意：teacher-facing 的 rejection reason 保存於 `TeacherProfile.rejectionReason` 並顯示給該老師，不屬於 internal admin note。）
+- Demand reject 時同樣需填寫**必填**的 rejection reason（trim 後 10–1000 字），UI 需明示「此說明會顯示給團主」；此 reason 是 organizer-facing，保存於 `DemandRequest.rejectionReason`，與內部 admin note 分離（`organizer-demand-request-foundation` 已確認）。
+- Admin note 不應顯示給一般使用者。（注意：teacher-facing 的 rejection reason 保存於 `TeacherProfile.rejectionReason`、organizer-facing 的 rejection reason 保存於 `DemandRequest.rejectionReason`，兩者皆顯示給對應當事人，不屬於 internal admin note。）
 - Admin UI 要清楚但不需要華麗，不做過度複雜的後台。
 
 ## Data Requirements
@@ -48,8 +49,8 @@ Free Soar Yoga 的信任感來自品質管理。老師未審核、需求未 revi
 - `ClassSession`
 - `Enrollment`
 - `Organization`
-- `AdminNote`
-- `Notification`
+- `AdminNote`（`organizer-demand-request-foundation` 本輪不建立此 model；demand reject reason 走 `DemandRequest.rejectionReason` 專用欄位）
+- `Notification`（demand 相關通知在 `organizer-demand-request-foundation` V1 延後，見 State Transitions）
 
 ## Permission Requirements
 
@@ -63,7 +64,7 @@ Free Soar Yoga 的信任感來自品質管理。老師未審核、需求未 revi
 Admin 可觸發：
 
 - `TeacherProfile`: `submitted → approved/rejected`、`approved → suspended`。`submitted → rejected` 需保存 teacher-facing rejection reason 於 `TeacherProfile.rejectionReason`（必填、trim 後 10–1000 字）；`rejected → submitted` 與 `approve` 時清空該 reason。V1 以站內顯示告知老師，email 為後續切片。
-- `DemandRequest`: `submitted → under_review → published/rejected`
+- `DemandRequest`: 完整最終設計為 `submitted → under_review → published/rejected`；**`organizer-demand-request-foundation` V1 已接線範圍**只有 `submitted → published/rejected`，**跳過 `under_review`**（Admin 直接一次決策，對齊 TeacherProfile 的 `submitted → approved/rejected` 簡化先例）。`submitted → rejected` 需保存 organizer-facing rejection reason 於 `DemandRequest.rejectionReason`（必填、trim 後 10–1000 字）；`rejected` 為**終局狀態**，不提供 resubmit，reason 寫入後永久保留。V1 以站內 status 顯示告知 organizer，email 為後續切片 `organizer-demand-notification`。
 - `DemandResponse`: `submitted → shortlisted/selected/declined`
 - `ClassSession`: `draft → pending_confirmation → open_for_enrollment → confirmed → completed/cancelled`
 - `Enrollment`: `pending → confirmed/cancelled`
@@ -80,8 +81,8 @@ Admin 可觸發：
 
 - Admin 可以查看待審老師。
 - Admin 可以 approve、reject、suspend teacher；reject 需填寫必填 rejection reason（trim 後 10–1000 字），reason 保存於 `TeacherProfile.rejectionReason` 並顯示給該老師。
-- Admin 可以查看待 review demand requests。
-- Admin 可以 publish 或 reject demand request。
+- Admin 可以查看待 review（`submitted`）demand requests，且每筆可見足以評估的完整內容（demand 全欄位 + 所連 organization + organizer displayName），不只是 title。
+- Admin 可以 publish 或 reject demand request；reject 需填寫必填 rejection reason（trim 後 10–1000 字）並經真正的二次確認，reason 保存於 `DemandRequest.rejectionReason` 並顯示給該 organizer。
 - Admin 可以查看 class sessions 與 enrollments。
 - Admin 可以留下 admin note。
 - 非 Admin 不可進入 admin routes。
@@ -95,6 +96,7 @@ Admin 可觸發：
 - Payment/refund operation center
 - 多層 admin role
 - 自動化 AI 審核
+- **`organizer-demand-request-foundation` 這一輪額外明確不做**：demand `under_review` transition、demand cancel/expire flow、`AdminNote` model 落地、demand email/notification（V1 以站內顯示告知）。
 
 ## Risks
 

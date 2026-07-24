@@ -76,10 +76,17 @@ Fields:
 - id
 - userId
 - organizationId
-- title
-- phone
+- displayName
 - createdAt
 - updatedAt
+
+Phase 1 schema notes（`organizer-demand-request-foundation` D1/D2/D3 已確認）：
+
+- 實際 Prisma schema 以 `displayName`（必填）作為 organizer 顯示名稱／聯絡窗口稱謂，**不新增** `title` / `phone` 欄位（reconcile 早期設計稿）。若未來需要聯絡電話，走 `Organization.contactPhone`（見下）或 `User.phone`，不在 `OrganizerProfile` 重複存放。
+- `userId` 為 `@unique`：V1 一個 `User` 至多一個 `OrganizerProfile`。
+- `organizationId` 為單一 nullable FK：V1 一個 `OrganizerProfile` 至多一個 `Organization`，不支援多對多。
+- **Organizer capability bootstrap 例外**：任何 signed-in user 皆可自助建立自己的 `OrganizerProfile` + `Organization`（比照 `TeacherProfile` 的 onboarding 模式），不需要 Admin 指派或審核；建立後僅能管理自己的 own 資料。詳見 `docs/domain/permissions-matrix.md` 與 `docs/product/route-map.md` 的對應標注。
+- 建立流程一律「新建專屬 `Organization`」，V1 不提供搜尋/加入既有組織的協作邀請（non-goal，屬 enterprise 協作範疇）。
 
 ## Organization
 
@@ -106,19 +113,17 @@ Type:
 - family_group
 - other
 
+Phase 1 schema notes（`organizer-demand-request-foundation` D4 已確認）：
+
+- `contactName` / `contactEmail` / `contactPhone` 是提交 `DemandRequest` 前的必填欄位（團體對外聯絡窗口），但 Prisma schema 層級宣告為 `String?`（nullable），以維持 migration additive-safe（既有 `Organization` 資料列不會因新增 `NOT NULL` 欄位而失敗）；必填規則由 application-layer 在 `DemandRequest` submit 時驗證（見下方 `DemandRequest` 說明），不是 schema 層級的資料庫約束。
+- `area` / `address` 為 V1 optional / deferred 欄位，可留空，不阻擋任何流程。
+- `contactEmail` 只做「非空 + 基本 email 形狀」驗證，不做寄送驗證；`contactPhone` 只做「非空 + 長度界線」驗證，不做電信驗證。
+
 ## ServiceType
 
-Represents yoga/class type.
+V1 **不**落地為獨立 Prisma model。`docs/product/form-field-spec.md` 曾規劃獨立 model + seed data，但因 repo 目前無 seed 基礎設施（無 `prisma/seed.ts`，且不可修改 `package.json` 新增 seed script），`organizer-demand-request-foundation` D5 已確認 V1 改採**應用層受控字串**：`DemandRequest.serviceType`（`String?`，見下）由 `src/domain/demand-request/service-types.ts` 常數清單約束允許值，server-side 驗證輸入必須落在清單內。此節保留作為 model 設計稿／未來若需要 Admin 管理類型時的升級參考，**目前不對應任何 Prisma model**。
 
-Fields:
-
-- id
-- name
-- description
-- category
-- isActive
-
-Examples:
+V1 受控清單（定案，7 項，供 `service-types.ts` 逐字採用）：
 
 - Hatha Yoga
 - Yin Yoga
@@ -173,7 +178,7 @@ Fields:
 - organizerProfileId
 - organizationId
 - title
-- serviceTypeId
+- serviceType
 - description
 - targetLevel
 - expectedParticipants
@@ -184,8 +189,35 @@ Fields:
 - frequency
 - budgetRange
 - status
+- rejectionReason
 - createdAt
 - updatedAt
+
+Status（`DemandRequestStatus`，`organizer-demand-request-foundation` D9 已確認）：
+
+- draft
+- submitted
+- under_review
+- published
+- teacher_responded
+- matched
+- converted_to_class
+- completed
+- cancelled
+- expired
+- rejected
+
+Phase 1 schema notes（`organizer-demand-request-foundation` D5–D11 已確認）：
+
+- `serviceTypeId` 更名為 `serviceType`：因 `ServiceType` 在 V1 不落地為獨立 model（見上），此欄位改為受控字串 `String?`，值須落在 `service-types.ts` 的 7 項定案清單內。
+- `organizerProfileId` / `organizationId` 一律由 server 端從登入使用者的 organizer capability 解析帶入，**不接受 client 傳入值決定 own 資源**（IDOR 防護）。
+- `title` / `serviceType` / `description` / `targetLevel` / `expectedParticipants` / `preferredAreas`（至少一項）/ `preferredTimeSlots`（至少一項）/ `classLengthMinutes` / `frequency` 是 submit 的必填欄位；`preferredStartDate` / `budgetRange` 為建議欄位，可留空。
+- `preferredAreas`、`preferredTimeSlots` 在 schema 中以 `String[] @default([])` 表示（對齊 `TeacherProfile.specialties` 等既有慣例），不建立正規化 relation 或 Json。`preferredTimeSlots` 值須落在受控清單內；`preferredAreas` 為自由輸入 + trim，上限 10 項、單項 ≤50 字。
+- `targetLevel`、`frequency` 為應用層受控字串（`String?`），`frequency` 固定 4 值（`single`/`weekly`/`biweekly`/`monthly`，不含 `other`）。
+- **V1 已接線的狀態轉換只有** `draft → submitted → published | rejected`（Organizer 建立/送出、Admin publish/reject）。`under_review`、`teacher_responded`、`matched`、`converted_to_class`、`completed`、`cancelled`、`expired` 這些 enum 值**保留但本輪不接線**，避免未來 pool/response/matching/class 相關 slice 需要再次 enum migration；細節與各狀態的觸發者/前置/後置見 `state-transition-details.md`。
+- `rejected` 為**終局狀態**：本輪不提供 `rejected → draft/submitted` 的重新送審路徑；organizer 若要再提需求，需另建新的 `DemandRequest`。
+- `rejectionReason` 是 nullable 欄位（`String?`），保存 Admin 在 `submitted → rejected` 時填寫、**面向該 demand 所屬 organizer 的退回說明**，與內部 `AdminNote` 語意分離（本輪不建 `AdminNote`）；必填、trim 後長度 10–1000 字。因 `rejected` 為終局狀態，reason 寫入後即永久保留於該 demand，不需清空邏輯。
+- 只有 `status = published` 的 `DemandRequest` 才是未來 approved teacher demand pool 的 eligible 資料前提；`draft`/`submitted`/`rejected` 一律不對 Teacher 或其他 Organizer 可見。Teacher demand pool 查詢本身不在本輪 scope。
 
 ## DemandResponse
 

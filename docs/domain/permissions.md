@@ -45,8 +45,11 @@ Cannot:
 
 ## Organizer
 
+`organizer-demand-request-foundation` D1 已確認：任何 signed-in user（Member 基本能力）皆可自助建立自己的 `OrganizerProfile` + `Organization` 以取得 Organizer 能力，不需要 Admin 指派或審核（比照 Teacher 的 onboarding 模式）；建立後即受下列規則約束，僅能管理自己的 own 資料。
+
 Can:
 
+- Create own OrganizerProfile / Organization（bootstrap，任何 signed-in user）
 - Create demand requests
 - View own demand requests
 - Edit own draft/submitted demand requests if allowed

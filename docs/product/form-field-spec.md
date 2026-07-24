@@ -70,6 +70,8 @@ Exception 欄位：
 
 ## Organizer Demand Request Form
 
+`organizer-demand-request-foundation` 已確認：此處欄位實際分兩個畫面收集（見 `docs/product/route-map.md`），不是單一表單：`organizationName`/`organizationType`/`contactName`/`contactEmail`/`contactPhone` 屬 organizer capability bootstrap，於 `/organizer/profile` 收集並保存到 `OrganizerProfile`/`Organization`；其餘 demand 專屬欄位於 `/organizer/demands/new`（或續編用的 `/organizer/demands/[id]/edit`）收集並保存到 `DemandRequest`。下表仍合併列出以呈現完整資料需求，但欄位分屬不同 model／畫面。
+
 | Field | 必填 | 說明 |
 |---|---|---|
 | `organizationName` | 是 | 組織或團體名稱 |
@@ -77,17 +79,19 @@ Exception 欄位：
 | `contactName` | 是 | 聯絡人 |
 | `contactEmail` | 是 | 聯絡 email |
 | `contactPhone` | 是 | 聯絡電話 |
-| `title` | 是 | 需求標題 |
-| `serviceTypeId` | 是 | 希望課程類型 |
-| `description` | 是 | 團體需求描述 |
+| `title` | 是 | 需求標題（5–100 字） |
+| `serviceType` | 是 | 希望課程類型，須落在 V1 定案的受控清單（見 `docs/domain/data-model.md` ServiceType 節） |
+| `description` | 是 | 團體需求描述（20–2000 字） |
 | `targetLevel` | 是 | 初學、一般、進階或混合 |
-| `expectedParticipants` | 是 | 預估人數 |
-| `preferredAreas` | 是 | 偏好地區 |
-| `preferredTimeSlots` | 是 | 偏好時段 |
-| `preferredStartDate` | 建議 | 希望開始日期 |
-| `classLengthMinutes` | 是 | 每堂課長 |
-| `frequency` | 是 | 單堂、每週、雙週等 |
-| `budgetRange` | 建議 | 預算區間 |
+| `expectedParticipants` | 是 | 預估人數（1–500） |
+| `preferredAreas` | 是 | 偏好地區，自由輸入，至少一項，最多 10 項、單項 ≤50 字 |
+| `preferredTimeSlots` | 是 | 偏好時段，至少一項，須落在受控清單內 |
+| `preferredStartDate` | 建議 | 希望開始日期，若填寫須為今日以後 |
+| `classLengthMinutes` | 是 | 每堂課長（30–240 分鐘） |
+| `frequency` | 是 | 單堂（`single`）、每週（`weekly`）、雙週（`biweekly`）、每月（`monthly`），V1 不含 `other` |
+| `budgetRange` | 建議 | 預算區間；brand 提醒勿過度強調價格 |
+
+`contactName`/`contactEmail`/`contactPhone` 在 Prisma schema 層級為 nullable（`String?`，migration additive-safe 考量），必填規則由 application-layer 在 `DemandRequest` submit 時驗證所連 `Organization` 是否已補齊，而非表單當下的資料庫約束。
 
 ### Organizer Form to Model Mapping
 
@@ -99,7 +103,7 @@ Exception 欄位：
 | `contactEmail` | `Organization.contactEmail` |
 | `contactPhone` | `Organization.contactPhone` |
 | `title` | `DemandRequest.title` |
-| `serviceTypeId` | `DemandRequest.serviceTypeId` |
+| `serviceType` | `DemandRequest.serviceType` |
 | `description` | `DemandRequest.description` |
 | `targetLevel` | `DemandRequest.targetLevel` |
 | `expectedParticipants` | `DemandRequest.expectedParticipants` |

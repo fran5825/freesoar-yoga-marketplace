@@ -83,11 +83,37 @@
 | Any active state | `cancelled` | Organizer / Admin | 取消原因成立 | 停止 matching 或 class formation |
 | `published` / `teacher_responded` | `expired` | System / Admin | 超過有效期限 | 不再接受新 response |
 
+### V1 policy notes（`organizer-demand-request-foundation` 已確認）
+
+上方 Transitions 表格是 marketplace 的完整最終設計；`organizer-demand-request-foundation` 這一輪 foundation feature **只落地**以下子集，其餘列為未來 slice（demand pool、response、matching、class conversion）的設計參考：
+
+| From | To | Actor | 前置條件 | 後置效果 |
+|---|---|---|---|---|
+| `draft` | `submitted` | Organizer | 必填需求欄位完成（`title`/`serviceType`/`description`/`targetLevel`/`expectedParticipants`/`preferredAreas`≥1/`preferredTimeSlots`≥1/`classLengthMinutes`/`frequency`），且所連 `Organization` 的 `contactName`/`contactEmail`/`contactPhone` 皆已填寫 | demand 進入待審核；V1 以站內 status 顯示告知 Organizer，不寄 email |
+| `submitted` | `published` | Admin | 需求清楚且適合平台 | Approved teacher 未來可見（demand pool 查詢本身不在本輪 scope）；organizer 於自己 dashboard 看見 status 更新 |
+| `submitted` | `rejected` | Admin | 需求不適合或資料不足，且 Admin 已填寫具體 rejection reason（必填，trim 後 10–1000 字） | 保存 `rejectionReason`；Organizer 於自己 dashboard / demand detail 看見 reason（V1 以站內顯示告知，email 為後續切片） |
+
+- **V1 跳過 `under_review`**：Admin review 直接 `submitted → published | rejected`，不提供「開始審查」的中間狀態或動作（對齊 `TeacherProfile` 的 `submitted → approved|rejected` 簡化先例）。`under_review` 的 enum 值保留，但本輪無對應 transition。
+- **`rejected` 在 V1 是終局狀態**：不提供 `rejected → draft/submitted` 的重新送審路徑；organizer 需依 reason 另建新的 `DemandRequest`。因此 reason 寫入後**永久保留**於該（終局）demand，不需要清空邏輯（與 `TeacherProfile.rejectionReason` 的「清空/覆蓋」lifecycle不同，因為 demand 沒有 resubmit 路徑）。
+- **Rejection reason（V1）**：與 `TeacherProfile.rejectionReason` 相同慣例——`normalizedReason = input.trim()`，驗證且持久化 trim 後值，長度 10–1000 字；`rejectionReason` 是面向該 demand 所屬 organizer 的退回說明，與內部 `AdminNote` 語意分離（本輪不建 `AdminNote`）。
+- **`cancelled` / `expired` 不在本輪範圍**：enum 值保留，V1 不實作 organizer 撤回 draft/submitted 或系統過期的 UI/flow。
+- Teacher response、matching、class conversion（`teacher_responded` 之後的所有 transition）完全不在本輪 scope；`published` demand 目前只保證資料前提成立，不建立任何 teacher-facing 查詢或寫入路徑。
+
+### Admin action matrix（`organizer-demand-request-foundation` V1）
+
+| Current status | V1 Admin actions |
+|---|---|
+| `submitted` | `publish`, `reject` |
+| `published` | 無（本輪不提供 cancel/expire） |
+| `rejected` | 唯讀（終局狀態，無 Admin 後續動作） |
+
 ### 禁止條件
 
 - 未 published demand 不可被 Teacher demand pool 看見。
 - `converted_to_class` 後不可修改會破壞 ClassSession 的核心欄位。
 - V1 不允許一個 demand 同時 matched 多位 teacher。
+- `draft`/`submitted`/`rejected` 的 `DemandRequest` 不可被其他 Organizer 或 Teacher 看見（own-only / not-yet-eligible）。
+- 非 Admin 不可執行 `publish` / `reject`。
 
 ## DemandResponse
 
@@ -186,7 +212,7 @@ Future / admin-only 後續能力：
 狀態變更可能觸發 notification：
 
 - TeacherProfile submitted / approved / rejected（**V1 落地範圍**：`submitted → rejected` 對老師的告知在 V1 以站內顯示 `rejectionReason` 實現，email 為後續切片 `teacher-application-rejection-notification`）
-- DemandRequest submitted / published / rejected
+- DemandRequest submitted / published / rejected（**V1 落地範圍**：`organizer-demand-request-foundation` D14 已確認延後 email/notification，V1 只以 organizer 自己 dashboard 的站內 status 顯示告知；email 為後續切片 `organizer-demand-notification`）
 - DemandResponse submitted / selected
 - ClassSession created / open_for_enrollment / confirmed / cancelled
 - Enrollment confirmed / cancelled

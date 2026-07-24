@@ -86,18 +86,50 @@ model OrganizerProfile {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization  Organization?  @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  demandRequests DemandRequest[]
 }
 
 model Organization {
-  id          String             @id @default(cuid())
-  name        String
-  type        OrganizationType
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  id           String             @id @default(cuid())
+  name         String
+  type         OrganizationType
+  contactName  String?
+  contactEmail String?
+  contactPhone String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
 
   organizerProfiles OrganizerProfile[]
+  demandRequests    DemandRequest[]
+}
+
+model DemandRequest {
+  id                    String              @id @default(cuid())
+  organizerProfileId    String
+  organizationId        String
+  title                 String?
+  serviceType           String?
+  description           String?
+  targetLevel           String?
+  expectedParticipants  Int?
+  preferredAreas        String[]            @default([])
+  preferredTimeSlots    String[]            @default([])
+  preferredStartDate    DateTime?
+  classLengthMinutes    Int?
+  frequency             String?
+  budgetRange           String?
+  status                DemandRequestStatus @default(draft)
+  rejectionReason       String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  organizerProfile OrganizerProfile @relation(fields: [organizerProfileId], references: [id], onDelete: Cascade)
+  organization     Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  @@index([status])
+  @@index([organizerProfileId])
 }
 
 enum TeacherProfileStatus {
@@ -114,4 +146,18 @@ enum OrganizationType {
   community
   family_group
   other
+}
+
+enum DemandRequestStatus {
+  draft
+  submitted
+  under_review
+  published
+  teacher_responded
+  matched
+  converted_to_class
+  completed
+  cancelled
+  expired
+  rejected
 }
