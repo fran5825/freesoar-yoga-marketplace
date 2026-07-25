@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { getOwnDemandRequestDetail } from "@/domain/demand-request/service";
+import { listResponsesForOwnDemandRequest } from "@/domain/demand-response/organizer-read-service";
 import { requireUser } from "@/lib/auth/session";
 
 import {
@@ -12,6 +13,7 @@ import {
   formatDemandRequestDate,
   formatDemandRequestDateTime,
 } from "../_components/status-labels";
+import { ResponseList } from "./_components/ResponseList";
 
 type DemandRequestDetailPageProps = {
   params: Promise<{ demandRequestId: string }>;
@@ -32,6 +34,8 @@ export default async function DemandRequestDetailPage({
   if (!demandRequest) {
     notFound();
   }
+
+  const responses = (await listResponsesForOwnDemandRequest(demandRequestId)) ?? [];
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-8 px-5 py-10 sm:px-8 sm:py-14">
@@ -126,6 +130,8 @@ export default async function DemandRequestDetailPage({
           />
         </div>
       </section>
+
+      <ResponseList responses={responses} />
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <Link
