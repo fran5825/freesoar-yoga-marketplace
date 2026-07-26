@@ -18,7 +18,7 @@ V1 default:
 ## Demand Matching
 
 - Teachers can respond to published demand requests.
-- Organizer/admin can select one teacher response.
+- Organizer can select one teacher response in V1 (Admin does not participate in matching decisions; see `permissions-matrix.md` V1 落地範圍 note).
 - Selected response can be converted into ClassSession.
 
 ## Class Formation

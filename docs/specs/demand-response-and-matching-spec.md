@@ -6,6 +6,14 @@ Demand response and matching 讓 approved teacher 可以回應 published demand 
 
 V1 不做 advanced AI matching，只做清楚、可審核、人工決策為主的 marketplace matching。
 
+## 落地現況（2026-07-26 更新）
+
+本 spec 描述的完整 user flow 分批落地：
+
+- **已出貨**（`docs/superpowers/plans/2026-07-21-teacher-demand-pool-response-plan.md`，D1–D16 已拍板、Codex 16 rounds 通過、已 commit + push 進 `main`）：User Flow 第 1–5 步——Teacher 瀏覽 published demand pool、查看 detail、提交/撤回 response，以及 Organizer 唯讀查看自己 demand 收到的 responses。
+- **已出貨**（`docs/superpowers/plans/2026-07-25-demand-response-selection-and-matching-plan.md`）：User Flow 第 7–8 步——Organizer 對自己 demand 底下的 response 執行 select（own-scoped，**Admin 不介入**，與本文件 Permission Requirements 原文「Admin 可查看與管理所有 responses」不同——V1 Admin 僅維持既有的 publish/reject 職責，未涉入 matching 決策）；select 成功時同一 transaction 內把同 demand 其餘 `submitted` response 轉 `declined`，並把 `DemandRequest` 轉 `matched`。**第 6 步（shortlist）未落地**：V1 跳過候選階段，Organizer 直接對任一 `submitted` response 一步到位 select；`shortlisted` enum 值保留但不接線。`DemandResponseStatus` enum（完整 6 值）已全數接線除 `shortlisted`/`expired` 外的狀態；`DemandRequestStatus` 的 `matched` 已接線（來源狀態是 `published`，不經過未接線的 `teacher_responded`）。
+- **尚未落地**（下一份獨立 plan 的範圍）：User Flow 第 9 步——selected response 轉成 `ClassSession`（`DemandRequest: matched → converted_to_class`）。本文件其餘章節（Permission/State Transitions/Acceptance Criteria）仍是這個剩餘範圍的產品層 source of truth。
+
 ## User Role
 
 主要角色：

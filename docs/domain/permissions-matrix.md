@@ -124,6 +124,8 @@ Organizer 不可查看其他 organizer 的私人 demand request。
 
 V1 一個 demand request 只能有一個 selected response。
 
+**V1 落地範圍**（`demand-response-selection-and-matching` 已確認）：`Select response` 僅 Organizer own-scoped 可執行，**Admin 不介入**（D2，上表 Admin 欄位為完整未來設計，V1 未開放）；`Decline response` 在 V1 不是獨立的 Organizer 手動動作，而是 select 成功時同一 transaction 內自動處理（D3），沒有對應的手動操作入口；`Shortlist response` 本輪不實作（D1），保留於表中作為未來 slice 參考（對齊上方 `Cancel demand` 的既有註記慣例）。
+
 ## ClassSession
 
 | Action | Visitor | Member | Organizer | Teacher | Admin |
