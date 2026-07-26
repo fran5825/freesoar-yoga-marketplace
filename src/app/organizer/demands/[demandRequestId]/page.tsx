@@ -13,14 +13,17 @@ import {
   formatDemandRequestDate,
   formatDemandRequestDateTime,
 } from "../_components/status-labels";
+import { selectDemandResponseAction } from "./actions";
 import { ResponseList } from "./_components/ResponseList";
 
 type DemandRequestDetailPageProps = {
   params: Promise<{ demandRequestId: string }>;
+  searchParams?: Promise<{ result?: string; message?: string }>;
 };
 
 export default async function DemandRequestDetailPage({
   params,
+  searchParams,
 }: DemandRequestDetailPageProps) {
   try {
     await requireUser();
@@ -28,7 +31,22 @@ export default async function DemandRequestDetailPage({
     redirect("/sign-in");
   }
 
-  const { demandRequestId } = await params;
+  const [{ demandRequestId }, resolvedSearchParams] = await Promise.all([
+    params,
+    searchParams,
+  ]);
+
+  const feedback =
+    resolvedSearchParams?.result && resolvedSearchParams.message
+      ? {
+          kind:
+            resolvedSearchParams.result === "success"
+              ? ("success" as const)
+              : ("error" as const),
+          message: resolvedSearchParams.message,
+        }
+      : null;
+
   const demandRequest = await getOwnDemandRequestDetail(demandRequestId);
 
   if (!demandRequest) {
@@ -57,6 +75,19 @@ export default async function DemandRequestDetailPage({
           最後更新：{formatDemandRequestDateTime(demandRequest.updatedAt)}
         </p>
       </header>
+
+      {feedback ? (
+        <section
+          aria-live="polite"
+          className={
+            feedback.kind === "success"
+              ? "rounded border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
+              : "rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
+          }
+        >
+          {feedback.message}
+        </section>
+      ) : null}
 
       {demandRequest.status === "rejected" ? (
         <section className="min-w-0 rounded border border-amber-200 bg-amber-50 p-4">
@@ -131,7 +162,11 @@ export default async function DemandRequestDetailPage({
         </div>
       </section>
 
-      <ResponseList responses={responses} />
+      <ResponseList
+        demandRequestId={demandRequestId}
+        responses={responses}
+        selectDemandResponseAction={selectDemandResponseAction}
+      />
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <Link

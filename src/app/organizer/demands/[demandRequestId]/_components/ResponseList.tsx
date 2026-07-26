@@ -4,16 +4,25 @@ const responseStatusLabels: Record<string, string> = {
   submitted: "已送出",
   shortlisted: "候選中",
   selected: "已選定",
-  declined: "未選用",
+  declined: "未獲選",
   withdrawn: "已撤回",
   expired: "已過期",
 };
 
 export function ResponseList({
   responses,
+  demandRequestId,
+  selectDemandResponseAction,
 }: {
   responses: OrganizerFacingResponse[];
+  demandRequestId: string;
+  selectDemandResponseAction: (formData: FormData) => Promise<void>;
 }) {
+  // D3/D8：demand 一旦有一筆 selected response，select 是終局動作，不再顯示其他選定表單。
+  const hasSelectedResponse = responses.some(
+    (response) => response.status === "selected",
+  );
+
   return (
     <section className="grid gap-4 rounded border border-gray-200 bg-white p-6">
       <div>
@@ -80,6 +89,48 @@ export function ResponseList({
                 <p className="mt-1 min-w-0 break-words text-xs leading-5 text-gray-500">
                   參考價格：{response.proposedPrice}
                 </p>
+              ) : null}
+
+              {!hasSelectedResponse && response.status === "submitted" ? (
+                <details className="mt-3 rounded border border-emerald-200 bg-emerald-50/60">
+                  <summary className="cursor-pointer list-none rounded px-4 py-2 text-sm font-medium text-emerald-800 marker:hidden">
+                    選定這位老師…
+                  </summary>
+                  <form
+                    action={selectDemandResponseAction}
+                    className="grid gap-3 border-t border-emerald-100 p-4"
+                  >
+                    <input
+                      name="demandRequestId"
+                      type="hidden"
+                      value={demandRequestId}
+                    />
+                    <input
+                      name="demandResponseId"
+                      type="hidden"
+                      value={response.id}
+                    />
+                    <p className="text-sm leading-6 text-gray-700">
+                      選定後，其餘老師的回應會自動標記為未獲選，且無法復原。
+                    </p>
+                    <label className="flex items-start gap-2 text-sm leading-6 text-gray-700">
+                      <input
+                        className="mt-1 shrink-0"
+                        name="confirmSelect"
+                        required
+                        type="checkbox"
+                        value="yes"
+                      />
+                      我確認要選定這位老師。
+                    </label>
+                    <button
+                      className="w-full rounded bg-emerald-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-800 sm:w-auto"
+                      type="submit"
+                    >
+                      確認選定
+                    </button>
+                  </form>
+                </details>
               ) : null}
             </li>
           ))}
