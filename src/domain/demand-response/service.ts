@@ -1,11 +1,11 @@
-import { randomUUID } from "crypto";
-
-import { Prisma } from "@prisma/client";
-import type { DemandRequestStatus, DemandResponseStatus } from "@prisma/client";
-
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
+import {
+  type OwnDemandResponse,
+  ownDemandResponseSelect,
+  submitDemandResponseForTeacher,
+} from "./__internal__/select-and-submit-core";
 import { requireApprovedTeacher } from "./capability";
 import {
   type DemandResponseWithdrawTransitionErrorCode,
@@ -17,32 +17,7 @@ import {
   validateDemandResponseSubmit,
 } from "./validation";
 
-// D1/D11：submit 時的 eligibility 判斷依 D11=B 固定為 published。
-const eligibleStatusesForSubmit: DemandRequestStatus[] = ["published"];
-
-export type OwnDemandResponse = {
-  id: string;
-  demandRequestId: string;
-  teacherProfileId: string;
-  message: string;
-  proposedTimeSlots: string[];
-  proposedPrice: string | null;
-  status: DemandResponseStatus;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-const ownDemandResponseSelect = {
-  id: true,
-  demandRequestId: true,
-  teacherProfileId: true,
-  message: true,
-  proposedTimeSlots: true,
-  proposedPrice: true,
-  status: true,
-  createdAt: true,
-  updatedAt: true,
-} as const;
+export type { OwnDemandResponse };
 
 export type DemandResponseSubmitErrorCode =
   | "authentication_required"
@@ -115,52 +90,37 @@ export async function submitOwnDemandResponse(
     };
   }
 
-  const id = randomUUID();
-  const now = new Date();
-  const { message, proposedTimeSlots, proposedPrice } = validation.normalized;
+  const result = await submitDemandResponseForTeacher(
+    teacherProfileId,
+    demandRequestId,
+    validation.normalized,
+  );
 
-  try {
-    const insertedRows = await prisma.$queryRaw<{ id: string }[]>`
-      INSERT INTO "DemandResponse"
-        ("id", "demandRequestId", "teacherProfileId", "message", "proposedTimeSlots", "proposedPrice", "status", "createdAt", "updatedAt")
-      SELECT
-        ${id}, ${demandRequestId}, ${teacherProfileId}, ${message}, ${proposedTimeSlots}::text[], ${proposedPrice}, 'submitted'::"DemandResponseStatus", ${now}, ${now}
-      WHERE EXISTS (
-        SELECT 1 FROM "DemandRequest"
-        WHERE "id" = ${demandRequestId} AND "status" = ANY(${eligibleStatusesForSubmit}::"DemandRequestStatus"[])
-      )
-      RETURNING "id"
-    `;
+  if (result.ok) {
+    return { ok: true, demandResponse: result.demandResponse };
+  }
 
-    if (insertedRows.length === 0) {
-      return {
-        ok: false,
-        code: "demand_not_eligible",
-        message: "這則需求目前無法回應，可能已不再公開。",
-      };
-    }
-
-    const demandResponse = await prisma.demandResponse.findUniqueOrThrow({
-      where: { id: insertedRows[0].id },
-      select: ownDemandResponseSelect,
-    });
-
-    return { ok: true, demandResponse };
-  } catch (error) {
-    if (isUniqueConstraintViolation(error)) {
-      return {
-        ok: false,
-        code: "response_already_exists",
-        message: "你已經對這則需求提交過回應了，withdraw 後也無法再重新提交。",
-      };
-    }
-
+  if (result.code === "not_eligible") {
     return {
       ok: false,
-      code: "demand_response_submit_failed",
-      message: "回應暫時無法送出，請稍後再試。",
+      code: "demand_not_eligible",
+      message: "這則需求目前無法回應，可能已不再公開。",
     };
   }
+
+  if (result.code === "response_already_exists") {
+    return {
+      ok: false,
+      code: "response_already_exists",
+      message: "你已經對這則需求提交過回應了，withdraw 後也無法再重新提交。",
+    };
+  }
+
+  return {
+    ok: false,
+    code: "demand_response_submit_failed",
+    message: "回應暫時無法送出，請稍後再試。",
+  };
 }
 
 // D10：withdraw 不論 DemandRequest 當下狀態如何，只要 own response 仍為 submitted 即可。
@@ -300,25 +260,4 @@ function withdrawTransitionBlockedMessage(
 
 function isAuthenticationRequiredError(error: unknown): boolean {
   return error instanceof Error && error.message === "Authentication required";
-}
-
-function isUniqueConstraintViolation(error: unknown): boolean {
-  if (
-    error instanceof Prisma.PrismaClientKnownRequestError &&
-    error.code === "P2002"
-  ) {
-    return true;
-  }
-
-  // Raw query 的 unique violation 經 Prisma 包裝為 P2010，訊息含底層 Postgres 錯誤碼 23505。
-  if (
-    error instanceof Prisma.PrismaClientKnownRequestError &&
-    error.code === "P2010" &&
-    typeof error.message === "string" &&
-    error.message.includes("23505")
-  ) {
-    return true;
-  }
-
-  return false;
 }
