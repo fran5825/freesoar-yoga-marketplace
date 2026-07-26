@@ -53,3 +53,79 @@ export function validateDemandResponseWithdrawTransition(
     code: "response_not_submitted",
   };
 }
+
+export type DemandResponseSelectTransitionErrorCode =
+  | "response_already_selected"
+  // 涵蓋 D1 保留但本輪未接線的其餘狀態（shortlisted/declined/withdrawn/expired）。
+  | "response_not_submitted";
+
+export type DemandResponseSelectTransitionResult =
+  | {
+      allowed: true;
+      from: "submitted";
+      to: "selected";
+    }
+  | {
+      allowed: false;
+      from: DemandResponseStatus;
+      to: "selected";
+      code: DemandResponseSelectTransitionErrorCode;
+    };
+
+// D1：本輪只接線 submitted→selected（跳過 shortlisted 兩階段）。
+export function validateDemandResponseSelectTransition(
+  from: DemandResponseStatus,
+): DemandResponseSelectTransitionResult {
+  if (from === "submitted") {
+    return { allowed: true, from, to: "selected" };
+  }
+
+  if (from === "selected") {
+    return {
+      allowed: false,
+      from,
+      to: "selected",
+      code: "response_already_selected",
+    };
+  }
+
+  return {
+    allowed: false,
+    from,
+    to: "selected",
+    code: "response_not_submitted",
+  };
+}
+
+export type DemandResponseDeclineTransitionErrorCode =
+  // 涵蓋 D1/D3 保留但本輪未接線或不適用的其餘狀態。
+  "response_not_submitted";
+
+export type DemandResponseDeclineTransitionResult =
+  | {
+      allowed: true;
+      from: "submitted";
+      to: "declined";
+    }
+  | {
+      allowed: false;
+      from: DemandResponseStatus;
+      to: "declined";
+      code: DemandResponseDeclineTransitionErrorCode;
+    };
+
+// D3：select 成功時，同一 demand 底下其餘 submitted response 自動轉 declined。
+export function validateDemandResponseDeclineTransition(
+  from: DemandResponseStatus,
+): DemandResponseDeclineTransitionResult {
+  if (from === "submitted") {
+    return { allowed: true, from, to: "declined" };
+  }
+
+  return {
+    allowed: false,
+    from,
+    to: "declined",
+    code: "response_not_submitted",
+  };
+}
