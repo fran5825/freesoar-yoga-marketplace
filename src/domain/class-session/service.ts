@@ -124,6 +124,102 @@ export async function createOwnClassSession(
   };
 }
 
+export type OpenOwnClassSessionForEnrollmentErrorCode =
+  | "authentication_required"
+  | "organizer_profile_required"
+  | "class_session_not_found"
+  | "class_session_not_draft"
+  | "class_session_already_started";
+
+export type OpenOwnClassSessionForEnrollmentResult =
+  | { ok: true }
+  | {
+      ok: false;
+      code: OpenOwnClassSessionForEnrollmentErrorCode;
+      message: string;
+    };
+
+// D2：Organizer own-scoped，單一狀態轉換 guard。這是單一 organizer 對自己單一 class
+// session 的操作，沒有多方競爭同一資源的併發場景，不需要 __internal__ pure-core + hooks
+// 架構（比較 createEnrollmentForUser，見 enrollment domain）。
+// D14：`startAt` 已過的 class session 不可開放報名，guard 直接寫進 updateMany 的 where，
+// 不額外查詢。
+export async function openOwnClassSessionForEnrollment(
+  classSessionId: string,
+): Promise<OpenOwnClassSessionForEnrollmentResult> {
+  let organizerProfileId: string;
+
+  try {
+    const currentUser = await requireUser();
+
+    const organizerProfile = await prisma.organizerProfile.findUnique({
+      where: { userId: currentUser.id },
+      select: { id: true },
+    });
+
+    if (!organizerProfile) {
+      return {
+        ok: false,
+        code: "organizer_profile_required",
+        message: "找不到你的團主資料。",
+      };
+    }
+
+    organizerProfileId = organizerProfile.id;
+  } catch (error) {
+    if (isAuthenticationRequiredError(error)) {
+      return {
+        ok: false,
+        code: "authentication_required",
+        message: "請先登入後再開放報名。",
+      };
+    }
+
+    throw error;
+  }
+
+  const updateResult = await prisma.classSession.updateMany({
+    where: {
+      id: classSessionId,
+      organizerProfileId,
+      status: "draft",
+      startAt: { gt: new Date() },
+    },
+    data: { status: "open_for_enrollment" },
+  });
+
+  if (updateResult.count > 0) {
+    return { ok: true };
+  }
+
+  const classSession = await prisma.classSession.findFirst({
+    where: { id: classSessionId, organizerProfileId },
+    select: { status: true, startAt: true },
+  });
+
+  if (!classSession) {
+    return {
+      ok: false,
+      code: "class_session_not_found",
+      message: "找不到這堂課程，或你沒有權限操作。",
+    };
+  }
+
+  if (classSession.startAt.getTime() <= Date.now()) {
+    return {
+      ok: false,
+      code: "class_session_already_started",
+      message: "這堂課程已經開始，無法開放報名。",
+    };
+  }
+
+  return {
+    ok: false,
+    code: "class_session_not_draft",
+    message: "這堂課程目前狀態不允許開放報名。",
+  };
+}
+
 function isAuthenticationRequiredError(error: unknown): boolean {
   return error instanceof Error && error.message === "Authentication required";
 }
