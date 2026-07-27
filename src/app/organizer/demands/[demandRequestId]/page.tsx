@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { SERVICE_TYPES } from "@/domain/demand-request/service-types";
 import { getOwnDemandRequestDetail } from "@/domain/demand-request/service";
 import { listResponsesForOwnDemandRequest } from "@/domain/demand-response/organizer-read-service";
 import { requireUser } from "@/lib/auth/session";
@@ -13,7 +14,7 @@ import {
   formatDemandRequestDate,
   formatDemandRequestDateTime,
 } from "../_components/status-labels";
-import { selectDemandResponseAction } from "./actions";
+import { createClassSessionAction, selectDemandResponseAction } from "./actions";
 import { ResponseList } from "./_components/ResponseList";
 
 type DemandRequestDetailPageProps = {
@@ -167,6 +168,157 @@ export default async function DemandRequestDetailPage({
         responses={responses}
         selectDemandResponseAction={selectDemandResponseAction}
       />
+
+      {demandRequest.status === "matched" ? (
+        <section className="grid gap-5 rounded border border-gray-200 bg-white p-6">
+          <div>
+            <h2 className="text-lg font-medium text-gray-950">建立課程</h2>
+            <p className="mt-2 text-sm leading-6 text-gray-600">
+              這會把這則需求轉為正式課程，之後無法修改，請確認資訊無誤後再送出。
+            </p>
+          </div>
+
+          <form action={createClassSessionAction} className="grid gap-4">
+            <input name="demandRequestId" type="hidden" value={demandRequestId} />
+
+            <div>
+              <label className="text-sm font-medium text-gray-950" htmlFor="title">
+                課程名稱
+              </label>
+              <input
+                className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                defaultValue={demandRequest.title ?? ""}
+                id="title"
+                maxLength={200}
+                name="title"
+                required
+                type="text"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-950" htmlFor="serviceType">
+                課程類型
+              </label>
+              <select
+                className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                defaultValue={demandRequest.serviceType ?? ""}
+                id="serviceType"
+                name="serviceType"
+                required
+              >
+                <option disabled value="">
+                  請選擇課程類型
+                </option>
+                {SERVICE_TYPES.map((serviceType) => (
+                  <option key={serviceType} value={serviceType}>
+                    {serviceType}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label
+                  className="text-sm font-medium text-gray-950"
+                  htmlFor="startAt"
+                >
+                  開始時間
+                </label>
+                <input
+                  className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                  id="startAt"
+                  name="startAt"
+                  required
+                  type="datetime-local"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-950" htmlFor="endAt">
+                  結束時間
+                </label>
+                <input
+                  className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                  id="endAt"
+                  name="endAt"
+                  required
+                  type="datetime-local"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-950" htmlFor="location">
+                地點
+              </label>
+              <input
+                className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                id="location"
+                maxLength={200}
+                name="location"
+                placeholder="例如：台北市信義區 OO 大樓 3F"
+                required
+                type="text"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-950" htmlFor="capacity">
+                名額上限
+              </label>
+              <input
+                className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                id="capacity"
+                max={500}
+                min={1}
+                name="capacity"
+                required
+                type="number"
+              />
+            </div>
+
+            <div>
+              <label
+                className="text-sm font-medium text-gray-950"
+                htmlFor="description"
+              >
+                課程說明（選填）
+              </label>
+              <textarea
+                className="mt-2 min-h-24 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                id="description"
+                maxLength={2000}
+                name="description"
+                placeholder="向老師與未來可能報名的會員說明這堂課的重點。"
+              />
+            </div>
+
+            <label className="flex items-start gap-2 text-sm leading-6 text-gray-700">
+              <input className="mt-1 shrink-0" name="isPublic" type="checkbox" value="yes" />
+              允許公開課程詳情頁與分享連結（未來功能，本輪送出後暫不生效）
+            </label>
+
+            <label className="flex items-start gap-2 text-sm leading-6 text-gray-700">
+              <input
+                className="mt-1 shrink-0"
+                name="confirmCreate"
+                required
+                type="checkbox"
+                value="yes"
+              />
+              我確認以上資訊無誤，同意建立課程。
+            </label>
+
+            <button
+              className="w-full rounded bg-gray-950 px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-gray-800 sm:w-auto"
+              type="submit"
+            >
+              建立課程
+            </button>
+          </form>
+        </section>
+      ) : null}
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <Link
