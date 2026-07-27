@@ -140,6 +140,8 @@ V1 一個 demand request 只能有一個 selected response。
 
 Teacher 可查看自己的 class session；V1 由 Admin 保有 class session 完成與取消的最終管理權。
 
+**V1 落地範圍**（`class-session-creation` 已確認）：`Create class session from matched demand` 僅 Organizer own-scoped 可執行，**Admin 不介入**（D1，上表 Admin 欄位為完整未來設計，V1 未開放）；`Edit draft class session` 本輪不實作（D2，一次到位建立、建立後不可編輯）；`Open for enrollment`／`Cancel class session`／`Complete class session` 本輪皆不接線（D9），保留於表中作為未來 slice 參考。`View private class session` 的 Teacher 欄位在 V1 不受 approved 狀態限制（`class-session-creation` D15，比照 View own response 的既有唯讀先例）。
+
 ## Enrollment
 
 | Action | Visitor | Member | Organizer | Teacher | Admin |

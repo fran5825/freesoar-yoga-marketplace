@@ -6,6 +6,14 @@ Class session and enrollment 將 matched demand 轉為可管理、可報名的�
 
 V1 的重點是清楚、安全、可追蹤，不做複雜金流、refund automation 或完整會員訂閱。
 
+## 落地現況（2026-07-26 更新）
+
+本 spec 描述的完整 user flow 分批落地：
+
+- **已出貨**（`docs/superpowers/plans/2026-07-26-class-session-creation-plan.md`）：User Flow 第 1–3 步——`DemandRequest` 進入 `matched`（見 `demand-response-and-matching-spec.md`）、Organizer 從自己 `matched` 的 demand 建立 `ClassSession`（own-scoped，Admin 不介入），且必要資訊於建立當下**一次到位**填齊（`title`/`description`（選填）/`serviceType`/`startAt`/`endAt`/`location`/`capacity`/`isPublic`），不是分階段補齊。Teacher 可唯讀查看自己已建立的 class session（不受 approved 狀態限制，比照唯讀查看自己 demand response 的先例）。
+- **未落地**：第 4 步——`ClassSession` 進入 `open_for_enrollment` 或 `confirmed`。V1 只接線到 `draft`，`pending_confirmation`/`open_for_enrollment`/`confirmed`/`completed`/`cancelled` enum 值保留但無 transition，因為這些狀態的實質意義（開放報名）需要 Enrollment 才存在。
+- **未落地**：第 5–9 步——Member 查看/報名、capacity 與重複報名檢查、enrollment confirmed。Enrollment 完全不在目前範圍，屬下一份獨立 plan。
+
 ## User Role
 
 主要角色：
@@ -57,7 +65,7 @@ V1 的重點是清楚、安全、可追蹤，不做複雜金流、refund automat
 - `organizerProfileId`
 - `organizationId`
 - `title`
-- `serviceTypeId`
+- `serviceType`
 - `startAt`
 - `endAt`
 - `location`

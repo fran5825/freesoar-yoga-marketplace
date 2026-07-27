@@ -214,7 +214,7 @@ Phase 1 schema notes（`organizer-demand-request-foundation` D5–D11 已確認�
 - `title` / `serviceType` / `description` / `targetLevel` / `expectedParticipants` / `preferredAreas`（至少一項）/ `preferredTimeSlots`（至少一項）/ `classLengthMinutes` / `frequency` 是 submit 的必填欄位；`preferredStartDate` / `budgetRange` 為建議欄位，可留空。
 - `preferredAreas`、`preferredTimeSlots` 在 schema 中以 `String[] @default([])` 表示（對齊 `TeacherProfile.specialties` 等既有慣例），不建立正規化 relation 或 Json。`preferredTimeSlots` 值須落在受控清單內；`preferredAreas` 為自由輸入 + trim，上限 10 項、單項 ≤50 字。
 - `targetLevel`、`frequency` 為應用層受控字串（`String?`），`frequency` 固定 4 值（`single`/`weekly`/`biweekly`/`monthly`，不含 `other`）。
-- **V1 已接線的狀態轉換只有** `draft → submitted → published | rejected`（Organizer 建立/送出、Admin publish/reject）。`under_review`、`teacher_responded`、`matched`、`converted_to_class`、`completed`、`cancelled`、`expired` 這些 enum 值**保留但本輪不接線**，避免未來 pool/response/matching/class 相關 slice 需要再次 enum migration；細節與各狀態的觸發者/前置/後置見 `state-transition-details.md`。
+- **V1 已接線的狀態轉換為** `draft → submitted → published | rejected`（Organizer 建立/送出、Admin publish/reject）、`published → matched`（Organizer select，見 `demand-response-selection-and-matching`）、`matched → converted_to_class`（Organizer 建立 ClassSession，見 `class-session-creation`）。`under_review`、`teacher_responded`、`completed`、`cancelled`、`expired` 這些 enum 值**保留但仍未接線**，避免未來相關 slice 需要再次 enum migration；細節與各狀態的觸發者/前置/後置見 `state-transition-details.md`。
 - `rejected` 為**終局狀態**：本輪不提供 `rejected → draft/submitted` 的重新送審路徑；organizer 若要再提需求，需另建新的 `DemandRequest`。
 - `rejectionReason` 是 nullable 欄位（`String?`），保存 Admin 在 `submitted → rejected` 時填寫、**面向該 demand 所屬 organizer 的退回說明**，與內部 `AdminNote` 語意分離（本輪不建 `AdminNote`）；必填、trim 後長度 10–1000 字。因 `rejected` 為終局狀態，reason 寫入後即永久保留於該 demand，不需清空邏輯。
 - 只有 `status = published` 的 `DemandRequest` 才是未來 approved teacher demand pool 的 eligible 資料前提；`draft`/`submitted`/`rejected` 一律不對 Teacher 或其他 Organizer 可見。Teacher demand pool 查詢本身不在本輪 scope。
@@ -259,7 +259,7 @@ Fields:
 - organizationId
 - title
 - description
-- serviceTypeId
+- serviceType
 - startAt
 - endAt
 - location

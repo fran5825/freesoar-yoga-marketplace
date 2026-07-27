@@ -46,8 +46,9 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 | `/organizer/demands` | 查看自己的 demand requests |
 | `/organizer/demands/new` | 建立 demand request draft 或直接 submit |
 | `/organizer/demands/[demandRequestId]/edit` | 重新開啟自己既有的 draft demand 續填、save 或 submit；僅允許 `status="draft"`，非 draft 導回 detail（`organizer-demand-request-foundation` 已確認，避免 draft 建立後無法完成的孤兒草稿） |
-| `/organizer/demands/[demandRequestId]` | 查看需求詳情、老師回覆與 matching 狀態；`draft` demand 提供前往 edit 續編的入口 |
+| `/organizer/demands/[demandRequestId]` | 查看需求詳情、老師回覆與 matching 狀態；`draft` demand 提供前往 edit 續編的入口；`matched` demand 提供建立 class session 的入口（`class-session-creation` 已確認） |
 | `/organizer/classes` | 查看自己需求形成的 class sessions |
+| `/organizer/classes/[classSessionId]` | 查看單一 class session 詳情（`class-session-creation` 已確認） |
 
 ## Member Routes
 
@@ -72,7 +73,7 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 
 - `/admin/*` 必須只允許 Admin。
 - `/teacher/dashboard` 是登入後 teacher onboarding / status route，允許 signed-in user 進入並建立 teacher application；頁面只能顯示自己的 TeacherProfile status 與申請下一步，不可開放 demand、availability、response 或 class session 功能。
-- 其他 `/teacher/*` workspace routes 必須只允許 Teacher 或 Admin；未 approved 的 Teacher 只能進入 onboarding / profile 相關頁。Demand response、eligible demand pool、availability 與 class session 能力必須另外檢查 TeacherProfile status 與 service-layer permission。
+- 其他 `/teacher/*` workspace routes 必須只允許 Teacher 或 Admin；未 approved 的 Teacher 只能進入 onboarding / profile 相關頁。Demand response、eligible demand pool、availability 與 class session 能力必須另外檢查 TeacherProfile status 與 service-layer permission。**`/teacher/classes` 是例外**：查看**已經指派給自己的既有 class session**不受此限，任何曾建立 `TeacherProfile` 的使用者皆可查看（比照既有唯讀查看自己 demand response 的權限模式），因為這是查看既有承諾而非申請新機會（`class-session-creation` D15 已確認）。
 - `/organizer/*` 必須只允許 Organizer 或 Admin；**`/organizer/profile` 是例外**：比照 `/teacher/dashboard` 的 onboarding 模式，允許任何 signed-in user 進入並自助建立自己的 `OrganizerProfile` + `Organization`（`organizer-demand-request-foundation` D1 已確認）。建立之後，該頁與其餘 `/organizer/*` workspace routes 一律限定 own 資料存取；此例外只開放「建立自己的 organizer 能力」這一動作，不代表 `/organizer/*` 對非 organizer 開放其他資料存取。
 - `/member/*` 必須只允許登入會員或 Admin。
 - 所有登入者預設具備 Member 基本能力；Teacher 或 Organizer 若要報名課程，使用同一個 User 的 Member 能力。

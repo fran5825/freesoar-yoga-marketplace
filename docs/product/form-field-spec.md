@@ -128,7 +128,7 @@ Exception 欄位：
 |---|---|---|
 | `title` | 是 | 課程名稱 |
 | `description` | 建議 | 課程說明 |
-| `serviceTypeId` | 是 | 課程類型 |
+| `serviceType` | 是 | 課程類型 |
 | `startAt` | 是 | 開始時間 |
 | `endAt` | 是 | 結束時間 |
 | `location` | 是 | 地點 |

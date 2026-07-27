@@ -83,9 +83,9 @@
 | Any active state | `cancelled` | Organizer / Admin | 取消原因成立 | 停止 matching 或 class formation |
 | `published` / `teacher_responded` | `expired` | System / Admin | 超過有效期限 | 不再接受新 response |
 
-### V1 policy notes（`organizer-demand-request-foundation`、`demand-response-selection-and-matching` 已確認）
+### V1 policy notes（`organizer-demand-request-foundation`、`demand-response-selection-and-matching`、`class-session-creation` 已確認）
 
-上方 Transitions 表格是 marketplace 的完整最終設計；目前**只落地**以下子集，其餘列為未來 slice（class conversion）的設計參考：
+上方 Transitions 表格是 marketplace 的完整最終設計；目前**只落地**以下子集，其餘列為未來 slice（Enrollment 之後的 class conversion）的設計參考：
 
 | From | To | Actor | 前置條件 | 後置效果 |
 |---|---|---|---|---|
@@ -93,13 +93,14 @@
 | `submitted` | `published` | Admin | 需求清楚且適合平台 | Approved teacher 可在 demand pool 看見 |
 | `submitted` | `rejected` | Admin | 需求不適合或資料不足，且 Admin 已填寫具體 rejection reason（必填，trim 後 10–1000 字） | 保存 `rejectionReason`；Organizer 於自己 dashboard / demand detail 看見 reason（V1 以站內顯示告知，email 為後續切片） |
 | `published` | `matched` | Organizer | demand 尚無 selected response，且 Organizer 對一筆屬於自己 demand 的 `submitted` response 執行 select | 該 response 轉 `selected`、同 demand 其餘 `submitted` response 轉 `declined`（同一 transaction） |
+| `matched` | `converted_to_class` | Organizer | demand 尚無 `ClassSession`，且 Organizer 已於建立表單一次到位填齊 `ClassSession` 必要欄位並通過驗證 | 同一 transaction 內原子建立 `ClassSession`（`status="draft"`） |
 
 - **V1 跳過 `under_review`**：Admin review 直接 `submitted → published | rejected`，不提供「開始審查」的中間狀態或動作（對齊 `TeacherProfile` 的 `submitted → approved|rejected` 簡化先例）。`under_review` 的 enum 值保留，但無對應 transition。
 - **`rejected` 在 V1 是終局狀態**：不提供 `rejected → draft/submitted` 的重新送審路徑；organizer 需依 reason 另建新的 `DemandRequest`。因此 reason 寫入後**永久保留**於該（終局）demand，不需要清空邏輯（與 `TeacherProfile.rejectionReason` 的「清空/覆蓋」lifecycle不同，因為 demand 沒有 resubmit 路徑）。
 - **Rejection reason（V1）**：與 `TeacherProfile.rejectionReason` 相同慣例——`normalizedReason = input.trim()`，驗證且持久化 trim 後值，長度 10–1000 字；`rejectionReason` 是面向該 demand 所屬 organizer 的退回說明，與內部 `AdminNote` 語意分離（不建 `AdminNote`）。
 - **`cancelled` / `expired` 不在目前範圍**：enum 值保留，V1 不實作 organizer 撤回 draft/submitted 或系統過期的 UI/flow。
 - **`published → matched` 不經過 `teacher_responded`**：與上方完整設計表格第 79 列不同——`teacher-demand-pool-response-plan` D11 選擇動態推導、不 persist `teacher_responded`，`demand-response-selection-and-matching` 沿用同一決定，因此實際接線的來源狀態是 `published`，不是 `teacher_responded`。
-- Class conversion（`matched → converted_to_class` 之後的所有 transition）不在目前 scope。
+- **`matched → converted_to_class` 僅 Organizer own-scoped，Admin 不介入**（`class-session-creation` D1，比照 `demand-response-selection-and-matching` D2 的同一先例）。Class conversion 之後的所有 transition（`converted_to_class → completed`／`cancelled`）不在目前 scope。
 
 ### Admin action matrix（`organizer-demand-request-foundation` V1）
 
@@ -182,12 +183,14 @@
 | `confirmed` | `completed` | Admin | 課程時間已過且完成 | 可處理後續管理紀錄 |
 | Any active state | `cancelled` | Organizer / Admin | 取消原因成立 | 停止 enrollment，通知相關人員 |
 
-### 禁止條件
+### V1 policy notes（`class-session-creation` 已確認）
 
-- 缺少 time、location、capacity 的 class session 不可 open_for_enrollment。
-- `cancelled` class session 不可接受新 enrollment。
-- `completed` class session 不可任意修改核心欄位。
-- ClassSession 必須檢查 teacher schedule conflict。
+上方 Transitions 表格是最終設計；目前**只落地** `(none) → draft`，由 `DemandRequest: matched → converted_to_class` 同一 transaction 觸發建立（見上方 DemandRequest V1 policy notes）。
+
+- **一次到位建立，無編輯**：`title`/`description`（選填）/`serviceType`/`startAt`/`endAt`/`location`/`capacity`/`isPublic` 皆於建立當下一次填齊並通過驗證，建立後不提供編輯（D2）；因此不存在「資料不完整的 draft」，`draft` 語意純粹是「已建立、尚未開放報名」。
+- **`pending_confirmation`/`open_for_enrollment`/`confirmed`/`completed`/`cancelled` 不接線**：`open_for_enrollment` 的存在意義是讓 Member 報名，但 Enrollment 屬未來獨立 plan，提前接線沒有實質使用者價值也無法驗證（D9）。
+- **Teacher schedule conflict 檢查目前不做**：沒有 `TeacherAvailability` 或任何排程資料可供檢查，`ClassSession 必須檢查 teacher schedule conflict` 這條禁止條件屬完整設計，本輪不接線（D8）。
+- **時區**：`startAt`/`endAt` 一律以固定 `Asia/Taipei`（UTC+8，無 DST）偏移量解析與顯示，不依賴伺服器或瀏覽器當地時區設定（D13）。
 
 ## Enrollment
 
