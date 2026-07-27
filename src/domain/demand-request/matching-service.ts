@@ -25,3 +25,28 @@ export async function markDemandRequestAsMatchedIfPublished(
     throw new DemandRequestNotMatchableError(demandRequestId);
   }
 }
+
+// class-session-creation D2：建立 ClassSession 成功時，同一 transaction 內把 DemandRequest
+// 從 matched 轉為 converted_to_class。供 class-session domain 的建立 service 在自己的 tx 內呼叫。
+export class DemandRequestNotConvertibleError extends Error {
+  constructor(public readonly demandRequestId: string) {
+    super("Demand request is not in a convertible (matched) state");
+    this.name = "DemandRequestNotConvertibleError";
+  }
+}
+
+// count===0 一律 throw，理由同 markDemandRequestAsMatchedIfPublished：讓呼叫方的
+// prisma.$transaction callback 因例外而 rollback，避免「class session 已建立但 demand 未轉換」。
+export async function markDemandRequestAsConvertedToClassIfMatched(
+  tx: Prisma.TransactionClient,
+  demandRequestId: string,
+): Promise<void> {
+  const result = await tx.demandRequest.updateMany({
+    where: { id: demandRequestId, status: "matched" },
+    data: { status: "converted_to_class" },
+  });
+
+  if (result.count === 0) {
+    throw new DemandRequestNotConvertibleError(demandRequestId);
+  }
+}
