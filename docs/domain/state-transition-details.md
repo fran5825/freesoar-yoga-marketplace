@@ -183,12 +183,17 @@
 | `confirmed` | `completed` | Admin | 課程時間已過且完成 | 可處理後續管理紀錄 |
 | Any active state | `cancelled` | Organizer / Admin | 取消原因成立 | 停止 enrollment，通知相關人員 |
 
-### V1 policy notes（`class-session-creation` 已確認）
+### V1 policy notes（`class-session-creation`、`enrollment` 已確認）
 
-上方 Transitions 表格是最終設計；目前**只落地** `(none) → draft`，由 `DemandRequest: matched → converted_to_class` 同一 transaction 觸發建立（見上方 DemandRequest V1 policy notes）。
+上方 Transitions 表格是最終設計；目前**落地** `(none) → draft`（由 `DemandRequest: matched → converted_to_class` 同一 transaction 觸發建立，見上方 DemandRequest V1 policy notes）與 `draft → open_for_enrollment`（Organizer own-scoped 明確觸發，`enrollment` D2）。
+
+| From | To | Actor | 前置條件 | 後置效果 |
+|---|---|---|---|---|
+| `draft` | `open_for_enrollment` | Organizer | own-scoped，且 `startAt` 尚未到達（D14） | Member 可透過分享連結查看並報名 |
 
 - **一次到位建立，無編輯**：`title`/`description`（選填）/`serviceType`/`startAt`/`endAt`/`location`/`capacity`/`isPublic` 皆於建立當下一次填齊並通過驗證，建立後不提供編輯（D2）；因此不存在「資料不完整的 draft」，`draft` 語意純粹是「已建立、尚未開放報名」。
-- **`pending_confirmation`/`open_for_enrollment`/`confirmed`/`completed`/`cancelled` 不接線**：`open_for_enrollment` 的存在意義是讓 Member 報名，但 Enrollment 屬未來獨立 plan，提前接線沒有實質使用者價值也無法驗證（D9）。
+- **`draft → open_for_enrollment` 不經過 `pending_confirmation`**：對齊 D2 的一次到位建立，沒有需要「初步完整」與「必要欄位完整」分兩階段確認的理由。
+- **`pending_confirmation`/`confirmed`/`completed`/`cancelled` 不接線**：`open_for_enrollment → confirmed` 沒有明確、機械式的觸發條件（不像 capacity 那樣可自動判斷），`enrollment` 沿用 `class-session-creation` D9 的判斷不提前接線；`open_for_enrollment` 本身已足以讓 Member 報名到滿額為止。
 - **Teacher schedule conflict 檢查目前不做**：沒有 `TeacherAvailability` 或任何排程資料可供檢查，`ClassSession 必須檢查 teacher schedule conflict` 這條禁止條件屬完整設計，本輪不接線（D8）。
 - **時區**：`startAt`/`endAt` 一律以固定 `Asia/Taipei`（UTC+8，無 DST）偏移量解析與顯示，不依賴伺服器或瀏覽器當地時區設定（D13）。
 
@@ -219,6 +224,22 @@ Future / admin-only 後續能力：
 |---|---|---|---|---|
 | `confirmed` | `attended` | Admin | 課程已完成，會員有出席 | attendance 完成 |
 | `confirmed` | `no_show` | Admin | 課程已完成，會員未出席 | attendance 完成 |
+
+### V1 policy notes（`enrollment` 已確認）
+
+上方 Transitions 表格是最終設計；目前**只落地**以下子集：
+
+| From | To | Actor | 前置條件 | 後置效果 |
+|---|---|---|---|---|
+| none | `confirmed` | Member | class session 為 `open_for_enrollment`、`startAt` 尚未到達（D14）、尚有 capacity、未曾對這個 class session 建立過 enrollment（不分狀態，D8） | 同一 transaction 內原子建立 enrollment，寫入 `consentedAt`（D6） |
+| `confirmed` | `cancelled` | Member | own-scoped，且 `startAt` 尚未到達（D14） | 釋放名額（不計入 capacity COUNT），但**不可**重新報名（D8） |
+
+- **跳過 `pending`**（D1）：建立當下的原子檢查（capacity／重複報名）已經涵蓋完整設計裡 `pending → confirmed` 的唯一前置條件，沒有獨立業務動作需要一個中繼狀態，對齊本專案一貫的簡化先例。
+- **`consentedAt` 非 nullable**（D6）：spec 明確要求「記錄」basic consent，這不是本專案其他確認 checkbox（`confirmReject`/`confirmSelect`/`confirmCreate`）那種純 UX 防誤觸，是需要留存的紀錄。
+- **取消也受 `startAt` 限制**（D14，與建立、開放報名一致）：取消一堂已經開始的課程的報名會抹除歷史報名紀錄，且讓這筆 enrollment 永遠無法銜接未來的 `confirmed → attended/no_show`，V1 課程開始後不提供自助取消。
+- **取消後不可重新報名**（D8）：`@@unique([classSessionId, userId])` 是資料庫層面唯一約束，只認這個組合本身是否已存在過，不分狀態。
+- **Admin 不介入**（D10）：本輪 Enrollment 生命週期完全是 Member 與 Organizer/Teacher（唯讀 roster）的範圍。
+- `pending`/`attended`/`no_show` 不接線，enum 值保留。
 
 ### 禁止條件
 

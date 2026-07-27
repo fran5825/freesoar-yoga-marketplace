@@ -140,7 +140,7 @@ V1 一個 demand request 只能有一個 selected response。
 
 Teacher 可查看自己的 class session；V1 由 Admin 保有 class session 完成與取消的最終管理權。
 
-**V1 落地範圍**（`class-session-creation` 已確認）：`Create class session from matched demand` 僅 Organizer own-scoped 可執行，**Admin 不介入**（D1，上表 Admin 欄位為完整未來設計，V1 未開放）；`Edit draft class session` 本輪不實作（D2，一次到位建立、建立後不可編輯）；`Open for enrollment`／`Cancel class session`／`Complete class session` 本輪皆不接線（D9），保留於表中作為未來 slice 參考。`View private class session` 的 Teacher 欄位在 V1 不受 approved 狀態限制（`class-session-creation` D15，比照 View own response 的既有唯讀先例）。
+**V1 落地範圍**（`class-session-creation`、`enrollment` 已確認）：`Create class session from matched demand` 僅 Organizer own-scoped 可執行，**Admin 不介入**（D1，上表 Admin 欄位為完整未來設計，V1 未開放）；`Edit draft class session` 本輪不實作（D2，一次到位建立、建立後不可編輯）；**`Open for enrollment` 僅 Organizer own-scoped 可執行**（`enrollment` D2，Admin 不介入，且 `startAt` 已過不可開放，D14——修正原本標記為不接線的敘述，這條動作已在 `enrollment` 落地）；`Cancel class session`／`Complete class session` 本輪仍不接線（D9），保留於表中作為未來 slice 參考。`View private class session` 的 Teacher 欄位在 V1 不受 approved 狀態限制（`class-session-creation` D15，比照 View own response 的既有唯讀先例）。
 
 ## Enrollment
 
@@ -156,6 +156,8 @@ Teacher 可查看自己的 class session；V1 由 Admin 保有 class session 完
 同一 user 不可重複報名同一 class session。Confirmed enrollments 不可超過 capacity。
 
 V1 不做完整 Teacher attendance workflow；`attended` / `no_show` 可保留為 future 或 admin-only 後續能力。
+
+**V1 落地範圍**（`enrollment` 已確認）：`Create enrollment`／`View own enrollment`／`Cancel own enrollment` 皆 Member own-scoped（任何登入使用者皆有 Member 能力，不需要額外的 profile model，D2 精神延續自既有 route-map 慣例）；`View class roster basics` Organizer／Teacher own-scoped，只回傳 `confirmed` enrollment 的最小必要識別資訊（`User.name` 為 null 時 fallback 至 `email`）與 `notes`，不含 `phone`/`image`；`Confirm enrollment`（跳過 `pending`，D1）與 `Mark attended / no_show`（D11）本輪皆不接線；**Admin 不介入**（D10，上表 Admin 欄位為完整未來設計，V1 未開放）。
 
 ## Notification
 

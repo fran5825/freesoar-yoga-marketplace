@@ -129,7 +129,7 @@ Rules:
 - Enrollment only allowed when open_for_enrollment or confirmed, depending on policy.
 - Completed sessions cannot be edited except admin notes/reviews.
 
-**V1 落地範圍（`class-session-creation` D1/D2/D9 已確認）**：上述完整狀態機是最終設計，目前只**接線** `(none) → draft`：Organizer 從自己 `matched` 的 demand 一次到位建立 `ClassSession`（必要欄位皆於建立當下填齊，不是分階段補齊的殘缺 `draft`），建立後不提供編輯。`pending_confirmation`/`open_for_enrollment`/`confirmed`/`completed`/`cancelled` enum 值保留但無對應 transition——`open_for_enrollment` 需要 Enrollment 才有實質意義，Enrollment 屬未來獨立 plan，本輪不提前接線。
+**V1 落地範圍（`class-session-creation` D1/D2/D9、`enrollment` D2/D3/D14 已確認）**：上述完整狀態機是最終設計，目前**接線** `(none) → draft → open_for_enrollment`：Organizer 從自己 `matched` 的 demand 一次到位建立 `ClassSession`（必要欄位皆於建立當下填齊，不是分階段補齊的殘缺 `draft`），建立後不提供編輯；Organizer own-scoped 明確按鈕觸發 `draft → open_for_enrollment`，且 `startAt` 已過的 class session 不可開放（D14）。`pending_confirmation`/`confirmed`/`completed`/`cancelled` enum 值保留但無對應 transition——`open_for_enrollment → confirmed` 沒有明確、機械式的觸發條件（不像 capacity 那樣可自動判斷），V1 不接線；`open_for_enrollment` 本身已足以讓 Member 報名到滿額為止。
 
 ## Enrollment Status
 
@@ -150,6 +150,8 @@ Future / admin-only states:
 attended
 no_show
 ```
+
+**V1 落地範圍（`enrollment` D1/D6/D8/D14 已確認）**：上述完整狀態機是最終設計，目前只**接線** `(none) → confirmed`（跳過 `pending`，`pending → confirmed` 沒有獨立於 capacity 檢查之外的業務動作）與 `confirmed → cancelled`。建立時同一 transaction 內原子檢查 capacity 與重複報名，成功即直接寫入 `confirmed`，並寫入 `consentedAt`（D6，非 nullable）。取消（`confirmed → cancelled`）與建立、開放報名一樣受 `startAt` 時間限制（D14）：課程開始後不提供自助取消，因為取消會抹除歷史報名紀錄，且讓這筆 enrollment 永遠無法銜接未來的 `confirmed → attended/no_show`。取消後**不可**對同一 class session 重新報名（D8，`@@unique([classSessionId, userId])` 不分狀態）。`pending`/`attended`/`no_show` enum 值保留但無對應 transition。
 
 Rules:
 

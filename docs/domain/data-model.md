@@ -280,8 +280,11 @@ Fields:
 - userId
 - status
 - notes
+- consentedAt
 - createdAt
 - updatedAt
+
+`consentedAt`（`enrollment` 已確認）：非 nullable，記錄使用者確認「了解此課程非醫療行為」的時間點；V1 唯一的建立路徑必定顯式寫入，不是選填的 UX 防誤觸欄位。
 
 ## PaymentIntent
 

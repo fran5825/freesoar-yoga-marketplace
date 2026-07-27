@@ -15,7 +15,7 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 | `/teachers/join` | 老師加入與申請入口 | Visitor, Teacher |
 | `/organizers/request` | 團主提出需求入口 | Visitor, Organizer |
 | `/classes` | 公開 class session 列表，optional / later，不作為 V1 必做 | Visitor, Member |
-| `/classes/[classSessionId]` | class session 詳情、share link 與 enrollment 入口 | Visitor, Member |
+| `/classes/[classSessionId]` | class session 詳情、share link 與 enrollment 入口（`enrollment` 已確認：V1 僅開放已登入 Member 存取，不對 Visitor 開放，也不檢查 `isPublic`——`isPublic` 目前只保留給未來公開列表使用，見 `class-session-creation` D11、`enrollment` D4） | Member |
 | `/faq` | 常見問題與信任說明 | Visitor |
 
 ## Auth Routes
@@ -55,7 +55,7 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 | Route | 目的 |
 |---|---|
 | `/member/dashboard` | 會員 dashboard，顯示已報名課程摘要 |
-| `/member/enrollments` | 查看自己的 enrollments |
+| `/member/enrollments` | 查看自己的 enrollments，並可取消（`enrollment` 已確認） |
 
 ## Admin Routes
 
@@ -77,7 +77,7 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 - `/organizer/*` 必須只允許 Organizer 或 Admin；**`/organizer/profile` 是例外**：比照 `/teacher/dashboard` 的 onboarding 模式，允許任何 signed-in user 進入並自助建立自己的 `OrganizerProfile` + `Organization`（`organizer-demand-request-foundation` D1 已確認）。建立之後，該頁與其餘 `/organizer/*` workspace routes 一律限定 own 資料存取；此例外只開放「建立自己的 organizer 能力」這一動作，不代表 `/organizer/*` 對非 organizer 開放其他資料存取。
 - `/member/*` 必須只允許登入會員或 Admin。
 - 所有登入者預設具備 Member 基本能力；Teacher 或 Organizer 若要報名課程，使用同一個 User 的 Member 能力。
-- 公開 class detail / share link 只允許 `open_for_enrollment` 或 `confirmed` 且標記可公開的 class session。
+- 公開 class detail / share link 只允許 `open_for_enrollment` 或 `confirmed` 且標記可公開的 class session。**（`enrollment` 已確認：這是完整未來設計，V1 的 `/classes/[classSessionId]` 只服務已登入 Member，不對 Visitor 開放，也不檢查 `isPublic`；`draft` 狀態的 class session 一律回傳 not-found，不揭露任何欄位——D4。）**
 - `/classes` 公開列表為 optional / later，不作為 V1 必做。
 
 ## RWD 原則
