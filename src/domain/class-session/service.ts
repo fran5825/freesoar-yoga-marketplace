@@ -1,0 +1,129 @@
+import { requireUser } from "@/lib/auth/session";
+import { prisma } from "@/lib/prisma";
+
+import { createClassSessionForOrganizer } from "./__internal__/create-class-session-core";
+import {
+  type ClassSessionCreateInput,
+  type ClassSessionValidationError,
+  validateClassSessionCreate,
+} from "./validation";
+
+export type CreateOwnClassSessionErrorCode =
+  | "authentication_required"
+  | "organizer_profile_required"
+  | "validation_failed"
+  | "demand_not_found"
+  | "demand_not_matched"
+  | "demand_not_ready"
+  | "class_session_already_exists"
+  | "class_session_create_failed";
+
+export type CreateOwnClassSessionResult =
+  | { ok: true; classSessionId: string }
+  | {
+      ok: false;
+      code: CreateOwnClassSessionErrorCode;
+      message: string;
+      validationErrors?: ClassSessionValidationError[];
+    };
+
+// D1/D2：Organizer own-scoped，一次到位建立。實際的鎖／原子建立／converted_to_class
+// 邏輯都在 __internal__ 的 pure 核心，這裡只負責把目前使用者解析成受信任的 organizerProfileId。
+export async function createOwnClassSession(
+  demandRequestId: string,
+  input: ClassSessionCreateInput,
+): Promise<CreateOwnClassSessionResult> {
+  const validation = validateClassSessionCreate(input);
+
+  if (!validation.valid) {
+    return {
+      ok: false,
+      code: "validation_failed",
+      message: "建立課程前，請先補齊必填欄位。",
+      validationErrors: validation.errors,
+    };
+  }
+
+  let organizerProfileId: string;
+
+  try {
+    const currentUser = await requireUser();
+
+    const organizerProfile = await prisma.organizerProfile.findUnique({
+      where: { userId: currentUser.id },
+      select: { id: true },
+    });
+
+    if (!organizerProfile) {
+      return {
+        ok: false,
+        code: "organizer_profile_required",
+        message: "找不到你的團主資料。",
+      };
+    }
+
+    organizerProfileId = organizerProfile.id;
+  } catch (error) {
+    if (isAuthenticationRequiredError(error)) {
+      return {
+        ok: false,
+        code: "authentication_required",
+        message: "請先登入後再建立課程。",
+      };
+    }
+
+    throw error;
+  }
+
+  const result = await createClassSessionForOrganizer(
+    organizerProfileId,
+    demandRequestId,
+    validation.normalized,
+  );
+
+  if (result.ok) {
+    return { ok: true, classSessionId: result.classSessionId };
+  }
+
+  if (result.code === "demand_not_found") {
+    return {
+      ok: false,
+      code: "demand_not_found",
+      message: "找不到這則需求，或你沒有權限操作。",
+    };
+  }
+
+  if (result.code === "class_session_already_exists") {
+    return {
+      ok: false,
+      code: "class_session_already_exists",
+      message: "這則需求已經建立過課程了。",
+    };
+  }
+
+  if (result.code === "demand_not_matched") {
+    return {
+      ok: false,
+      code: "demand_not_matched",
+      message: "這則需求目前狀態不允許建立課程。",
+    };
+  }
+
+  if (result.code === "demand_not_ready") {
+    return {
+      ok: false,
+      code: "demand_not_ready",
+      message: "這則需求尚未選定老師，請稍後再試。",
+    };
+  }
+
+  return {
+    ok: false,
+    code: "class_session_create_failed",
+    message: "課程暫時無法建立，請稍後再試。",
+  };
+}
+
+function isAuthenticationRequiredError(error: unknown): boolean {
+  return error instanceof Error && error.message === "Authentication required";
+}
