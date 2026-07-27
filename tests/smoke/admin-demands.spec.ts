@@ -211,6 +211,12 @@ test.describe("/admin/demands smoke", () => {
     await reasonField.fill("太短");
     await card.getByRole("checkbox").check();
     await card.getByRole("button", { name: "確認退回" }).click();
+
+    // 這次送出真的打到伺服器並觸發 redirect（revalidatePath 造成整棵 RSC 樹重新渲染）。
+    // 下面對 heading 的檢查在 redirect 前後都會通過（heading 兩邊都存在），不足以證明
+    // 新頁面真的渲染完成；用 URL 帶有 result=error 當作 redirect 已完成的明確訊號，
+    // 避免在舊頁面還沒被換掉前就對它做後續操作。
+    await expect(page).toHaveURL(/result=error/);
     await expect(
       card.getByRole("heading", { name: demandTitle }),
     ).toBeVisible();
@@ -221,9 +227,18 @@ test.describe("/admin/demands smoke", () => {
     });
     expect(stillSubmitted.status).toBe("submitted");
 
+    // <details> 沒有綁定任何 open 狀態，上面的 redirect 造成它回到預設關閉。這裡確定
+    // redirect 已完成後，直接把 open 設成 true（而不是點擊 summary 做 toggle）——
+    // toggle 在時序不確定時可能誤把「其實還沒被 redirect 收合」的舊節點關掉，
+    // 用明確賦值取代 toggle 才是與時序無關的做法。
+    await card.locator("details").evaluate((element: HTMLDetailsElement) => {
+      element.open = true;
+    });
+
     // 正常填寫合法長度的 reason 且勾選確認，才能真正退回。
     const reason = `需求說明過於簡略，請補充上課對象與希望呈現的課程樣貌 ${testRunId}。`;
     await reasonField.fill(`  ${reason}  `);
+    await card.getByRole("checkbox").check();
     await card.getByRole("button", { name: "確認退回" }).click();
 
     await expect(page.getByText("需求已退回。")).toBeVisible();
