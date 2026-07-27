@@ -19,6 +19,7 @@ model User {
   sessions         Session[]
   teacherProfile   TeacherProfile?
   organizerProfile OrganizerProfile?
+  enrollments      Enrollment[]
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 }
@@ -180,9 +181,29 @@ model ClassSession {
   teacherProfile   TeacherProfile   @relation(fields: [teacherProfileId], references: [id], onDelete: Restrict)
   organizerProfile OrganizerProfile @relation(fields: [organizerProfileId], references: [id], onDelete: Restrict)
   organization     Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  enrollments      Enrollment[]
 
   @@index([teacherProfileId])
   @@index([organizerProfileId])
+  @@index([status])
+}
+
+model Enrollment {
+  id             String           @id @default(cuid())
+  classSessionId String
+  userId         String
+  status         EnrollmentStatus @default(confirmed)
+  notes          String?
+  consentedAt    DateTime
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  classSession ClassSession @relation(fields: [classSessionId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([classSessionId, userId])
+  @@index([classSessionId])
+  @@index([userId])
   @@index([status])
 }
 
@@ -232,4 +253,12 @@ enum ClassSessionStatus {
   confirmed
   completed
   cancelled
+}
+
+enum EnrollmentStatus {
+  pending
+  confirmed
+  cancelled
+  attended
+  no_show
 }
