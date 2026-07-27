@@ -81,6 +81,9 @@ export async function getOwnClassSessionDetailForOrganizer(
 
 // D15：Teacher 版本 DTO 不含 Organization 聯絡資訊（第 4 節第 6 點），
 // 只揭露 Organization 名稱。
+// enrollment domain D9：roster 一次隨列表帶出（避免對每張卡片再發一個獨立查詢，見
+// enrollment-plan Slice 4 的 N+1 說明），只含 confirmed enrollment 的最小必要欄位
+// （不含 phone/image，email 只在 UI 層 name 為 null 時才 fallback 顯示）。
 export type TeacherFacingClassSession = {
   id: string;
   title: string;
@@ -95,6 +98,11 @@ export type TeacherFacingClassSession = {
   createdAt: Date;
   demandRequest: { targetLevel: string | null };
   organization: { name: string };
+  enrollments: {
+    id: string;
+    notes: string | null;
+    user: { name: string | null; email: string | null };
+  }[];
 };
 
 // D15：查看自己既有的 class session 不透過 requireApprovedTeacher() 把關——
@@ -130,6 +138,10 @@ export async function listOwnClassSessionsForTeacher(): Promise<
       createdAt: true,
       demandRequest: { select: { targetLevel: true } },
       organization: { select: { name: true } },
+      enrollments: {
+        where: { status: "confirmed" },
+        select: { id: true, notes: true, user: { select: { name: true, email: true } } },
+      },
     },
     orderBy: { startAt: "asc" },
   });
