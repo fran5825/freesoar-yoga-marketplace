@@ -90,6 +90,37 @@ export default async function TeacherClassesPage() {
                   {classSession.description}
                 </p>
               ) : null}
+
+              {classSession.status === "open_for_enrollment" ? (
+                <div className="min-w-0 border-t border-gray-100 pt-3">
+                  <h3 className="text-sm font-medium text-gray-950">
+                    已報名會員（{classSession.enrollments.length} 人）
+                  </h3>
+                  {classSession.enrollments.length === 0 ? (
+                    <p className="mt-2 text-sm leading-6 text-gray-600">
+                      目前還沒有會員報名。
+                    </p>
+                  ) : (
+                    <ul className="mt-2 grid gap-2">
+                      {classSession.enrollments.map((enrollment) => (
+                        <li
+                          className="min-w-0 rounded border border-gray-100 bg-gray-50 p-3 text-sm"
+                          key={enrollment.id}
+                        >
+                          <p className="min-w-0 break-words font-medium text-gray-950">
+                            {enrollment.user.name ?? enrollment.user.email ?? "會員"}
+                          </p>
+                          {enrollment.notes ? (
+                            <p className="mt-1 min-w-0 whitespace-pre-wrap break-words text-gray-600">
+                              {enrollment.notes}
+                            </p>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ) : null}
             </article>
           ))}
         </section>

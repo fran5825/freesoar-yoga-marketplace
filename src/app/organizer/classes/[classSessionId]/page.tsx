@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { getOwnClassSessionDetailForOrganizer } from "@/domain/class-session/read-service";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
+import { listConfirmedEnrollmentsForClassSession } from "@/domain/enrollment/read-service";
 import { requireUser } from "@/lib/auth/session";
 
 import { demandRequestTargetLevelLabels } from "../../demands/_components/status-labels";
@@ -9,6 +10,7 @@ import {
   classSessionStatusLabels,
   classSessionStatusToneClasses,
 } from "../_components/status-labels";
+import { openForEnrollmentAction } from "./actions";
 
 type OrganizerClassSessionDetailPageProps = {
   params: Promise<{ classSessionId: string }>;
@@ -46,6 +48,11 @@ export default async function OrganizerClassSessionDetailPage({
   if (!classSession) {
     notFound();
   }
+
+  const roster =
+    classSession.status === "open_for_enrollment"
+      ? ((await listConfirmedEnrollmentsForClassSession(classSessionId)) ?? [])
+      : [];
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-8 px-5 py-10 sm:px-8 sm:py-14">
@@ -96,6 +103,79 @@ export default async function OrganizerClassSessionDetailPage({
           <DetailField label="課程說明" multiline value={classSession.description} />
         </div>
       </section>
+
+      {classSession.status === "draft" ? (
+        <section className="grid gap-4 rounded border border-gray-200 bg-white p-6">
+          <div>
+            <h2 className="text-lg font-medium text-gray-950">開放報名</h2>
+            <p className="mt-2 text-sm leading-6 text-gray-600">
+              開放後，會員就能看到並報名這堂課，此動作無法復原。
+            </p>
+          </div>
+          <form action={openForEnrollmentAction} className="grid gap-3">
+            <input name="classSessionId" type="hidden" value={classSessionId} />
+            <label className="flex items-start gap-2 text-sm leading-6 text-gray-700">
+              <input
+                className="mt-1 shrink-0"
+                name="confirmOpen"
+                required
+                type="checkbox"
+                value="yes"
+              />
+              我確認要開放這堂課程的報名。
+            </label>
+            <button
+              className="w-full rounded bg-emerald-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-800 sm:w-auto"
+              type="submit"
+            >
+              開放報名
+            </button>
+          </form>
+        </section>
+      ) : null}
+
+      {classSession.status === "open_for_enrollment" ? (
+        <section className="grid gap-4 rounded border border-gray-200 bg-white p-6">
+          <div>
+            <h2 className="text-lg font-medium text-gray-950">報名連結</h2>
+            <p className="mt-2 text-sm leading-6 text-gray-600">
+              把這個連結分享給會員，他們登入後就能查看課程並報名。
+            </p>
+            <p className="mt-2 min-w-0 break-all rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-950">
+              {`/classes/${classSessionId}`}
+            </p>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-medium text-gray-950">
+              已報名會員（{roster.length} 人）
+            </h3>
+            {roster.length === 0 ? (
+              <p className="mt-2 text-sm leading-6 text-gray-600">
+                目前還沒有會員報名，之後有報名會顯示在這裡。
+              </p>
+            ) : (
+              <ul className="mt-2 grid gap-2">
+                {roster.map((entry) => (
+                  <li
+                    className="min-w-0 rounded border border-gray-100 bg-gray-50 p-3 text-sm"
+                    key={entry.id}
+                  >
+                    <p className="min-w-0 break-words font-medium text-gray-950">
+                      {entry.memberLabel}
+                    </p>
+                    {entry.notes ? (
+                      <p className="mt-1 min-w-0 whitespace-pre-wrap break-words text-gray-600">
+                        {entry.notes}
+                      </p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+      ) : null}
     </main>
   );
 }
