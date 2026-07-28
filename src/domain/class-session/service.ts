@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
+import { cancelClassSessionForOrganizer } from "./__internal__/cancel-class-session-core";
 import { createClassSessionForOrganizer } from "./__internal__/create-class-session-core";
 import {
   type ClassSessionCreateInput,
@@ -217,6 +218,105 @@ export async function openOwnClassSessionForEnrollment(
     ok: false,
     code: "class_session_not_draft",
     message: "這堂課程目前狀態不允許開放報名。",
+  };
+}
+
+export type CancelOwnClassSessionErrorCode =
+  | "authentication_required"
+  | "organizer_profile_required"
+  | "class_session_not_found"
+  | "class_session_already_cancelled"
+  | "class_session_already_started"
+  | "class_session_not_cancellable"
+  | "class_session_cancel_failed";
+
+export type CancelOwnClassSessionResult =
+  | { ok: true }
+  | {
+      ok: false;
+      code: CancelOwnClassSessionErrorCode;
+      message: string;
+    };
+
+// D1/D2/D3：Organizer own-scoped。實際的鎖／原子狀態轉換／連帶取消 Enrollment 邏輯都在
+// __internal__ 的 pure 核心（跟 createEnrollmentForUser 搶同一個 ClassSession 鎖，見
+// D3），這裡只負責把目前使用者解析成受信任的 organizerProfileId。
+export async function cancelOwnClassSession(
+  classSessionId: string,
+): Promise<CancelOwnClassSessionResult> {
+  let organizerProfileId: string;
+
+  try {
+    const currentUser = await requireUser();
+
+    const organizerProfile = await prisma.organizerProfile.findUnique({
+      where: { userId: currentUser.id },
+      select: { id: true },
+    });
+
+    if (!organizerProfile) {
+      return {
+        ok: false,
+        code: "organizer_profile_required",
+        message: "找不到你的團主資料。",
+      };
+    }
+
+    organizerProfileId = organizerProfile.id;
+  } catch (error) {
+    if (isAuthenticationRequiredError(error)) {
+      return {
+        ok: false,
+        code: "authentication_required",
+        message: "請先登入後再取消課程。",
+      };
+    }
+
+    throw error;
+  }
+
+  const result = await cancelClassSessionForOrganizer(organizerProfileId, classSessionId);
+
+  if (result.ok) {
+    return { ok: true };
+  }
+
+  if (result.code === "class_session_not_found") {
+    return {
+      ok: false,
+      code: "class_session_not_found",
+      message: "找不到這堂課程，或你沒有權限操作。",
+    };
+  }
+
+  if (result.code === "class_session_already_cancelled") {
+    return {
+      ok: false,
+      code: "class_session_already_cancelled",
+      message: "這堂課程已經取消過了。",
+    };
+  }
+
+  if (result.code === "class_session_already_started") {
+    return {
+      ok: false,
+      code: "class_session_already_started",
+      message: "這堂課程已經開始，無法取消。",
+    };
+  }
+
+  if (result.code === "class_session_not_cancellable") {
+    return {
+      ok: false,
+      code: "class_session_not_cancellable",
+      message: "這堂課程目前狀態不允許取消。",
+    };
+  }
+
+  return {
+    ok: false,
+    code: "class_session_cancel_failed",
+    message: "課程暫時無法取消，請稍後再試。",
   };
 }
 
