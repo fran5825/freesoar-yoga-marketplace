@@ -1,5 +1,6 @@
 import type { OrganizationType } from "@prisma/client";
 
+import { notifyUsers } from "@/domain/notification/create";
 import { requireAdmin } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
@@ -157,6 +158,23 @@ export async function publishSubmittedDemandRequest(
       }
     }
 
+    try {
+      const demand = await prisma.demandRequest.findUnique({
+        where: { id: demandRequestId },
+        select: { organizerProfile: { select: { userId: true } } },
+      });
+
+      if (demand) {
+        await notifyUsers(
+          "demand_request_published",
+          [{ userId: demand.organizerProfile.userId, role: "self" }],
+          {},
+        );
+      }
+    } catch (notifyError) {
+      console.error("[notification] demand_request_published trigger failed", notifyError);
+    }
+
     return { ok: true };
   } catch (error) {
     if (isAdminPermissionRequiredError(error)) {
@@ -230,6 +248,26 @@ export async function rejectSubmittedDemandRequest(
           message: "只有已送出審核的需求可以退回。",
         };
       }
+    }
+
+    try {
+      const demand = await prisma.demandRequest.findUnique({
+        where: { id: demandRequestId },
+        select: {
+          rejectionReason: true,
+          organizerProfile: { select: { userId: true } },
+        },
+      });
+
+      if (demand) {
+        await notifyUsers(
+          "demand_request_rejected",
+          [{ userId: demand.organizerProfile.userId, role: "self" }],
+          { reason: demand.rejectionReason ?? undefined },
+        );
+      }
+    } catch (notifyError) {
+      console.error("[notification] demand_request_rejected trigger failed", notifyError);
     }
 
     return { ok: true };

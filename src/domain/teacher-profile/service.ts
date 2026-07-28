@@ -1,4 +1,6 @@
 import { getCurrentUser, requireAdmin, requireUser } from "@/lib/auth/session";
+import { listAdminUserIds } from "@/domain/notification/admin-recipients";
+import { notifyUsers } from "@/domain/notification/create";
 import { prisma } from "@/lib/prisma";
 
 import type { TeacherProfileStatus } from "./state";
@@ -344,6 +346,20 @@ export async function submitOwnTeacherProfileApplication(
       select: teacherProfileDraftSelect,
     });
 
+    try {
+      const adminIds = await listAdminUserIds();
+      await notifyUsers(
+        "teacher_application_submitted",
+        [
+          { userId: currentUser.id, role: "self" },
+          ...adminIds.map((id) => ({ userId: id, role: "admin" as const })),
+        ],
+        { actorLabel: currentUser.name ?? currentUser.email ?? undefined },
+      );
+    } catch (notifyError) {
+      console.error("[notification] teacher_application_submitted trigger failed", notifyError);
+    }
+
     return {
       ok: true,
       profile,
@@ -412,6 +428,14 @@ export async function approveSubmittedTeacherProfileApplication(
       where: { id: teacherProfileId },
       select: teacherProfileDraftSelect,
     });
+
+    try {
+      await notifyUsers("teacher_application_approved", [
+        { userId: profile.userId, role: "self" },
+      ], {});
+    } catch (notifyError) {
+      console.error("[notification] teacher_application_approved trigger failed", notifyError);
+    }
 
     return {
       ok: true,
@@ -497,6 +521,16 @@ export async function rejectSubmittedTeacherProfileApplication(
       where: { id: teacherProfileId },
       select: teacherProfileDraftSelect,
     });
+
+    try {
+      await notifyUsers(
+        "teacher_application_rejected",
+        [{ userId: profile.userId, role: "self" }],
+        { reason: profile.rejectionReason ?? undefined },
+      );
+    } catch (notifyError) {
+      console.error("[notification] teacher_application_rejected trigger failed", notifyError);
+    }
 
     return {
       ok: true,

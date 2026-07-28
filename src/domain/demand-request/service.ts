@@ -1,6 +1,8 @@
 import type { DemandRequestStatus } from "@prisma/client";
 
 import { getOwnOrganizerContext } from "@/domain/organizer-profile/service";
+import { listAdminUserIds } from "@/domain/notification/admin-recipients";
+import { notifyUsers } from "@/domain/notification/create";
 import { getCurrentUser, requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
@@ -336,6 +338,20 @@ export async function submitOwnDemandRequest(
       where: { id: demandRequestId },
       select: demandRequestSelect,
     });
+
+    try {
+      const adminIds = await listAdminUserIds();
+      await notifyUsers(
+        "demand_request_submitted",
+        [
+          { userId: organizerContext.organizerProfile.userId, role: "self" },
+          ...adminIds.map((id) => ({ userId: id, role: "admin" as const })),
+        ],
+        { actorLabel: organizerContext.organizerProfile.displayName },
+      );
+    } catch (notifyError) {
+      console.error("[notification] demand_request_submitted trigger failed", notifyError);
+    }
 
     return {
       ok: true,
