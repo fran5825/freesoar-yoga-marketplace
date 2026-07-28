@@ -101,6 +101,20 @@ const COPY_TABLE: CopyTable = {
       body: `你已經取消「${classSessionTitle ?? ""}」的報名。`,
     }),
   },
+  class_session_cancelled: {
+    self: ({ classSessionTitle }) => ({
+      title: "課程已取消",
+      body: `你已經取消「${classSessionTitle ?? ""}」。`,
+    }),
+    counterpart: ({ classSessionTitle }) => ({
+      title: "課程已取消",
+      body: `你的課程「${classSessionTitle ?? ""}」已經取消。`,
+    }),
+    affected_member: ({ classSessionTitle }) => ({
+      title: "課程已取消",
+      body: `「${classSessionTitle ?? ""}」已經取消，你的報名也一併取消了。`,
+    }),
+  },
 };
 
 export function buildNotificationCopy(
