@@ -1,4 +1,5 @@
 import { requireUser } from "@/lib/auth/session";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export default async function AccountSmokePage() {
@@ -53,6 +54,15 @@ export default async function AccountSmokePage() {
           </p>
           <p>Member account active.</p>
         </div>
+      </section>
+
+      <section className="rounded border border-gray-200 p-4 text-sm">
+        <h2 className="text-lg font-medium">Notifications</h2>
+        <p className="mt-3 text-sm text-gray-600">
+          <Link className="text-sky-700 underline underline-offset-2" href="/notifications">
+            查看我的通知
+          </Link>
+        </p>
       </section>
     </main>
   );
