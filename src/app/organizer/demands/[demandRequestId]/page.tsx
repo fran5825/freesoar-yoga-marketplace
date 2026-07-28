@@ -14,7 +14,11 @@ import {
   formatDemandRequestDate,
   formatDemandRequestDateTime,
 } from "../_components/status-labels";
-import { createClassSessionAction, selectDemandResponseAction } from "./actions";
+import {
+  cancelDemandRequestAction,
+  createClassSessionAction,
+  selectDemandResponseAction,
+} from "./actions";
 import { ResponseList } from "./_components/ResponseList";
 
 type DemandRequestDetailPageProps = {
@@ -317,6 +321,40 @@ export default async function DemandRequestDetailPage({
               建立課程
             </button>
           </form>
+        </section>
+      ) : null}
+
+      {["draft", "submitted", "published", "matched"].includes(demandRequest.status) ? (
+        <section className="rounded border border-rose-200 bg-white p-6">
+          <details className="grid gap-4">
+            <summary className="cursor-pointer list-none text-lg font-medium text-rose-800 marker:hidden">
+              取消需求…
+            </summary>
+            <div>
+              <p className="text-sm leading-6 text-gray-600">
+                取消後無法復原，已提交或已選定的老師回應也會一併取消，並會收到通知。
+              </p>
+            </div>
+            <form action={cancelDemandRequestAction} className="grid gap-3">
+              <input name="demandRequestId" type="hidden" value={demandRequestId} />
+              <label className="flex items-start gap-2 text-sm leading-6 text-gray-700">
+                <input
+                  className="mt-1 shrink-0"
+                  name="confirmCancel"
+                  required
+                  type="checkbox"
+                  value="yes"
+                />
+                我確認要取消這則需求，且已提交或已選定的老師回應也會一併取消。
+              </label>
+              <button
+                className="w-full rounded bg-rose-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-800 sm:w-auto"
+                type="submit"
+              >
+                確認取消需求
+              </button>
+            </form>
+          </details>
         </section>
       ) : null}
 

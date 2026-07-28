@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { createOwnClassSession } from "@/domain/class-session/service";
+import { cancelOwnDemandRequest } from "@/domain/demand-request/service";
 import { selectDemandResponse } from "@/domain/demand-response/organizer-select-service";
 
 export async function selectDemandResponseAction(
@@ -51,6 +52,22 @@ export async function createClassSessionAction(formData: FormData): Promise<void
   redirect(
     `/organizer/classes/${result.classSessionId}?result=success&message=${encodeURIComponent("課程已建立。")}`,
   );
+}
+
+export async function cancelDemandRequestAction(formData: FormData): Promise<void> {
+  const demandRequestId = readFormString(formData, "demandRequestId");
+
+  const result = await cancelOwnDemandRequest(demandRequestId);
+
+  revalidatePath(`/organizer/demands/${demandRequestId}`);
+  revalidatePath("/organizer/demands");
+  revalidatePath(`/teacher/demands/${demandRequestId}`);
+
+  if (!result.ok) {
+    redirectWithFeedback(demandRequestId, "error", result.message);
+  }
+
+  redirectWithFeedback(demandRequestId, "success", "需求已取消。");
 }
 
 function readFormString(formData: FormData, name: string): string {

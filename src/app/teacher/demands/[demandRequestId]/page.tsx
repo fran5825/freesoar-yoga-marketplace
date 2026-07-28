@@ -71,18 +71,24 @@ export default async function TeacherDemandDetailPage({
   const ownResponse = await getOwnDemandResponseForDemand(demandRequestId);
 
   if (ownResponse) {
-    const demandTitle = await prisma.demandRequest.findUnique({
+    const demand = await prisma.demandRequest.findUnique({
       where: { id: demandRequestId },
-      select: { title: true },
+      select: { title: true, status: true },
     });
-    const statusCopy = responseStatusCopy[ownResponse.status];
+    // D9（demand-request-cancellation 修正版）：declined 狀態的既有文案假設是「團主選了
+    // 別人」，但這則回應也可能是因為 demand 本身被取消而連帶轉為 declined——那種情況下
+    // 既有文案是不實敘述，改用取消專用的文案。
+    const statusCopy =
+      ownResponse.status === "declined" && demand?.status === "cancelled"
+        ? { label: "需求已取消", body: "團主已取消這則需求，感謝你的回應。" }
+        : responseStatusCopy[ownResponse.status];
 
     return (
       <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-5 py-10 sm:px-8">
         <header className="border-b border-gray-200 pb-6">
           <p className="text-sm font-medium text-sky-700">Teacher demands</p>
           <h1 className="mt-2 break-words text-2xl font-semibold tracking-tight text-gray-950">
-            {demandTitle?.title ?? "團體需求"}
+            {demand?.title ?? "團體需求"}
           </h1>
         </header>
 
