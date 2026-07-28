@@ -59,6 +59,16 @@ const COPY_TABLE: CopyTable = {
         : "很抱歉，你的需求這次未通過審核。",
     }),
   },
+  demand_request_cancelled: {
+    self: ({ demandTitle }) => ({
+      title: "需求已取消",
+      body: `你已經取消「${demandTitle ?? ""}」。`,
+    }),
+    affected_responder: ({ demandTitle }) => ({
+      title: "需求已取消",
+      body: `你回應的需求「${demandTitle ?? ""}」已經取消。`,
+    }),
+  },
   demand_response_submitted: {
     counterpart: ({ actorLabel, demandTitle }) => ({
       title: "有老師回應了你的需求",

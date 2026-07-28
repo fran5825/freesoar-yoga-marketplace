@@ -288,6 +288,7 @@ enum NotificationType {
   demand_request_submitted
   demand_request_published
   demand_request_rejected
+  demand_request_cancelled
   demand_response_submitted
   demand_response_selected
   class_session_created
