@@ -319,19 +319,19 @@ Fields:
 
 ## Notification
 
-Represents notification record.
+Represents notification record。**已落地**（`docs/superpowers/plans/2026-07-27-notification-plan.md` 已確認）：V1 只寫入 `channel="in_app"`，`email`/`line`/`sms` 保留為未來 channel 的 reserved enum 值（D2/D6）；`status` 生命週期是 `pending → sent`／`pending → failed`，V1 站內列表（`/notifications`）只顯示 `status="sent"` 的記錄。
 
 Fields:
 
 - id
 - userId
-- type
-- channel
+- type（`NotificationType`，14 個 enum 值，V1 落地 11 個，`class_session_changed`／`class_session_cancelled`／`class_reminder_basic` 保留未接線）
+- channel（`NotificationChannel`：`email`／`in_app`／`line`／`sms`，V1 只寫入 `in_app`）
 - title
 - body
-- status
+- status（`NotificationStatus`：`pending`／`sent`／`failed`／`cancelled`，V1 只會出現 `sent`／`failed`）
 - createdAt
-- sentAt
+- sentAt（nullable，`pending`／`failed` 狀態時為 null）
 
 ## AdminNote
 

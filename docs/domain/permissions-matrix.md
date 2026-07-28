@@ -169,6 +169,8 @@ V1 不做完整 Teacher attendance workflow；`attended` / `no_show` 可保留�
 
 通知建立可由 domain/service layer 觸發；一般使用者不可任意建立 system notification。
 
+**V1 落地範圍**（`notification` 已確認）：`View own notifications` 透過 `/notifications` 頁面實現，own-scoped，任何登入使用者（含 Admin 自己）皆可查看自己收到的通知；`Create system notification`／`Send notification` 由各 domain/service layer 的 11 個既有 trigger 點（見 `state-transition-details.md` 的「Notification Side Effects」）內部呼叫 `notifyUsers`，不對外開放任何可手動建立或發送通知的 API 或 UI 入口，也沒有 Admin 專用的 notification 管理介面。收件人解析邏輯（誰會收到通知）持續受本文件 Security Review Required 清單規範。
+
 ## AdminNote
 
 | Action | Visitor | Member | Organizer | Teacher | Admin |

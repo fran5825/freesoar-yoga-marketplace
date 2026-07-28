@@ -251,12 +251,12 @@ Future / admin-only 後續能力：
 
 ## Notification Side Effects
 
-狀態變更可能觸發 notification：
+狀態變更可能觸發 notification。**已落地**（`docs/superpowers/plans/2026-07-27-notification-plan.md` 已確認，D1）：以下 11 個事件會在對應狀態變更**成功之後**建立 `Notification` 記錄（`channel="in_app"`，見 D2），失敗（收件人解析或寫入本身出錯）絕不影響觸發它的主要商業邏輯（D4）：
 
-- TeacherProfile submitted / approved / rejected（**V1 落地範圍**：`submitted → rejected` 對老師的告知在 V1 以站內顯示 `rejectionReason` 實現，email 為後續切片 `teacher-application-rejection-notification`）
-- DemandRequest submitted / published / rejected（**V1 落地範圍**：`organizer-demand-request-foundation` D14 已確認延後 email/notification，V1 只以 organizer 自己 dashboard 的站內 status 顯示告知；email 為後續切片 `organizer-demand-notification`）
-- DemandResponse submitted / selected
-- ClassSession created / open_for_enrollment / confirmed / cancelled
-- Enrollment confirmed / cancelled
+- TeacherProfile submitted（Teacher 自己 + Admin）/ approved（Teacher 自己）/ rejected（Teacher 自己，含 `rejectionReason`）——沿用既有的站內 `rejectionReason` 顯示（`teacher-application-rejection-notification` 一輪已確認），本輪額外新增 `Notification` 記錄與 `/notifications` 列表這個獨立管道，兩者並存。
+- DemandRequest submitted（Organizer 自己 + Admin）/ published（Organizer 自己）/ rejected（Organizer 自己，含 `rejectionReason`）——沿用既有的站內 status 顯示（`organizer-demand-request-foundation` D14 已確認），本輪同樣新增獨立的 `Notification` 記錄。
+- DemandResponse submitted（該 demand 的 Organizer + Admin）/ selected（Organizer 自己 + 被選中的 Teacher）
+- ClassSession created（Organizer 自己 + Teacher）——`open_for_enrollment` 本輪確認**不**新增獨立事件（D10，理由：`class_session_created` 已涵蓋通知價值，避免重複通知）；`confirmed`／`cancelled` 兩個狀態本身尚未接線（見上方 ClassSession V1 範圍），對應的通知事件保留未接線。
+- Enrollment confirmed（Member 自己）/ cancelled（Member 自己）
 
 Notification 內容需遵守品牌語氣：清楚、溫和、可信任，不使用焦慮式推銷。
