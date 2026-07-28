@@ -14,6 +14,8 @@ import { Prisma } from "@prisma/client";
 import type { DemandRequestStatus, DemandResponseStatus } from "@prisma/client";
 
 import { markDemandRequestAsMatchedIfPublished } from "@/domain/demand-request/matching-service";
+import { listAdminUserIds } from "@/domain/notification/admin-recipients";
+import { notifyUsers } from "@/domain/notification/create";
 import { prisma } from "@/lib/prisma";
 
 // D1/D11：submit 時的 eligibility 判斷依 D11=B 固定為 published。
@@ -110,6 +112,36 @@ export async function submitDemandResponseForTeacher(
       where: { id: insertedRows[0].id },
       select: ownDemandResponseSelect,
     });
+
+    // D4/D7 修正版：resolver query + notifyUsers 一律在 tx commit 之後才執行，不進 tx。
+    try {
+      const detail = await prisma.demandResponse.findUnique({
+        where: { id: demandResponse.id },
+        select: {
+          teacherProfile: { select: { displayName: true } },
+          demandRequest: {
+            select: { title: true, organizerProfile: { select: { userId: true } } },
+          },
+        },
+      });
+
+      if (detail) {
+        const adminIds = await listAdminUserIds();
+        await notifyUsers(
+          "demand_response_submitted",
+          [
+            { userId: detail.demandRequest.organizerProfile.userId, role: "counterpart" },
+            ...adminIds.map((id) => ({ userId: id, role: "admin" as const })),
+          ],
+          {
+            actorLabel: detail.teacherProfile.displayName ?? undefined,
+            demandTitle: detail.demandRequest.title ?? undefined,
+          },
+        );
+      }
+    } catch (notifyError) {
+      console.error("[notification] demand_response_submitted trigger failed", notifyError);
+    }
 
     return { ok: true, demandResponse };
   } catch (error) {
@@ -221,6 +253,32 @@ export async function selectDemandResponseForOrganizer(
 
       return { demandResponseId, demandRequestId };
     });
+
+    // D4/D7 修正版：resolver query + notifyUsers 一律在 tx commit 之後才執行，不進 tx。
+    try {
+      const detail = await prisma.demandResponse.findUnique({
+        where: { id: result.demandResponseId },
+        select: {
+          teacherProfile: { select: { userId: true } },
+          demandRequest: {
+            select: { title: true, organizerProfile: { select: { userId: true } } },
+          },
+        },
+      });
+
+      if (detail) {
+        await notifyUsers(
+          "demand_response_selected",
+          [
+            { userId: detail.demandRequest.organizerProfile.userId, role: "self" },
+            { userId: detail.teacherProfile.userId, role: "counterpart" },
+          ],
+          { demandTitle: detail.demandRequest.title ?? undefined },
+        );
+      }
+    } catch (notifyError) {
+      console.error("[notification] demand_response_selected trigger failed", notifyError);
+    }
 
     return { ok: true, ...result };
   } catch (error) {

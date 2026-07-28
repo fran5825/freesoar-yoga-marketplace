@@ -3,7 +3,20 @@
 // 使用者競爭同一個有限資源（capacity）的 concurrency-sensitive 場景，比照
 // class-session/__internal__/create-class-session-core.ts 已驗證過的同一套架構。
 
+import type { NotificationType } from "@prisma/client";
+
+import { notifyUsers } from "@/domain/notification/create";
+import type { NotificationPayload, NotificationRecipient } from "@/domain/notification/types";
 import { prisma } from "@/lib/prisma";
+
+// 供 D4 端到端失敗隔離測試注入：預設值就是「解析收件人 + 呼叫 notifyUsers」的真正邏輯
+// （見下方呼叫處），測試可傳入一個保證丟出例外的假函式，驗證 trigger 呼叫端外層的
+// try/catch 確實吞掉例外、不影響本函式的回傳結果。
+export type NotifyFn = (
+  type: NotificationType,
+  recipients: NotificationRecipient[],
+  payload: NotificationPayload,
+) => Promise<void>;
 
 export type DemandLockHooks = {
   onBeforeLock?: () => void | Promise<void>;
@@ -75,6 +88,7 @@ export async function createEnrollmentForUser(
   classSessionId: string,
   input: CreateEnrollmentInput,
   hooks?: DemandLockHooks,
+  notifyOverride: NotifyFn = notifyUsers,
 ): Promise<CreateEnrollmentForUserResult> {
   try {
     const enrollmentId = await prisma.$transaction(async (tx) => {
@@ -135,6 +149,24 @@ export async function createEnrollmentForUser(
 
       return enrollment.id;
     });
+
+    // D4/D7 修正版：resolver query + notify 一律在 tx commit 之後才執行，不進 tx；
+    // 例外（不論來自 resolver query 或 notifyOverride 本身）在這裡被吞掉，trigger
+    // 外層的這層 try/catch 是 D9 端到端失敗隔離測試實際要驗證的邊界。
+    try {
+      const classSession = await prisma.classSession.findUnique({
+        where: { id: classSessionId },
+        select: { title: true },
+      });
+
+      await notifyOverride(
+        "enrollment_confirmed",
+        [{ userId, role: "self" }],
+        { classSessionTitle: classSession?.title },
+      );
+    } catch (notifyError) {
+      console.error("[notification] enrollment_confirmed trigger failed", notifyError);
+    }
 
     return { ok: true, enrollmentId };
   } catch (error) {

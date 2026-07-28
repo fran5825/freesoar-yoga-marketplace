@@ -6,6 +6,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { markDemandRequestAsConvertedToClassIfMatched } from "@/domain/demand-request/matching-service";
+import { notifyUsers } from "@/domain/notification/create";
 
 export type DemandLockHooks = {
   onBeforeLock?: () => void | Promise<void>;
@@ -142,6 +143,31 @@ export async function createClassSessionForOrganizer(
 
       return classSession.id;
     });
+
+    // D4/D7 修正版：resolver query + notifyUsers 一律在 tx commit 之後才執行，不進 tx。
+    try {
+      const detail = await prisma.classSession.findUnique({
+        where: { id: classSessionId },
+        select: {
+          title: true,
+          organizerProfile: { select: { userId: true } },
+          teacherProfile: { select: { userId: true } },
+        },
+      });
+
+      if (detail) {
+        await notifyUsers(
+          "class_session_created",
+          [
+            { userId: detail.organizerProfile.userId, role: "self" },
+            { userId: detail.teacherProfile.userId, role: "counterpart" },
+          ],
+          { classSessionTitle: detail.title },
+        );
+      }
+    } catch (notifyError) {
+      console.error("[notification] class_session_created trigger failed", notifyError);
+    }
 
     return { ok: true, classSessionId };
   } catch (error) {

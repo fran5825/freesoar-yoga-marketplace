@@ -1,3 +1,4 @@
+import { notifyUsers } from "@/domain/notification/create";
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
@@ -167,6 +168,21 @@ export async function cancelOwnEnrollment(
   });
 
   if (updateResult.count > 0) {
+    try {
+      const classSession = await prisma.enrollment.findUnique({
+        where: { id: enrollmentId },
+        select: { classSession: { select: { title: true } } },
+      });
+
+      await notifyUsers(
+        "enrollment_cancelled",
+        [{ userId, role: "self" }],
+        { classSessionTitle: classSession?.classSession.title },
+      );
+    } catch (notifyError) {
+      console.error("[notification] enrollment_cancelled trigger failed", notifyError);
+    }
+
     return { ok: true };
   }
 
