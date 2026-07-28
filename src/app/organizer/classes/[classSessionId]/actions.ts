@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { openOwnClassSessionForEnrollment } from "@/domain/class-session/service";
+import {
+  cancelOwnClassSession,
+  openOwnClassSessionForEnrollment,
+} from "@/domain/class-session/service";
 
 export async function openForEnrollmentAction(formData: FormData): Promise<void> {
   const classSessionId = readFormString(formData, "classSessionId");
@@ -17,6 +20,23 @@ export async function openForEnrollmentAction(formData: FormData): Promise<void>
   }
 
   redirectWithFeedback(classSessionId, "success", "已開放報名。");
+}
+
+export async function cancelClassSessionAction(formData: FormData): Promise<void> {
+  const classSessionId = readFormString(formData, "classSessionId");
+
+  const result = await cancelOwnClassSession(classSessionId);
+
+  revalidatePath(`/organizer/classes/${classSessionId}`);
+  revalidatePath("/organizer/classes");
+  revalidatePath("/teacher/classes");
+  revalidatePath("/member/enrollments");
+
+  if (!result.ok) {
+    redirectWithFeedback(classSessionId, "error", result.message);
+  }
+
+  redirectWithFeedback(classSessionId, "success", "課程已取消。");
 }
 
 function readFormString(formData: FormData, name: string): string {

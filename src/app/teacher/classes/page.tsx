@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
 
 import { demandRequestTargetLevelLabels } from "@/app/organizer/demands/_components/status-labels";
+import {
+  classSessionStatusLabels,
+  classSessionStatusToneClasses,
+} from "@/app/organizer/classes/_components/status-labels";
 import { listOwnClassSessionsForTeacher } from "@/domain/class-session/read-service";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { requireUser } from "@/lib/auth/session";
@@ -44,9 +48,16 @@ export default async function TeacherClassesPage() {
               className="grid gap-3 rounded border border-gray-200 bg-white p-5"
               key={classSession.id}
             >
-              <h2 className="min-w-0 break-words text-lg font-medium text-gray-950">
-                {classSession.title}
-              </h2>
+              <div className="flex flex-wrap items-center gap-3">
+                <h2 className="min-w-0 break-words text-lg font-medium text-gray-950">
+                  {classSession.title}
+                </h2>
+                <span
+                  className={`w-fit rounded-full px-3 py-1 text-xs font-medium ${classSessionStatusToneClasses[classSession.status]}`}
+                >
+                  {classSessionStatusLabels[classSession.status]}
+                </span>
+              </div>
               <dl className="grid gap-2 text-sm text-gray-600 sm:grid-cols-2">
                 <div className="min-w-0">
                   <dt className="font-medium text-gray-950">團體</dt>

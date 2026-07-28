@@ -10,7 +10,7 @@ import {
   classSessionStatusLabels,
   classSessionStatusToneClasses,
 } from "../_components/status-labels";
-import { openForEnrollmentAction } from "./actions";
+import { cancelClassSessionAction, openForEnrollmentAction } from "./actions";
 
 type OrganizerClassSessionDetailPageProps = {
   params: Promise<{ classSessionId: string }>;
@@ -174,6 +174,40 @@ export default async function OrganizerClassSessionDetailPage({
               </ul>
             )}
           </div>
+        </section>
+      ) : null}
+
+      {classSession.status === "draft" || classSession.status === "open_for_enrollment" ? (
+        <section className="rounded border border-rose-200 bg-white p-6">
+          <details className="grid gap-4">
+            <summary className="cursor-pointer list-none text-lg font-medium text-rose-800 marker:hidden">
+              取消課程…
+            </summary>
+            <div>
+              <p className="text-sm leading-6 text-gray-600">
+                取消後無法復原，已報名的會員報名也會一併取消，並會收到通知。
+              </p>
+            </div>
+            <form action={cancelClassSessionAction} className="grid gap-3">
+              <input name="classSessionId" type="hidden" value={classSessionId} />
+              <label className="flex items-start gap-2 text-sm leading-6 text-gray-700">
+                <input
+                  className="mt-1 shrink-0"
+                  name="confirmCancel"
+                  required
+                  type="checkbox"
+                  value="yes"
+                />
+                我確認要取消這堂課程，且已報名的會員也會一併取消。
+              </label>
+              <button
+                className="w-full rounded bg-rose-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-800 sm:w-auto"
+                type="submit"
+              >
+                確認取消課程
+              </button>
+            </form>
+          </details>
         </section>
       ) : null}
     </main>
