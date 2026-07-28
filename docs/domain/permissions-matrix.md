@@ -107,7 +107,7 @@ Teacher 只有在 published demand 或 matched class 需要時，才可看到必
 
 Organizer 不可查看其他 organizer 的私人 demand request。
 
-**V1 落地範圍**（`organizer-demand-request-foundation` 已確認）：`under_review` 狀態本輪不接線（見 `state-transition-details.md`），故上表已將原「View submitted / under review demand」併為「View submitted demand」。`Cancel demand` 這一列描述的是完整狀態機的最終能力，**本輪 foundation 不實作** cancel 的 UI/API（non-goal），保留於表中作為未來 slice 的權限參考。
+**V1 落地範圍**（`organizer-demand-request-foundation`、`demand-request-cancellation` 已確認）：`under_review` 狀態本輪不接線（見 `state-transition-details.md`），故上表已將原「View submitted / under review demand」併為「View submitted demand」。**`Cancel demand` 僅 Organizer own-scoped 可執行**（`demand-request-cancellation` D1，Admin 不介入——修正原本標記為不接線的敘述，這條動作已在 `demand-request-cancellation` 落地；可從 `draft`/`submitted`/`published`/`matched` 觸發，明確排除 `converted_to_class`，並連帶取消該 demand 底下所有 `submitted`／`selected` 的 `DemandResponse`，見 `state-transition-details.md`）。
 
 ## DemandResponse
 
@@ -169,7 +169,7 @@ V1 不做完整 Teacher attendance workflow；`attended` / `no_show` 可保留�
 
 通知建立可由 domain/service layer 觸發；一般使用者不可任意建立 system notification。
 
-**V1 落地範圍**（`notification`、`class-session-cancellation` 已確認）：`View own notifications` 透過 `/notifications` 頁面實現，own-scoped，任何登入使用者（含 Admin 自己）皆可查看自己收到的通知；`Create system notification`／`Send notification` 由各 domain/service layer 的 12 個既有 trigger 點（見 `state-transition-details.md` 的「Notification Side Effects」）內部呼叫 `notifyUsers`，不對外開放任何可手動建立或發送通知的 API 或 UI 入口，也沒有 Admin 專用的 notification 管理介面。收件人解析邏輯（誰會收到通知）持續受本文件 Security Review Required 清單規範。
+**V1 落地範圍**（`notification`、`class-session-cancellation`、`demand-request-cancellation` 已確認）：`View own notifications` 透過 `/notifications` 頁面實現，own-scoped，任何登入使用者（含 Admin 自己）皆可查看自己收到的通知；`Create system notification`／`Send notification` 由各 domain/service layer 的 13 個既有 trigger 點（見 `state-transition-details.md` 的「Notification Side Effects」）內部呼叫 `notifyUsers`，不對外開放任何可手動建立或發送通知的 API 或 UI 入口，也沒有 Admin 專用的 notification 管理介面。收件人解析邏輯（誰會收到通知）持續受本文件 Security Review Required 清單規範。
 
 ## AdminNote
 

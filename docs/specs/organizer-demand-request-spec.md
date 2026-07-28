@@ -6,6 +6,13 @@ Organizer demand request 讓團主可以用清楚、安心的方式提出瑜伽�
 
 V1 的重點是收集足夠形成媒合的資訊，不是建立複雜企業採購系統。
 
+## 落地現況（2026-07-28 更新）
+
+本 spec 原始描述的 `organizer-demand-request-foundation` 這一輪明確**不做** demand cancel/expire flow（見下方 Non-goals；`under_review`/`cancelled`/`expired` 皆不在該輪 scope）。這件事後來由 `docs/superpowers/plans/2026-07-28-demand-request-cancellation-plan.md` 補上：
+
+- **已出貨**：Organizer own-scoped 可從 `draft`/`submitted`/`published`/`matched` 四個狀態取消自己的 demand request，**明確排除** `converted_to_class`（已有 `ClassSession` 存在，`onDelete: Restrict` 外鍵會產生語意矛盾資料，該狀態下要取消應改用 `class-session-cancellation` 取消對應的 `ClassSession`）；Admin 不介入。取消時，同一 transaction 內把該 demand 底下所有 `submitted`／`selected` 的 `DemandResponse` 一併轉為 `declined`（連帶取消，reuse 既有值，不新增新的 `DemandResponseStatus`），Organizer 自己與每一位受影響的 Teacher 都會收到站內通知（`demand_request_cancelled` 事件，見 `docs/product/notification-spec.md`）。不做取消原因欄位。
+- 詳細狀態轉換、前置條件與併發設計見 `docs/domain/state-transition-details.md`、`docs/domain/state-machines.md`、`docs/domain/permissions-matrix.md`。
+
 ## User Role
 
 主要角色：

@@ -83,7 +83,7 @@
 | Any active state | `cancelled` | Organizer / Admin | 取消原因成立 | 停止 matching 或 class formation |
 | `published` / `teacher_responded` | `expired` | System / Admin | 超過有效期限 | 不再接受新 response |
 
-### V1 policy notes（`organizer-demand-request-foundation`、`demand-response-selection-and-matching`、`class-session-creation` 已確認）
+### V1 policy notes（`organizer-demand-request-foundation`、`demand-response-selection-and-matching`、`class-session-creation`、`demand-request-cancellation` 已確認）
 
 上方 Transitions 表格是 marketplace 的完整最終設計；目前**只落地**以下子集，其餘列為未來 slice（Enrollment 之後的 class conversion）的設計參考：
 
@@ -94,7 +94,11 @@
 | `submitted` | `rejected` | Admin | 需求不適合或資料不足，且 Admin 已填寫具體 rejection reason（必填，trim 後 10–1000 字） | 保存 `rejectionReason`；Organizer 於自己 dashboard / demand detail 看見 reason（V1 以站內顯示告知，email 為後續切片） |
 | `published` | `matched` | Organizer | demand 尚無 selected response，且 Organizer 對一筆屬於自己 demand 的 `submitted` response 執行 select | 該 response 轉 `selected`、同 demand 其餘 `submitted` response 轉 `declined`（同一 transaction） |
 | `matched` | `converted_to_class` | Organizer | demand 尚無 `ClassSession`，且 Organizer 已於建立表單一次到位填齊 `ClassSession` 必要欄位並通過驗證 | 同一 transaction 內原子建立 `ClassSession`（`status="draft"`） |
+| `draft`／`submitted`／`published`／`matched` | `cancelled` | Organizer | own-scoped，demand 尚未是 `cancelled`，且不是 `converted_to_class`／`rejected`（`demand-request-cancellation` D1/D2） | 同一 transaction 內把該 demand 底下所有 `status IN ('submitted','selected')` 的 `DemandResponse` 一併轉為 `declined`（D4，不新增新的 `DemandResponseStatus` 值）；Organizer 與每一位受影響 Teacher 收到 `demand_request_cancelled` 通知（D9） |
 
+- **`converted_to_class` 明確排除取消**（`demand-request-cancellation` D1）：這個狀態已經有 `ClassSession` 存在（`ClassSession.demandRequestId` 為 `@unique`、`onDelete: Restrict` 外鍵），允許取消會產生「`ClassSession` 存在但所屬 `DemandRequest` 卻是 `cancelled`」的語意矛盾資料；這個狀態下要取消，Organizer 應改用 `class-session-cancellation` 取消對應的 `ClassSession`。
+- **取消併發設計**：取消動作與既有的 `submitDemandResponseForTeacher`／`selectDemandResponseForOrganizer`／`createClassSessionForOrganizer` 三個 mutation 搶同一把 `DemandRequest` 的 `SELECT ... FOR UPDATE` 鎖，正確加入既有的鎖序列（D5）。
+- **不做取消原因欄位**（D7，比照 `class-session-cancellation` D6 的既有先例）。
 - **V1 跳過 `under_review`**：Admin review 直接 `submitted → published | rejected`，不提供「開始審查」的中間狀態或動作（對齊 `TeacherProfile` 的 `submitted → approved|rejected` 簡化先例）。`under_review` 的 enum 值保留，但無對應 transition。
 - **`rejected` 在 V1 是終局狀態**：不提供 `rejected → draft/submitted` 的重新送審路徑；organizer 需依 reason 另建新的 `DemandRequest`。因此 reason 寫入後**永久保留**於該（終局）demand，不需要清空邏輯（與 `TeacherProfile.rejectionReason` 的「清空/覆蓋」lifecycle不同，因為 demand 沒有 resubmit 路徑）。
 - **Rejection reason（V1）**：與 `TeacherProfile.rejectionReason` 相同慣例——`normalizedReason = input.trim()`，驗證且持久化 trim 後值，長度 10–1000 字；`rejectionReason` 是面向該 demand 所屬 organizer 的退回說明，與內部 `AdminNote` 語意分離（不建 `AdminNote`）。
@@ -117,6 +121,8 @@
 - V1 不允許一個 demand 同時 matched 多位 teacher。
 - `draft`/`submitted`/`rejected` 的 `DemandRequest` 不可被其他 Organizer 或 Teacher 看見（own-only / not-yet-eligible）。
 - 非 Admin 不可執行 `publish` / `reject`。
+- `converted_to_class` 之後不可取消 `DemandRequest`（`ClassSession.demandRequestId` 為 `onDelete: Restrict` 外鍵，取消會產生語意矛盾資料，`demand-request-cancellation` D1）。
+- `rejected`／已是 `cancelled` 的 `DemandRequest` 不可再取消（前者是既有終局狀態；後者回傳明確錯誤碼，非 no-op）。
 
 ## DemandResponse
 
@@ -140,7 +146,7 @@
 | `submitted` / `shortlisted` | `withdrawn` | Teacher | 尚未 selected | response 結束 |
 | `submitted` / `shortlisted` | `expired` | System / Admin | demand expired 或過期 | response 結束 |
 
-### V1 policy notes（`teacher-demand-pool-response-plan`、`demand-response-selection-and-matching` 已確認）
+### V1 policy notes（`teacher-demand-pool-response-plan`、`demand-response-selection-and-matching`、`demand-request-cancellation` 已確認）
 
 上方 Transitions 表格是 marketplace 的完整最終設計；目前**只落地**以下子集：
 
@@ -150,6 +156,7 @@
 | `submitted` | `withdrawn` | Teacher | 尚未 selected；suspended teacher 不可執行（仍可查看） | response 結束，不可再重新提交 |
 | `submitted` | `selected` | Organizer | own-scoped，demand 尚無 selected response | DemandRequest 同一 transaction 內轉 `matched` |
 | `submitted` | `declined` | System（select 觸發，非 Organizer 手動） | 同 demand 有另一筆 response 被 select | 與上一列同一 transaction 內完成，非獨立動作 |
+| `submitted`／`selected` | `declined` | System（`DemandRequest` cancel 觸發，非 Organizer 手動） | 所屬 `DemandRequest` 執行取消（`demand-request-cancellation` D4） | 與 `DemandRequest → cancelled` 同一 transaction 內完成，非獨立動作；reuse 既有 `declined` 值，不新增新狀態 |
 
 - **`shortlisted` 不接線**：V1 跳過候選階段，Organizer 直接對任一 `submitted` response 執行 select（`demand-response-selection-and-matching` D1）；enum 值保留供未來使用。
 - **Select 僅 Organizer own-scoped，Admin 不介入**（D2）：與上方完整設計表格「Organizer / Admin」不同，V1 未開放 Admin 執行 select。
@@ -254,10 +261,10 @@ Future / admin-only 後續能力：
 
 ## Notification Side Effects
 
-狀態變更可能觸發 notification。**已落地**（`docs/superpowers/plans/2026-07-27-notification-plan.md`、`2026-07-28-class-session-cancellation-plan.md` 已確認）：以下 12 個事件會在對應狀態變更**成功之後**建立 `Notification` 記錄（`channel="in_app"`，見 notification 一輪 D2），失敗（收件人解析或寫入本身出錯）絕不影響觸發它的主要商業邏輯（notification 一輪 D4）：
+狀態變更可能觸發 notification。**已落地**（`docs/superpowers/plans/2026-07-27-notification-plan.md`、`2026-07-28-class-session-cancellation-plan.md`、`2026-07-28-demand-request-cancellation-plan.md` 已確認）：以下 13 個事件會在對應狀態變更**成功之後**建立 `Notification` 記錄（`channel="in_app"`，見 notification 一輪 D2），失敗（收件人解析或寫入本身出錯）絕不影響觸發它的主要商業邏輯（notification 一輪 D4）：
 
 - TeacherProfile submitted（Teacher 自己 + Admin）/ approved（Teacher 自己）/ rejected（Teacher 自己，含 `rejectionReason`）——沿用既有的站內 `rejectionReason` 顯示（`teacher-application-rejection-notification` 一輪已確認），本輪額外新增 `Notification` 記錄與 `/notifications` 列表這個獨立管道，兩者並存。
-- DemandRequest submitted（Organizer 自己 + Admin）/ published（Organizer 自己）/ rejected（Organizer 自己，含 `rejectionReason`）——沿用既有的站內 status 顯示（`organizer-demand-request-foundation` D14 已確認），本輪同樣新增獨立的 `Notification` 記錄。
+- DemandRequest submitted（Organizer 自己 + Admin）/ published（Organizer 自己）/ rejected（Organizer 自己，含 `rejectionReason`）/ **cancelled**（Organizer 自己 + 每一位因連帶取消而受影響的 Teacher，`demand-request-cancellation` D9 已確認；受影響 Teacher 用第五種收件人角色 `affected_responder`——不沿用 `class-session-cancellation` 的 `affected_member`，因為那個角色的既有文案是 Enrollment／Member 語境的措辭，套用在 Teacher／DemandResponse 語境下文法與情境都不對）——沿用既有的站內 status 顯示（`organizer-demand-request-foundation` D14 已確認），本輪同樣新增獨立的 `Notification` 記錄。
 - DemandResponse submitted（該 demand 的 Organizer + Admin）/ selected（Organizer 自己 + 被選中的 Teacher）
 - ClassSession created（Organizer 自己 + Teacher）／**cancelled**（Organizer 自己 + Teacher + 每一位因連帶取消而受影響的 Member，`class-session-cancellation` D7 已確認；受影響 Member 用第四種收件人角色 `affected_member`，不跟 Member 自助取消的 `enrollment_cancelled` 共用，見下方 Enrollment 小節）——`open_for_enrollment` 本輪確認**不**新增獨立事件（D10，理由：`class_session_created` 已涵蓋通知價值，避免重複通知）；`confirmed` 狀態本身尚未接線（見上方 ClassSession V1 範圍），對應的通知事件保留未接線。
 - Enrollment confirmed（Member 自己）/ cancelled（Member 自己——僅限 Member 透過 `/member/enrollments` 自助取消這個觸發來源；Organizer 取消 ClassSession 造成的連帶取消改發 `class_session_cancelled`／`affected_member`，不是這個事件，見 `class-session-cancellation` D7/D8）

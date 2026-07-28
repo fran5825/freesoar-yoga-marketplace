@@ -48,7 +48,7 @@ Rules:
 - Matched demand can become ClassSession.
 - Converted demands should not be edited in ways that invalidate ClassSession.
 
-**V1 落地範圍（`organizer-demand-request-foundation` D9、`demand-response-selection-and-matching` D1/D2/D4、`class-session-creation` D1/D2 已確認）**：上述完整狀態機是 marketplace 的最終設計，但目前只**接線**以下子集：
+**V1 落地範圍（`organizer-demand-request-foundation` D9、`demand-response-selection-and-matching` D1/D2/D4、`class-session-creation` D1/D2、`demand-request-cancellation` D1/D2 已確認）**：上述完整狀態機是 marketplace 的最終設計，但目前只**接線**以下子集：
 
 ```text
 draft
@@ -57,14 +57,18 @@ draft
   → matched
   → converted_to_class
   → rejected
+
+draft / submitted / published / matched
+  → cancelled
 ```
 
-`under_review`、`teacher_responded`、`completed`、`cancelled`、`expired` 這些狀態值在 Prisma enum 中**保留**（避免未來相關 slice 需要再次 enum migration），但**不提供**對應的 transition 或 UI 動作：
+`under_review`、`teacher_responded`、`completed`、`expired` 這些狀態值在 Prisma enum 中**保留**（避免未來相關 slice 需要再次 enum migration），但**不提供**對應的 transition 或 UI 動作：
 
 - Admin review 直接 `submitted → published | rejected`，V1 **跳過** `under_review` 這一步（對齊 `TeacherProfile` 的 `submitted → approved|rejected` 簡化先例）。
 - `rejected` 在 V1 是**終局狀態**：不提供 `rejected → draft/submitted` 的重新送審路徑；organizer 需另建新的 demand。
 - **`published → matched` 跳過 `teacher_responded`**：`teacher-demand-pool-response-plan` D11 選擇動態推導、不 persist `teacher_responded`，`demand-response-selection-and-matching` 沿用同一決定不變更，因此實際接線的是 `published → matched`，Actor 為 **Organizer**（own-scoped，D2；Admin 不介入 select）。
 - **`matched → converted_to_class`**：Organizer 從自己 `matched` 的 demand 建立 `ClassSession` 時，同一 transaction 內把 demand 轉為 `converted_to_class`（`class-session-creation` D1/D2，Admin 不介入，比照 D2 select 的同一先例）。Class conversion 之後（`converted_to_class → completed`／`cancelled`）不在目前 scope。
+- **`draft`／`submitted`／`published`／`matched` → `cancelled`**（`demand-request-cancellation` D1/D2）：Organizer own-scoped，明確**排除** `converted_to_class`（已有 `ClassSession` 存在，`onDelete: Restrict` 外鍵會產生語意矛盾資料，該狀態下要取消應改用 `class-session-cancellation`）；`matched` 狀態下取消（D2，選定老師之後、建立課程之前這段期間唯一能回頭的窗口）與 `draft`/`submitted`/`published` 狀態下取消，同一 transaction 內都會把該 demand 底下所有 `status IN ('submitted','selected')` 的 `DemandResponse` 一併轉為 `declined`（連帶取消，D4）。取消動作與既有 `submitDemandResponseForTeacher`／`selectDemandResponseForOrganizer`／`createClassSessionForOrganizer` 搶同一把 `DemandRequest` 鎖（D5）。
 
 詳細前置條件、後置效果與各狀態的 Actor，見 `state-transition-details.md`。
 
@@ -91,7 +95,7 @@ Rules:
 - Organizer/admin can shortlist/select.
 - Only one selected response per demand in V1.
 
-**V1 落地範圍（`teacher-demand-pool-response-plan`、`demand-response-selection-and-matching` D1/D2/D3 已確認）**：上述完整狀態機是 marketplace 的最終設計，目前接線的子集為：
+**V1 落地範圍（`teacher-demand-pool-response-plan`、`demand-response-selection-and-matching` D1/D2/D3、`demand-request-cancellation` D4 已確認）**：上述完整狀態機是 marketplace 的最終設計，目前接線的子集為：
 
 ```text
 (none)
@@ -100,11 +104,12 @@ Rules:
   → declined
 ```
 
-（另外獨立接線 `submitted → withdrawn`，見下方禁止條件。）
+（另外獨立接線 `submitted → withdrawn`，見下方禁止條件。`selected → declined` 也可能發生，見下方連帶取消說明。）
 
 - `shortlisted` enum 值**保留但不接線**：V1 跳過候選階段，Organizer 直接對任一 `submitted` response 執行 select（`demand-response-selection-and-matching` D1）。
 - `Select` 僅 **Organizer own-scoped** 可執行，**Admin 不介入**（D2，與上表 Rules 所寫的「Organizer/admin」不同，V1 未開放 Admin）。
 - `Decline` 在 V1 不是 Organizer 手動動作，而是 select 成功時**同一 transaction 內**自動把同 demand 其餘 `submitted` response 轉為 `declined`（D3）。
+- **連帶取消也會產生 `declined`**（`demand-request-cancellation` D4）：所屬 `DemandRequest` 被 Organizer 取消時，該 demand 底下所有 `submitted`／`selected` 的 response 同一 transaction 內一併轉為 `declined`——reuse 既有值，不新增新的 `DemandResponseStatus`。Teacher 端文案會依「demand 被取消」與「選了別人」區分（見 `docs/domain/permissions-matrix.md`／`state-transition-details.md`）。
 - `expired` enum 值保留但不接線（無 demand 過期機制）。
 
 ## ClassSession Status
