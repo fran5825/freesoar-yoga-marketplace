@@ -6,6 +6,7 @@ import { notifyUsers } from "@/domain/notification/create";
 import { getCurrentUser, requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
+import { cancelDemandRequestForOrganizer } from "./__internal__/cancel-demand-request-core";
 import {
   type DemandRequestSubmitTransitionErrorCode,
   validateDemandRequestSubmitTransition,
@@ -406,6 +407,93 @@ function submitTransitionBlockedMessage(
   }
 
   return "此需求目前狀態不允許送出，請重新整理後確認狀態。";
+}
+
+export type CancelOwnDemandRequestErrorCode =
+  | "authentication_required"
+  | "organizer_profile_required"
+  | "demand_request_not_found"
+  | "demand_request_already_cancelled"
+  | "demand_request_not_cancellable"
+  | "demand_request_cancel_failed";
+
+export type CancelOwnDemandRequestResult =
+  | { ok: true }
+  | {
+      ok: false;
+      code: CancelOwnDemandRequestErrorCode;
+      message: string;
+    };
+
+// D1/D2/D5：Organizer own-scoped。實際的鎖／原子狀態轉換／連帶取消 DemandResponse 邏輯
+// 都在 __internal__ 的 pure 核心（跟既有的 submit/select/createClassSession 三個
+// mutation 搶同一把 DemandRequest 鎖，見 D5），這裡只負責把目前使用者解析成受信任的
+// organizerProfileId。
+export async function cancelOwnDemandRequest(
+  demandRequestId: string,
+): Promise<CancelOwnDemandRequestResult> {
+  let organizerProfileId: string;
+
+  try {
+    await requireUser();
+    const organizerContext = await getOwnOrganizerContext();
+
+    if (!organizerContext) {
+      return {
+        ok: false,
+        code: "organizer_profile_required",
+        message: "找不到你的團主資料。",
+      };
+    }
+
+    organizerProfileId = organizerContext.organizerProfile.id;
+  } catch (error) {
+    if (isAuthenticationRequiredError(error)) {
+      return {
+        ok: false,
+        code: "authentication_required",
+        message: "請先登入後再取消需求。",
+      };
+    }
+
+    throw error;
+  }
+
+  const result = await cancelDemandRequestForOrganizer(organizerProfileId, demandRequestId);
+
+  if (result.ok) {
+    return { ok: true };
+  }
+
+  if (result.code === "demand_request_not_found") {
+    return {
+      ok: false,
+      code: "demand_request_not_found",
+      message: "找不到這則需求，或你沒有權限操作。",
+    };
+  }
+
+  if (result.code === "demand_request_already_cancelled") {
+    return {
+      ok: false,
+      code: "demand_request_already_cancelled",
+      message: "這則需求已經取消過了。",
+    };
+  }
+
+  if (result.code === "demand_request_not_cancellable") {
+    return {
+      ok: false,
+      code: "demand_request_not_cancellable",
+      message: "這則需求目前狀態不允許取消。",
+    };
+  }
+
+  return {
+    ok: false,
+    code: "demand_request_cancel_failed",
+    message: "需求暫時無法取消，請稍後再試。",
+  };
 }
 
 function isAuthenticationRequiredError(error: unknown): boolean {
