@@ -140,7 +140,7 @@ V1 一個 demand request 只能有一個 selected response。
 
 Teacher 可查看自己的 class session；V1 由 Admin 保有 class session 完成與取消的最終管理權。
 
-**V1 落地範圍**（`class-session-creation`、`enrollment` 已確認）：`Create class session from matched demand` 僅 Organizer own-scoped 可執行，**Admin 不介入**（D1，上表 Admin 欄位為完整未來設計，V1 未開放）；`Edit draft class session` 本輪不實作（D2，一次到位建立、建立後不可編輯）；**`Open for enrollment` 僅 Organizer own-scoped 可執行**（`enrollment` D2，Admin 不介入，且 `startAt` 已過不可開放，D14——修正原本標記為不接線的敘述，這條動作已在 `enrollment` 落地）；`Cancel class session`／`Complete class session` 本輪仍不接線（D9），保留於表中作為未來 slice 參考。`View private class session` 的 Teacher 欄位在 V1 不受 approved 狀態限制（`class-session-creation` D15，比照 View own response 的既有唯讀先例）。
+**V1 落地範圍**（`class-session-creation`、`enrollment`、`class-session-cancellation` 已確認）：`Create class session from matched demand` 僅 Organizer own-scoped 可執行，**Admin 不介入**（D1，上表 Admin 欄位為完整未來設計，V1 未開放）；`Edit draft class session` 本輪不實作（D2，一次到位建立、建立後不可編輯）；**`Open for enrollment` 僅 Organizer own-scoped 可執行**（`enrollment` D2，Admin 不介入，且 `startAt` 已過不可開放，D14）；**`Cancel class session` 僅 Organizer own-scoped 可執行**（`class-session-cancellation` D1，Admin 不介入，且 `startAt` 已過不可取消，D2——修正原本標記為不接線的敘述，這條動作已在 `class-session-cancellation` 落地；取消可從 `draft` 或 `open_for_enrollment` 觸發，並連帶取消該課程底下所有 `confirmed` 的 Enrollment，見 `state-transition-details.md`）；`Complete class session` 本輪仍不接線（`class-session-cancellation` D9），保留於表中作為未來 slice 參考。`View private class session` 的 Teacher 欄位在 V1 不受 approved 狀態限制（`class-session-creation` D15，比照 View own response 的既有唯讀先例）。
 
 ## Enrollment
 
@@ -169,7 +169,7 @@ V1 不做完整 Teacher attendance workflow；`attended` / `no_show` 可保留�
 
 通知建立可由 domain/service layer 觸發；一般使用者不可任意建立 system notification。
 
-**V1 落地範圍**（`notification` 已確認）：`View own notifications` 透過 `/notifications` 頁面實現，own-scoped，任何登入使用者（含 Admin 自己）皆可查看自己收到的通知；`Create system notification`／`Send notification` 由各 domain/service layer 的 11 個既有 trigger 點（見 `state-transition-details.md` 的「Notification Side Effects」）內部呼叫 `notifyUsers`，不對外開放任何可手動建立或發送通知的 API 或 UI 入口，也沒有 Admin 專用的 notification 管理介面。收件人解析邏輯（誰會收到通知）持續受本文件 Security Review Required 清單規範。
+**V1 落地範圍**（`notification`、`class-session-cancellation` 已確認）：`View own notifications` 透過 `/notifications` 頁面實現，own-scoped，任何登入使用者（含 Admin 自己）皆可查看自己收到的通知；`Create system notification`／`Send notification` 由各 domain/service layer 的 12 個既有 trigger 點（見 `state-transition-details.md` 的「Notification Side Effects」）內部呼叫 `notifyUsers`，不對外開放任何可手動建立或發送通知的 API 或 UI 入口，也沒有 Admin 專用的 notification 管理介面。收件人解析邏輯（誰會收到通知）持續受本文件 Security Review Required 清單規範。
 
 ## AdminNote
 

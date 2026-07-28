@@ -183,17 +183,20 @@
 | `confirmed` | `completed` | Admin | 課程時間已過且完成 | 可處理後續管理紀錄 |
 | Any active state | `cancelled` | Organizer / Admin | 取消原因成立 | 停止 enrollment，通知相關人員 |
 
-### V1 policy notes（`class-session-creation`、`enrollment` 已確認）
+### V1 policy notes（`class-session-creation`、`enrollment`、`class-session-cancellation` 已確認）
 
-上方 Transitions 表格是最終設計；目前**落地** `(none) → draft`（由 `DemandRequest: matched → converted_to_class` 同一 transaction 觸發建立，見上方 DemandRequest V1 policy notes）與 `draft → open_for_enrollment`（Organizer own-scoped 明確觸發，`enrollment` D2）。
+上方 Transitions 表格是最終設計；目前**落地** `(none) → draft`（由 `DemandRequest: matched → converted_to_class` 同一 transaction 觸發建立，見上方 DemandRequest V1 policy notes）、`draft → open_for_enrollment`（Organizer own-scoped 明確觸發，`enrollment` D2），以及 `draft → cancelled`／`open_for_enrollment → cancelled`（Organizer own-scoped 明確觸發，`class-session-cancellation` D1）。
 
 | From | To | Actor | 前置條件 | 後置效果 |
 |---|---|---|---|---|
 | `draft` | `open_for_enrollment` | Organizer | own-scoped，且 `startAt` 尚未到達（D14） | Member 可透過分享連結查看並報名 |
+| `draft`／`open_for_enrollment` | `cancelled` | Organizer | own-scoped，且 `startAt` 尚未到達（`class-session-cancellation` D2，與 D14 同一精神） | 該 ClassSession 底下所有 `confirmed` Enrollment 在同一 transaction 內一併轉成 `cancelled`（連帶取消，D4）；Organizer/Teacher/受影響 Member 收到 `class_session_cancelled` 通知（D7） |
 
 - **一次到位建立，無編輯**：`title`/`description`（選填）/`serviceType`/`startAt`/`endAt`/`location`/`capacity`/`isPublic` 皆於建立當下一次填齊並通過驗證，建立後不提供編輯（D2）；因此不存在「資料不完整的 draft」，`draft` 語意純粹是「已建立、尚未開放報名」。
 - **`draft → open_for_enrollment` 不經過 `pending_confirmation`**：對齊 D2 的一次到位建立，沒有需要「初步完整」與「必要欄位完整」分兩階段確認的理由。
-- **`pending_confirmation`/`confirmed`/`completed`/`cancelled` 不接線**：`open_for_enrollment → confirmed` 沒有明確、機械式的觸發條件（不像 capacity 那樣可自動判斷），`enrollment` 沿用 `class-session-creation` D9 的判斷不提前接線；`open_for_enrollment` 本身已足以讓 Member 報名到滿額為止。
+- **`pending_confirmation`/`confirmed`/`completed` 不接線**：`open_for_enrollment → confirmed` 沒有明確、機械式的觸發條件（不像 capacity 那樣可自動判斷），`enrollment` 沿用 `class-session-creation` D9 的判斷不提前接線；`open_for_enrollment` 本身已足以讓 Member 報名到滿額為止。`completed` 也還沒接線（`class-session-cancellation` D9 明確不做）。
+- **取消（`cancelled`）的併發設計**：取消動作會跟 `createEnrollmentForUser` 搶同一個 `ClassSession` 資源，用跟 enrollment 建立完全一致的 `SELECT ... FOR UPDATE` 手法序列化，確保「會員剛好在取消瞬間報名成功」的情境仍然會被正確連帶取消，不會殘留一筆狀態與課程矛盾的 `confirmed` Enrollment（`class-session-cancellation` D3）。
+- **取消不影響 DemandRequest**：`converted_to_class` 是媒合流程走到這一步的歷史事實，不因為之後那堂課被取消而回頭改變（`class-session-cancellation` D5）。
 - **Teacher schedule conflict 檢查目前不做**：沒有 `TeacherAvailability` 或任何排程資料可供檢查，`ClassSession 必須檢查 teacher schedule conflict` 這條禁止條件屬完整設計，本輪不接線（D8）。
 - **時區**：`startAt`/`endAt` 一律以固定 `Asia/Taipei`（UTC+8，無 DST）偏移量解析與顯示，不依賴伺服器或瀏覽器當地時區設定（D13）。
 
@@ -251,12 +254,12 @@ Future / admin-only 後續能力：
 
 ## Notification Side Effects
 
-狀態變更可能觸發 notification。**已落地**（`docs/superpowers/plans/2026-07-27-notification-plan.md` 已確認，D1）：以下 11 個事件會在對應狀態變更**成功之後**建立 `Notification` 記錄（`channel="in_app"`，見 D2），失敗（收件人解析或寫入本身出錯）絕不影響觸發它的主要商業邏輯（D4）：
+狀態變更可能觸發 notification。**已落地**（`docs/superpowers/plans/2026-07-27-notification-plan.md`、`2026-07-28-class-session-cancellation-plan.md` 已確認）：以下 12 個事件會在對應狀態變更**成功之後**建立 `Notification` 記錄（`channel="in_app"`，見 notification 一輪 D2），失敗（收件人解析或寫入本身出錯）絕不影響觸發它的主要商業邏輯（notification 一輪 D4）：
 
 - TeacherProfile submitted（Teacher 自己 + Admin）/ approved（Teacher 自己）/ rejected（Teacher 自己，含 `rejectionReason`）——沿用既有的站內 `rejectionReason` 顯示（`teacher-application-rejection-notification` 一輪已確認），本輪額外新增 `Notification` 記錄與 `/notifications` 列表這個獨立管道，兩者並存。
 - DemandRequest submitted（Organizer 自己 + Admin）/ published（Organizer 自己）/ rejected（Organizer 自己，含 `rejectionReason`）——沿用既有的站內 status 顯示（`organizer-demand-request-foundation` D14 已確認），本輪同樣新增獨立的 `Notification` 記錄。
 - DemandResponse submitted（該 demand 的 Organizer + Admin）/ selected（Organizer 自己 + 被選中的 Teacher）
-- ClassSession created（Organizer 自己 + Teacher）——`open_for_enrollment` 本輪確認**不**新增獨立事件（D10，理由：`class_session_created` 已涵蓋通知價值，避免重複通知）；`confirmed`／`cancelled` 兩個狀態本身尚未接線（見上方 ClassSession V1 範圍），對應的通知事件保留未接線。
-- Enrollment confirmed（Member 自己）/ cancelled（Member 自己）
+- ClassSession created（Organizer 自己 + Teacher）／**cancelled**（Organizer 自己 + Teacher + 每一位因連帶取消而受影響的 Member，`class-session-cancellation` D7 已確認；受影響 Member 用第四種收件人角色 `affected_member`，不跟 Member 自助取消的 `enrollment_cancelled` 共用，見下方 Enrollment 小節）——`open_for_enrollment` 本輪確認**不**新增獨立事件（D10，理由：`class_session_created` 已涵蓋通知價值，避免重複通知）；`confirmed` 狀態本身尚未接線（見上方 ClassSession V1 範圍），對應的通知事件保留未接線。
+- Enrollment confirmed（Member 自己）/ cancelled（Member 自己——僅限 Member 透過 `/member/enrollments` 自助取消這個觸發來源；Organizer 取消 ClassSession 造成的連帶取消改發 `class_session_cancelled`／`affected_member`，不是這個事件，見 `class-session-cancellation` D7/D8）
 
 Notification 內容需遵守品牌語氣：清楚、溫和、可信任，不使用焦慮式推銷。

@@ -6,10 +6,11 @@
 
 ## 落地現況（2026-07-28 更新）
 
-`docs/superpowers/plans/2026-07-27-notification-plan.md` 已把本文件描述的 notification 資料模型與**部分** event 落地，但實際落地方式跟本文件原本規劃的「V1 以 email 為主」有一個重要落差，記錄如下：
+`docs/superpowers/plans/2026-07-27-notification-plan.md`、`2026-07-28-class-session-cancellation-plan.md` 已把本文件描述的 notification 資料模型與**大部分** event 落地，但實際落地方式跟本文件原本規劃的「V1 以 email 為主」有一個重要落差，記錄如下：
 
 - **Channel（跟原規劃不同）**：這個 repo 目前沒有接任何 email provider（無套件、無 API key），真的去接一個外部 email 服務超出單輪能自主完成的範圍。V1 實際寫入的 `channel` 是 `in_app`，不是本文件原本規劃的 `email`；`/notifications` 頁面是這個 channel 唯一的投遞終點。`email`／`line`／`sms` 三個 channel 仍然保留在 `NotificationChannel` enum 裡（供未來真的接 email provider 的切片使用），只是 V1 不會寫入這些值。
-- **Events（部分落地）**：下方「Notification Events」表列出的 14 個事件中，已落地 11 個：`teacher_application_submitted`／`teacher_application_approved`／`teacher_application_rejected`／`demand_request_submitted`／`demand_request_published`／`demand_request_rejected`／`demand_response_submitted`／`demand_response_selected`／`class_session_created`／`enrollment_confirmed`／`enrollment_cancelled`。**未落地**：`class_session_changed`／`class_session_cancelled`（因為「編輯課程」「取消課程」這兩個動作本身在 V1 都還沒接線，見 `docs/domain/permissions-matrix.md` 的 ClassSession 範圍註記）、`class_reminder_basic`（需要排程/背景工作機制，這個 repo 目前沒有 cron/queue infra，屬於未來擴充）。
+- **Events（大部分落地）**：下方「Notification Events」表列出的 14 個事件中，已落地 12 個：`teacher_application_submitted`／`teacher_application_approved`／`teacher_application_rejected`／`demand_request_submitted`／`demand_request_published`／`demand_request_rejected`／`demand_response_submitted`／`demand_response_selected`／`class_session_created`／`class_session_cancelled`／`enrollment_confirmed`／`enrollment_cancelled`。**未落地**：`class_session_changed`（「編輯課程」這個動作本身在 V1 還沒接線，見 `docs/domain/permissions-matrix.md` 的 ClassSession 範圍註記）、`class_reminder_basic`（需要排程/背景工作機制，這個 repo 目前沒有 cron/queue infra，屬於未來擴充）。
+- **`class_session_cancelled` 的收件人角色（`class-session-cancellation` D7 已確認）**：這個事件同時要通知 Teacher 與被連帶取消的 Member，兩者需要不同文案，既有的 `NotificationRecipientRole`（`self`/`admin`/`counterpart`）不夠用（`counterpart` 原本假設一個事件最多一種對象）。因此新增了第四種角色 `affected_member` 專門用於這個事件；Member 自助取消報名（`enrollment_cancelled`）跟 Organizer 連帶取消（`class_session_cancelled`／`affected_member`）刻意保持成兩個獨立事件，不共用同一份文案。
 - **Notification Data／Status**：`Notification` 的欄位清單與 Status 清單（下方兩節）已經照原樣落地，沒有變動。
 
 ## Notification 原則

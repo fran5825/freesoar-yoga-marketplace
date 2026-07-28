@@ -325,7 +325,7 @@ Fields:
 
 - id
 - userId
-- type（`NotificationType`，14 個 enum 值，V1 落地 11 個，`class_session_changed`／`class_session_cancelled`／`class_reminder_basic` 保留未接線）
+- type（`NotificationType`，14 個 enum 值，V1 落地 12 個（`class-session-cancellation` 一輪把 `class_session_cancelled` 接上），`class_session_changed`／`class_reminder_basic` 保留未接線）
 - channel（`NotificationChannel`：`email`／`in_app`／`line`／`sms`，V1 只寫入 `in_app`）
 - title
 - body
