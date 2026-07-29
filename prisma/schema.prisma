@@ -21,6 +21,7 @@ model User {
   organizerProfile OrganizerProfile?
   enrollments      Enrollment[]
   notifications    Notification[]
+  reviews          Review[]
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 }
@@ -184,6 +185,7 @@ model ClassSession {
   organizerProfile OrganizerProfile @relation(fields: [organizerProfileId], references: [id], onDelete: Restrict)
   organization     Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   enrollments      Enrollment[]
+  reviews          Review[]
 
   @@index([teacherProfileId])
   @@index([organizerProfileId])
@@ -207,6 +209,24 @@ model Enrollment {
   @@index([classSessionId])
   @@index([userId])
   @@index([status])
+}
+
+// D2/D4（class-session-review-plan）：不含 teacherProfileId（授課老師一律透過
+// classSession 關聯取得，避免沒有 DB 一致性保證的冗餘欄位）與 visibility（V1 沒有任何
+// 公開頁面可以消費這個欄位）。
+model Review {
+  id             String   @id @default(cuid())
+  classSessionId String
+  reviewerUserId String
+  rating         Int
+  comment        String?
+  createdAt      DateTime @default(now())
+
+  classSession ClassSession @relation(fields: [classSessionId], references: [id], onDelete: Cascade)
+  reviewer     User         @relation(fields: [reviewerUserId], references: [id], onDelete: Cascade)
+
+  @@unique([classSessionId, reviewerUserId])
+  @@index([classSessionId])
 }
 
 model Notification {
@@ -297,9 +317,11 @@ enum NotificationType {
   class_session_created
   class_session_changed
   class_session_cancelled
+  class_session_completed
   enrollment_confirmed
   enrollment_cancelled
   class_reminder_basic
+  review_submitted
 }
 
 enum NotificationChannel {

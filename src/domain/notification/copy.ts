@@ -137,6 +137,18 @@ const COPY_TABLE: CopyTable = {
       body: `「${classSessionTitle ?? ""}」已經取消，你的報名也一併取消了。`,
     }),
   },
+  class_session_completed: {
+    affected_member: ({ classSessionTitle }) => ({
+      title: "課程已完成，邀請留下評價",
+      body: `「${classSessionTitle ?? ""}」已經完成，歡迎留下你的評價，讓其他人參考。`,
+    }),
+  },
+  review_submitted: {
+    counterpart: ({ actorLabel, classSessionTitle }) => ({
+      title: "課程收到新評價",
+      body: `${actorLabel ?? "一位會員"}對你的課程「${classSessionTitle ?? ""}」留下了評價。`,
+    }),
+  },
 };
 
 export function buildNotificationCopy(

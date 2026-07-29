@@ -1,3 +1,4 @@
+import { notifyUsers } from "@/domain/notification/create";
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
@@ -390,6 +391,35 @@ export async function completeOwnClassSession(
   });
 
   if (updateResult.count > 0) {
+    // D5（class-session-review-plan）：兌現 class-session-completion D5 的既有承諾——
+    // 「已完成」本身不值得單獨通知，但結合「邀請留下評價」就有價值了。tx commit 之後才
+    // 執行，try/catch 隔離失敗，不影響已經成功的狀態轉換（比照既有先例）。
+    try {
+      const detail = await prisma.classSession.findUnique({
+        where: { id: classSessionId },
+        select: {
+          title: true,
+          enrollments: {
+            where: { status: "confirmed" },
+            select: { userId: true },
+          },
+        },
+      });
+
+      if (detail && detail.enrollments.length > 0) {
+        await notifyUsers(
+          "class_session_completed",
+          detail.enrollments.map((enrollment) => ({
+            userId: enrollment.userId,
+            role: "affected_member" as const,
+          })),
+          { classSessionTitle: detail.title },
+        );
+      }
+    } catch (notifyError) {
+      console.error("[notification] class_session_completed trigger failed", notifyError);
+    }
+
     return { ok: true };
   }
 
