@@ -2,6 +2,8 @@ import { listSubmittedDemandRequestsForAdmin } from "@/domain/demand-request/adm
 import { requireAdmin } from "@/lib/auth/session";
 import { notFound } from "next/navigation";
 
+import { AdminNav } from "@/app/admin/_components/admin-nav";
+
 import { publishDemandRequestAction, rejectDemandRequestAction } from "./actions";
 
 type AdminDemandsPageProps = {
@@ -63,6 +65,7 @@ export default async function AdminDemandsPage({
       <header className="grid gap-3 border-b border-gray-200 pb-6 md:grid-cols-[1fr_auto] md:items-end">
         <div>
           <p className="text-sm font-medium text-sky-700">Admin review</p>
+          <AdminNav />
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-gray-950">
             Demand requests
           </h1>

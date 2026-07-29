@@ -5,6 +5,7 @@ import {
   classSessionStatusLabels,
   classSessionStatusToneClasses,
 } from "@/app/organizer/classes/_components/status-labels";
+import { AdminNav } from "@/app/admin/_components/admin-nav";
 import {
   listAllClassSessionsForAdmin,
   type AdminClassSessionSummary,
@@ -34,6 +35,7 @@ export default async function AdminClassesPage() {
     <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-8 px-6 py-10">
       <header className="border-b border-gray-200 pb-6">
         <p className="text-sm font-medium text-sky-700">Admin</p>
+        <AdminNav />
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-gray-950">
           Class sessions
         </h1>
