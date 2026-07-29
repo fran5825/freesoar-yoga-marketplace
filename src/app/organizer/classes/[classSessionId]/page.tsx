@@ -10,7 +10,11 @@ import {
   classSessionStatusLabels,
   classSessionStatusToneClasses,
 } from "../_components/status-labels";
-import { cancelClassSessionAction, openForEnrollmentAction } from "./actions";
+import {
+  cancelClassSessionAction,
+  completeClassSessionAction,
+  openForEnrollmentAction,
+} from "./actions";
 
 type OrganizerClassSessionDetailPageProps = {
   params: Promise<{ classSessionId: string }>;
@@ -49,10 +53,10 @@ export default async function OrganizerClassSessionDetailPage({
     notFound();
   }
 
-  const roster =
-    classSession.status === "open_for_enrollment"
-      ? ((await listConfirmedEnrollmentsForClassSession(classSessionId)) ?? [])
-      : [];
+  const roster = ["open_for_enrollment", "completed"].includes(classSession.status)
+    ? ((await listConfirmedEnrollmentsForClassSession(classSessionId)) ?? [])
+    : [];
+  const hasEnded = hasClassSessionEnded(classSession.endAt);
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-8 px-5 py-10 sm:px-8 sm:py-14">
@@ -134,17 +138,19 @@ export default async function OrganizerClassSessionDetailPage({
         </section>
       ) : null}
 
-      {classSession.status === "open_for_enrollment" ? (
+      {["open_for_enrollment", "completed"].includes(classSession.status) ? (
         <section className="grid gap-4 rounded border border-gray-200 bg-white p-6">
-          <div>
-            <h2 className="text-lg font-medium text-gray-950">報名連結</h2>
-            <p className="mt-2 text-sm leading-6 text-gray-600">
-              把這個連結分享給會員，他們登入後就能查看課程並報名。
-            </p>
-            <p className="mt-2 min-w-0 break-all rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-950">
-              {`/classes/${classSessionId}`}
-            </p>
-          </div>
+          {classSession.status === "open_for_enrollment" ? (
+            <div>
+              <h2 className="text-lg font-medium text-gray-950">報名連結</h2>
+              <p className="mt-2 text-sm leading-6 text-gray-600">
+                把這個連結分享給會員，他們登入後就能查看課程並報名。
+              </p>
+              <p className="mt-2 min-w-0 break-all rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-950">
+                {`/classes/${classSessionId}`}
+              </p>
+            </div>
+          ) : null}
 
           <div>
             <h3 className="text-sm font-medium text-gray-950">
@@ -174,6 +180,36 @@ export default async function OrganizerClassSessionDetailPage({
               </ul>
             )}
           </div>
+        </section>
+      ) : null}
+
+      {classSession.status === "open_for_enrollment" && hasEnded ? (
+        <section className="grid gap-4 rounded border border-gray-200 bg-white p-6">
+          <div>
+            <h2 className="text-lg font-medium text-gray-950">標記完成</h2>
+            <p className="mt-2 text-sm leading-6 text-gray-600">
+              確認這堂課程已經結束，標記後會顯示為「已完成」。
+            </p>
+          </div>
+          <form action={completeClassSessionAction} className="grid gap-3">
+            <input name="classSessionId" type="hidden" value={classSessionId} />
+            <label className="flex items-start gap-2 text-sm leading-6 text-gray-700">
+              <input
+                className="mt-1 shrink-0"
+                name="confirmComplete"
+                required
+                type="checkbox"
+                value="yes"
+              />
+              我確認這堂課程已經結束。
+            </label>
+            <button
+              className="w-full rounded bg-gray-950 px-4 py-2 text-center text-sm font-medium text-white transition hover:bg-gray-800 sm:w-auto"
+              type="submit"
+            >
+              標記完成
+            </button>
+          </form>
         </section>
       ) : null}
 
@@ -233,4 +269,8 @@ function DetailField({
       </p>
     </div>
   );
+}
+
+function hasClassSessionEnded(endAt: Date): boolean {
+  return endAt.getTime() <= Date.now();
 }

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import {
   cancelOwnClassSession,
+  completeOwnClassSession,
   openOwnClassSessionForEnrollment,
 } from "@/domain/class-session/service";
 
@@ -37,6 +38,22 @@ export async function cancelClassSessionAction(formData: FormData): Promise<void
   }
 
   redirectWithFeedback(classSessionId, "success", "課程已取消。");
+}
+
+export async function completeClassSessionAction(formData: FormData): Promise<void> {
+  const classSessionId = readFormString(formData, "classSessionId");
+
+  const result = await completeOwnClassSession(classSessionId);
+
+  revalidatePath(`/organizer/classes/${classSessionId}`);
+  revalidatePath("/organizer/classes");
+  revalidatePath("/teacher/classes");
+
+  if (!result.ok) {
+    redirectWithFeedback(classSessionId, "error", result.message);
+  }
+
+  redirectWithFeedback(classSessionId, "success", "課程已標記完成。");
 }
 
 function readFormString(formData: FormData, name: string): string {

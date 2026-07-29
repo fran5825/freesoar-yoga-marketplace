@@ -102,7 +102,7 @@ export default async function TeacherClassesPage() {
                 </p>
               ) : null}
 
-              {classSession.status === "open_for_enrollment" ? (
+              {["open_for_enrollment", "completed"].includes(classSession.status) ? (
                 <div className="min-w-0 border-t border-gray-100 pt-3">
                   <h3 className="text-sm font-medium text-gray-950">
                     已報名會員（{classSession.enrollments.length} 人）

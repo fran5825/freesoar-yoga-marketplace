@@ -53,18 +53,19 @@ export type MemberFacingClassSession = {
 
 // D4：只回傳 status === "open_for_enrollment" 的 class session，draft 一律回傳 null
 // （not-found 語意）——draft 代表 Organizer 根本還沒開放、也還沒產生過任何分享連結，
-// 不應該讓任何人透過猜測 classSessionId 就看到未開放課程的完整內容。這個過濾不會讓
-// 「目前無法報名」這個 UI 狀態變成不可達：D3 確定本輪不接線 open_for_enrollment 之後的
-// 任何狀態轉換，所以一個「已經開始但還沒被任何機制關閉」的 class session 依然是
-// open_for_enrollment，這個函式依然會回傳它，UI 層再用 startAt 判斷要顯示報名表單
-// 還是「目前無法報名」（見 D14）。
+// 不應該讓任何人透過猜測 classSessionId 就看到未開放課程的完整內容。
+// 修正（class-session-completion D7）：也允許 completed，否則過期課程一旦真的被標記
+// 完成，既有連結會第一次因此變成 404（過期但還沒標記完成時仍是 open_for_enrollment，
+// 連結本來就看得到）——這是本輪造成的新行為劣化，不是延續既有先例，見該輪 plan。
+// completed 一定代表 endAt 已過（因此 startAt 也已過），下方既有的 hasClassSessionStarted
+// 判斷會自然把它導向既有的「目前無法報名」分支，不需要新增第四種分支。
 export async function getClassSessionForMember(
   classSessionId: string,
 ): Promise<MemberFacingClassSession | null> {
   const currentUser = await requireUser();
 
   const classSession = await prisma.classSession.findFirst({
-    where: { id: classSessionId, status: "open_for_enrollment" },
+    where: { id: classSessionId, status: { in: ["open_for_enrollment", "completed"] } },
     select: {
       id: true,
       title: true,
