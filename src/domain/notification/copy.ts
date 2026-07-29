@@ -120,13 +120,13 @@ const COPY_TABLE: CopyTable = {
   enrollment_cancelled: {
     self: ({ classSessionTitle }) => ({
       title: "報名已取消",
-      body: `你已經取消「${classSessionTitle ?? ""}」的報名。`,
+      body: `「${classSessionTitle ?? ""}」的報名已經取消。`,
     }),
   },
   class_session_cancelled: {
     self: ({ classSessionTitle }) => ({
       title: "課程已取消",
-      body: `你已經取消「${classSessionTitle ?? ""}」。`,
+      body: `「${classSessionTitle ?? ""}」已經取消。`,
     }),
     counterpart: ({ classSessionTitle }) => ({
       title: "課程已取消",

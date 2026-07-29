@@ -1,9 +1,16 @@
 // __internal__：不是通用 API。只給 (1) 唯一的 auth-resolving 外層（service.ts 的
-// cancelOwnClassSession）與 (2) Playwright 併發測試直接呼叫——取消動作會跟
-// createEnrollmentForUser 搶同一個 ClassSession 資源，是本輪唯一有多方併發的場景
-// （見 plan D3），比照 enrollment/__internal__/create-enrollment-core.ts 的同一套架構。
+// cancelOwnClassSession、admin-service.ts 的 cancelClassSessionForAdmin）與 (2) Playwright
+// 併發測試直接呼叫——取消動作會跟 createEnrollmentForUser 搶同一個 ClassSession 資源，是
+// 唯一有多方併發的場景（見 class-session-cancellation D3），比照
+// enrollment/__internal__/create-enrollment-core.ts 的同一套架構。
+//
+// admin-class-enrollment-management 一輪（D5）：cancelClassSessionForOrganizer 與
+// cancelClassSessionForAdmin 共用同一段鎖 + 連帶取消 + 通知的交易邏輯（private
+// cancelClassSessionCore），差別只在鎖查詢的 WHERE 要不要帶 organizerProfileId 擁有權過濾。
+// 兩者都不呼叫 requireUser()/requireAdmin()，權限檢查一律交給呼叫端解析。
 
 import type { NotificationType } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 import { notifyUsers } from "@/domain/notification/create";
 import type { NotificationPayload, NotificationRecipient } from "@/domain/notification/types";
@@ -62,80 +69,102 @@ class ClassSessionNotCancellableError extends Error {
 
 const CANCELLABLE_STATUSES = new Set(["draft", "open_for_enrollment"]);
 
-// D1/D2/D3/D4：own-scoped，整段包在 prisma.$transaction 內：
-// (a) 鎖住 ClassSession 並驗證擁有權（WHERE 子句本身就同時驗證 organizerProfileId）；
+// D1/D2/D3/D4（class-session-cancellation）+ D5（admin-class-enrollment-management）：
+// organizerProfileId 為 null 代表 Admin-scoped，鎖查詢不過濾擁有權。整段包在
+// prisma.$transaction 內：
+// (a) 鎖住 ClassSession（Organizer 路徑同時驗證擁有權，Admin 路徑鎖任何一筆）；
 // (b) 檢查尚未是 cancelled；
 // (c) 檢查狀態在可取消集合內（目前只有 draft/open_for_enrollment 會實際出現）；
 // (d) 檢查 startAt > now（D2，比照 enrollment D14）；
 // (e) 轉成 cancelled；
 // (f) 連帶把所有 confirmed Enrollment 轉成 cancelled，RETURNING userId 供通知使用（D4）。
-export async function cancelClassSessionForOrganizer(
-  organizerProfileId: string,
+// 鎖查詢額外帶出這筆 ClassSession 實際的 organizerProfileId，tx commit 之後的通知收件人
+// 解析一律使用這個從資料庫讀出來的值，不是函式參數——Admin 路徑呼叫時函式參數是 null，
+// 用參數解析 Organizer 收件人會查不到人，讓 Organizer 完全收不到通知（admin-class-
+// enrollment-management D5，codex round 2 指出的問題）。
+async function cancelClassSessionCore(
+  organizerProfileId: string | null,
   classSessionId: string,
   hooks?: DemandLockHooks,
   notifyOverride: NotifyFn = notifyUsers,
 ): Promise<CancelClassSessionForOrganizerResult> {
   try {
-    const { teacherProfileId, title, affectedMemberUserIds } = await prisma.$transaction(
-      async (tx) => {
-        await hooks?.onBeforeLock?.();
+    const {
+      organizerProfileId: resolvedOrganizerProfileId,
+      teacherProfileId,
+      title,
+      affectedMemberUserIds,
+    } = await prisma.$transaction(async (tx) => {
+      await hooks?.onBeforeLock?.();
 
-        const lockedClassSession = await tx.$queryRaw<
-          { id: string; status: string; startAt: Date; teacherProfileId: string; title: string }[]
-        >`
-          SELECT "id", "status", "startAt", "teacherProfileId", "title"
+      const ownershipFilter =
+        organizerProfileId !== null
+          ? Prisma.sql`AND "organizerProfileId" = ${organizerProfileId}`
+          : Prisma.empty;
+
+      const lockedClassSession = await tx.$queryRaw<
+        {
+          id: string;
+          status: string;
+          startAt: Date;
+          organizerProfileId: string;
+          teacherProfileId: string;
+          title: string;
+        }[]
+      >(Prisma.sql`
+          SELECT "id", "status", "startAt", "organizerProfileId", "teacherProfileId", "title"
           FROM "ClassSession"
-          WHERE "id" = ${classSessionId} AND "organizerProfileId" = ${organizerProfileId}
+          WHERE "id" = ${classSessionId} ${ownershipFilter}
           FOR UPDATE
-        `;
+        `);
 
-        if (lockedClassSession.length === 0) {
-          throw new ClassSessionNotFoundError();
-        }
+      if (lockedClassSession.length === 0) {
+        throw new ClassSessionNotFoundError();
+      }
 
-        await hooks?.onLockAcquired?.();
+      await hooks?.onLockAcquired?.();
 
-        const classSession = lockedClassSession[0];
+      const classSession = lockedClassSession[0];
 
-        if (classSession.status === "cancelled") {
-          throw new ClassSessionAlreadyCancelledError();
-        }
+      if (classSession.status === "cancelled") {
+        throw new ClassSessionAlreadyCancelledError();
+      }
 
-        if (!CANCELLABLE_STATUSES.has(classSession.status)) {
-          throw new ClassSessionNotCancellableError();
-        }
+      if (!CANCELLABLE_STATUSES.has(classSession.status)) {
+        throw new ClassSessionNotCancellableError();
+      }
 
-        if (classSession.startAt.getTime() <= Date.now()) {
-          throw new ClassSessionAlreadyStartedError();
-        }
+      if (classSession.startAt.getTime() <= Date.now()) {
+        throw new ClassSessionAlreadyStartedError();
+      }
 
-        await tx.classSession.update({
-          where: { id: classSessionId },
-          data: { status: "cancelled" },
-        });
+      await tx.classSession.update({
+        where: { id: classSessionId },
+        data: { status: "cancelled" },
+      });
 
-        const now = new Date();
-        const cancelledEnrollments = await tx.$queryRaw<{ userId: string }[]>`
+      const now = new Date();
+      const cancelledEnrollments = await tx.$queryRaw<{ userId: string }[]>`
           UPDATE "Enrollment"
           SET "status" = 'cancelled'::"EnrollmentStatus", "updatedAt" = ${now}
           WHERE "classSessionId" = ${classSessionId} AND "status" = 'confirmed'::"EnrollmentStatus"
           RETURNING "userId"
         `;
 
-        return {
-          teacherProfileId: classSession.teacherProfileId,
-          title: classSession.title,
-          affectedMemberUserIds: cancelledEnrollments.map((row) => row.userId),
-        };
-      },
-    );
+      return {
+        organizerProfileId: classSession.organizerProfileId,
+        teacherProfileId: classSession.teacherProfileId,
+        title: classSession.title,
+        affectedMemberUserIds: cancelledEnrollments.map((row) => row.userId),
+      };
+    });
 
     // D4/D7 修正版：resolver query + notify 一律在 tx commit 之後才執行，不進 tx；
     // 例外在這裡被吞掉，不影響回傳給呼叫端的結果。
     try {
       const [organizerProfile, teacherProfile] = await Promise.all([
         prisma.organizerProfile.findUnique({
-          where: { id: organizerProfileId },
+          where: { id: resolvedOrganizerProfileId },
           select: { userId: true },
         }),
         prisma.teacherProfile.findUnique({
@@ -183,4 +212,23 @@ export async function cancelClassSessionForOrganizer(
 
     return { ok: false, code: "cancel_failed" };
   }
+}
+
+export async function cancelClassSessionForOrganizer(
+  organizerProfileId: string,
+  classSessionId: string,
+  hooks?: DemandLockHooks,
+  notifyOverride: NotifyFn = notifyUsers,
+): Promise<CancelClassSessionForOrganizerResult> {
+  return cancelClassSessionCore(organizerProfileId, classSessionId, hooks, notifyOverride);
+}
+
+// D5（admin-class-enrollment-management）：Admin-scoped，鎖任何一筆 ClassSession，不檢查
+// 擁有權。呼叫端（admin-service.ts）負責 requireAdmin() 把關。
+export async function cancelClassSessionForAdmin(
+  classSessionId: string,
+  hooks?: DemandLockHooks,
+  notifyOverride: NotifyFn = notifyUsers,
+): Promise<CancelClassSessionForOrganizerResult> {
+  return cancelClassSessionCore(null, classSessionId, hooks, notifyOverride);
 }
