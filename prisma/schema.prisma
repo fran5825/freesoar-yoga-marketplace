@@ -74,6 +74,7 @@ model TeacherProfile {
   profilePhotoUrl String?
   status          TeacherProfileStatus @default(draft)
   rejectionReason String?
+  suspensionReason String?
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
 
@@ -285,6 +286,8 @@ enum NotificationType {
   teacher_application_submitted
   teacher_application_approved
   teacher_application_rejected
+  teacher_profile_suspended
+  teacher_profile_restored
   demand_request_submitted
   demand_request_published
   demand_request_rejected

@@ -35,6 +35,18 @@ const COPY_TABLE: CopyTable = {
         : "很抱歉，你的老師申請這次未通過審核。",
     }),
   },
+  teacher_profile_suspended: {
+    self: ({ reason }) => ({
+      title: "老師資格已暫停",
+      body: `你的老師資格已經暫停。原因：${reason ?? ""}`,
+    }),
+  },
+  teacher_profile_restored: {
+    self: () => ({
+      title: "老師資格已恢復",
+      body: "你的老師資格已經恢復，可以重新回應需求了。",
+    }),
+  },
   demand_request_submitted: {
     self: () => ({
       title: "需求已送出",
