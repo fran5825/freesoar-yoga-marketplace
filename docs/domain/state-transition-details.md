@@ -221,7 +221,7 @@ suspended
 | From | To | Actor | 前置條件 | 後置效果 |
 |---|---|---|---|---|
 | `draft` | `open_for_enrollment` | Organizer | own-scoped，且 `startAt` 尚未到達（D14） | Member 可透過分享連結查看並報名 |
-| `draft`／`open_for_enrollment` | `cancelled` | Organizer | own-scoped，且 `startAt` 尚未到達（`class-session-cancellation` D2，與 D14 同一精神） | 該 ClassSession 底下所有 `confirmed` Enrollment 在同一 transaction 內一併轉成 `cancelled`（連帶取消，D4）；Organizer/Teacher/受影響 Member 收到 `class_session_cancelled` 通知（D7） |
+| `draft`／`open_for_enrollment` | `cancelled` | Organizer / Admin | Organizer own-scoped 或 Admin（不檢查擁有權），且 `startAt` 尚未到達（`class-session-cancellation` D2，與 D14 同一精神；Admin 版由 `admin-class-enrollment-management` D1/D5 新增，資格條件完全相同） | 該 ClassSession 底下所有 `confirmed` Enrollment 在同一 transaction 內一併轉成 `cancelled`（連帶取消，D4）；Organizer/Teacher/受影響 Member 收到 `class_session_cancelled` 通知（D7），不論觸發者是 Organizer 還是 Admin，收件人解析邏輯完全相同 |
 | `open_for_enrollment` | `completed` | Organizer | own-scoped，且 `endAt` 已經過去（`class-session-completion` D2，與 D14/D2 的時間方向相反——完成需要「已經發生」，取消/開放需要「尚未發生」） | 標記課程已完成；不連帶處理 `Enrollment`（D3，`attended`/`no_show` 仍不接線）；不觸發新的 Notification（D5） |
 
 - **一次到位建立，無編輯**：`title`/`description`（選填）/`serviceType`/`startAt`/`endAt`/`location`/`capacity`/`isPublic` 皆於建立當下一次填齊並通過驗證，建立後不提供編輯（D2）；因此不存在「資料不完整的 draft」，`draft` 語意純粹是「已建立、尚未開放報名」。
@@ -229,6 +229,7 @@ suspended
 - **`pending_confirmation`/`confirmed` 不接線**：`open_for_enrollment → confirmed` 沒有明確、機械式的觸發條件（不像 capacity 那樣可自動判斷），`enrollment` 沿用 `class-session-creation` D9 的判斷不提前接線；`open_for_enrollment` 本身已足以讓 Member 報名到滿額為止。
 - **修正：`completed` 已經在 `class-session-completion` 一輪落地**，不再是「還沒接線」——Organizer own-scoped，只能從 `open_for_enrollment` 觸發（`draft` 從未開放過，沒有人可能出席；`pending_confirmation`/`confirmed` 從未接線，不可能是實際來源狀態），且 `endAt` 必須已經過去。不連帶處理 `Enrollment`（已經 `confirmed` 的報名維持原狀，代表「這位會員確實報名了這堂已完成的課程」這個歷史事實）；不新增 Notification（理由見 D5：「已完成」本身資訊價值有限，更有價值的「邀請留下評價」通知留給未來的 Review 一輪一次做好）。連帶影響：`getClassSessionForMember`（Member 端公開連結）與 Organizer／Teacher 兩處既有的 roster 顯示條件都同步擴大為同時允許 `completed`，否則過期課程一旦真的被標記完成，既有連結／roster 會第一次因此消失（`class-session-completion` D6/D7）。
 - **取消（`cancelled`）的併發設計**：取消動作會跟 `createEnrollmentForUser` 搶同一個 `ClassSession` 資源，用跟 enrollment 建立完全一致的 `SELECT ... FOR UPDATE` 手法序列化，確保「會員剛好在取消瞬間報名成功」的情境仍然會被正確連帶取消，不會殘留一筆狀態與課程矛盾的 `confirmed` Enrollment（`class-session-cancellation` D3）。
+- **修正：Admin 版取消已經在 `admin-class-enrollment-management` 一輪落地**——`cancelClassSessionForOrganizer`（Organizer own-scoped）與 `cancelClassSessionForAdmin`（Admin，不檢查擁有權）共用同一段鎖 + 連帶取消 + 通知的交易邏輯，只有鎖查詢的 `WHERE` 子句要不要帶 `organizerProfileId` 不同。取消一律是單向動作，這個系統目前沒有任何「恢復已取消 ClassSession」的 transition，`git revert` 部署層級的程式碼變更也不會復原任何已經透過這個能力被取消的真實資料——這點對 Organizer own-scoped 版本一直都成立，Admin 版本沒有讓它變得更差。
 - **取消不影響 DemandRequest**：`converted_to_class` 是媒合流程走到這一步的歷史事實，不因為之後那堂課被取消而回頭改變（`class-session-cancellation` D5）。
 - **Teacher schedule conflict 檢查目前不做**：沒有 `TeacherAvailability` 或任何排程資料可供檢查，`ClassSession 必須檢查 teacher schedule conflict` 這條禁止條件屬完整設計，本輪不接線（D8）。
 - **時區**：`startAt`/`endAt` 一律以固定 `Asia/Taipei`（UTC+8，無 DST）偏移量解析與顯示，不依賴伺服器或瀏覽器當地時區設定（D13）。
@@ -268,13 +269,13 @@ Future / admin-only 後續能力：
 | From | To | Actor | 前置條件 | 後置效果 |
 |---|---|---|---|---|
 | none | `confirmed` | Member | class session 為 `open_for_enrollment`、`startAt` 尚未到達（D14）、尚有 capacity、未曾對這個 class session 建立過 enrollment（不分狀態，D8） | 同一 transaction 內原子建立 enrollment，寫入 `consentedAt`（D6） |
-| `confirmed` | `cancelled` | Member | own-scoped，且 `startAt` 尚未到達（D14） | 釋放名額（不計入 capacity COUNT），但**不可**重新報名（D8） |
+| `confirmed` | `cancelled` | Member / Admin | Member own-scoped，或 Admin（不檢查擁有權）；皆需 `startAt` 尚未到達（D14；Admin 版由 `admin-class-enrollment-management` D4 新增，資格條件完全相同） | 釋放名額（不計入 capacity COUNT），但**不可**重新報名（D8）；通知該筆 enrollment 的 Member 本人（`enrollment_cancelled`／`self`），不論觸發者是 Member 自己還是 Admin |
 
 - **跳過 `pending`**（D1）：建立當下的原子檢查（capacity／重複報名）已經涵蓋完整設計裡 `pending → confirmed` 的唯一前置條件，沒有獨立業務動作需要一個中繼狀態，對齊本專案一貫的簡化先例。
 - **`consentedAt` 非 nullable**（D6）：spec 明確要求「記錄」basic consent，這不是本專案其他確認 checkbox（`confirmReject`/`confirmSelect`/`confirmCreate`）那種純 UX 防誤觸，是需要留存的紀錄。
 - **取消也受 `startAt` 限制**（D14，與建立、開放報名一致）：取消一堂已經開始的課程的報名會抹除歷史報名紀錄，且讓這筆 enrollment 永遠無法銜接未來的 `confirmed → attended/no_show`，V1 課程開始後不提供自助取消。
 - **取消後不可重新報名**（D8）：`@@unique([classSessionId, userId])` 是資料庫層面唯一約束，只認這個組合本身是否已存在過，不分狀態。
-- **Admin 不介入**（D10）：本輪 Enrollment 生命週期完全是 Member 與 Organizer/Teacher（唯讀 roster）的範圍。
+- ~~**Admin 不介入**（D10）：本輪 Enrollment 生命週期完全是 Member 與 Organizer/Teacher（唯讀 roster）的範圍。~~ **修正：`admin-class-enrollment-management` 一輪已經打破這個限制**——Admin 現在可以取消任何一筆 `confirmed` enrollment，資格條件跟 Member 自助取消完全相同（D4），只是不檢查 `userId` 擁有權。`Confirm enrollment`（`pending → confirmed`）與 `attended`/`no_show` 標記仍然完全不接線，這部分的「Admin 不介入」維持成立；只有「取消」這一種轉換打破了原本 D10 的範圍。
 - `pending`/`attended`/`no_show` 不接線，enum 值保留。
 
 ### 禁止條件

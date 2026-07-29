@@ -66,9 +66,11 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 | `/admin/teachers` | 審核、查看、暫停 teacher profiles |
 | `/admin/demands` | review、publish、reject demand requests |
 | `/admin/demands/[demandRequestId]` | admin demand detail（可選）；若 Admin review UI 採「detail route」而非「展開卡片」呈現完整 demand + organization + organizer 內容，才會落地此路由（`organizer-demand-request-foundation` Slice 7 決定採用哪一種呈現方式時據此對齊） |
-| `/admin/classes` | 管理 class sessions |
-| `/admin/enrollments` | 管理 enrollments |
+| `/admin/classes` | **已落地**（`admin-class-enrollment-management` 已確認）：查看全平台所有 class session（依狀態分組），連到 detail 頁 |
+| `/admin/classes/[classSessionId]` | **已落地**（`admin-class-enrollment-management` 已確認）：單一 class session 完整詳情、完整 roster（含所有狀態）、取消課程／取消單筆報名 |
 | `/admin/organizations` | 查看與管理 organizations |
+
+**修正（`admin-class-enrollment-management` 已確認）：原本規劃的 `/admin/enrollments` 獨立路由不建**——Enrollment 沒有任何狀態需要 Admin 核准才能推進，一個扁平、無篩選的全站報名列表沒有天然的用途；roster 與取消單筆報名的能力改為併入 `/admin/classes/[classSessionId]`（比照 Organizer／Teacher 既有頁面把 roster 顯示在 class session 詳情頁的既有資訊架構），理由與範圍見該輪 plan 的 D2。
 
 ## Route Guard 原則
 

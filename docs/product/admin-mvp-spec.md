@@ -89,6 +89,12 @@ Admin 不應：
 - 讓 capacity 缺失的 class session 開放 enrollment。
 - 任意修改 completed session 的核心資料。
 
+**落地現況（`admin-class-enrollment-management` 已確認）**：`/admin/classes`（總覽，依狀態分組）與 `/admin/classes/[classSessionId]`（詳情 + 取消）已落地，但範圍窄於上方描述——只做「查看」與「取消」兩項：
+- **「協助補齊必要資訊」不做**：`class-session-creation` D2 本來就規定建立後不可編輯（一次到位），這是 model 本身的設計限制，不是 Organizer 專屬的限制，Admin 也不例外。
+- **「變更 status」只落地「取消」這一種轉換，不是泛用能力**：真正落地的狀態只有 `draft`/`open_for_enrollment`/`completed`/`cancelled`，中繼狀態（`pending_confirmation`/`confirmed`）從未接線；讓 Admin 代替 Organizer 觸發「開放報名」或「標記完成」沒有已知的營運需求，只有「資料出錯需要緊急介入停損」明確對應「取消」。
+- **不記錄取消 reason**：這個系統目前沒有任何地方會顯示 ClassSession 的取消原因（不像 `TeacherProfile.rejectionReason`／`suspensionReason` 有明確的下游消費者），既有 Organizer 版取消本身也從來沒有 reason 欄位，只有 Admin 路徑新增一個純裝飾性、沒有任何頁面會顯示的欄位不符合這個專案一貫的最小化原則。
+- 取消資格條件跟 Organizer own-scoped 版本完全相同（狀態在 `draft`/`open_for_enrollment` 內，且 `startAt` 尚未到達），只是不檢查擁有權；取消是單向動作，這個系統完全沒有「恢復已取消 class session」的能力，`admin-mvp-spec.md` 的「Admin 不應：任意修改 completed session 的核心資料」與這個限制一致。
+
 ## Enrollment Actions
 
 Admin 可以：
@@ -102,6 +108,8 @@ Admin 不應：
 - 讓 enrollment 超過 class capacity。
 - 建立同一會員對同一課程的重複 enrollment。
 - 對非必要人員揭露會員私人資料。
+
+**落地現況（`admin-class-enrollment-management` 已確認）**：「取消」已落地（`/admin/classes/[classSessionId]` 的 roster 逐筆提供），資格條件跟既有 Member 自助取消完全相同（`status="confirmed"` 且 `classSession.startAt` 尚未到達），只是不檢查 `userId` 擁有權。**「協助確認 enrollment」不適用**：V1 建立當下就直接是 `confirmed`（跳過 `pending`，`enrollment` D1），沒有 `pending` 狀態需要 Admin 確認。`attended`／`no_show` 仍然不接線（延續既有 `enrollment` D11 的既有決定，本輪不擴大範圍）。roster 額外顯示每一筆 enrollment 的 `status`（含已經自己取消過的），比 Organizer own-scoped 版本的 roster 更完整，讓 Admin 能看到歷史狀態再判斷要不要介入。沒有獨立的 `/admin/enrollments` 路由（見 `docs/product/route-map.md`）。
 
 ## Organization Actions
 
