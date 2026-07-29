@@ -62,7 +62,7 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 
 | Route | 目的 |
 |---|---|
-| `/admin/dashboard` | Admin dashboard 與 basic KPIs |
+| `/admin/dashboard` | **已落地**（`admin-dashboard` 已確認）：Admin dashboard 與 basic KPIs |
 | `/admin/teachers` | 審核、查看、暫停 teacher profiles |
 | `/admin/demands` | review、publish、reject demand requests |
 | `/admin/demands/[demandRequestId]` | admin demand detail（可選）；若 Admin review UI 採「detail route」而非「展開卡片」呈現完整 demand + organization + organizer 內容，才會落地此路由（`organizer-demand-request-foundation` Slice 7 決定採用哪一種呈現方式時據此對齊） |

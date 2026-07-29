@@ -21,7 +21,7 @@ V1 Admin dashboard 應聚焦審核、狀態管理、資料邊界與基本 KPI，
 
 | Page | 目的 |
 |---|---|
-| `/admin/dashboard` | 顯示待審事項與 basic KPIs |
+| `/admin/dashboard` | **已落地**（`admin-dashboard` 已確認）：顯示待審事項與 basic KPIs |
 | `/admin/teachers` | 管理 teacher profiles |
 | `/admin/demands` | 管理 demand requests |
 | `/admin/classes` | 管理 class sessions |
@@ -39,6 +39,12 @@ V1 可先包含：
 - matched demand requests count
 - upcoming class sessions count
 - confirmed enrollments count
+
+**落地現況（`admin-dashboard` 已確認）**：7 個數字全部已落地，一律是不分擁有權的平台全域即時計數（`prisma.count()`），沒有互動式圖表或時間區間篩選。其中兩個定義容易被誤解，特別記錄：
+- **`matched demand requests count` 只算 `DemandRequest.status = "matched"`，不含 `converted_to_class`**——`converted_to_class` 代表已經進到下一步（已經建立 `ClassSession`），不再是「等待轉換的 matched 需求」。
+- **`upcoming class sessions count` 是 `status = "open_for_enrollment"` 且 `startAt` 尚未到達**，不是單純數 `open_for_enrollment` 狀態的總數——一堂 `open_for_enrollment` 但 `startAt` 已經過去、尚未被 Organizer 標記完成的課程不算「即將到來」。
+
+「待審事項」只有 `teacher applications pending count`／`demand requests pending review count` 兩個數字提供連結（分別連到 `/admin/teachers`／`/admin/demands`，兩個既有審核佇列頁面），其餘 5 個 KPI 純顯示數字，不對應任何篩選視圖。
 
 ## Teacher Review Actions
 
