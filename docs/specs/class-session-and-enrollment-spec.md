@@ -12,7 +12,8 @@ V1 的重點是清楚、安全、可追蹤，不做複雜金流、refund automat
 
 - **已出貨**（`docs/superpowers/plans/2026-07-26-class-session-creation-plan.md`）：User Flow 第 1–3 步——`DemandRequest` 進入 `matched`（見 `demand-response-and-matching-spec.md`）、Organizer 從自己 `matched` 的 demand 建立 `ClassSession`（own-scoped，Admin 不介入），且必要資訊於建立當下**一次到位**填齊（`title`/`description`（選填）/`serviceType`/`startAt`/`endAt`/`location`/`capacity`/`isPublic`），不是分階段補齊。Teacher 可唯讀查看自己已建立的 class session（不受 approved 狀態限制，比照唯讀查看自己 demand response 的先例）。
 - **已出貨**（`docs/superpowers/plans/2026-07-27-enrollment-plan.md`）：User Flow 第 4 步（部分）——Organizer own-scoped 把 `draft` 開放為 `open_for_enrollment`（不經過 `pending_confirmation`，且 `startAt` 已過不可開放）；第 5–8 步——已登入 Member 透過 Organizer 分享的直接連結（`/classes/[classSessionId]`）查看詳情、勾選 basic consent 後報名，系統原子檢查名額與重複報名，成功即直接 `confirmed`（跳過 `pending`）並記錄 `consentedAt`；Member 可在 `startAt` 之前自助取消報名（取消後不可重新報名），取消會釋放名額；Organizer／Teacher 在既有 class session 頁面看到 confirmed 報名的基本 roster。**`ClassSession` 進入 `confirmed`（不同於 Enrollment 的 `confirmed`）未落地**：`open_for_enrollment` 之後沒有更多 ClassSession 狀態轉換，`open_for_enrollment` 本身已足以讓 Member 報名到滿額為止。
-- **未落地**：第 9 步——`attended`/`no_show`，`class-session-and-enrollment-spec.md` 已明確標記為 future 或 admin-only 後續能力。`/classes` 公開列表、未登入 Visitor 可見的 class detail、`/admin/enrollments` 皆維持未落地。
+- **已出貨**（`docs/superpowers/plans/2026-07-29-class-session-completion-plan.md`）：`ClassSession` 補上 `open_for_enrollment → completed` 這個轉換——Organizer own-scoped，只能在 `endAt` 已經過去之後標記完成（時間方向與「開放報名」／「取消」相反）。不連帶處理 `Enrollment`（`confirmed` 報名維持原狀），也不新增 Notification（「已完成」本身資訊價值有限，更有價值的「邀請留下評價」通知留給未來 Review 一輪一次做好）。Member 透過既有分享連結（`/classes/[classSessionId]`）與 Organizer／Teacher 兩處既有的報名名單顯示條件都同步擴大為同時允許 `completed`，確保已完成的課程不會因為這個新狀態值而讓既有連結或報名名單消失。
+- **未落地**：第 9 步——`attended`/`no_show`，`class-session-and-enrollment-spec.md` 已明確標記為 future 或 admin-only 後續能力，`class-session-completion` 一輪明確不擴大這個範圍。`/classes` 公開列表、未登入 Visitor 可見的 class detail、`/admin/enrollments` 皆維持未落地。
 
 ## User Role
 

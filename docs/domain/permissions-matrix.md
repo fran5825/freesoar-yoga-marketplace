@@ -139,11 +139,11 @@ V1 一個 demand request 只能有一個 selected response。
 | Edit draft class session | No | No | Own | No | Admin |
 | Open for enrollment | No | No | Own | No | Admin |
 | Cancel class session | No | No | Own | No | Admin |
-| Complete class session | No | No | No | No | Admin |
+| Complete class session | No | No | Own | No | Admin |
 
-Teacher 可查看自己的 class session；V1 由 Admin 保有 class session 完成與取消的最終管理權。
+Teacher 可查看自己的 class session；下方「V1 落地範圍」對 Complete/Cancel 兩列有修正說明。
 
-**V1 落地範圍**（`class-session-creation`、`enrollment`、`class-session-cancellation` 已確認）：`Create class session from matched demand` 僅 Organizer own-scoped 可執行，**Admin 不介入**（D1，上表 Admin 欄位為完整未來設計，V1 未開放）；`Edit draft class session` 本輪不實作（D2，一次到位建立、建立後不可編輯）；**`Open for enrollment` 僅 Organizer own-scoped 可執行**（`enrollment` D2，Admin 不介入，且 `startAt` 已過不可開放，D14）；**`Cancel class session` 僅 Organizer own-scoped 可執行**（`class-session-cancellation` D1，Admin 不介入，且 `startAt` 已過不可取消，D2——修正原本標記為不接線的敘述，這條動作已在 `class-session-cancellation` 落地；取消可從 `draft` 或 `open_for_enrollment` 觸發，並連帶取消該課程底下所有 `confirmed` 的 Enrollment，見 `state-transition-details.md`）；`Complete class session` 本輪仍不接線（`class-session-cancellation` D9），保留於表中作為未來 slice 參考。`View private class session` 的 Teacher 欄位在 V1 不受 approved 狀態限制（`class-session-creation` D15，比照 View own response 的既有唯讀先例）。
+**V1 落地範圍**（`class-session-creation`、`enrollment`、`class-session-cancellation`、`class-session-completion` 已確認）：`Create class session from matched demand` 僅 Organizer own-scoped 可執行，**Admin 不介入**（D1，上表 Admin 欄位為完整未來設計，V1 未開放）；`Edit draft class session` 本輪不實作（D2，一次到位建立、建立後不可編輯）；**`Open for enrollment` 僅 Organizer own-scoped 可執行**（`enrollment` D2，Admin 不介入，且 `startAt` 已過不可開放，D14）；**`Cancel class session` 僅 Organizer own-scoped 可執行**（`class-session-cancellation` D1，Admin 不介入，且 `startAt` 已過不可取消，D2——修正原本標記為不接線的敘述，這條動作已在 `class-session-cancellation` 落地；取消可從 `draft` 或 `open_for_enrollment` 觸發，並連帶取消該課程底下所有 `confirmed` 的 Enrollment，見 `state-transition-details.md`）；**`Complete class session` 僅 Organizer own-scoped 可執行**（`class-session-completion` D1，Admin 不介入——修正原本標記為不接線、且誤寫成 Admin-only 的敘述，這條動作已落地；只能從 `open_for_enrollment` 觸發，且 `endAt` 必須已經過去，時間方向與 Cancel／Open for enrollment 相反；不連帶處理 Enrollment，也不觸發新的 Notification）。`View private class session` 的 Teacher 欄位在 V1 不受 approved 狀態限制（`class-session-creation` D15，比照 View own response 的既有唯讀先例）。
 
 ## Enrollment
 
