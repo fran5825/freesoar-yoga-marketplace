@@ -132,6 +132,38 @@ export default async function TeacherClassesPage() {
                   )}
                 </div>
               ) : null}
+
+              {classSession.status === "completed" ? (
+                <div className="min-w-0 border-t border-gray-100 pt-3">
+                  <h3 className="text-sm font-medium text-gray-950">
+                    學員評價（{classSession.reviews.length} 則）
+                  </h3>
+                  {classSession.reviews.length === 0 ? (
+                    <p className="mt-2 text-sm leading-6 text-gray-600">
+                      目前還沒有評價。
+                    </p>
+                  ) : (
+                    <ul className="mt-2 grid gap-2">
+                      {classSession.reviews.map((review) => (
+                        <li
+                          className="min-w-0 rounded border border-gray-100 bg-gray-50 p-3 text-sm"
+                          key={review.id}
+                        >
+                          <p className="min-w-0 break-words font-medium text-gray-950">
+                            {review.reviewer.name ?? review.reviewer.email ?? "會員"}・
+                            {"★".repeat(review.rating)}
+                          </p>
+                          {review.comment ? (
+                            <p className="mt-1 min-w-0 whitespace-pre-wrap break-words text-gray-600">
+                              {review.comment}
+                            </p>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ) : null}
             </article>
           ))}
         </section>

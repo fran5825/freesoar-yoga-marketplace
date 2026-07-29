@@ -4,7 +4,7 @@ import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { listOwnEnrollmentsForMember } from "@/domain/enrollment/read-service";
 import { requireUser } from "@/lib/auth/session";
 
-import { cancelEnrollmentAction } from "./actions";
+import { cancelEnrollmentAction, submitReviewAction } from "./actions";
 
 type MemberEnrollmentsPageProps = {
   searchParams?: Promise<{ result?: string; message?: string }>;
@@ -118,6 +118,83 @@ export default async function MemberEnrollmentsPage({
                     </button>
                   </form>
                 </details>
+              ) : null}
+
+              {enrollment.status === "confirmed" &&
+              enrollment.classSession.status === "completed" ? (
+                enrollment.classSession.reviews.length > 0 ? (
+                  <div className="rounded border border-emerald-100 bg-emerald-50 p-4">
+                    <p className="text-sm font-medium text-emerald-900">
+                      你的評價：{"★".repeat(enrollment.classSession.reviews[0].rating)}
+                    </p>
+                    {enrollment.classSession.reviews[0].comment ? (
+                      <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-emerald-900">
+                        {enrollment.classSession.reviews[0].comment}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <details className="rounded border border-sky-200 bg-sky-50/60">
+                    <summary className="cursor-pointer list-none rounded px-4 py-2 text-sm font-medium text-sky-800 marker:hidden">
+                      留下評價…
+                    </summary>
+                    <form
+                      action={submitReviewAction}
+                      className="grid gap-3 border-t border-sky-100 p-4"
+                    >
+                      <input
+                        name="classSessionId"
+                        type="hidden"
+                        value={enrollment.classSession.id}
+                      />
+                      <div>
+                        <label
+                          className="text-sm font-medium text-gray-950"
+                          htmlFor={`rating-${enrollment.id}`}
+                        >
+                          星等
+                        </label>
+                        <select
+                          className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                          defaultValue=""
+                          id={`rating-${enrollment.id}`}
+                          name="rating"
+                          required
+                        >
+                          <option disabled value="">
+                            請選擇星等
+                          </option>
+                          <option value="5">★★★★★（5）</option>
+                          <option value="4">★★★★（4）</option>
+                          <option value="3">★★★（3）</option>
+                          <option value="2">★★（2）</option>
+                          <option value="1">★（1）</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label
+                          className="text-sm font-medium text-gray-950"
+                          htmlFor={`comment-${enrollment.id}`}
+                        >
+                          評語（選填）
+                        </label>
+                        <textarea
+                          className="mt-2 min-h-20 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                          id={`comment-${enrollment.id}`}
+                          maxLength={500}
+                          name="comment"
+                          placeholder="說說這堂課帶給你的感受，讓其他人參考。"
+                        />
+                      </div>
+                      <button
+                        className="w-full rounded bg-sky-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-800 sm:w-auto"
+                        type="submit"
+                      >
+                        送出評價
+                      </button>
+                    </form>
+                  </details>
+                )
               ) : null}
             </article>
           ))}

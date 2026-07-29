@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { getOwnClassSessionDetailForOrganizer } from "@/domain/class-session/read-service";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { listConfirmedEnrollmentsForClassSession } from "@/domain/enrollment/read-service";
+import { listReviewsForClassSession } from "@/domain/review/read-service";
 import { requireUser } from "@/lib/auth/session";
 
 import { demandRequestTargetLevelLabels } from "../../demands/_components/status-labels";
@@ -56,6 +57,10 @@ export default async function OrganizerClassSessionDetailPage({
   const roster = ["open_for_enrollment", "completed"].includes(classSession.status)
     ? ((await listConfirmedEnrollmentsForClassSession(classSessionId)) ?? [])
     : [];
+  const reviews =
+    classSession.status === "completed"
+      ? ((await listReviewsForClassSession(classSessionId)) ?? [])
+      : [];
   const hasEnded = hasClassSessionEnded(classSession.endAt);
 
   return (
@@ -180,6 +185,33 @@ export default async function OrganizerClassSessionDetailPage({
               </ul>
             )}
           </div>
+        </section>
+      ) : null}
+
+      {classSession.status === "completed" ? (
+        <section className="grid gap-4 rounded border border-gray-200 bg-white p-6">
+          <h2 className="text-lg font-medium text-gray-950">學員評價（{reviews.length} 則）</h2>
+          {reviews.length === 0 ? (
+            <p className="text-sm leading-6 text-gray-600">目前還沒有評價。</p>
+          ) : (
+            <ul className="grid gap-2">
+              {reviews.map((review) => (
+                <li
+                  className="min-w-0 rounded border border-gray-100 bg-gray-50 p-3 text-sm"
+                  key={review.id}
+                >
+                  <p className="min-w-0 break-words font-medium text-gray-950">
+                    {review.reviewerLabel}・{"★".repeat(review.rating)}
+                  </p>
+                  {review.comment ? (
+                    <p className="mt-1 min-w-0 whitespace-pre-wrap break-words text-gray-600">
+                      {review.comment}
+                    </p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       ) : null}
 

@@ -103,6 +103,13 @@ export type TeacherFacingClassSession = {
     notes: string | null;
     user: { name: string | null; email: string | null };
   }[];
+  reviews: {
+    id: string;
+    rating: number;
+    comment: string | null;
+    createdAt: Date;
+    reviewer: { name: string | null; email: string | null };
+  }[];
 };
 
 // D15：查看自己既有的 class session 不透過 requireApprovedTeacher() 把關——
@@ -141,6 +148,16 @@ export async function listOwnClassSessionsForTeacher(): Promise<
       enrollments: {
         where: { status: "confirmed" },
         select: { id: true, notes: true, user: { select: { name: true, email: true } } },
+      },
+      reviews: {
+        select: {
+          id: true,
+          rating: true,
+          comment: true,
+          createdAt: true,
+          reviewer: { select: { name: true, email: true } },
+        },
+        orderBy: { createdAt: "asc" },
       },
     },
     orderBy: { startAt: "asc" },

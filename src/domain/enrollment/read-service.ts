@@ -1,4 +1,4 @@
-import type { EnrollmentStatus } from "@prisma/client";
+import type { ClassSessionStatus, EnrollmentStatus } from "@prisma/client";
 
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
@@ -14,10 +14,15 @@ export type OwnEnrollment = {
     startAt: Date;
     endAt: Date;
     location: string;
+    status: ClassSessionStatus;
+    reviews: { id: string; rating: number; comment: string | null }[];
   };
 };
 
 // Member own-scoped，供 /member/enrollments 顯示。
+// class-session-review-plan D7 修正版：nested `reviews`（用 reviewerUserId 過濾成只有
+// 自己留的那一筆）與 classSession.status 一起隨列表帶出，避免對每一筆 completed 課程
+// 各自呼叫一次額外查詢判斷「是否已經評價過」（N+1，codex round 1 指出的問題）。
 export async function listOwnEnrollmentsForMember(): Promise<OwnEnrollment[]> {
   const currentUser = await requireUser();
 
@@ -29,7 +34,18 @@ export async function listOwnEnrollmentsForMember(): Promise<OwnEnrollment[]> {
       notes: true,
       createdAt: true,
       classSession: {
-        select: { id: true, title: true, startAt: true, endAt: true, location: true },
+        select: {
+          id: true,
+          title: true,
+          startAt: true,
+          endAt: true,
+          location: true,
+          status: true,
+          reviews: {
+            where: { reviewerUserId: currentUser.id },
+            select: { id: true, rating: true, comment: true },
+          },
+        },
       },
     },
     orderBy: { classSession: { startAt: "asc" } },
