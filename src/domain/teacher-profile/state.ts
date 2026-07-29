@@ -210,3 +210,133 @@ export function validateTeacherProfileRejectTransition(
     code: "suspended_profile_cannot_reject",
   };
 }
+
+export type TeacherProfileSuspendTransitionErrorCode =
+  | "draft_profile_cannot_suspend"
+  | "submitted_profile_cannot_suspend"
+  | "rejected_profile_cannot_suspend"
+  | "suspended_profile_cannot_suspend_again";
+
+export type TeacherProfileSuspendTransitionResult =
+  | {
+      allowed: true;
+      from: "approved";
+      to: "suspended";
+    }
+  | {
+      allowed: false;
+      from: TeacherProfileStatus;
+      to: "suspended";
+      code: TeacherProfileSuspendTransitionErrorCode;
+    };
+
+export function validateTeacherProfileSuspendTransition(
+  from: TeacherProfileStatus,
+): TeacherProfileSuspendTransitionResult {
+  if (from === "approved") {
+    return {
+      allowed: true,
+      from,
+      to: "suspended",
+    };
+  }
+
+  if (from === "draft") {
+    return {
+      allowed: false,
+      from,
+      to: "suspended",
+      code: "draft_profile_cannot_suspend",
+    };
+  }
+
+  if (from === "submitted") {
+    return {
+      allowed: false,
+      from,
+      to: "suspended",
+      code: "submitted_profile_cannot_suspend",
+    };
+  }
+
+  if (from === "rejected") {
+    return {
+      allowed: false,
+      from,
+      to: "suspended",
+      code: "rejected_profile_cannot_suspend",
+    };
+  }
+
+  return {
+    allowed: false,
+    from,
+    to: "suspended",
+    code: "suspended_profile_cannot_suspend_again",
+  };
+}
+
+export type TeacherProfileRestoreTransitionErrorCode =
+  | "draft_profile_cannot_restore"
+  | "submitted_profile_cannot_restore"
+  | "approved_profile_cannot_restore_again"
+  | "rejected_profile_cannot_restore";
+
+export type TeacherProfileRestoreTransitionResult =
+  | {
+      allowed: true;
+      from: "suspended";
+      to: "approved";
+    }
+  | {
+      allowed: false;
+      from: TeacherProfileStatus;
+      to: "approved";
+      code: TeacherProfileRestoreTransitionErrorCode;
+    };
+
+export function validateTeacherProfileRestoreTransition(
+  from: TeacherProfileStatus,
+): TeacherProfileRestoreTransitionResult {
+  if (from === "suspended") {
+    return {
+      allowed: true,
+      from,
+      to: "approved",
+    };
+  }
+
+  if (from === "draft") {
+    return {
+      allowed: false,
+      from,
+      to: "approved",
+      code: "draft_profile_cannot_restore",
+    };
+  }
+
+  if (from === "submitted") {
+    return {
+      allowed: false,
+      from,
+      to: "approved",
+      code: "submitted_profile_cannot_restore",
+    };
+  }
+
+  if (from === "approved") {
+    return {
+      allowed: false,
+      from,
+      to: "approved",
+      code: "approved_profile_cannot_restore_again",
+    };
+  }
+
+  return {
+    allowed: false,
+    from,
+    to: "approved",
+    code: "rejected_profile_cannot_restore",
+  };
+}

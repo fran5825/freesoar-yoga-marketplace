@@ -161,6 +161,7 @@ export type SelectDemandResponseForOrganizerErrorCode =
   | "demand_response_not_found"
   | "response_not_submitted"
   | "response_demand_already_matched"
+  | "response_teacher_not_approved"
   | "select_failed";
 
 export type SelectDemandResponseForOrganizerResult =
@@ -178,7 +179,9 @@ class SelectDemandResponseNotSelectableError extends Error {
   constructor(
     public readonly code: Extract<
       SelectDemandResponseForOrganizerErrorCode,
-      "response_not_submitted" | "response_demand_already_matched"
+      | "response_not_submitted"
+      | "response_demand_already_matched"
+      | "response_teacher_not_approved"
     >,
   ) {
     super("Demand response is not currently selectable");
@@ -217,6 +220,9 @@ export async function selectDemandResponseForOrganizer(
       await hooks?.onLockAcquired?.();
 
       const now = new Date();
+      // D7 修正版（teacher-profile-suspension-plan）：追加 teacher 資格檢查，比照
+      // submitDemandResponseForTeacher 既有的對稱寫法——暫停一位老師之後，Organizer
+      // 不應該還能選定他既有、還沒被選定的 submitted response。
       const selectedRows = await tx.$queryRaw<{ id: string }[]>`
         UPDATE "DemandResponse"
         SET "status" = 'selected'::"DemandResponseStatus", "updatedAt" = ${now}
@@ -225,6 +231,10 @@ export async function selectDemandResponseForOrganizer(
           AND NOT EXISTS (
             SELECT 1 FROM "DemandResponse" AS other
             WHERE other."demandRequestId" = ${demandRequestId} AND other."status" = 'selected'::"DemandResponseStatus"
+          )
+          AND EXISTS (
+            SELECT 1 FROM "TeacherProfile" tp
+            WHERE tp."id" = "DemandResponse"."teacherProfileId" AND tp."status" = 'approved'::"TeacherProfileStatus"
           )
         RETURNING "id"
       `;
@@ -235,9 +245,22 @@ export async function selectDemandResponseForOrganizer(
           select: { id: true },
         });
 
-        throw new SelectDemandResponseNotSelectableError(
-          existingSelected ? "response_demand_already_matched" : "response_not_submitted",
-        );
+        if (existingSelected) {
+          throw new SelectDemandResponseNotSelectableError("response_demand_already_matched");
+        }
+
+        const target = await tx.demandResponse.findUnique({
+          where: { id: demandResponseId },
+          select: { status: true },
+        });
+
+        if (target?.status !== "submitted") {
+          throw new SelectDemandResponseNotSelectableError("response_not_submitted");
+        }
+
+        // 已排除「有其他 selected」與「自己狀態不是 submitted」兩種情況，
+        // 唯一剩下的原因是 teacher 資格檢查沒通過（D7 修正版）。
+        throw new SelectDemandResponseNotSelectableError("response_teacher_not_approved");
       }
 
       await tx.demandResponse.updateMany({

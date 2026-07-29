@@ -9,6 +9,7 @@ export type SelectDemandResponseErrorCode =
   | "demand_response_not_found"
   | "response_not_submitted"
   | "response_demand_already_matched"
+  | "response_teacher_not_approved"
   | "demand_response_select_failed";
 
 export type SelectDemandResponseResult =
@@ -86,6 +87,14 @@ export async function selectDemandResponse(
       ok: false,
       code: "response_demand_already_matched",
       message: "這則需求已經選定過老師了。",
+    };
+  }
+
+  if (result.code === "response_teacher_not_approved") {
+    return {
+      ok: false,
+      code: "response_teacher_not_approved",
+      message: "這位老師目前無法被選定，可能帳號已被暫停，請重新整理後確認。",
     };
   }
 

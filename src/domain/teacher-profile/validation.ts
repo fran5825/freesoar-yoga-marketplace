@@ -195,3 +195,59 @@ export function validateTeacherProfileRejectionReason(
     normalizedReason,
   };
 }
+
+export const SUSPENSION_REASON_MIN_LENGTH = 10;
+export const SUSPENSION_REASON_MAX_LENGTH = 1000;
+
+export type TeacherProfileSuspensionReasonErrorCode =
+  | "suspension_reason_required"
+  | "suspension_reason_too_short"
+  | "suspension_reason_too_long";
+
+export type TeacherProfileSuspensionReasonValidationResult =
+  | {
+      valid: true;
+      normalizedReason: string;
+    }
+  | {
+      valid: false;
+      code: TeacherProfileSuspensionReasonErrorCode;
+      message: string;
+    };
+
+// D1: suspension reason 比照既有 rejection reason 的既有形狀——trim 後值為單一基準，
+// 驗證且持久化 trim 後值，長度 10–1000 字；獨立欄位，不 reuse rejectionReason（理由見 plan D1）。
+export function validateTeacherProfileSuspensionReason(
+  reason: string | null | undefined,
+): TeacherProfileSuspensionReasonValidationResult {
+  const normalizedReason = typeof reason === "string" ? reason.trim() : "";
+
+  if (normalizedReason.length === 0) {
+    return {
+      valid: false,
+      code: "suspension_reason_required",
+      message: "暫停原因為必填。",
+    };
+  }
+
+  if (normalizedReason.length < SUSPENSION_REASON_MIN_LENGTH) {
+    return {
+      valid: false,
+      code: "suspension_reason_too_short",
+      message: `暫停原因至少需要 ${SUSPENSION_REASON_MIN_LENGTH} 個字。`,
+    };
+  }
+
+  if (normalizedReason.length > SUSPENSION_REASON_MAX_LENGTH) {
+    return {
+      valid: false,
+      code: "suspension_reason_too_long",
+      message: `暫停原因不可超過 ${SUSPENSION_REASON_MAX_LENGTH} 個字。`,
+    };
+  }
+
+  return {
+    valid: true,
+    normalizedReason,
+  };
+}

@@ -3,6 +3,10 @@ import { listAdminUserIds } from "@/domain/notification/admin-recipients";
 import { notifyUsers } from "@/domain/notification/create";
 import { prisma } from "@/lib/prisma";
 
+import {
+  restoreSuspendedTeacherProfileForAdmin,
+  suspendApprovedTeacherProfileForAdmin,
+} from "./__internal__/suspend-restore-core";
 import type { TeacherProfileStatus } from "./state";
 import {
   validateTeacherProfileApproveTransition,
@@ -12,9 +16,11 @@ import {
 import {
   type TeacherProfileApplicationInput,
   type TeacherProfileRejectionReasonErrorCode,
+  type TeacherProfileSuspensionReasonErrorCode,
   type TeacherProfileValidationError,
   validateTeacherProfileDraft,
   validateTeacherProfileRejectionReason,
+  validateTeacherProfileSuspensionReason,
 } from "./validation";
 
 export type TeacherProfileDraftSaveProfile = {
@@ -32,6 +38,7 @@ export type TeacherProfileDraftSaveProfile = {
   profilePhotoUrl: string | null;
   status: TeacherProfileStatus;
   rejectionReason: string | null;
+  suspensionReason: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -71,6 +78,7 @@ export type TeacherProfileSubmitProfile = {
   profilePhotoUrl: string | null;
   status: TeacherProfileStatus;
   rejectionReason: string | null;
+  suspensionReason: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -111,6 +119,7 @@ export type TeacherProfileApplicationSnapshot = {
   profilePhotoUrl: string | null;
   status: TeacherProfileStatus;
   rejectionReason: string | null;
+  suspensionReason: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -175,6 +184,7 @@ const teacherProfileDraftSelect = {
   profilePhotoUrl: true,
   status: true,
   rejectionReason: true,
+  suspensionReason: true,
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -551,6 +561,186 @@ export async function rejectSubmittedTeacherProfileApplication(
       message: "TeacherProfile application could not be rejected.",
     };
   }
+}
+
+export type SuspendApprovedTeacherProfileErrorCode =
+  | "admin_permission_required"
+  | "teacher_profile_not_found"
+  | "teacher_profile_not_approved"
+  | "suspension_reason_invalid"
+  | "teacher_profile_suspend_failed";
+
+export type SuspendApprovedTeacherProfileResult =
+  | { ok: true }
+  | {
+      ok: false;
+      code: SuspendApprovedTeacherProfileErrorCode;
+      message: string;
+      suspensionReasonError?: TeacherProfileSuspensionReasonErrorCode;
+    };
+
+// D1：Organizer own-scoped 概念不適用（Admin-only），這裡只負責 requireAdmin() 把關
+// 與 suspensionReason 驗證，實際的原子 UPDATE／staleness check／通知邏輯都在
+// __internal__ 的 pure 核心（見該檔案開頭註解：抽出來是為了讓 D5 修正版要求的
+// notifyOverride／onBeforeNotifyCheck 決定性測試可以在 Node context 直接呼叫，
+// 不需要真正的 HTTP session）。
+export async function suspendApprovedTeacherProfile(
+  teacherProfileId: string,
+  suspensionReason: string | null | undefined,
+): Promise<SuspendApprovedTeacherProfileResult> {
+  try {
+    await requireAdmin();
+  } catch (error) {
+    if (isAdminPermissionRequiredError(error)) {
+      return {
+        ok: false,
+        code: "admin_permission_required",
+        message: "需要 Admin 權限才能暫停這位老師。",
+      };
+    }
+
+    throw error;
+  }
+
+  const reasonValidation = validateTeacherProfileSuspensionReason(suspensionReason);
+
+  if (!reasonValidation.valid) {
+    return {
+      ok: false,
+      code: "suspension_reason_invalid",
+      message: reasonValidation.message,
+      suspensionReasonError: reasonValidation.code,
+    };
+  }
+
+  const result = await suspendApprovedTeacherProfileForAdmin(
+    teacherProfileId,
+    reasonValidation.normalizedReason,
+  );
+
+  if (result.ok) {
+    return { ok: true };
+  }
+
+  if (result.code === "teacher_profile_not_found") {
+    return {
+      ok: false,
+      code: "teacher_profile_not_found",
+      message: "找不到這位老師的資料。",
+    };
+  }
+
+  if (result.code === "teacher_profile_not_approved") {
+    return {
+      ok: false,
+      code: "teacher_profile_not_approved",
+      message: "只有目前已通過審核的老師可以被暫停。",
+    };
+  }
+
+  return {
+    ok: false,
+    code: "teacher_profile_suspend_failed",
+    message: "暫停暫時無法完成，請稍後再試。",
+  };
+}
+
+export type RestoreSuspendedTeacherProfileErrorCode =
+  | "admin_permission_required"
+  | "teacher_profile_not_found"
+  | "teacher_profile_not_suspended"
+  | "teacher_profile_restore_failed";
+
+export type RestoreSuspendedTeacherProfileResult =
+  | { ok: true }
+  | {
+      ok: false;
+      code: RestoreSuspendedTeacherProfileErrorCode;
+      message: string;
+    };
+
+// D2：同上，只負責 requireAdmin() 把關，實際邏輯在 __internal__ 的 pure 核心。
+export async function restoreSuspendedTeacherProfile(
+  teacherProfileId: string,
+): Promise<RestoreSuspendedTeacherProfileResult> {
+  try {
+    await requireAdmin();
+  } catch (error) {
+    if (isAdminPermissionRequiredError(error)) {
+      return {
+        ok: false,
+        code: "admin_permission_required",
+        message: "需要 Admin 權限才能恢復這位老師。",
+      };
+    }
+
+    throw error;
+  }
+
+  const result = await restoreSuspendedTeacherProfileForAdmin(teacherProfileId);
+
+  if (result.ok) {
+    return { ok: true };
+  }
+
+  if (result.code === "teacher_profile_not_found") {
+    return {
+      ok: false,
+      code: "teacher_profile_not_found",
+      message: "找不到這位老師的資料。",
+    };
+  }
+
+  if (result.code === "teacher_profile_not_suspended") {
+    return {
+      ok: false,
+      code: "teacher_profile_not_suspended",
+      message: "只有目前暫停中的老師可以被恢復。",
+    };
+  }
+
+  return {
+    ok: false,
+    code: "teacher_profile_restore_failed",
+    message: "恢復暫時無法完成，請稍後再試。",
+  };
+}
+
+export type ApprovedOrSuspendedTeacherProfileForAdmin = {
+  id: string;
+  userId: string;
+  displayName: string | null;
+  status: TeacherProfileStatus;
+  suspensionReason: string | null;
+  updatedAt: Date;
+  user: {
+    id: string;
+    name: string | null;
+    email: string | null;
+  };
+};
+
+// D3：一次查詢回傳 approved + suspended 兩種狀態，UI 層再依 status 分組渲染。
+export async function listApprovedAndSuspendedTeacherProfilesForAdmin(): Promise<
+  ApprovedOrSuspendedTeacherProfileForAdmin[]
+> {
+  await requireAdmin();
+
+  return prisma.teacherProfile.findMany({
+    where: { status: { in: ["approved", "suspended"] } },
+    orderBy: { updatedAt: "desc" },
+    select: {
+      id: true,
+      userId: true,
+      displayName: true,
+      status: true,
+      suspensionReason: true,
+      updatedAt: true,
+      user: {
+        select: { id: true, name: true, email: true },
+      },
+    },
+  });
 }
 
 function toTeacherProfileDraftData(input: TeacherProfileApplicationInput) {
