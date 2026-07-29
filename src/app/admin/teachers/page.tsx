@@ -1,10 +1,15 @@
-import { listSubmittedTeacherProfileApplicationsForAdmin } from "@/domain/teacher-profile/service";
+import {
+  listApprovedAndSuspendedTeacherProfilesForAdmin,
+  listSubmittedTeacherProfileApplicationsForAdmin,
+} from "@/domain/teacher-profile/service";
 import { requireAdmin } from "@/lib/auth/session";
 import { notFound } from "next/navigation";
 
 import {
   approveTeacherProfileApplicationAction,
   rejectTeacherProfileApplicationAction,
+  restoreTeacherProfileAction,
+  suspendTeacherProfileAction,
 } from "./actions";
 
 type AdminTeachersPageProps = {
@@ -23,10 +28,18 @@ export default async function AdminTeachersPage({
     notFound();
   }
 
-  const [applications, resolvedSearchParams] = await Promise.all([
-    listSubmittedTeacherProfileApplicationsForAdmin(),
-    searchParams,
-  ]);
+  const [applications, approvedAndSuspended, resolvedSearchParams] =
+    await Promise.all([
+      listSubmittedTeacherProfileApplicationsForAdmin(),
+      listApprovedAndSuspendedTeacherProfilesForAdmin(),
+      searchParams,
+    ]);
+  const approvedTeachers = approvedAndSuspended.filter(
+    (teacher) => teacher.status === "approved",
+  );
+  const suspendedTeachers = approvedAndSuspended.filter(
+    (teacher) => teacher.status === "suspended",
+  );
   const feedback =
     resolvedSearchParams?.result && resolvedSearchParams.message
       ? {
@@ -233,6 +246,134 @@ export default async function AdminTeachersPage({
           ))}
         </section>
       )}
+
+      <section className="grid gap-4">
+        <h2 className="text-xl font-semibold text-gray-950">
+          Approved teachers ({approvedTeachers.length})
+        </h2>
+        {approvedTeachers.length === 0 ? (
+          <p className="text-sm leading-6 text-gray-600">
+            目前沒有已通過審核的老師。
+          </p>
+        ) : (
+          approvedTeachers.map((teacher) => (
+            <article
+              className="grid gap-4 rounded border border-gray-200 bg-white p-5 sm:grid-cols-[1fr_auto] sm:items-start"
+              key={teacher.id}
+            >
+              <div className="min-w-0">
+                <h3 className="text-lg font-semibold text-gray-950">
+                  {teacher.displayName ?? "Unnamed teacher"}
+                </h3>
+                <p className="mt-1 break-words text-sm text-gray-600">
+                  {teacher.user.email ?? "Not provided"}
+                </p>
+              </div>
+              <details className="rounded border border-rose-200 bg-rose-50/60 sm:w-72">
+                <summary className="cursor-pointer list-none rounded px-4 py-2 text-sm font-medium text-rose-800 marker:hidden">
+                  Suspend…
+                </summary>
+                <form
+                  action={suspendTeacherProfileAction}
+                  className="grid gap-3 border-t border-rose-100 p-4"
+                >
+                  <input name="teacherProfileId" type="hidden" value={teacher.id} />
+                  <div>
+                    <label
+                      className="text-sm font-medium text-gray-950"
+                      htmlFor={`suspend-reason-${teacher.id}`}
+                    >
+                      暫停原因
+                    </label>
+                    <p className="mt-1 text-xs leading-5 text-gray-600">
+                      此說明會顯示給老師，請具體、溫和地寫出暫停的原因（10–1000 字）。
+                    </p>
+                    <textarea
+                      className="mt-2 min-h-24 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
+                      id={`suspend-reason-${teacher.id}`}
+                      maxLength={1000}
+                      minLength={10}
+                      name="suspensionReason"
+                      placeholder="例如：近期收到多筆課程品質相關反映，需要先暫停接受新需求。"
+                      required
+                    />
+                  </div>
+                  <label className="flex items-start gap-2 text-sm leading-6 text-gray-700">
+                    <input
+                      className="mt-1 shrink-0"
+                      name="confirmSuspend"
+                      required
+                      type="checkbox"
+                      value="yes"
+                    />
+                    我確認要暫停這位老師，且以上原因會顯示給老師。
+                  </label>
+                  <button
+                    className="w-full rounded bg-rose-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-800"
+                    type="submit"
+                  >
+                    確認暫停
+                  </button>
+                </form>
+              </details>
+            </article>
+          ))
+        )}
+      </section>
+
+      <section className="grid gap-4">
+        <h2 className="text-xl font-semibold text-gray-950">
+          Suspended teachers ({suspendedTeachers.length})
+        </h2>
+        {suspendedTeachers.length === 0 ? (
+          <p className="text-sm leading-6 text-gray-600">
+            目前沒有暫停中的老師。
+          </p>
+        ) : (
+          suspendedTeachers.map((teacher) => (
+            <article
+              className="grid gap-4 rounded border border-gray-200 bg-white p-5 sm:grid-cols-[1fr_auto] sm:items-start"
+              key={teacher.id}
+            >
+              <div className="min-w-0">
+                <h3 className="text-lg font-semibold text-gray-950">
+                  {teacher.displayName ?? "Unnamed teacher"}
+                </h3>
+                <p className="mt-1 break-words text-sm text-gray-600">
+                  {teacher.user.email ?? "Not provided"}
+                </p>
+                {teacher.suspensionReason ? (
+                  <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-gray-600">
+                    暫停原因：{teacher.suspensionReason}
+                  </p>
+                ) : null}
+              </div>
+              <form
+                action={restoreTeacherProfileAction}
+                className="grid gap-2 sm:w-56"
+              >
+                <input name="teacherProfileId" type="hidden" value={teacher.id} />
+                <label className="flex items-start gap-2 text-xs leading-5 text-gray-700">
+                  <input
+                    className="mt-1 shrink-0"
+                    name="confirmRestore"
+                    required
+                    type="checkbox"
+                    value="yes"
+                  />
+                  我確認要恢復這位老師。
+                </label>
+                <button
+                  className="w-full rounded bg-gray-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-800"
+                  type="submit"
+                >
+                  Restore
+                </button>
+              </form>
+            </article>
+          ))
+        )}
+      </section>
     </main>
   );
 }

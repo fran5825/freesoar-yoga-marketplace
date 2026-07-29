@@ -135,6 +135,20 @@ export default async function TeacherDashboardPage() {
             </div>
           ) : null}
 
+          {profileStatus.profile.status === "suspended" ? (
+            <div className="min-w-0 rounded border border-gray-200 bg-gray-50 p-4">
+              <h3 className="text-sm font-medium text-gray-950">
+                平台的暫停說明
+              </h3>
+              <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-gray-700">
+                {profileStatus.profile.suspensionReason &&
+                profileStatus.profile.suspensionReason.trim().length > 0
+                  ? profileStatus.profile.suspensionReason
+                  : "平台尚未提供具體說明。如需協助，請聯絡平台管理者。"}
+              </p>
+            </div>
+          ) : null}
+
           <div className="grid gap-3 rounded border border-gray-100 bg-gray-50 p-4 text-sm md:grid-cols-2">
             <ReadOnlyItem
               label="Display name"
