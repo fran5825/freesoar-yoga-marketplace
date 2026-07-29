@@ -1,3 +1,4 @@
+import { requireApprovedTeacher } from "@/domain/teacher-profile/capability";
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
@@ -6,7 +7,6 @@ import {
   ownDemandResponseSelect,
   submitDemandResponseForTeacher,
 } from "./__internal__/select-and-submit-core";
-import { requireApprovedTeacher } from "./capability";
 import {
   type DemandResponseWithdrawTransitionErrorCode,
   validateDemandResponseWithdrawTransition,

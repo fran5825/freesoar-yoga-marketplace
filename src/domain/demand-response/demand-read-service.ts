@@ -1,8 +1,7 @@
 import type { DemandRequestStatus } from "@prisma/client";
 
+import { requireApprovedTeacher } from "@/domain/teacher-profile/capability";
 import { prisma } from "@/lib/prisma";
-
-import { requireApprovedTeacher } from "./capability";
 
 // D1/D11：eligibleStatuses 依 D11=B（動態推導，不 persist）固定為 published。
 // 若未來 D11 改為選項 A，這裡需同步改為 ["published", "teacher_responded"]。

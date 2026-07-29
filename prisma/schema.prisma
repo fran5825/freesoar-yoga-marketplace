@@ -61,27 +61,71 @@ model VerificationToken {
 }
 
 model TeacherProfile {
-  id              String               @id @default(cuid())
-  userId          String               @unique
-  displayName     String?
-  bio             String?
-  teachingStyle   String?
-  experienceYears Int?
-  certifications  String[]             @default([])
-  specialties     String[]             @default([])
-  serviceAreas    String[]             @default([])
-  teachingFormats String[]             @default([])
-  priceRange      String?
-  profilePhotoUrl String?
-  status          TeacherProfileStatus @default(draft)
-  rejectionReason String?
+  id               String               @id @default(cuid())
+  userId           String               @unique
+  displayName      String?
+  bio              String?
+  teachingStyle    String?
+  experienceYears  Int?
+  certifications   String[]             @default([])
+  specialties      String[]             @default([])
+  serviceAreas     String[]             @default([])
+  teachingFormats  String[]             @default([])
+  priceRange       String?
+  profilePhotoUrl  String?
+  status           TeacherProfileStatus @default(draft)
+  rejectionReason  String?
   suspensionReason String?
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
 
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  demandResponses DemandResponse[]
-  classSessions   ClassSession[]
+  user                   User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  demandResponses        DemandResponse[]
+  classSessions          ClassSession[]
+  teacherAvailabilities  TeacherAvailability[]
+  availabilityExceptions AvailabilityException[]
+}
+
+// teacher-availability D2/D11：不含原始草稿的 isRecurring 欄位——這個 model 本身就是
+// 「固定、重複出現」的既有語意（跟 AvailabilityException 用不同 table 區分固定/例外），
+// isRecurring 不管填什麼都不影響任何查詢或顯示邏輯，是多餘欄位。
+model TeacherAvailability {
+  id               String   @id @default(cuid())
+  teacherProfileId String
+  dayOfWeek        Int // 0（週日）–6（週六），對齊 JS Date.getDay() 慣例
+  startTime        String // "HH:mm"，24 小時制，00:00–23:59
+  endTime          String // "HH:mm"，24 小時制，必須嚴格大於 startTime（不支援跨夜區間）
+  locationArea     String? // 選填，上限 100 字
+  createdAt        DateTime @default(now())
+
+  teacherProfile TeacherProfile @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
+
+  @@index([teacherProfileId])
+}
+
+// teacher-availability D3：blocked 優先於 extra_available——同一天同一個時段如果兩種記錄
+// 都存在，任何消費者都必須把這個時段判讀為「不可授課」。這只是文件層級的判讀規則，
+// 本輪不做寫入時的衝突檢查或資料庫約束（見 D3）。
+enum AvailabilityExceptionType {
+  blocked
+  extra_available
+}
+
+// teacher-availability D4：startTime/endTime 皆為選填，兩者皆 null 代表「整天」。
+model AvailabilityException {
+  id               String                    @id @default(cuid())
+  teacherProfileId String
+  date             DateTime                  @db.Date // 只存日期，不含時間，避免時區造成的日期偏移，見 date-format.ts
+  startTime        String? // "HH:mm"，與 endTime 必須同時提供或同時不提供
+  endTime          String? // "HH:mm"，必須嚴格大於 startTime
+  type             AvailabilityExceptionType
+  reason           String? // 選填，上限 500 字
+  createdAt        DateTime                  @default(now())
+
+  teacherProfile TeacherProfile @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
+
+  @@index([teacherProfileId])
+  @@index([date])
 }
 
 model OrganizerProfile {
@@ -230,14 +274,14 @@ model Review {
 }
 
 model Notification {
-  id        String               @id @default(cuid())
+  id        String              @id @default(cuid())
   userId    String
   type      NotificationType
   channel   NotificationChannel
   title     String
   body      String
-  status    NotificationStatus   @default(pending)
-  createdAt DateTime             @default(now())
+  status    NotificationStatus  @default(pending)
+  createdAt DateTime            @default(now())
   sentAt    DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

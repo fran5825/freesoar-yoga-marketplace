@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 
-import { requireApprovedTeacher } from "@/domain/demand-response/capability";
+import { requireApprovedTeacher } from "@/domain/teacher-profile/capability";
 import { getPublishedDemandRequestDetailForTeacher } from "@/domain/demand-response/demand-read-service";
 import { getOwnDemandResponseForDemand } from "@/domain/demand-response/service";
 import { PREFERRED_TIME_SLOTS } from "@/domain/demand-request/service-types";
