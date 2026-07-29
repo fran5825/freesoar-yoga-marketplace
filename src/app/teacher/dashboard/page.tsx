@@ -42,7 +42,7 @@ const statusCopy: Record<TeacherProfileStatus, DashboardStatusCopy> = {
   approved: {
     label: "Approved",
     title: "你的老師資料已通過審核",
-    body: "你已具備下一階段 marketplace capability 的基礎資格。Demand pool、availability 與 response flow 尚未在本 slice 開放。",
+    body: "你已具備 marketplace capability，可以瀏覽並回應團體需求、查看已建立的課程，並管理你的可授課時間。",
     actionLabel: "查看已保存資料",
     actionHref: "/teachers/join",
     tone: "emerald",
@@ -86,8 +86,7 @@ export default async function TeacherDashboardPage() {
               老師狀態中心
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-600">
-              這裡只顯示你的 TeacherProfile 目前狀態與下一步。本 slice 不開放
-              availability、demand pool、response 或 class session 功能。
+              這裡顯示你的 TeacherProfile 目前狀態與下一步。
             </p>
           </div>
           <Link
@@ -179,6 +178,15 @@ export default async function TeacherDashboardPage() {
             >
               {profileStatus.copy.actionLabel}
             </Link>
+            {profileStatus.profile.status === "approved" ||
+            profileStatus.profile.status === "suspended" ? (
+              <Link
+                className="rounded border border-gray-300 px-5 py-3 text-center text-sm font-medium text-gray-900 transition hover:bg-gray-50"
+                href="/teacher/availability"
+              >
+                管理可授課時間
+              </Link>
+            ) : null}
           </div>
         </section>
       ) : (
