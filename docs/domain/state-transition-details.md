@@ -231,7 +231,7 @@ suspended
 - **取消（`cancelled`）的併發設計**：取消動作會跟 `createEnrollmentForUser` 搶同一個 `ClassSession` 資源，用跟 enrollment 建立完全一致的 `SELECT ... FOR UPDATE` 手法序列化，確保「會員剛好在取消瞬間報名成功」的情境仍然會被正確連帶取消，不會殘留一筆狀態與課程矛盾的 `confirmed` Enrollment（`class-session-cancellation` D3）。
 - **修正：Admin 版取消已經在 `admin-class-enrollment-management` 一輪落地**——`cancelClassSessionForOrganizer`（Organizer own-scoped）與 `cancelClassSessionForAdmin`（Admin，不檢查擁有權）共用同一段鎖 + 連帶取消 + 通知的交易邏輯，只有鎖查詢的 `WHERE` 子句要不要帶 `organizerProfileId` 不同。取消一律是單向動作，這個系統目前沒有任何「恢復已取消 ClassSession」的 transition，`git revert` 部署層級的程式碼變更也不會復原任何已經透過這個能力被取消的真實資料——這點對 Organizer own-scoped 版本一直都成立，Admin 版本沒有讓它變得更差。
 - **取消不影響 DemandRequest**：`converted_to_class` 是媒合流程走到這一步的歷史事實，不因為之後那堂課被取消而回頭改變（`class-session-cancellation` D5）。
-- **Teacher schedule conflict 檢查目前不做**：沒有 `TeacherAvailability` 或任何排程資料可供檢查，`ClassSession 必須檢查 teacher schedule conflict` 這條禁止條件屬完整設計，本輪不接線（D8）。
+- **Teacher schedule conflict 檢查目前不做**：`TeacherAvailability`／`AvailabilityException` 資料已經存在（`teacher-availability` 一輪已落地），但媒合流程／`ClassSession` 建立時是否要比對這份資料、要用擋下還是提示的方式呈現衝突，是一個需要額外設計的獨立決策，本輪不接線；`ClassSession 必須檢查 teacher schedule conflict` 這條禁止條件仍屬完整設計（D8）。
 - **時區**：`startAt`/`endAt` 一律以固定 `Asia/Taipei`（UTC+8，無 DST）偏移量解析與顯示，不依賴伺服器或瀏覽器當地時區設定（D13）。
 
 ## Enrollment

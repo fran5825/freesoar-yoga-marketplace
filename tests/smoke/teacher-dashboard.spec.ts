@@ -143,11 +143,16 @@ test.describe("/teacher/dashboard smoke", () => {
       await expect(page.getByRole("link", { name: "Classes" })).toHaveCount(0);
 
       if (statusCase.status === "approved") {
+        // teacher-availability D13：文案已更新為描述目前已開放的能力，
+        // 並新增前往 /teacher/availability 的連結。
         await expect(
           page.getByText(
-            "Demand pool、availability 與 response flow 尚未在本 slice 開放",
+            "你已具備 marketplace capability，可以瀏覽並回應團體需求、查看已建立的課程，並管理你的可授課時間。",
           ),
         ).toBeVisible();
+        await expect(
+          page.getByRole("link", { name: "管理可授課時間" }),
+        ).toHaveAttribute("href", "/teacher/availability");
       }
     });
   }

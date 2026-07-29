@@ -137,38 +137,41 @@ V1 受控清單（定案，7 項，供 `service-types.ts` 逐字採用）：
 
 ## TeacherAvailability
 
-Represents regular availability.
+**已落地**（`teacher-availability` 已確認）。Represents regular（每週固定）availability。
 
 Fields:
 
 - id
 - teacherProfileId
-- dayOfWeek
-- startTime
-- endTime
-- locationArea
-- isRecurring
+- dayOfWeek（0–6，0 為週日）
+- startTime（`HH:mm`）
+- endTime（`HH:mm`，須晚於 `startTime`，不支援跨夜區間）
+- locationArea（選填，上限 100 字）
 - createdAt
-- updatedAt
+
+沒有 `isRecurring` 欄位——這個 model 本身就只代表「每週固定」的規律可授課時段，`isRecurring` 永遠是 `true`、不影響任何邏輯，落地時判斷為多餘欄位而拿掉；例外（單次的封鎖或額外開放）改由下方 `AvailabilityException` 另外表達。沒有 `updatedAt`：不提供編輯，只有新增／刪除。
 
 ## AvailabilityException
 
-Represents blocked or special availability.
+**已落地**（`teacher-availability` 已確認）。Represents blocked or special availability（單一日期的例外）。
 
 Fields:
 
 - id
 - teacherProfileId
-- date
-- startTime
-- endTime
+- date（`@db.Date`，純日期、無時分概念，以 UTC 為錨點解析與格式化，見 `src/domain/teacher-availability/date-format.ts`）
+- startTime（選填，`HH:mm`）
+- endTime（選填，`HH:mm`）—— `startTime`／`endTime` 必須同時提供或同時不提供；兩者皆空代表「整天」
 - type
-- reason
+- reason（選填，上限 500 字）
+- createdAt
 
 Type:
 
-- blocked
-- extra_available
+- blocked（封鎖：這天無法授課）
+- extra_available（額外開放：原本沒有排班，但這天可以授課）
+
+**判讀規則（文件記載，非資料庫層強制）**：同一天／同一時段可以同時存在 `blocked` 與 `extra_available` 兩筆記錄（不做重疊檢查），若兩者衝突，`blocked` 優先於 `extra_available`。這條規則目前沒有任何消費端（沒有排程衝突檢查邏輯），先在此記錄供未來需要判讀時依循。
 
 ## DemandRequest
 
