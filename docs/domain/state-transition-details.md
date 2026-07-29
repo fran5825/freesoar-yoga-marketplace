@@ -27,6 +27,29 @@
 | `approved` | `suspended` | Admin | 品質、安全或營運原因 | Teacher 不可公開或回應新需求 |
 | `suspended` | `approved` | Admin | Admin 確認可恢復 | Teacher 恢復 marketplace 權限；正式 restore UI / API 是否納入 V1 需 product owner 另行批准 |
 
+### V1 落地範圍（`teacher-profile-suspension` 已確認）
+
+上方 Transitions 表格是這個實體的完整最終設計；本文件的 TeacherProfile 小節過去一直沒有像 DemandRequest／DemandResponse／ClassSession／Enrollment 那樣明確劃出「目前只落地哪個子集」，導致 `approved ↔ suspended` 這組雙向轉換長期被文件描述成已經是 V1 admin action，但實際上直到 `teacher-profile-suspension` 這一輪之前，**整個 repo 沒有任何程式碼會把 `TeacherProfile.status` 寫成 `suspended`**（`docs/superpowers/plans/2026-07-29-teacher-profile-suspension-plan.md` 1.1 節已逐字 `grep` 確認）。本輪把這個長期文件債務補上：
+
+```text
+draft
+  → submitted
+  → approved
+  → rejected
+
+rejected
+  → submitted
+
+approved
+  → suspended
+suspended
+  → approved
+```
+
+- `approved → suspended`（暫停）與 `suspended → approved`（恢復）都是 Admin-only，本輪一起接線，不是分兩輪。
+- 暫停必填 `suspensionReason`（獨立於 `rejectionReason` 的新欄位，比照既有 rejection reason 的既有驗證形狀：trim 後 10–1000 字），恢復時清空。
+- 暫停**不**連帶處理該老師既有的 `DemandResponse`／`ClassSession`——已經 `selected` 的 response 與已經建立的 `ClassSession` 不受影響；但 `selectDemandResponseForOrganizer`（`demand-response` 領域）新增了 teacher 資格檢查，暫停之後 Organizer 無法再選定這位老師既有、還沒被選定的 `submitted` response（見下方 DemandResponse 小節）。
+
 ### V1 policy notes
 
 - Member / Organizer 在 V1 只可看見 `approved` teacher。
@@ -34,16 +57,16 @@
 - `submitted` 後核心申請欄位不可由 Teacher 直接編輯；若未來需要 edit-after-submit，需另開 product decision。
 - `rejected` teacher 可依 Admin reason 修改後重新送審；V1 不限制重新送審次數，不新增 counter / lockout。
 - **Rejection reason（V1）**：Admin 執行 `submitted → rejected` 時**必填** rejection reason，保存於 `TeacherProfile.rejectionReason`（面向老師的退回說明，與內部 `AdminNote` 分離）。reason 以 `normalizedReason = input.trim()` 為準：驗證且持久化 trim 後值，長度 10–1000 字。lifecycle：`rejected` 期間**保留**（供老師邊看邊改）、`rejected → submitted` 與 `approve` 時**清空**、再次 reject **覆蓋**（單欄位、只留最新、不保留歷史）。V1 以站內顯示（dashboard / join）作為對老師的告知，**不寄 email**；email/notification 為後續切片 `teacher-application-rejection-notification`。
-- `suspended → approved` 是 allowed policy，但完整 restore flow 可作為 future slice / admin-manual decision，不代表 V1 必須立即實作正式 restore UI / API。
+- **修正：`suspended → approved` 已經在 `teacher-profile-suspension` 一輪落地**，不再是「future slice / admin-manual decision」——`approved → suspended`（Admin-only、必填 `suspensionReason`）與 `suspended → approved`（Admin-only、清空 `suspensionReason`）都已接線於 `/admin/teachers` 頁面。
 
 ### Admin action matrix
 
 | Current status | V1 Admin actions |
 |---|---|
 | `submitted` | `approve`, `reject` |
-| `approved` | `suspend` |
+| `approved` | `suspend`（`teacher-profile-suspension` 已落地，必填 `suspensionReason`） |
 | `rejected` | view reason / history；Teacher 可重新 submit，不需要 Admin 主動重開 |
-| `suspended` | `restore to approved` 可在 policy 上允許；正式 UI / API 是否實作由 product owner 另行批准 |
+| `suspended` | `restore to approved`（`teacher-profile-suspension` 已落地，清空 `suspensionReason`） |
 
 ### 禁止條件
 
@@ -146,7 +169,7 @@
 | `submitted` / `shortlisted` | `withdrawn` | Teacher | 尚未 selected | response 結束 |
 | `submitted` / `shortlisted` | `expired` | System / Admin | demand expired 或過期 | response 結束 |
 
-### V1 policy notes（`teacher-demand-pool-response-plan`、`demand-response-selection-and-matching`、`demand-request-cancellation` 已確認）
+### V1 policy notes（`teacher-demand-pool-response-plan`、`demand-response-selection-and-matching`、`demand-request-cancellation`、`teacher-profile-suspension` 已確認）
 
 上方 Transitions 表格是 marketplace 的完整最終設計；目前**只落地**以下子集：
 
@@ -162,6 +185,7 @@
 - **Select 僅 Organizer own-scoped，Admin 不介入**（D2）：與上方完整設計表格「Organizer / Admin」不同，V1 未開放 Admin 執行 select。
 - **Decline 不是獨立的 Organizer 手動動作**：select 成功時，同一 transaction 內自動把同 demand 其餘 `submitted` response 轉為 `declined`（D3），沒有對應的手動 decline UI/API。
 - **`expired` 不接線**：無 demand 過期機制，enum 值保留。
+- **修正（`teacher-profile-suspension` 已確認）：`submitted → selected` 現在也要求該 response 所屬的 `TeacherProfile.status = 'approved'`**——`selectDemandResponseForOrganizer` 的原子 `UPDATE` 陳述式追加了這個檢查（比照 `submitDemandResponseForTeacher` 既有的對稱檢查），暫停一位老師之後，Organizer 無法再選定他既有、還沒被選定的 `submitted` response（回傳 `response_teacher_not_approved`）。已經 `selected` 的 response 不受影響——這條檢查只在「選定」這個動作發生的當下生效，不會回溯處理已經成立的 response。
 
 ### 禁止條件
 
@@ -261,9 +285,10 @@ Future / admin-only 後續能力：
 
 ## Notification Side Effects
 
-狀態變更可能觸發 notification。**已落地**（`docs/superpowers/plans/2026-07-27-notification-plan.md`、`2026-07-28-class-session-cancellation-plan.md`、`2026-07-28-demand-request-cancellation-plan.md` 已確認）：以下 13 個事件會在對應狀態變更**成功之後**建立 `Notification` 記錄（`channel="in_app"`，見 notification 一輪 D2），失敗（收件人解析或寫入本身出錯）絕不影響觸發它的主要商業邏輯（notification 一輪 D4）：
+狀態變更可能觸發 notification。**已落地**（`docs/superpowers/plans/2026-07-27-notification-plan.md`、`2026-07-28-class-session-cancellation-plan.md`、`2026-07-28-demand-request-cancellation-plan.md`、`2026-07-29-teacher-profile-suspension-plan.md` 已確認）：以下 15 個事件會在對應狀態變更**成功之後**建立 `Notification` 記錄（`channel="in_app"`，見 notification 一輪 D2），失敗（收件人解析或寫入本身出錯）絕不影響觸發它的主要商業邏輯（notification 一輪 D4）：
 
 - TeacherProfile submitted（Teacher 自己 + Admin）/ approved（Teacher 自己）/ rejected（Teacher 自己，含 `rejectionReason`）——沿用既有的站內 `rejectionReason` 顯示（`teacher-application-rejection-notification` 一輪已確認），本輪額外新增 `Notification` 記錄與 `/notifications` 列表這個獨立管道，兩者並存。
+- TeacherProfile **suspended**（Teacher 自己，含 `suspensionReason`）／**restored**（Teacher 自己）——`teacher-profile-suspension` 一輪新增，原始事件表沒有規劃過這兩個事件，`NotificationType` enum 也沒有預先保留（真的跑了一次 migration）。收件人只有 Teacher 自己（`self`），不通知其他角色。發通知前有 best-effort 的過期抑制：若狀態在原子寫入之後、發通知之前又被另一次操作改變（例如暫停後幾乎同時被恢復），就跳過這則已經過期的通知，避免老師先看到「已恢復」又看到過期的「已暫停」。
 - DemandRequest submitted（Organizer 自己 + Admin）/ published（Organizer 自己）/ rejected（Organizer 自己，含 `rejectionReason`）/ **cancelled**（Organizer 自己 + 每一位因連帶取消而受影響的 Teacher，`demand-request-cancellation` D9 已確認；受影響 Teacher 用第五種收件人角色 `affected_responder`——不沿用 `class-session-cancellation` 的 `affected_member`，因為那個角色的既有文案是 Enrollment／Member 語境的措辭，套用在 Teacher／DemandResponse 語境下文法與情境都不對）——沿用既有的站內 status 顯示（`organizer-demand-request-foundation` D14 已確認），本輪同樣新增獨立的 `Notification` 記錄。
 - DemandResponse submitted（該 demand 的 Organizer + Admin）/ selected（Organizer 自己 + 被選中的 Teacher）
 - ClassSession created（Organizer 自己 + Teacher）／**cancelled**（Organizer 自己 + Teacher + 每一位因連帶取消而受影響的 Member，`class-session-cancellation` D7 已確認；受影響 Member 用第四種收件人角色 `affected_member`，不跟 Member 自助取消的 `enrollment_cancelled` 共用，見下方 Enrollment 小節）——`open_for_enrollment` 本輪確認**不**新增獨立事件（D10，理由：`class_session_created` 已涵蓋通知價值，避免重複通知）；`confirmed` 狀態本身尚未接線（見上方 ClassSession V1 範圍），對應的通知事件保留未接線。

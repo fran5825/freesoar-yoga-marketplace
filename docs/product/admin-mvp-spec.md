@@ -48,12 +48,15 @@ Admin 可以：
 - approve teacher。
 - reject teacher，並填寫 reason。
 - suspend teacher，並填寫 reason。
+- restore（恢復）已暫停的 teacher。
 
 Admin 不應：
 
 - 代替 teacher 任意美化 profile 內容並發布。
 - 繞過必要欄位直接 approve。
 - 讓 suspended teacher 回應新需求。
+
+**落地現況（`teacher-profile-suspension` 已確認）**：`suspend teacher，並填寫 reason` 與「Admin 不應：讓 suspended teacher 回應新需求」這兩條原則直到本輪才真正由程式碼落實——`suspendApprovedTeacherProfile` 提供暫停能力（必填 reason），`selectDemandResponseForOrganizer` 新增的 teacher 資格檢查則確保暫停後無法再被選定為新的媒合對象。`restore` 是本輪一併新增的能力，本文件原本沒有列出。
 
 ## Demand Review Actions
 

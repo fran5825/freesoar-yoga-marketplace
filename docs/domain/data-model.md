@@ -45,6 +45,7 @@ Fields:
 - profilePhotoUrl
 - status
 - rejectionReason
+- suspensionReason
 - createdAt
 - updatedAt
 
@@ -58,6 +59,7 @@ Phase 1 schema notes:
 - `specialties`、`serviceAreas`、`teachingFormats`、`certifications` 在 schema 中以 string list 表示，讓 Phase 1 不需要額外建立分類表或複雜 taxonomy。
 - 老師聯絡電話在 V1 使用 `User.phone`，不在 `TeacherProfile` 重複存放。
 - `rejectionReason` 是 nullable 欄位（`String?`），保存 Admin 在 `submitted → rejected` 時填寫、**面向老師的退回說明**。它與內部 `AdminNote` 語意分離：`rejectionReason` 會顯示給該老師，`AdminNote` 不對外。V1 只保存「最新一次」reason，不保留歷史（audit trail 屬 V1 之外）。reason 由 Admin 動作寫入，非 Teacher 可編輯欄位；lifecycle 見 `state-transition-details.md`（`rejected` 期間保留、`rejected → submitted` 與 `approve` 時清空、再次 reject 覆蓋）。
+- **`suspensionReason`（`teacher-profile-suspension` 已確認）**：nullable 欄位（`String?`），保存 Admin 在 `approved → suspended` 時填寫、面向老師的暫停說明。獨立於 `rejectionReason`，不共用同一欄位——兩者代表不同原因（退回 vs. 暫停），共用會讓 UI 文案在其中一種情境下失真（比照 `demand-request-cancellation` D9 已經修過的同類教訓：reuse 一個語意不合的既有欄位/狀態，會讓文案講錯話）。lifecycle：`suspended` 期間保留（供老師查看）、`restore`（`suspended → approved`）時清空，不保留歷史。
 
 Status:
 
@@ -325,7 +327,7 @@ Fields:
 
 - id
 - userId
-- type（`NotificationType`，15 個 enum 值——原始 14 個事件表（`class-session-cancellation` 一輪把保留的 `class_session_cancelled` 接上，共接線 12 個）之外，`demand-request-cancellation` 一輪新增第 15 個全新值 `demand_request_cancelled`（真的執行了一次 `ALTER TYPE ... ADD VALUE` migration，不是接上原本保留的值），V1 目前共接線 13 個；`class_session_changed`／`class_reminder_basic` 保留未接線）
+- type（`NotificationType`，17 個 enum 值——原始 14 個事件表（`class-session-cancellation` 一輪把保留的 `class_session_cancelled` 接上，共接線 12 個）之外，`demand-request-cancellation` 一輪新增第 15 個全新值 `demand_request_cancelled`、`teacher-profile-suspension` 一輪再新增第 16、17 個全新值 `teacher_profile_suspended`／`teacher_profile_restored`（三者都真的執行過 `ALTER TYPE ... ADD VALUE` migration，不是接上原本保留的值），V1 目前共接線 15 個；`class_session_changed`／`class_reminder_basic` 保留未接線）
 - channel（`NotificationChannel`：`email`／`in_app`／`line`／`sms`，V1 只寫入 `in_app`）
 - title
 - body

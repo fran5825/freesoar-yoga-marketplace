@@ -63,8 +63,11 @@ V1 採用能力模型，而不是限制一個 `User` 只能有一種身分：
 | Approve profile | No | No | No | No | Admin |
 | Reject profile | No | No | No | No | Admin |
 | Suspend profile | No | No | No | No | Admin |
+| Restore profile | No | No | No | No | Admin |
 
 Teacher 不可 approve 自己。Suspended teacher 不可公開顯示，也不可回應新 demand request。
+
+**V1 落地範圍（`teacher-profile-suspension` 已確認）**：`Suspend profile` 這一列過去長期沒有對應的落地範圍註記，容易被誤讀成早就是 V1 功能——實際上直到本輪之前，整個 repo 沒有任何程式碼會把 `TeacherProfile.status` 寫成 `suspended`。本輪把 `Suspend profile` 與新增的 `Restore profile` 一起接線：兩者都是 Admin-only，`Suspend` 必填 `suspensionReason`（trim 後 10–1000 字，獨立於 `rejectionReason` 的欄位），`Restore` 只能從 `suspended` 觸發並清空該欄位。連帶影響：`demand-response-and-matching-spec.md` 的 `Select response` 動作現在也會檢查該 response 所屬老師是否仍是 `approved`，暫停後既有的 `submitted` response 無法再被選定。
 
 ## TeacherAvailability
 
@@ -124,7 +127,7 @@ Organizer 不可查看其他 organizer 的私人 demand request。
 
 V1 一個 demand request 只能有一個 selected response。
 
-**V1 落地範圍**（`demand-response-selection-and-matching` 已確認）：`Select response` 僅 Organizer own-scoped 可執行，**Admin 不介入**（D2，上表 Admin 欄位為完整未來設計，V1 未開放）；`Decline response` 在 V1 不是獨立的 Organizer 手動動作，而是 select 成功時同一 transaction 內自動處理（D3），沒有對應的手動操作入口；`Shortlist response` 本輪不實作（D1），保留於表中作為未來 slice 參考（對齊上方 `Cancel demand` 的既有註記慣例）。
+**V1 落地範圍**（`demand-response-selection-and-matching`、`teacher-profile-suspension` 已確認）：`Select response` 僅 Organizer own-scoped 可執行，**Admin 不介入**（D2，上表 Admin 欄位為完整未來設計，V1 未開放）；`Decline response` 在 V1 不是獨立的 Organizer 手動動作，而是 select 成功時同一 transaction 內自動處理（D3），沒有對應的手動操作入口；`Shortlist response` 本輪不實作（D1），保留於表中作為未來 slice 參考（對齊上方 `Cancel demand` 的既有註記慣例）。`Select response` 額外要求該 response 所屬的 `TeacherProfile.status = 'approved'`（`teacher-profile-suspension` 已確認）——暫停中的老師既有的 `submitted` response 無法再被選定。
 
 ## ClassSession
 

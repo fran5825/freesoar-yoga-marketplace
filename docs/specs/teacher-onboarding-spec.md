@@ -6,6 +6,15 @@ Teacher onboarding 讓瑜伽老師可以加入 Free Soar Yoga，建立可信任�
 
 V1 的重點是品質、信任與清楚流程，不是讓老師建立完整 SaaS 型個人商店。
 
+## 落地現況（2026-07-29 更新）
+
+本 spec 的「State Transitions」／「TeacherProfile Status Definitions」／「Admin Action Matrix」三節描述的是完整設計，直到 `docs/superpowers/plans/2026-07-29-teacher-profile-suspension-plan.md` 之前，`approved → suspended`（暫停）與 `suspended → approved`（恢復）都**沒有真正落地**——整個 repo 沒有任何程式碼會把 `TeacherProfile.status` 寫成 `suspended`（已逐字 `grep` 確認），即使下方第 111 行的既有敘述聽起來像是只差 restore 沒做。這件事本輪已經澄清並補上：
+
+- **已出貨**：`approved → suspended` 與 `suspended → approved` 一起接線（Admin-only）。暫停必填 `suspensionReason`（新增獨立欄位，不與 `rejectionReason` 共用，trim 後 10–1000 字），恢復時清空。兩者都在 `/admin/teachers` 頁面落地（新增「Approved teachers」／「Suspended teachers」兩個區塊）；Teacher dashboard 的既有 `suspended` 文案（早就寫好，只是從未觸發過）現在會正確顯示，並新增顯示 `suspensionReason` 的區塊。
+- **連帶影響**：暫停**不**回溯處理該老師已經 `selected` 的 response 或已經建立的 `ClassSession`；但 `selectDemandResponseForOrganizer`（`demand-response-and-matching-spec.md` 範圍）新增了 teacher 資格檢查，暫停後 Organizer 無法再選定這位老師既有、還沒被選定的 `submitted` response。
+- **通知**：新增 `teacher_profile_suspended`／`teacher_profile_restored` 兩個 `NotificationType`（原始事件表沒有規劃過，真的跑了 migration），只通知 Teacher 自己。
+- 不動下方第 88–121 行的既有敘述本身——那些描述的是這一輪之前的既有設計狀態，仍然正確，只是在本輪之前從未真正落地。
+
 ## User Role
 
 主要角色：

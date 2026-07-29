@@ -9,7 +9,9 @@ draft
   → submitted
   → approved
   → rejected
-  → suspended
+
+approved
+  ↔ suspended
 ```
 
 Rules:
@@ -17,6 +19,8 @@ Rules:
 - Only approved teachers can respond to demand requests.
 - Rejected teachers may resubmit if allowed by admin.
 - Suspended teachers cannot appear publicly or respond to new demands.
+
+**V1 落地範圍（`teacher-profile-suspension` 已確認）**：這是這個檔案裡第一次替 TeacherProfile 補上「V1 落地範圍」子集說明（DemandRequest／DemandResponse／ClassSession／Enrollment 都已經有這個格式，TeacherProfile 之前一直沒有，導致 `approved ↔ suspended` 長期被誤讀成早就是 V1 功能）。`draft → submitted → approved|rejected`、`rejected → submitted` 都已落地（`teacher-onboarding-spec.md` 已確認）；`approved ↔ suspended` 這組雙向轉換直到 `teacher-profile-suspension` 一輪才真正接線——Admin-only，`approved → suspended` 必填 `suspensionReason`（獨立欄位，不與 `rejectionReason` 共用），`suspended → approved` 清空該欄位。暫停不連帶處理既有的 `DemandResponse`／`ClassSession`，但 `DemandResponse` 的 `submitted → selected` 轉換（見下方 DemandResponse Status）新增了 teacher 資格檢查，暫停後無法再被選定。
 
 ## DemandRequest Status
 
@@ -95,7 +99,7 @@ Rules:
 - Organizer/admin can shortlist/select.
 - Only one selected response per demand in V1.
 
-**V1 落地範圍（`teacher-demand-pool-response-plan`、`demand-response-selection-and-matching` D1/D2/D3、`demand-request-cancellation` D4 已確認）**：上述完整狀態機是 marketplace 的最終設計，目前接線的子集為：
+**V1 落地範圍（`teacher-demand-pool-response-plan`、`demand-response-selection-and-matching` D1/D2/D3、`demand-request-cancellation` D4、`teacher-profile-suspension` 已確認）**：上述完整狀態機是 marketplace 的最終設計，目前接線的子集為：
 
 ```text
 (none)
@@ -110,6 +114,7 @@ Rules:
 - `Select` 僅 **Organizer own-scoped** 可執行，**Admin 不介入**（D2，與上表 Rules 所寫的「Organizer/admin」不同，V1 未開放 Admin）。
 - `Decline` 在 V1 不是 Organizer 手動動作，而是 select 成功時**同一 transaction 內**自動把同 demand 其餘 `submitted` response 轉為 `declined`（D3）。
 - **連帶取消也會產生 `declined`**（`demand-request-cancellation` D4）：所屬 `DemandRequest` 被 Organizer 取消時，該 demand 底下所有 `submitted`／`selected` 的 response 同一 transaction 內一併轉為 `declined`——reuse 既有值，不新增新的 `DemandResponseStatus`。Teacher 端文案會依「demand 被取消」與「選了別人」區分（見 `docs/domain/permissions-matrix.md`／`state-transition-details.md`）。
+- **`submitted → selected` 新增 teacher 資格檢查**（`teacher-profile-suspension` 已確認）：select 的原子 UPDATE 現在也要求該 response 所屬 `TeacherProfile.status = 'approved'`，暫停中的老師既有的 `submitted` response 無法再被選定（回傳 `response_teacher_not_approved`），但已經 `selected` 的 response 不受影響。
 - `expired` enum 值保留但不接線（無 demand 過期機制）。
 
 ## ClassSession Status
