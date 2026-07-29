@@ -320,6 +320,123 @@ export async function cancelOwnClassSession(
   };
 }
 
+export type CompleteOwnClassSessionErrorCode =
+  | "authentication_required"
+  | "organizer_profile_required"
+  | "class_session_not_found"
+  | "class_session_already_completed"
+  | "class_session_not_completable"
+  | "class_session_not_ended"
+  | "class_session_complete_failed";
+
+export type CompleteOwnClassSessionResult =
+  | { ok: true }
+  | {
+      ok: false;
+      code: CompleteOwnClassSessionErrorCode;
+      message: string;
+    };
+
+// D1/D2/D4 修正版：Organizer own-scoped，單一狀態轉換，比照 openOwnClassSessionForEnrollment
+// 的既有形狀（單一 updateMany + count===0 時再查一次分類錯誤原因），不需要 __internal__
+// pure-core（沒有多方競爭同一資源的併發場景）。只能從 open_for_enrollment 觸發，且 endAt
+// 必須已經過去。跟 openOwnClassSessionForEnrollment 的既有寫法不同：這裡只在函式最開頭
+// 呼叫一次 `new Date()`，同時用於 updateMany 的 guard 與失敗後分類查詢的比較，避免兩次
+// 獨立取時在極端邊界下互相矛盾（codex round 1 指出的問題）。
+export async function completeOwnClassSession(
+  classSessionId: string,
+): Promise<CompleteOwnClassSessionResult> {
+  let organizerProfileId: string;
+
+  try {
+    const currentUser = await requireUser();
+
+    const organizerProfile = await prisma.organizerProfile.findUnique({
+      where: { userId: currentUser.id },
+      select: { id: true },
+    });
+
+    if (!organizerProfile) {
+      return {
+        ok: false,
+        code: "organizer_profile_required",
+        message: "找不到你的團主資料。",
+      };
+    }
+
+    organizerProfileId = organizerProfile.id;
+  } catch (error) {
+    if (isAuthenticationRequiredError(error)) {
+      return {
+        ok: false,
+        code: "authentication_required",
+        message: "請先登入後再標記課程完成。",
+      };
+    }
+
+    throw error;
+  }
+
+  const now = new Date();
+
+  const updateResult = await prisma.classSession.updateMany({
+    where: {
+      id: classSessionId,
+      organizerProfileId,
+      status: "open_for_enrollment",
+      endAt: { lte: now },
+    },
+    data: { status: "completed" },
+  });
+
+  if (updateResult.count > 0) {
+    return { ok: true };
+  }
+
+  const classSession = await prisma.classSession.findFirst({
+    where: { id: classSessionId, organizerProfileId },
+    select: { status: true, endAt: true },
+  });
+
+  if (!classSession) {
+    return {
+      ok: false,
+      code: "class_session_not_found",
+      message: "找不到這堂課程，或你沒有權限操作。",
+    };
+  }
+
+  if (classSession.status === "completed") {
+    return {
+      ok: false,
+      code: "class_session_already_completed",
+      message: "這堂課程已經標記完成過了。",
+    };
+  }
+
+  if (classSession.status !== "open_for_enrollment") {
+    return {
+      ok: false,
+      code: "class_session_not_completable",
+      message: "這堂課程目前狀態不允許標記完成。",
+    };
+  }
+
+  if (classSession.endAt.getTime() > now.getTime()) {
+    return {
+      ok: false,
+      code: "class_session_not_ended",
+      message: "這堂課程尚未結束，無法標記完成。",
+    };
+  }
+
+  return {
+    ok: false,
+    code: "class_session_complete_failed",
+    message: "標記完成暫時無法完成，請稍後再試。",
+  };
+}
+
 function isAuthenticationRequiredError(error: unknown): boolean {
   return error instanceof Error && error.message === "Authentication required";
 }
