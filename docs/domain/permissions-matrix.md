@@ -162,6 +162,17 @@ V1 不做完整 Teacher attendance workflow；`attended` / `no_show` 可保留�
 
 **V1 落地範圍**（`enrollment` 已確認）：`Create enrollment`／`View own enrollment`／`Cancel own enrollment` 皆 Member own-scoped（任何登入使用者皆有 Member 能力，不需要額外的 profile model，D2 精神延續自既有 route-map 慣例）；`View class roster basics` Organizer／Teacher own-scoped，只回傳 `confirmed` enrollment 的最小必要識別資訊（`User.name` 為 null 時 fallback 至 `email`）與 `notes`，不含 `phone`/`image`；`Confirm enrollment`（跳過 `pending`，D1）與 `Mark attended / no_show`（D11）本輪皆不接線；**Admin 不介入**（D10，上表 Admin 欄位為完整未來設計，V1 未開放）。
 
+## Review
+
+| Action | Visitor | Member | Organizer | Teacher | Admin |
+|---|---|---|---|---|---|
+| Submit review | No | Own | No | No | No |
+| View class session's reviews | No | Own | Own | Own | Admin |
+
+同一 Member 對同一 class session 只能留下一次評價（`@@unique([classSessionId, reviewerUserId])`）。
+
+**V1 落地範圍**（`class-session-review` 已確認）：`Submit review` 僅 Member own-scoped 可執行，且僅限於自己有 `confirmed` enrollment、且該 class session 目前是 `completed` 的情況（D1，兩個資格條件不合都收斂成同一個 `review_not_eligible` 錯誤碼，不細分原因）；不可編輯或刪除已送出的評價（D3）。`View class session's reviews`：Member 只看得到自己在該 class session 留下的那一則（透過 `listOwnEnrollmentsForMember` 的 nested `reviews` select，用 `reviewerUserId` 二次過濾）；Organizer／Teacher 看得到該 class session 的**所有**評價（own-scoped，Organizer 透過 `listReviewsForClassSession` 檢查 `organizerProfileId` 屬於自己，Teacher 透過既有 `listOwnClassSessionsForTeacher` 的 `teacherProfileId` own-scoping 天生取得），評價作者顯示既有 `name`/`email` fallback 的顯示名稱，不匿名化（D4）；**Admin 不介入**（上表 Admin 欄位為完整未來設計，V1 未開放任何 Admin 專用的評價檢視介面）。
+
 ## Notification
 
 | Action | Visitor | Member | Organizer | Teacher | Admin |

@@ -306,17 +306,15 @@ Fields:
 
 ## Review
 
-Represents review after class.
+Represents review after class. **已落地**（`docs/superpowers/plans/2026-07-29-class-session-review-plan.md` D2/D4）：Member 對已完成（`status="completed"`）且自己有 `confirmed` enrollment 的 class session 留下一次性評價，`@@unique([classSessionId, reviewerUserId])` 本身就是唯一需要的併發保護，不需要額外的鎖。不含 `teacherProfileId`（授課老師一律透過 `classSession` 關聯取得，避免沒有 DB 一致性保證的冗餘欄位）與 `visibility`（V1 沒有任何公開頁面可以消費這個欄位；評價只在 Member／Organizer／Teacher 各自的既有 own-scoped 頁面顯示，作者顯示既有 name/email fallback 的顯示名稱，不匿名化）。
 
 Fields:
 
 - id
 - classSessionId
 - reviewerUserId
-- teacherProfileId
-- rating
-- comment
-- visibility
+- rating（1–5 的整數，必填）
+- comment（選填，上限 500 字，比照 `Enrollment.notes` 的既有先例）
 - createdAt
 
 ## Notification
@@ -327,7 +325,7 @@ Fields:
 
 - id
 - userId
-- type（`NotificationType`，17 個 enum 值——原始 14 個事件表（`class-session-cancellation` 一輪把保留的 `class_session_cancelled` 接上，共接線 12 個）之外，`demand-request-cancellation` 一輪新增第 15 個全新值 `demand_request_cancelled`、`teacher-profile-suspension` 一輪再新增第 16、17 個全新值 `teacher_profile_suspended`／`teacher_profile_restored`（三者都真的執行過 `ALTER TYPE ... ADD VALUE` migration，不是接上原本保留的值），V1 目前共接線 15 個；`class_session_changed`／`class_reminder_basic` 保留未接線）
+- type（`NotificationType`，19 個 enum 值——原始 14 個事件表（`class-session-cancellation` 一輪把保留的 `class_session_cancelled` 接上，共接線 12 個）之外，`demand-request-cancellation` 一輪新增第 15 個全新值 `demand_request_cancelled`、`teacher-profile-suspension` 一輪再新增第 16、17 個全新值 `teacher_profile_suspended`／`teacher_profile_restored`、`class-session-review` 一輪再新增第 18、19 個全新值 `class_session_completed`（`completeOwnClassSession` 成功後通知 `affected_member` 角色）／`review_submitted`（`submitReviewForUser` 成功後通知 `counterpart` 角色，即授課老師）（五者都真的執行過 `ALTER TYPE ... ADD VALUE` migration，不是接上原本保留的值），V1 目前共接線 17 個；`class_session_changed`／`class_reminder_basic` 保留未接線）
 - channel（`NotificationChannel`：`email`／`in_app`／`line`／`sms`，V1 只寫入 `in_app`）
 - title
 - body
