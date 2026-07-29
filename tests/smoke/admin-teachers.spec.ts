@@ -106,16 +106,27 @@ test.describe("/admin/teachers smoke", () => {
     ).toBeVisible();
     await expect(page.getByText(`Draft Teacher ${testRunId}`)).toBeHidden();
     await expect(page.getByText(`Rejected Teacher ${testRunId}`)).toBeHidden();
-    await expect(page.getByText(`Suspended Teacher ${testRunId}`)).toBeHidden();
+    // teacher-profile-suspension 一輪新增了「Suspended teachers」區塊，suspended 老師
+    // 現在會正確出現在頁面上（只是不在待審核佇列裡）——改成驗證他不在「Submitted」佇列裡
+    // （沒有 Approve/Reject 這類審核按鈕），而不是整頁都看不到。
+    const suspendedInReviewQueue = page.getByRole("article").filter({
+      has: page.getByRole("heading", { name: `Suspended Teacher ${testRunId}` }),
+      hasText: "Approve",
+    });
+    await expect(suspendedInReviewQueue).toHaveCount(0);
 
     await submittedApplication.getByRole("button", { name: "Approve" }).click();
 
     await expect(
       page.getByText("TeacherProfile application approved."),
     ).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: `Submitted Teacher ${testRunId}` }),
-    ).toBeHidden();
+    // 核准後這位老師會正確出現在新的「Approved teachers」區塊（teacher-profile-suspension
+    // 一輪新增），不再整頁都看不到——改成驗證他已經離開「Submitted」審核佇列。
+    const submittedInReviewQueueAfterApprove = page.getByRole("article").filter({
+      has: page.getByRole("heading", { name: `Submitted Teacher ${testRunId}` }),
+      hasText: "Approve",
+    });
+    await expect(submittedInReviewQueueAfterApprove).toHaveCount(0);
 
     const approvedProfile = await prisma.teacherProfile.findFirstOrThrow({
       where: {
