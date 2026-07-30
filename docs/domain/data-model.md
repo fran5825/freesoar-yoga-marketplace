@@ -151,7 +151,7 @@ Fields:
 - locationArea（選填，上限 100 字）
 - createdAt
 
-沒有 `isRecurring` 欄位——這個 model 本身就只代表「每週固定」的規律可授課時段，`isRecurring` 永遠是 `true`、不影響任何邏輯，落地時判斷為多餘欄位而拿掉；例外（單次的封鎖或額外開放）改由下方 `AvailabilityException` 另外表達。沒有 `updatedAt`：不提供編輯，只有新增／刪除。
+沒有 `isRecurring` 欄位——這個 model 本身就只代表「每週固定」的規律可授課時段，`isRecurring` 永遠是 `true`、不影響任何邏輯，落地時判斷為多餘欄位而拿掉；例外（單次的封鎖或額外開放）改由下方 `AvailabilityException` 另外表達。**Edit（`teacher-availability-edit` 已確認）**：approved 老師可以整筆覆寫編輯既有記錄（重用建立時的必填規則），不再只有新增／刪除兩種操作。**仍然沒有 `updatedAt` 欄位，這輪也刻意不新增**——沒有被要求，也沒有任何既有消費端需要用它判斷資料新鮮度；編輯後看不出「這筆記錄上次是什麼時候被改的」，這是刻意接受的限制，不是遺漏。
 
 ## AvailabilityException
 
@@ -174,6 +174,8 @@ Type:
 - extra_available（額外開放：原本沒有排班，但這天可以授課）
 
 **判讀規則（文件記載，非資料庫層強制）**：同一天／同一時段可以同時存在 `blocked` 與 `extra_available` 兩筆記錄（不做重疊檢查），若兩者衝突，`blocked` 優先於 `extra_available`。這條規則目前沒有任何消費端（沒有排程衝突檢查邏輯），先在此記錄供未來需要判讀時依循。
+
+**Edit（`teacher-availability-edit` 已確認）**：approved 老師可以整筆覆寫編輯既有記錄（重用建立時的必填規則，含 `type`／`startTime`／`endTime`／`reason` 都可以改），不再只有新增／刪除兩種操作。同樣沒有 `updatedAt` 欄位，理由跟 `TeacherAvailability` 一致（見上方說明）。
 
 ## DemandRequest
 

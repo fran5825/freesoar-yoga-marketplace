@@ -82,7 +82,7 @@ Teacher 不可 approve 自己。Suspended teacher 不可公開顯示，也不可
 
 Organizer 只能在已媒合或合適流程中看到必要的可約時間，不應看到老師完整私人排程。
 
-**V1 落地範圍（`teacher-availability` 已確認）**：目前只落地 Teacher 欄位這一直行，且比上表更細緻——`View own` 不分 `TeacherProfile` 狀態，任何狀態（含 `suspended`）都可以查看自己既有的固定時段與例外（比照既有 `suspended` 可唯讀查看自己 demand response 的先例）；`Create`／`Delete` 僅限 `approved` 才能操作（`suspended` 只能看不能寫），沒有 `Edit` 這個動作——本輪只提供新增與刪除，沒有編輯既有記錄的功能。Organizer 的「Eligible」與 Admin 欄位仍是上表所描述的完整未來設計，V1 本輪未開放（沒有任何頁面讓 Organizer 或 Admin 查看老師的 availability）。
+**V1 落地範圍（`teacher-availability`、`teacher-availability-edit` 已確認）**：目前只落地 Teacher 欄位這一直行，且比上表更細緻——`View own` 不分 `TeacherProfile` 狀態，任何狀態（含 `suspended`）都可以查看自己既有的固定時段與例外（比照既有 `suspended` 可唯讀查看自己 demand response 的先例）；`Create`／`Edit`／`Delete` 僅限 `approved` 才能操作（`suspended` 只能看不能寫）。`Edit` 已落地（`teacher-availability-edit` 已確認）：整筆覆寫，驗證規則跟 `Create` 完全一致，own-scope 防護（`updateMany` 帶 `teacherProfileId` 篩選）也跟 `Delete` 完全同一個模式。Organizer 的「Eligible」與 Admin 欄位仍是上表所描述的完整未來設計，V1 本輪未開放（沒有任何頁面讓 Organizer 或 Admin 查看老師的 availability）。
 
 ## Organization / OrganizerProfile
 
