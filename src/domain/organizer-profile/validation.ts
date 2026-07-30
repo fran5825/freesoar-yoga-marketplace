@@ -150,6 +150,53 @@ export function validateUpdateOwnOrganizationInput(
   return createValidResult();
 }
 
+export type UpdateOwnOrganizerProfileInput = {
+  displayName?: string | null;
+};
+
+export type UpdateOwnOrganizerProfileValidationErrorCode = "display_name_required";
+
+export type UpdateOwnOrganizerProfileValidationError = {
+  field: "displayName";
+  code: UpdateOwnOrganizerProfileValidationErrorCode;
+  message: string;
+};
+
+export type UpdateOwnOrganizerProfileValidationResult =
+  | {
+      valid: true;
+      errors: [];
+    }
+  | {
+      valid: false;
+      errors: UpdateOwnOrganizerProfileValidationError[];
+    };
+
+// D3: 沿用建立時 displayName 的既有必填規則——已建立的團主資料不應該因為編輯
+// 而被清空成空字串。
+export function validateUpdateOwnOrganizerProfileInput(
+  input: UpdateOwnOrganizerProfileInput,
+): UpdateOwnOrganizerProfileValidationResult {
+  const errors: UpdateOwnOrganizerProfileValidationError[] = [];
+
+  if (isBlank(input.displayName)) {
+    errors.push({
+      field: "displayName",
+      code: "display_name_required",
+      message: "團主顯示名稱為必填欄位。",
+    });
+  }
+
+  if (errors.length > 0) {
+    return {
+      valid: false,
+      errors,
+    };
+  }
+
+  return createValidResult();
+}
+
 function createValidResult(): { valid: true; errors: [] } {
   return {
     valid: true,

@@ -1,6 +1,7 @@
 import type {
   CreateOrganizerProfileInput,
   UpdateOwnOrganizationInput,
+  UpdateOwnOrganizerProfileInput,
 } from "./validation";
 
 export type CreateOrganizerProfileFormInput = {
@@ -36,6 +37,18 @@ export function normalizeUpdateOwnOrganizationInput(
     contactName: normalizeOptionalString(input.contactName),
     contactEmail: normalizeOptionalString(input.contactEmail),
     contactPhone: normalizeOptionalString(input.contactPhone),
+  };
+}
+
+export type UpdateOwnOrganizerProfileFormInput = {
+  displayName: string;
+};
+
+export function normalizeUpdateOwnOrganizerProfileInput(
+  input: UpdateOwnOrganizerProfileFormInput,
+): UpdateOwnOrganizerProfileInput {
+  return {
+    displayName: normalizeOptionalString(input.displayName),
   };
 }
 

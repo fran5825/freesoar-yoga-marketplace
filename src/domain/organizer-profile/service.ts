@@ -8,8 +8,11 @@ import {
   type CreateOrganizerProfileValidationError,
   type UpdateOwnOrganizationInput,
   type UpdateOwnOrganizationValidationError,
+  type UpdateOwnOrganizerProfileInput,
+  type UpdateOwnOrganizerProfileValidationError,
   validateCreateOrganizerProfileInput,
   validateUpdateOwnOrganizationInput,
+  validateUpdateOwnOrganizerProfileInput,
 } from "./validation";
 
 export type OrganizerContextOrganization = {
@@ -280,6 +283,82 @@ export async function updateOwnOrganization(
       ok: false,
       code: "organization_update_failed",
       message: "組織資訊暫時無法更新，請稍後再試。",
+    };
+  }
+}
+
+export type UpdateOwnOrganizerProfileErrorCode =
+  | "authentication_required"
+  | "organizer_profile_required"
+  | "validation_failed"
+  | "organizer_profile_update_failed";
+
+export type UpdateOwnOrganizerProfileResult =
+  | {
+      ok: true;
+      organizerProfile: OrganizerContextProfile;
+    }
+  | {
+      ok: false;
+      code: UpdateOwnOrganizerProfileErrorCode;
+      message: string;
+      validationErrors?: UpdateOwnOrganizerProfileValidationError[];
+    };
+
+// D1/D2/D3：OrganizerProfile 沒有 status 欄位，任何已建立 OrganizerProfile 的使用者
+// 都能編輯自己的 displayName，不需要額外的狀態判斷。
+export async function updateOwnOrganizerProfile(
+  input: UpdateOwnOrganizerProfileInput,
+): Promise<UpdateOwnOrganizerProfileResult> {
+  const validation = validateUpdateOwnOrganizerProfileInput(input);
+
+  if (!validation.valid) {
+    return {
+      ok: false,
+      code: "validation_failed",
+      message: "團主資料格式需要調整後才能儲存。",
+      validationErrors: validation.errors,
+    };
+  }
+
+  try {
+    const currentUser = await requireUser();
+
+    const updateResult = await prisma.organizerProfile.updateMany({
+      where: { userId: currentUser.id },
+      data: { displayName: input.displayName as string },
+    });
+
+    if (updateResult.count === 0) {
+      return {
+        ok: false,
+        code: "organizer_profile_required",
+        message: "請先建立團主資料後再編輯顯示名稱。",
+      };
+    }
+
+    const organizerProfile = await prisma.organizerProfile.findUniqueOrThrow({
+      where: { userId: currentUser.id },
+      select: organizerProfileSelect,
+    });
+
+    return {
+      ok: true,
+      organizerProfile,
+    };
+  } catch (error) {
+    if (isAuthenticationRequiredError(error)) {
+      return {
+        ok: false,
+        code: "authentication_required",
+        message: "請先登入後再編輯團主顯示名稱。",
+      };
+    }
+
+    return {
+      ok: false,
+      code: "organizer_profile_update_failed",
+      message: "團主顯示名稱暫時無法更新，請稍後再試。",
     };
   }
 }
