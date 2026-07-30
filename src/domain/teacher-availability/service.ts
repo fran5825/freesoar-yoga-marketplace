@@ -84,6 +84,90 @@ export async function createOwnTeacherAvailability(
   }
 }
 
+export type UpdateOwnTeacherAvailabilityErrorCode =
+  | "authentication_required"
+  | "approved_teacher_required"
+  | "validation_failed"
+  | "not_found"
+  | "update_failed";
+
+export type UpdateOwnTeacherAvailabilityResult =
+  | { ok: true }
+  | {
+      ok: false;
+      code: UpdateOwnTeacherAvailabilityErrorCode;
+      message: string;
+      validationErrors?: TeacherAvailabilityValidationError[];
+    };
+
+// teacher-availability-edit D1/D3：整筆覆寫，驗證規則跟新增完全一致；own-scope
+// 用 updateMany 帶 { id, teacherProfileId } 雙重篩選，比照既有 deleteOwnTeacherAvailability()
+// 的既有 IDOR 防護寫法。
+export async function updateOwnTeacherAvailability(
+  availabilityId: string,
+  input: TeacherAvailabilityInput,
+): Promise<UpdateOwnTeacherAvailabilityResult> {
+  const validation = validateTeacherAvailabilityInput(input);
+
+  if (!validation.valid) {
+    return {
+      ok: false,
+      code: "validation_failed",
+      message: "儲存前，請先確認以上資訊。",
+      validationErrors: validation.errors,
+    };
+  }
+
+  let teacherProfileId: string;
+
+  try {
+    const context = await requireApprovedTeacher();
+    teacherProfileId = context.teacherProfileId;
+  } catch (error) {
+    if (isAuthenticationRequiredError(error)) {
+      return {
+        ok: false,
+        code: "authentication_required",
+        message: "請先登入後再編輯可授課時段。",
+      };
+    }
+
+    return {
+      ok: false,
+      code: "approved_teacher_required",
+      message: "需要通過審核的老師身份才能編輯可授課時段。",
+    };
+  }
+
+  try {
+    const result = await prisma.teacherAvailability.updateMany({
+      where: { id: availabilityId, teacherProfileId },
+      data: {
+        dayOfWeek: validation.normalized.dayOfWeek,
+        startTime: validation.normalized.startTime,
+        endTime: validation.normalized.endTime,
+        locationArea: validation.normalized.locationArea,
+      },
+    });
+
+    if (result.count === 0) {
+      return {
+        ok: false,
+        code: "not_found",
+        message: "找不到這筆固定時段，或你沒有權限操作。",
+      };
+    }
+
+    return { ok: true };
+  } catch {
+    return {
+      ok: false,
+      code: "update_failed",
+      message: "暫時無法儲存，請稍後再試。",
+    };
+  }
+}
+
 export type DeleteOwnTeacherAvailabilityErrorCode =
   | "authentication_required"
   | "approved_teacher_required"
@@ -203,6 +287,89 @@ export async function createOwnAvailabilityException(
       ok: false,
       code: "create_failed",
       message: "暫時無法新增，請稍後再試。",
+    };
+  }
+}
+
+export type UpdateOwnAvailabilityExceptionErrorCode =
+  | "authentication_required"
+  | "approved_teacher_required"
+  | "validation_failed"
+  | "not_found"
+  | "update_failed";
+
+export type UpdateOwnAvailabilityExceptionResult =
+  | { ok: true }
+  | {
+      ok: false;
+      code: UpdateOwnAvailabilityExceptionErrorCode;
+      message: string;
+      validationErrors?: AvailabilityExceptionValidationError[];
+    };
+
+// teacher-availability-edit D1/D3：同構於 updateOwnTeacherAvailability()，見上方註解。
+export async function updateOwnAvailabilityException(
+  exceptionId: string,
+  input: AvailabilityExceptionInput,
+): Promise<UpdateOwnAvailabilityExceptionResult> {
+  const validation = validateAvailabilityExceptionInput(input);
+
+  if (!validation.valid) {
+    return {
+      ok: false,
+      code: "validation_failed",
+      message: "儲存前，請先確認以上資訊。",
+      validationErrors: validation.errors,
+    };
+  }
+
+  let teacherProfileId: string;
+
+  try {
+    const context = await requireApprovedTeacher();
+    teacherProfileId = context.teacherProfileId;
+  } catch (error) {
+    if (isAuthenticationRequiredError(error)) {
+      return {
+        ok: false,
+        code: "authentication_required",
+        message: "請先登入後再編輯例外。",
+      };
+    }
+
+    return {
+      ok: false,
+      code: "approved_teacher_required",
+      message: "需要通過審核的老師身份才能編輯例外。",
+    };
+  }
+
+  try {
+    const result = await prisma.availabilityException.updateMany({
+      where: { id: exceptionId, teacherProfileId },
+      data: {
+        date: validation.normalized.date,
+        type: validation.normalized.type,
+        startTime: validation.normalized.startTime,
+        endTime: validation.normalized.endTime,
+        reason: validation.normalized.reason,
+      },
+    });
+
+    if (result.count === 0) {
+      return {
+        ok: false,
+        code: "not_found",
+        message: "找不到這筆例外，或你沒有權限操作。",
+      };
+    }
+
+    return { ok: true };
+  } catch {
+    return {
+      ok: false,
+      code: "update_failed",
+      message: "暫時無法儲存，請稍後再試。",
     };
   }
 }
