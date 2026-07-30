@@ -6,10 +6,12 @@ import { redirect } from "next/navigation";
 import {
   normalizeCreateOrganizerProfileInput,
   normalizeUpdateOwnOrganizationInput,
+  normalizeUpdateOwnOrganizerProfileInput,
 } from "@/domain/organizer-profile/input";
 import {
   createOwnOrganizerProfileWithOrganization,
   updateOwnOrganization,
+  updateOwnOrganizerProfile,
 } from "@/domain/organizer-profile/service";
 
 export async function createOrganizerProfileAction(
@@ -31,6 +33,23 @@ export async function createOrganizerProfileAction(
 
   revalidatePath("/organizer/profile");
   redirectWithFeedback("success", "團主資料已建立，你可以開始整理需求。");
+}
+
+export async function updateOrganizerProfileAction(
+  formData: FormData,
+): Promise<void> {
+  const normalizedInput = normalizeUpdateOwnOrganizerProfileInput({
+    displayName: getStringField(formData, "displayName"),
+  });
+
+  const result = await updateOwnOrganizerProfile(normalizedInput);
+
+  if (!result.ok) {
+    redirectWithFeedback("error", buildErrorMessage(result.message, result.validationErrors));
+  }
+
+  revalidatePath("/organizer/profile");
+  redirectWithFeedback("success", "團主顯示名稱已更新。");
 }
 
 export async function updateOrganizationAction(

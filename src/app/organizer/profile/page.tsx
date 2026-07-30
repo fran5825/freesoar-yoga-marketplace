@@ -6,7 +6,11 @@ import { redirect } from "next/navigation";
 import { getOwnOrganizerContext } from "@/domain/organizer-profile/service";
 import { requireUser } from "@/lib/auth/session";
 
-import { createOrganizerProfileAction, updateOrganizationAction } from "./actions";
+import {
+  createOrganizerProfileAction,
+  updateOrganizationAction,
+  updateOrganizerProfileAction,
+} from "./actions";
 
 const organizationTypeOptions: { value: string; label: string }[] = [
   { value: "company", label: "公司" },
@@ -150,10 +154,26 @@ export default async function OrganizerProfilePage({
               <h2 className="mt-3 text-xl font-semibold text-gray-950">
                 {organizerContext.organizerProfile.displayName}
               </h2>
-              <p className="mt-2 text-sm leading-6 text-gray-600">
-                團主顯示名稱建立後暫不開放於此頁編輯；如需調整，請聯繫平台管理者。
-              </p>
             </div>
+
+            <form action={updateOrganizerProfileAction} className="grid gap-3">
+              <Field hint="讓老師與平台知道怎麼稱呼你或你的團隊窗口。" label="團主顯示名稱">
+                <input
+                  className={inputClassName}
+                  defaultValue={organizerContext.organizerProfile.displayName}
+                  name="displayName"
+                  required
+                  type="text"
+                />
+              </Field>
+              <button
+                className="w-fit rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-900 transition hover:bg-gray-50"
+                type="submit"
+              >
+                儲存顯示名稱
+              </button>
+            </form>
+
             <div>
               <Link
                 className="inline-flex rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-900 transition hover:bg-gray-50"
