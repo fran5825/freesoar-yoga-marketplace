@@ -271,6 +271,50 @@ export default async function AdminTeachersPage({
                 <p className="mt-1 break-words text-sm text-gray-600">
                   {teacher.user.email ?? "Not provided"}
                 </p>
+                <p className="mt-1 text-xs text-gray-500">
+                  Last updated: {formatDateTime(teacher.updatedAt)}
+                </p>
+                <details className="mt-3 rounded border border-gray-200 bg-gray-50">
+                  <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-gray-700 marker:hidden">
+                    View profile details
+                  </summary>
+                  <div className="grid gap-3 border-t border-gray-100 p-3 text-sm">
+                    <ReadOnlyText label="Bio" value={teacher.bio} />
+                    <ReadOnlyText
+                      label="Teaching style"
+                      value={teacher.teachingStyle}
+                    />
+                    <ReadOnlyText
+                      label="Experience"
+                      value={
+                        typeof teacher.experienceYears === "number"
+                          ? `${teacher.experienceYears} years`
+                          : null
+                      }
+                    />
+                    <ReadOnlyList
+                      label="Specialties"
+                      values={teacher.specialties}
+                    />
+                    <ReadOnlyList
+                      label="Service areas"
+                      values={teacher.serviceAreas}
+                    />
+                    <ReadOnlyList
+                      label="Teaching formats"
+                      values={teacher.teachingFormats}
+                    />
+                    <ReadOnlyList
+                      label="Certifications"
+                      values={teacher.certifications}
+                    />
+                    <ReadOnlyText label="Price range" value={teacher.priceRange} />
+                    <ReadOnlyText
+                      label="Profile photo URL"
+                      value={teacher.profilePhotoUrl}
+                    />
+                  </div>
+                </details>
               </div>
               <details className="rounded border border-rose-200 bg-rose-50/60 sm:w-72">
                 <summary className="cursor-pointer list-none rounded px-4 py-2 text-sm font-medium text-rose-800 marker:hidden">
@@ -350,6 +394,50 @@ export default async function AdminTeachersPage({
                     暫停原因：{teacher.suspensionReason}
                   </p>
                 ) : null}
+                <p className="mt-1 text-xs text-gray-500">
+                  Last updated: {formatDateTime(teacher.updatedAt)}
+                </p>
+                <details className="mt-3 rounded border border-gray-200 bg-gray-50">
+                  <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-gray-700 marker:hidden">
+                    View profile details
+                  </summary>
+                  <div className="grid gap-3 border-t border-gray-100 p-3 text-sm">
+                    <ReadOnlyText label="Bio" value={teacher.bio} />
+                    <ReadOnlyText
+                      label="Teaching style"
+                      value={teacher.teachingStyle}
+                    />
+                    <ReadOnlyText
+                      label="Experience"
+                      value={
+                        typeof teacher.experienceYears === "number"
+                          ? `${teacher.experienceYears} years`
+                          : null
+                      }
+                    />
+                    <ReadOnlyList
+                      label="Specialties"
+                      values={teacher.specialties}
+                    />
+                    <ReadOnlyList
+                      label="Service areas"
+                      values={teacher.serviceAreas}
+                    />
+                    <ReadOnlyList
+                      label="Teaching formats"
+                      values={teacher.teachingFormats}
+                    />
+                    <ReadOnlyList
+                      label="Certifications"
+                      values={teacher.certifications}
+                    />
+                    <ReadOnlyText label="Price range" value={teacher.priceRange} />
+                    <ReadOnlyText
+                      label="Profile photo URL"
+                      value={teacher.profilePhotoUrl}
+                    />
+                  </div>
+                </details>
               </div>
               <form
                 action={restoreTeacherProfileAction}

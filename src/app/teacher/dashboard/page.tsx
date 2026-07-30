@@ -42,9 +42,9 @@ const statusCopy: Record<TeacherProfileStatus, DashboardStatusCopy> = {
   approved: {
     label: "Approved",
     title: "你的老師資料已通過審核",
-    body: "你已具備 marketplace capability，可以瀏覽並回應團體需求、查看已建立的課程，並管理你的可授課時間。",
-    actionLabel: "查看已保存資料",
-    actionHref: "/teachers/join",
+    body: "你已具備 marketplace capability，可以瀏覽並回應團體需求、查看已建立的課程、管理你的可授課時間，並編輯你的老師個人資料。",
+    actionLabel: "編輯我的資料",
+    actionHref: "/teacher/profile",
     tone: "emerald",
   },
   suspended: {
@@ -52,7 +52,7 @@ const statusCopy: Record<TeacherProfileStatus, DashboardStatusCopy> = {
     title: "你的老師狀態目前暫停中",
     body: "此狀態下不會公開顯示，也不能回應新的 demand request。若需要協助，請聯絡平台管理者。",
     actionLabel: "查看目前資料",
-    actionHref: "/teachers/join",
+    actionHref: "/teacher/profile",
     tone: "gray",
   },
 };
