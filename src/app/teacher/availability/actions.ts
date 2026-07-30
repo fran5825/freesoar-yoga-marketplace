@@ -8,6 +8,8 @@ import {
   createOwnTeacherAvailability,
   deleteOwnAvailabilityException,
   deleteOwnTeacherAvailability,
+  updateOwnAvailabilityException,
+  updateOwnTeacherAvailability,
 } from "@/domain/teacher-availability/service";
 
 export async function createTeacherAvailabilityAction(formData: FormData): Promise<void> {
@@ -27,6 +29,26 @@ export async function createTeacherAvailabilityAction(formData: FormData): Promi
   }
 
   redirectWithFeedback("success", "已新增固定可授課時段。");
+}
+
+export async function updateTeacherAvailabilityAction(formData: FormData): Promise<void> {
+  const availabilityId = readFormString(formData, "availabilityId");
+  const dayOfWeekValue = readFormString(formData, "dayOfWeek");
+
+  const result = await updateOwnTeacherAvailability(availabilityId, {
+    dayOfWeek: dayOfWeekValue.length > 0 ? Number(dayOfWeekValue) : null,
+    startTime: readFormString(formData, "startTime"),
+    endTime: readFormString(formData, "endTime"),
+    locationArea: readOptionalFormString(formData, "locationArea"),
+  });
+
+  revalidatePath("/teacher/availability");
+
+  if (!result.ok) {
+    redirectWithFeedback("error", result.message);
+  }
+
+  redirectWithFeedback("success", "已更新固定可授課時段。");
 }
 
 export async function deleteTeacherAvailabilityAction(formData: FormData): Promise<void> {
@@ -61,6 +83,27 @@ export async function createAvailabilityExceptionAction(formData: FormData): Pro
   }
 
   redirectWithFeedback("success", "已新增日期例外。");
+}
+
+export async function updateAvailabilityExceptionAction(formData: FormData): Promise<void> {
+  const exceptionId = readFormString(formData, "exceptionId");
+  const typeValue = readFormString(formData, "type");
+
+  const result = await updateOwnAvailabilityException(exceptionId, {
+    date: readFormString(formData, "date"),
+    type: typeValue.length > 0 ? typeValue : null,
+    startTime: readOptionalFormString(formData, "startTime"),
+    endTime: readOptionalFormString(formData, "endTime"),
+    reason: readOptionalFormString(formData, "reason"),
+  });
+
+  revalidatePath("/teacher/availability");
+
+  if (!result.ok) {
+    redirectWithFeedback("error", result.message);
+  }
+
+  redirectWithFeedback("success", "已更新日期例外。");
 }
 
 export async function deleteAvailabilityExceptionAction(formData: FormData): Promise<void> {

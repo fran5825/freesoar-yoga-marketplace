@@ -10,6 +10,8 @@ import {
   createTeacherAvailabilityAction,
   deleteAvailabilityExceptionAction,
   deleteTeacherAvailabilityAction,
+  updateAvailabilityExceptionAction,
+  updateTeacherAvailabilityAction,
 } from "./actions";
 
 type TeacherAvailabilityPageProps = {
@@ -134,7 +136,7 @@ export default async function TeacherAvailabilityPage({
           aria-live="polite"
           className="rounded border border-gray-200 bg-gray-50 px-4 py-3 text-sm leading-6 text-gray-700"
         >
-          帳號目前暫停中，暫時無法新增或刪除可授課時間，但你仍然可以查看既有資料。
+          帳號目前暫停中，暫時無法新增、編輯或刪除可授課時間，但你仍然可以查看既有資料。
         </section>
       ) : null}
 
@@ -155,15 +157,104 @@ export default async function TeacherAvailabilityPage({
                     {entry.locationArea ? `・${entry.locationArea}` : ""}
                   </p>
                   {isApproved ? (
-                    <form action={deleteTeacherAvailabilityAction}>
-                      <input name="availabilityId" type="hidden" value={entry.id} />
-                      <button
-                        className="rounded border border-rose-200 px-3 py-1 text-xs font-medium text-rose-800 transition hover:bg-rose-50"
-                        type="submit"
-                      >
-                        刪除
-                      </button>
-                    </form>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <details>
+                        <summary className="cursor-pointer list-none rounded border border-gray-300 px-3 py-1 text-xs font-medium text-gray-900 marker:hidden hover:bg-gray-100">
+                          編輯…
+                        </summary>
+                        <form
+                          action={updateTeacherAvailabilityAction}
+                          className="mt-3 grid gap-3 rounded border border-gray-200 bg-white p-3"
+                        >
+                          <input name="availabilityId" type="hidden" value={entry.id} />
+                          <div>
+                            <label
+                              className="text-sm font-medium text-gray-950"
+                              htmlFor={`edit-dayOfWeek-${entry.id}`}
+                            >
+                              星期幾
+                            </label>
+                            <select
+                              className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                              defaultValue={entry.dayOfWeek}
+                              id={`edit-dayOfWeek-${entry.id}`}
+                              name="dayOfWeek"
+                              required
+                            >
+                              {dayOfWeekLabels.map((label, index) => (
+                                <option key={label} value={index}>
+                                  {label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div>
+                              <label
+                                className="text-sm font-medium text-gray-950"
+                                htmlFor={`edit-startTime-${entry.id}`}
+                              >
+                                開始時間
+                              </label>
+                              <input
+                                className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                                defaultValue={entry.startTime}
+                                id={`edit-startTime-${entry.id}`}
+                                name="startTime"
+                                required
+                                type="time"
+                              />
+                            </div>
+                            <div>
+                              <label
+                                className="text-sm font-medium text-gray-950"
+                                htmlFor={`edit-endTime-${entry.id}`}
+                              >
+                                結束時間
+                              </label>
+                              <input
+                                className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                                defaultValue={entry.endTime}
+                                id={`edit-endTime-${entry.id}`}
+                                name="endTime"
+                                required
+                                type="time"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label
+                              className="text-sm font-medium text-gray-950"
+                              htmlFor={`edit-locationArea-${entry.id}`}
+                            >
+                              地區（選填）
+                            </label>
+                            <input
+                              className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                              defaultValue={entry.locationArea ?? ""}
+                              id={`edit-locationArea-${entry.id}`}
+                              maxLength={100}
+                              name="locationArea"
+                            />
+                          </div>
+                          <button
+                            className="w-full rounded bg-sky-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-800 sm:w-auto"
+                            type="submit"
+                          >
+                            儲存變更
+                          </button>
+                        </form>
+                      </details>
+                      <form action={deleteTeacherAvailabilityAction}>
+                        <input name="availabilityId" type="hidden" value={entry.id} />
+                        <button
+                          className="rounded border border-rose-200 px-3 py-1 text-xs font-medium text-rose-800 transition hover:bg-rose-50"
+                          type="submit"
+                        >
+                          刪除
+                        </button>
+                      </form>
+                    </div>
                   ) : null}
                 </div>
               </li>
@@ -276,15 +367,118 @@ export default async function TeacherAvailabilityPage({
                     ) : null}
                   </div>
                   {isApproved ? (
-                    <form action={deleteAvailabilityExceptionAction}>
-                      <input name="exceptionId" type="hidden" value={entry.id} />
-                      <button
-                        className="rounded border border-rose-200 px-3 py-1 text-xs font-medium text-rose-800 transition hover:bg-rose-50"
-                        type="submit"
-                      >
-                        刪除
-                      </button>
-                    </form>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <details>
+                        <summary className="cursor-pointer list-none rounded border border-gray-300 px-3 py-1 text-xs font-medium text-gray-900 marker:hidden hover:bg-gray-100">
+                          編輯…
+                        </summary>
+                        <form
+                          action={updateAvailabilityExceptionAction}
+                          className="mt-3 grid gap-3 rounded border border-gray-200 bg-white p-3"
+                        >
+                          <input name="exceptionId" type="hidden" value={entry.id} />
+                          <div>
+                            <label
+                              className="text-sm font-medium text-gray-950"
+                              htmlFor={`edit-date-${entry.id}`}
+                            >
+                              日期
+                            </label>
+                            <input
+                              className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                              defaultValue={formatAvailabilityExceptionDate(entry.date)}
+                              id={`edit-date-${entry.id}`}
+                              name="date"
+                              required
+                              type="date"
+                            />
+                          </div>
+                          <fieldset className="grid gap-2">
+                            <legend className="text-sm font-medium text-gray-950">類型</legend>
+                            <label className="flex items-center gap-2 text-sm text-gray-700">
+                              <input
+                                defaultChecked={entry.type === "blocked"}
+                                name="type"
+                                type="radio"
+                                value="blocked"
+                              />
+                              封鎖（這天無法授課）
+                            </label>
+                            <label className="flex items-center gap-2 text-sm text-gray-700">
+                              <input
+                                defaultChecked={entry.type === "extra_available"}
+                                name="type"
+                                type="radio"
+                                value="extra_available"
+                              />
+                              額外開放（原本沒有排班，但這天可以授課）
+                            </label>
+                          </fieldset>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div>
+                              <label
+                                className="text-sm font-medium text-gray-950"
+                                htmlFor={`edit-startTime-${entry.id}`}
+                              >
+                                開始時間（選填，留空代表整天）
+                              </label>
+                              <input
+                                className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                                defaultValue={entry.startTime ?? ""}
+                                id={`edit-startTime-${entry.id}`}
+                                name="startTime"
+                                type="time"
+                              />
+                            </div>
+                            <div>
+                              <label
+                                className="text-sm font-medium text-gray-950"
+                                htmlFor={`edit-endTime-${entry.id}`}
+                              >
+                                結束時間（選填）
+                              </label>
+                              <input
+                                className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                                defaultValue={entry.endTime ?? ""}
+                                id={`edit-endTime-${entry.id}`}
+                                name="endTime"
+                                type="time"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label
+                              className="text-sm font-medium text-gray-950"
+                              htmlFor={`edit-reason-${entry.id}`}
+                            >
+                              原因（選填）
+                            </label>
+                            <textarea
+                              className="mt-2 min-h-20 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                              defaultValue={entry.reason ?? ""}
+                              id={`edit-reason-${entry.id}`}
+                              maxLength={500}
+                              name="reason"
+                            />
+                          </div>
+                          <button
+                            className="w-full rounded bg-sky-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-800 sm:w-auto"
+                            type="submit"
+                          >
+                            儲存變更
+                          </button>
+                        </form>
+                      </details>
+                      <form action={deleteAvailabilityExceptionAction}>
+                        <input name="exceptionId" type="hidden" value={entry.id} />
+                        <button
+                          className="rounded border border-rose-200 px-3 py-1 text-xs font-medium text-rose-800 transition hover:bg-rose-50"
+                          type="submit"
+                        >
+                          刪除
+                        </button>
+                      </form>
+                    </div>
                   ) : null}
                 </div>
               </li>
