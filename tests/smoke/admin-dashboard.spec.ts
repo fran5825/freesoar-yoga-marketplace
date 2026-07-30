@@ -211,7 +211,7 @@ test.describe("admin dashboard smoke", () => {
     await expect(page).toHaveURL(/\/admin\/demands$/);
   });
 
-  test("the shared admin nav links to all four admin pages, and works from each of them", async ({
+  test("the shared admin nav links to all five admin pages, and works from each of them", async ({
     context,
     page,
   }, testInfo) => {
@@ -222,7 +222,13 @@ test.describe("admin dashboard smoke", () => {
     const { sessionToken } = await createUserSession({ email: adminEmail, isAdmin: true });
     await addAuthSessionCookie(context, sessionToken);
 
-    for (const startPath of ["/admin/dashboard", "/admin/teachers", "/admin/demands", "/admin/classes"]) {
+    for (const startPath of [
+      "/admin/dashboard",
+      "/admin/teachers",
+      "/admin/demands",
+      "/admin/classes",
+      "/admin/organizations",
+    ]) {
       await page.goto(startPath);
       await expect(page.getByRole("navigation").getByRole("link", { name: "Dashboard" })).toHaveAttribute(
         "href",
@@ -239,6 +245,10 @@ test.describe("admin dashboard smoke", () => {
       await expect(page.getByRole("navigation").getByRole("link", { name: "Classes" })).toHaveAttribute(
         "href",
         "/admin/classes",
+      );
+      await expect(page.getByRole("navigation").getByRole("link", { name: "Organizations" })).toHaveAttribute(
+        "href",
+        "/admin/organizations",
       );
     }
   });

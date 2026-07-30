@@ -100,6 +100,8 @@ Teacher 只有在 published demand 或 matched class 需要時，才可看到必
 
 **V1 落地範圍（`organizer-profile-edit` 已確認）**：`Edit organizer profile` 這一列的 `Own`（Organizer）已落地——只有 `displayName` 這一個欄位，沒有狀態機也沒有狀態閘門（`OrganizerProfile` 不像 `TeacherProfile` 有 draft/approve/suspend，建立當下就是可用狀態），任何已建立 `OrganizerProfile` 的使用者都能隨時編輯。`Admin` 欄位仍是完整未來設計，V1 未開放（沒有任何頁面讓 Admin 代編輯 Organizer 的 `displayName`）。
 
+**V1 落地範圍（`admin-organizations` 已確認）**：`View organization` 這一列的 `Admin` 已落地，但只是**唯讀**——`/admin/organizations` 讓 Admin 查看全平台所有 organization（名稱、類型、聯絡資訊、所屬 organizer 清單、需求與課程數量），依名稱字母排序。`Edit organization` 這一列的 `Admin` 仍是明確 Non-goal，V1 未開放（沒有任何頁面讓 Admin 編輯或代管 organization 資料）。
+
 ## DemandRequest
 
 | Action | Visitor | Member | Organizer | Teacher | Admin |
