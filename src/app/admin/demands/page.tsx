@@ -1,4 +1,5 @@
 import { listSubmittedDemandRequestsForAdmin } from "@/domain/demand-request/admin-service";
+import { organizationTypeLabels } from "@/domain/organizer-profile/organization-type-labels";
 import { requireAdmin } from "@/lib/auth/session";
 import { notFound } from "next/navigation";
 
@@ -25,14 +26,6 @@ const frequencyLabels: Record<string, string> = {
   weekly: "每週",
   biweekly: "雙週",
   monthly: "每月",
-};
-
-const organizationTypeLabels: Record<string, string> = {
-  company: "公司",
-  company_club: "公司社團",
-  community: "社區",
-  family_group: "親友揪團",
-  other: "其他",
 };
 
 export default async function AdminDemandsPage({

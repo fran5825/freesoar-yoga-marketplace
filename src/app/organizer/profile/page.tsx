@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { ORGANIZATION_TYPE_OPTIONS } from "@/domain/organizer-profile/organization-type-labels";
 import { getOwnOrganizerContext } from "@/domain/organizer-profile/service";
 import { requireUser } from "@/lib/auth/session";
 
@@ -11,14 +12,6 @@ import {
   updateOrganizationAction,
   updateOrganizerProfileAction,
 } from "./actions";
-
-const organizationTypeOptions: { value: string; label: string }[] = [
-  { value: "company", label: "公司" },
-  { value: "company_club", label: "公司社團" },
-  { value: "community", label: "社區" },
-  { value: "family_group", label: "親友揪團" },
-  { value: "other", label: "其他" },
-];
 
 const inputClassName =
   "mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100";
@@ -128,7 +121,7 @@ export default async function OrganizerProfilePage({
                 <option disabled value="">
                   請選擇組織類型
                 </option>
-                {organizationTypeOptions.map((option) => (
+                {ORGANIZATION_TYPE_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
@@ -214,7 +207,7 @@ export default async function OrganizerProfilePage({
                   <option disabled value="">
                     請選擇組織類型
                   </option>
-                  {organizationTypeOptions.map((option) => (
+                  {ORGANIZATION_TYPE_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
                     </option>
