@@ -7,6 +7,7 @@ import {
   restoreSuspendedTeacherProfileForAdmin,
   suspendApprovedTeacherProfileForAdmin,
 } from "./__internal__/suspend-restore-core";
+import { requireApprovedTeacher } from "./capability";
 import type { TeacherProfileStatus } from "./state";
 import {
   validateTeacherProfileApproveTransition,
@@ -20,6 +21,7 @@ import {
   type TeacherProfileValidationError,
   validateTeacherProfileDraft,
   validateTeacherProfileRejectionReason,
+  validateTeacherProfileSubmit,
   validateTeacherProfileSuspensionReason,
 } from "./validation";
 
@@ -391,6 +393,88 @@ export async function submitOwnTeacherProfileApplication(
   }
 }
 
+export type TeacherProfileUpdateErrorCode =
+  | "authentication_required"
+  | "approved_teacher_required"
+  | "update_validation_failed"
+  | "teacher_profile_update_failed";
+
+export type TeacherProfileUpdateResult =
+  | { ok: true; profile: TeacherProfileApplicationSnapshot }
+  | {
+      ok: false;
+      code: TeacherProfileUpdateErrorCode;
+      message: string;
+      validationErrors?: TeacherProfileValidationError[];
+    };
+
+// teacher-profile-edit D1/D5/D11：approved 老師編輯自己 profile 的必填規則跟送審當下
+// 完全一致（重用 validateTeacherProfileSubmit），並發保護用 updateMany 帶 status:"approved"
+// 條件（不需要 raw SQL 鎖，理由見 plan D5）。
+export async function updateOwnTeacherProfile(
+  input: TeacherProfileApplicationInput,
+): Promise<TeacherProfileUpdateResult> {
+  const validation = validateTeacherProfileSubmit(input);
+
+  if (!validation.valid) {
+    return {
+      ok: false,
+      code: "update_validation_failed",
+      message: "儲存前，請先確認以上資訊。",
+      validationErrors: validation.errors,
+    };
+  }
+
+  let teacherProfileId: string;
+
+  try {
+    const context = await requireApprovedTeacher();
+    teacherProfileId = context.teacherProfileId;
+  } catch (error) {
+    if (isAuthenticationRequiredError(error)) {
+      return {
+        ok: false,
+        code: "authentication_required",
+        message: "請先登入後再編輯老師資料。",
+      };
+    }
+
+    return {
+      ok: false,
+      code: "approved_teacher_required",
+      message: "需要通過審核的老師身份才能編輯老師資料。",
+    };
+  }
+
+  try {
+    const updateResult = await prisma.teacherProfile.updateMany({
+      where: { id: teacherProfileId, status: "approved" },
+      data: toTeacherProfileDraftData(input),
+    });
+
+    if (updateResult.count === 0) {
+      return {
+        ok: false,
+        code: "approved_teacher_required",
+        message: "需要通過審核的老師身份才能編輯老師資料。",
+      };
+    }
+
+    const profile = await prisma.teacherProfile.findUniqueOrThrow({
+      where: { id: teacherProfileId },
+      select: teacherProfileDraftSelect,
+    });
+
+    return { ok: true, profile };
+  } catch {
+    return {
+      ok: false,
+      code: "teacher_profile_update_failed",
+      message: "老師資料暫時無法儲存，請稍後再試。",
+    };
+  }
+}
+
 export async function approveSubmittedTeacherProfileApplication(
   teacherProfileId: string,
 ): Promise<TeacherProfileApproveResult> {
@@ -710,6 +794,15 @@ export type ApprovedOrSuspendedTeacherProfileForAdmin = {
   id: string;
   userId: string;
   displayName: string | null;
+  bio: string | null;
+  teachingStyle: string | null;
+  experienceYears: number | null;
+  certifications: string[];
+  specialties: string[];
+  serviceAreas: string[];
+  teachingFormats: string[];
+  priceRange: string | null;
+  profilePhotoUrl: string | null;
   status: TeacherProfileStatus;
   suspensionReason: string | null;
   updatedAt: Date;
@@ -721,6 +814,8 @@ export type ApprovedOrSuspendedTeacherProfileForAdmin = {
 };
 
 // D3：一次查詢回傳 approved + suspended 兩種狀態，UI 層再依 status 分組渲染。
+// teacher-profile-edit D9（codex round 3/4）：select 擴充成跟 teacherProfileDraftSelect 一樣
+// 完整的欄位集合，讓 Admin 在老師編輯自己 profile 後能看到「改成了什麼」，不是只看到時間戳記。
 export async function listApprovedAndSuspendedTeacherProfilesForAdmin(): Promise<
   ApprovedOrSuspendedTeacherProfileForAdmin[]
 > {
@@ -733,6 +828,15 @@ export async function listApprovedAndSuspendedTeacherProfilesForAdmin(): Promise
       id: true,
       userId: true,
       displayName: true,
+      bio: true,
+      teachingStyle: true,
+      experienceYears: true,
+      certifications: true,
+      specialties: true,
+      serviceAreas: true,
+      teachingFormats: true,
+      priceRange: true,
+      profilePhotoUrl: true,
       status: true,
       suspensionReason: true,
       updatedAt: true,

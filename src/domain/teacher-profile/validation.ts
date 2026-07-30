@@ -133,8 +133,17 @@ function isBlank(value: string | null | undefined): boolean {
   return typeof value !== "string" || value.trim().length === 0;
 }
 
+// Prisma `Int`（Postgres `Int4`）範圍是 -2147483648–2147483647；不是整數或超出上限
+// 都會在寫入時讓 Prisma Client 丟出例外，這裡先擋下，不是新增業務規則。
+const INT4_MAX = 2147483647;
+
 function hasExperienceYears(value: number | null | undefined): boolean {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= 0 &&
+    value <= INT4_MAX
+  );
 }
 
 function hasAtLeastOneValue(values: string[] | null | undefined): boolean {
