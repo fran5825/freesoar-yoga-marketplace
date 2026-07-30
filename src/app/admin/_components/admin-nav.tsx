@@ -18,6 +18,9 @@ export function AdminNav() {
       <Link className="text-sky-700 hover:underline" href="/admin/classes">
         Classes
       </Link>
+      <Link className="text-sky-700 hover:underline" href="/admin/organizations">
+        Organizations
+      </Link>
     </nav>
   );
 }
