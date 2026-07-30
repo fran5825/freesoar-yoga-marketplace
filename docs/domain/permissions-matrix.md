@@ -98,6 +98,8 @@ Teacher 只有在 published demand 或 matched class 需要時，才可看到必
 
 **Organizer capability bootstrap 例外**（`organizer-demand-request-foundation` D1 已確認）：`Create organizer profile` 這一列的「Organizer=Own」在建立當下有一個先天的循環——建立前這位 user 還不具備 Organizer 能力。比照 `TeacherProfile` 既有的 onboarding 模式，V1 明確允許：**任何 signed-in user（Member 基本能力）皆可自助建立自己的 `OrganizerProfile` + `Organization`**（不需要 Admin 指派或審核），建立後即具備 Organizer 能力，且僅能管理自己的 own 資料。此例外只適用於「建立」動作本身；建立後的 `View` / `Edit organization` / `Edit organizer profile` 仍嚴格限定 Own。對應的 route 層例外見 `docs/product/route-map.md` 的 `/organizer/profile` 標注。
 
+**V1 落地範圍（`organizer-profile-edit` 已確認）**：`Edit organizer profile` 這一列的 `Own`（Organizer）已落地——只有 `displayName` 這一個欄位，沒有狀態機也沒有狀態閘門（`OrganizerProfile` 不像 `TeacherProfile` 有 draft/approve/suspend，建立當下就是可用狀態），任何已建立 `OrganizerProfile` 的使用者都能隨時編輯。`Admin` 欄位仍是完整未來設計，V1 未開放（沒有任何頁面讓 Admin 代編輯 Organizer 的 `displayName`）。
+
 ## DemandRequest
 
 | Action | Visitor | Member | Organizer | Teacher | Admin |

@@ -90,6 +90,7 @@ Phase 1 schema notes（`organizer-demand-request-foundation` D1/D2/D3 已確認�
 - `organizationId` 為單一 nullable FK：V1 一個 `OrganizerProfile` 至多一個 `Organization`，不支援多對多。
 - **Organizer capability bootstrap 例外**：任何 signed-in user 皆可自助建立自己的 `OrganizerProfile` + `Organization`（比照 `TeacherProfile` 的 onboarding 模式），不需要 Admin 指派或審核；建立後僅能管理自己的 own 資料。詳見 `docs/domain/permissions-matrix.md` 與 `docs/product/route-map.md` 的對應標注。
 - 建立流程一律「新建專屬 `Organization`」，V1 不提供搜尋/加入既有組織的協作邀請（non-goal，屬 enterprise 協作範疇）。
+- **Edit（`organizer-profile-edit` 已確認）**：已建立 `OrganizerProfile` 的 Organizer 可以在 `/organizer/profile` 編輯 `displayName`（沿用建立時的必填規則）。`id`／`userId`／`organizationId`／`createdAt`／`updatedAt` 不可由 Organizer 編輯。因為 `OrganizerProfile` 沒有狀態機（不像 `TeacherProfile` 需要 Admin 審核才能進入 `approved`），這個編輯能力不需要任何狀態閘門——只要有自己的 `OrganizerProfile` 就能隨時編輯。不新增 notification。
 
 ## Organization
 
