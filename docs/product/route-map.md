@@ -31,8 +31,8 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 
 | Route | 目的 |
 |---|---|
-| `/teacher/dashboard` | 老師 onboarding / status dashboard；已登入使用者可查看自己的 TeacherProfile status，尚未建立 TeacherProfile 時可前往建立申請。本 status slice 不開放 demand、availability、response 或 class session 功能。 |
-| `/teacher/profile` | 編輯 teacher profile |
+| `/teacher/dashboard` | 老師 onboarding / status dashboard；已登入使用者可查看自己的 TeacherProfile status，尚未建立 TeacherProfile 時可前往建立申請。 |
+| `/teacher/profile` | **已落地**（`teacher-profile-edit` 已確認）：approved 老師編輯自己的個人資料，suspended 唯讀查看，其餘狀態導向 `/teachers/join` |
 | `/teacher/availability` | **已落地**（`teacher-availability` 已確認）：管理固定 availability 與 exception |
 | `/teacher/demands` | 查看 eligible demand requests |
 | `/teacher/demands/[demandRequestId]` | 查看需求詳情並提交 response |

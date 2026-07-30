@@ -12,31 +12,37 @@ const statusCases: Array<{
   status: TeacherProfileStatus;
   title: string;
   actionLabel: string;
+  actionHref: string;
 }> = [
   {
     status: "draft",
     title: "你的老師申請草稿正在整理中",
     actionLabel: "繼續整理申請",
+    actionHref: "/teachers/join",
   },
   {
     status: "submitted",
     title: "你的老師申請已送出審核",
     actionLabel: "查看申請內容",
+    actionHref: "/teachers/join",
   },
   {
     status: "rejected",
     title: "你的老師申請可修正後重新送出",
     actionLabel: "修正並重新送審",
+    actionHref: "/teachers/join",
   },
   {
     status: "approved",
     title: "你的老師資料已通過審核",
-    actionLabel: "查看已保存資料",
+    actionLabel: "編輯我的資料",
+    actionHref: "/teacher/profile",
   },
   {
     status: "suspended",
     title: "你的老師狀態目前暫停中",
     actionLabel: "查看目前資料",
+    actionHref: "/teacher/profile",
   },
 ];
 
@@ -133,7 +139,7 @@ test.describe("/teacher/dashboard smoke", () => {
       await expect(page.getByText(displayName)).toBeVisible();
       await expect(
         page.getByRole("link", { name: statusCase.actionLabel }),
-      ).toHaveAttribute("href", "/teachers/join");
+      ).toHaveAttribute("href", statusCase.actionHref);
       await expect(page.getByRole("link", { name: "Demand pool" })).toHaveCount(
         0,
       );
@@ -143,16 +149,17 @@ test.describe("/teacher/dashboard smoke", () => {
       await expect(page.getByRole("link", { name: "Classes" })).toHaveCount(0);
 
       if (statusCase.status === "approved") {
-        // teacher-availability D13：文案已更新為描述目前已開放的能力，
-        // 並新增前往 /teacher/availability 的連結。
+        // teacher-profile-edit D9：approved 的 body 與主要 action 連結再次更新，
+        // 補上「編輯個人資料」這個新落地的能力。
         await expect(
           page.getByText(
-            "你已具備 marketplace capability，可以瀏覽並回應團體需求、查看已建立的課程，並管理你的可授課時間。",
+            "你已具備 marketplace capability，可以瀏覽並回應團體需求、查看已建立的課程、管理你的可授課時間，並編輯你的老師個人資料。",
           ),
         ).toBeVisible();
         await expect(
           page.getByRole("link", { name: "管理可授課時間" }),
         ).toHaveAttribute("href", "/teacher/availability");
+        // 「編輯我的資料」連結的 href 已經由上方的通用斷言（statusCase.actionHref）涵蓋。
       }
     });
   }

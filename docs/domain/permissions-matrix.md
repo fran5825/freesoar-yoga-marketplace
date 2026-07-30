@@ -69,6 +69,8 @@ Teacher 不可 approve 自己。Suspended teacher 不可公開顯示，也不可
 
 **V1 落地範圍（`teacher-profile-suspension` 已確認）**：`Suspend profile` 這一列過去長期沒有對應的落地範圍註記，容易被誤讀成早就是 V1 功能——實際上直到本輪之前，整個 repo 沒有任何程式碼會把 `TeacherProfile.status` 寫成 `suspended`。本輪把 `Suspend profile` 與新增的 `Restore profile` 一起接線：兩者都是 Admin-only，`Suspend` 必填 `suspensionReason`（trim 後 10–1000 字，獨立於 `rejectionReason` 的欄位），`Restore` 只能從 `suspended` 觸發並清空該欄位。連帶影響：`demand-response-and-matching-spec.md` 的 `Select response` 動作現在也會檢查該 response 所屬老師是否仍是 `approved`，暫停後既有的 `submitted` response 無法再被選定。
 
+**V1 落地範圍（`teacher-profile-edit` 已確認）**：`Edit teacher profile` 這一列的 `Own`（Teacher）不是無條件的——只有 `approved` 才能編輯（`/teacher/profile`，重用送審時的必填規則）；`suspended` 只能唯讀查看，不能編輯；`draft`／`submitted`／`rejected` 沿用既有 `/teachers/join` 的既有流程，不受這輪影響。`Admin` 欄位仍是上表所描述的完整未來設計，V1 本輪未開放（沒有任何頁面讓 Admin 代編輯老師的 `TeacherProfile`）；Admin 目前只能在 `/admin/teachers` 唯讀查看老師的完整欄位內容與最後更新時間（見 `data-model.md` 的 Edit 說明），不能代為修改。
+
 ## TeacherAvailability
 
 | Action | Visitor | Member | Organizer | Teacher | Admin |

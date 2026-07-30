@@ -319,7 +319,9 @@ test.describe("teacher profile suspension smoke", () => {
       has: page.getByRole("heading", { name: `Teacher a ${testRunId}` }),
     });
     await expect(approvedCard).toBeVisible();
-    await approvedCard.locator("summary").click();
+    // teacher-profile-edit 一輪在同一張卡片上新增了「View profile details」這個
+    // 第二個 <summary>，這裡要精準點「Suspend…」，不能再用泛用的 summary 選擇器。
+    await approvedCard.getByText("Suspend…").click();
 
     // D1: reason required — native required blocks empty submit, card stays in Approved.
     await approvedCard.getByRole("button", { name: "確認暫停" }).click();

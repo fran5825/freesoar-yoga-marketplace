@@ -60,6 +60,7 @@ Phase 1 schema notes:
 - 老師聯絡電話在 V1 使用 `User.phone`，不在 `TeacherProfile` 重複存放。
 - `rejectionReason` 是 nullable 欄位（`String?`），保存 Admin 在 `submitted → rejected` 時填寫、**面向老師的退回說明**。它與內部 `AdminNote` 語意分離：`rejectionReason` 會顯示給該老師，`AdminNote` 不對外。V1 只保存「最新一次」reason，不保留歷史（audit trail 屬 V1 之外）。reason 由 Admin 動作寫入，非 Teacher 可編輯欄位；lifecycle 見 `state-transition-details.md`（`rejected` 期間保留、`rejected → submitted` 與 `approve` 時清空、再次 reject 覆蓋）。
 - **`suspensionReason`（`teacher-profile-suspension` 已確認）**：nullable 欄位（`String?`），保存 Admin 在 `approved → suspended` 時填寫、面向老師的暫停說明。獨立於 `rejectionReason`，不共用同一欄位——兩者代表不同原因（退回 vs. 暫停），共用會讓 UI 文案在其中一種情境下失真（比照 `demand-request-cancellation` D9 已經修過的同類教訓：reuse 一個語意不合的既有欄位/狀態，會讓文案講錯話）。lifecycle：`suspended` 期間保留（供老師查看）、`restore`（`suspended → approved`）時清空，不保留歷史。
+- **Edit（`teacher-profile-edit` 已確認）**：approved 老師可以在 `/teacher/profile` 編輯 `displayName`／`bio`／`teachingStyle`／`experienceYears`／`specialties`／`serviceAreas`／`teachingFormats`／`certifications`／`priceRange`／`profilePhotoUrl` 這 10 個欄位，`id`／`userId`／`status`／`rejectionReason`／`suspensionReason`／`createdAt`／`updatedAt` 不可由 Teacher 編輯。編輯重用送審時的必填規則（`validateTeacherProfileSubmit`），且額外要求 `experienceYears` 必須是整數並落在 Postgres `Int4` 範圍內（`0`–`2147483647`），避免超出範圍的數字在寫入資料庫時造成未攔截的例外。`suspended` 老師只能唯讀查看，不能編輯。**編輯不觸發重新審核、不改變 `status`、不新增 notification**——即使改的是會影響公開呈現或媒合判斷的欄位（如 `displayName`、`specialties`），這是本輪明確拍板的 V1 決策，不是遺漏；Admin 可在 `/admin/teachers` 的 approved／suspended 卡片上展開「View profile details」查看老師目前完整的欄位內容與最後更新時間，作為事後發現與判斷的既有補救手段。
 
 Status:
 
