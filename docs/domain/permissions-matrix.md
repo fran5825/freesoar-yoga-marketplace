@@ -179,7 +179,9 @@ V1 不做完整 Teacher attendance workflow；`attended` / `no_show` 可保留�
 
 同一 Member 對同一 class session 只能留下一次評價（`@@unique([classSessionId, reviewerUserId])`）。
 
-**V1 落地範圍**（`class-session-review` 已確認）：`Submit review` 僅 Member own-scoped 可執行，且僅限於自己有 `confirmed` enrollment、且該 class session 目前是 `completed` 的情況（D1，兩個資格條件不合都收斂成同一個 `review_not_eligible` 錯誤碼，不細分原因）；不可編輯或刪除已送出的評價（D3）。`View class session's reviews`：Member 只看得到自己在該 class session 留下的那一則（透過 `listOwnEnrollmentsForMember` 的 nested `reviews` select，用 `reviewerUserId` 二次過濾）；Organizer／Teacher 看得到該 class session 的**所有**評價（own-scoped，Organizer 透過 `listReviewsForClassSession` 檢查 `organizerProfileId` 屬於自己，Teacher 透過既有 `listOwnClassSessionsForTeacher` 的 `teacherProfileId` own-scoping 天生取得），評價作者顯示既有 `name`/`email` fallback 的顯示名稱，不匿名化（D4）；**Admin 不介入**（上表 Admin 欄位為完整未來設計，V1 未開放任何 Admin 專用的評價檢視介面）。
+**V1 落地範圍**（`class-session-review` 已確認）：`Submit review` 僅 Member own-scoped 可執行，且僅限於自己有 `confirmed` enrollment、且該 class session 目前是 `completed` 的情況（D1，兩個資格條件不合都收斂成同一個 `review_not_eligible` 錯誤碼，不細分原因）；不可編輯或刪除已送出的評價（D3）。`View class session's reviews`：Member 只看得到自己在該 class session 留下的那一則（透過 `listOwnEnrollmentsForMember` 的 nested `reviews` select，用 `reviewerUserId` 二次過濾）；Organizer／Teacher 看得到該 class session 的**所有**評價（own-scoped，Organizer 透過 `listReviewsForClassSession` 檢查 `organizerProfileId` 屬於自己，Teacher 透過既有 `listOwnClassSessionsForTeacher` 的 `teacherProfileId` own-scoping 天生取得），評價作者顯示既有 `name`/`email` fallback 的顯示名稱，不匿名化（D4）；**Admin 不介入逐筆評價檢視**（上表 Admin 欄位對應的是**逐筆**評價內容——評語、評價者身分——這部分仍是完整未來設計，V1 未開放任何 Admin 專用的逐筆評價檢視介面）。
+
+**V1 額外落地（`review-average-rating-display` 已確認，與上表 `View class session's reviews` 的 Admin 欄位是不同顆粒度的能力）**：Admin 在 `/admin/teachers` 可以看到每位老師的**衍生彙整值**（平均分數＋評價則數），不是逐筆評價檢視——看不到任何評語內容或評價者身分，也沒有對應的資料檢視介面，純粹是一個計算後的信號數字。Teacher 本來就看得到自己所有課程的完整評價（既有 `Own`），這一輪只是把同一批已經允許看到的資料多做一個彙整摘要顯示在 `/teacher/profile`，不是新增可見範圍。
 
 ## Notification
 

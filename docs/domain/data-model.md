@@ -324,6 +324,8 @@ Fields:
 - comment（選填，上限 500 字，比照 `Enrollment.notes` 的既有先例）
 - createdAt
 
+**已落地**（`docs/superpowers/plans/2026-07-31-review-average-rating-display-plan.md` 已確認）：老師的平均評分與評價則數是**即時計算的衍生值**，不是新欄位——透過 `Review` → `ClassSession.teacherProfileId` 的關聯即時聚合（own 用 `prisma.review.aggregate()`，Admin 列表用資料庫端 `JOIN`＋`GROUP BY`，兩者都不把逐筆評價撈進應用層）。老師本人可在 `/teacher/profile` 看到自己的彙整值；Admin 可在 `/admin/teachers` 看到每位老師的彙整值（僅平均分數與則數，不含評語或評價者身分）。
+
 ## Notification
 
 Represents notification record。**已落地**（`docs/superpowers/plans/2026-07-27-notification-plan.md` 已確認）：V1 只寫入 `channel="in_app"`，`email`/`line`/`sms` 保留為未來 channel 的 reserved enum 值（D2/D6）；`status` 生命週期是 `pending → sent`／`pending → failed`，V1 站內列表（`/notifications`）只顯示 `status="sent"` 的記錄。
