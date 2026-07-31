@@ -65,9 +65,11 @@
 - 不顯示 raw image URL。
 - 不顯示 `User.isAdmin`。
 - 不顯示 Teacher / Organizer unloaded debug wording。
+- 提供 `/member/dashboard` 與 `/organizer/dashboard` 的最小 workspace 入口。
+- `/account` 不載入 `TeacherProfile` / `OrganizerProfile` relation；目標 route 各自執行 access policy 與 bootstrap 判斷。
 - 不是正式會員中心。
 - 不是正式 dashboard。
-- 不包含 account editing、enrollment、Teacher onboarding、Organizer onboarding 或 dashboard navigation。
+- 不包含 account editing、enrollment、Teacher onboarding、Organizer onboarding、完整角色判斷或四角色 dashboard launcher。
 
 ### `/sign-in`
 
@@ -90,7 +92,7 @@
 
 目前 capability / guard smoke 的邊界如下：
 
-- `/account`：只顯示 signed-in / member active 狀態，不顯示 internal capability debug。
+- `/account`：顯示 signed-in / member active 狀態與 Member／Organizer 的最小 workspace links，不顯示 internal capability debug，也不載入 profile relations。
 - `/dev/admin`：仍保留 development-only 的 admin guard smoke，用來驗證 `requireAdmin()` 與 `User.isAdmin` 判斷。
 - Member：登入者預設具備 member capability，但 product-facing 畫面只顯示 member active 狀態。
 - Admin：仍由 `User.isAdmin` 判斷，但不在 `/account` 顯示。
@@ -143,7 +145,7 @@ OAuth 登入目前可同時建立帳號，因此不急著實作完整 `/sign-up`
 - 何時將 `/` 轉為正式 landing page / brand home。
 - 是否需要正式 `/sign-up`。
 - 是否需要正式 dashboard。
-- 是否讓 `/account` 轉為正式會員入口。
+- `account-dashboard-navigation` 已核准讓 `/account` 提供 Member／Organizer 最小入口；是否擴張為正式會員中心、四角色 launcher 或依 capability 動態顯示，仍需另行確認。
 - 何時載入 `TeacherProfile` / `OrganizerProfile` capability。
 - 何時加入 LINE / Facebook 或其他 provider。
 - 是否需要 shared header / navigation。
