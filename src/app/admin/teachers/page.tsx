@@ -1,3 +1,4 @@
+import { formatTeacherRatingSummary } from "@/domain/review/rating-summary";
 import {
   listApprovedAndSuspendedTeacherProfilesForAdmin,
   listSubmittedTeacherProfileApplicationsForAdmin,
@@ -274,6 +275,12 @@ export default async function AdminTeachersPage({
                 <p className="mt-1 text-xs text-gray-500">
                   Last updated: {formatDateTime(teacher.updatedAt)}
                 </p>
+                <p className="mt-1 text-xs text-gray-500">
+                  {formatTeacherRatingSummary({
+                    averageRating: teacher.averageRating,
+                    reviewCount: teacher.reviewCount,
+                  })}
+                </p>
                 <details className="mt-3 rounded border border-gray-200 bg-gray-50">
                   <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-gray-700 marker:hidden">
                     View profile details
@@ -396,6 +403,12 @@ export default async function AdminTeachersPage({
                 ) : null}
                 <p className="mt-1 text-xs text-gray-500">
                   Last updated: {formatDateTime(teacher.updatedAt)}
+                </p>
+                <p className="mt-1 text-xs text-gray-500">
+                  {formatTeacherRatingSummary({
+                    averageRating: teacher.averageRating,
+                    reviewCount: teacher.reviewCount,
+                  })}
                 </p>
                 <details className="mt-3 rounded border border-gray-200 bg-gray-50">
                   <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-gray-700 marker:hidden">

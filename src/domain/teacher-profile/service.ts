@@ -1,3 +1,5 @@
+import { Prisma } from "@prisma/client";
+
 import { getCurrentUser, requireAdmin, requireUser } from "@/lib/auth/session";
 import { listAdminUserIds } from "@/domain/notification/admin-recipients";
 import { notifyUsers } from "@/domain/notification/create";
@@ -811,6 +813,8 @@ export type ApprovedOrSuspendedTeacherProfileForAdmin = {
     name: string | null;
     email: string | null;
   };
+  averageRating: number | null;
+  reviewCount: number;
 };
 
 // D3：一次查詢回傳 approved + suspended 兩種狀態，UI 層再依 status 分組渲染。
@@ -821,7 +825,7 @@ export async function listApprovedAndSuspendedTeacherProfilesForAdmin(): Promise
 > {
   await requireAdmin();
 
-  return prisma.teacherProfile.findMany({
+  const teachers = await prisma.teacherProfile.findMany({
     where: { status: { in: ["approved", "suspended"] } },
     orderBy: { updatedAt: "desc" },
     select: {
@@ -845,6 +849,36 @@ export async function listApprovedAndSuspendedTeacherProfilesForAdmin(): Promise
       },
     },
   });
+
+  // D3：資料庫端聚合（JOIN + GROUP BY），不把每位老師的逐筆評價撈進應用層——
+  // 結果集大小受老師數量限制，不隨平台累積的評價總數持續變重。
+  const ratingRows =
+    teachers.length === 0
+      ? []
+      : await prisma.$queryRaw<
+          { teacherProfileId: string; averageRating: number | null; reviewCount: bigint }[]
+        >(Prisma.sql`
+          SELECT cs."teacherProfileId" AS "teacherProfileId",
+                 AVG(r.rating)::float AS "averageRating",
+                 COUNT(r.rating) AS "reviewCount"
+          FROM "Review" r
+          JOIN "ClassSession" cs ON cs.id = r."classSessionId"
+          WHERE cs."teacherProfileId" IN (${Prisma.join(teachers.map((teacher) => teacher.id))})
+          GROUP BY cs."teacherProfileId"
+        `);
+
+  const ratingByTeacherProfileId = new Map(
+    ratingRows.map((row) => [
+      row.teacherProfileId,
+      { averageRating: row.averageRating, reviewCount: Number(row.reviewCount) },
+    ]),
+  );
+
+  return teachers.map((teacher) => ({
+    ...teacher,
+    averageRating: ratingByTeacherProfileId.get(teacher.id)?.averageRating ?? null,
+    reviewCount: ratingByTeacherProfileId.get(teacher.id)?.reviewCount ?? 0,
+  }));
 }
 
 function toTeacherProfileDraftData(input: TeacherProfileApplicationInput) {

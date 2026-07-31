@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
+import { formatTeacherRatingSummary } from "@/domain/review/rating-summary";
+import { getOwnTeacherRatingSummary } from "@/domain/review/read-service";
 import { getOwnTeacherProfileApplicationSnapshot } from "@/domain/teacher-profile/service";
 import { requireUser } from "@/lib/auth/session";
 
@@ -111,6 +113,7 @@ export default async function TeacherProfilePage({
   }
 
   const isApproved = profile.status === "approved";
+  const ratingSummary = await getOwnTeacherRatingSummary();
 
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-5 py-10 sm:px-8">
@@ -136,6 +139,13 @@ export default async function TeacherProfilePage({
           {feedback.message}
         </section>
       ) : null}
+
+      <section className="rounded border border-gray-200 bg-white px-4 py-3 text-sm">
+        <p className="font-medium text-gray-950">平均評分</p>
+        <p className="mt-1 text-gray-700">
+          {ratingSummary ? formatTeacherRatingSummary(ratingSummary) : "尚無評價"}
+        </p>
+      </section>
 
       {!isApproved ? (
         <section

@@ -1,6 +1,8 @@
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
+import type { TeacherRatingSummary } from "./rating-summary";
+
 export type ClassSessionReviewEntry = {
   id: string;
   rating: number;
@@ -46,4 +48,29 @@ export async function listReviewsForClassSession(
     createdAt: review.createdAt,
     reviewerLabel: review.reviewer.name ?? review.reviewer.email ?? "會員",
   }));
+}
+
+// D3：即時 aggregate 查詢，Prisma 直接轉譯成資料庫端 AVG()/COUNT()，不會把逐筆 Review 撈進應用層。
+export async function getOwnTeacherRatingSummary(): Promise<TeacherRatingSummary | null> {
+  const currentUser = await requireUser();
+
+  const teacherProfile = await prisma.teacherProfile.findUnique({
+    where: { userId: currentUser.id },
+    select: { id: true },
+  });
+
+  if (!teacherProfile) {
+    return null;
+  }
+
+  const aggregate = await prisma.review.aggregate({
+    where: { classSession: { teacherProfileId: teacherProfile.id } },
+    _avg: { rating: true },
+    _count: { rating: true },
+  });
+
+  return {
+    averageRating: aggregate._avg.rating,
+    reviewCount: aggregate._count.rating,
+  };
 }
