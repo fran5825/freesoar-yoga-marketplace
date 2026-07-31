@@ -42,7 +42,7 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 
 | Route | 目的 |
 |---|---|
-| `/organizer/dashboard` | 團主 dashboard，顯示需求、回覆與課程摘要 |
+| `/organizer/dashboard` | **已落地**（`role-dashboards` 已確認）：彙整自己的近期通知與需求狀態；任何 signed-in user 可進入，尚未建立 `OrganizerProfile` 時只顯示建立團主資料 CTA（見下方 Route Guard 例外） |
 | `/organizer/profile` | Organizer capability bootstrap / 管理 organizer profile 與 organization 基本資料；已登入使用者可在此自助建立自己的 `OrganizerProfile` + `Organization`，尚未建立時導向建立流程（見下方 Route Guard 例外） |
 | `/organizer/demands` | 查看自己的 demand requests |
 | `/organizer/demands/new` | 建立 demand request draft 或直接 submit |
@@ -55,7 +55,7 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 
 | Route | 目的 |
 |---|---|
-| `/member/dashboard` | 會員 dashboard，顯示已報名課程摘要 |
+| `/member/dashboard` | **已落地**（`role-dashboards` 已確認）：彙整自己的近期通知、報名狀態與即將到來的已確認課程 |
 | `/member/enrollments` | 查看自己的 enrollments，並可取消（`enrollment` 已確認） |
 
 ## Admin Routes
@@ -77,7 +77,7 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 - `/admin/*` 必須只允許 Admin。
 - `/teacher/dashboard` 是登入後 teacher onboarding / status route，允許 signed-in user 進入並建立 teacher application；頁面只能顯示自己的 TeacherProfile status 與申請下一步，不可開放 demand、availability、response 或 class session 功能。
 - 其他 `/teacher/*` workspace routes 必須只允許 Teacher 或 Admin；未 approved 的 Teacher 只能進入 onboarding / profile 相關頁。Demand response、eligible demand pool、availability 與 class session 能力必須另外檢查 TeacherProfile status 與 service-layer permission。**`/teacher/classes` 是例外**：查看**已經指派給自己的既有 class session**不受此限，任何曾建立 `TeacherProfile` 的使用者皆可查看（比照既有唯讀查看自己 demand response 的權限模式），因為這是查看既有承諾而非申請新機會（`class-session-creation` D15 已確認）。
-- `/organizer/*` 必須只允許 Organizer 或 Admin；**`/organizer/profile` 是例外**：比照 `/teacher/dashboard` 的 onboarding 模式，允許任何 signed-in user 進入並自助建立自己的 `OrganizerProfile` + `Organization`（`organizer-demand-request-foundation` D1 已確認）。建立之後，該頁與其餘 `/organizer/*` workspace routes 一律限定 own 資料存取；此例外只開放「建立自己的 organizer 能力」這一動作，不代表 `/organizer/*` 對非 organizer 開放其他資料存取。
+- `/organizer/*` 必須只允許 Organizer 或 Admin；**`/organizer/profile` 與 `/organizer/dashboard` 是 bootstrap 例外**：比照 `/teacher/dashboard` 的 onboarding 模式，允許任何 signed-in user 進入。`/organizer/profile` 可自助建立自己的 `OrganizerProfile` + `Organization`（`organizer-demand-request-foundation` D1 已確認）；`/organizer/dashboard` 在尚未建立 profile 時只顯示前往建立資料的 CTA，不讀取或顯示任何 Organizer 私有資料（`role-dashboards` 已確認）。建立之後，這兩頁與其餘 `/organizer/*` workspace routes 一律限定 own 資料存取；例外不代表非 Organizer 可存取他人的需求、課程或 organization 資料。
 - `/member/*` 必須只允許登入會員或 Admin。
 - 所有登入者預設具備 Member 基本能力；Teacher 或 Organizer 若要報名課程，使用同一個 User 的 Member 能力。
 - 公開 class detail / share link 只允許 `open_for_enrollment` 或 `confirmed` 且標記可公開的 class session。**（`enrollment` 已確認：這是完整未來設計，V1 的 `/classes/[classSessionId]` 只服務已登入 Member，不對 Visitor 開放，也不檢查 `isPublic`；`draft` 狀態的 class session 一律回傳 not-found，不揭露任何欄位——D4。）**
