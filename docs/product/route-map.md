@@ -24,7 +24,7 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 |---|---|---|
 | `/sign-in` | 登入 | All |
 | `/sign-up` | 註冊 | Visitor |
-| `/account` | 個人帳號基本資料 | Member, Organizer, Teacher, Admin |
+| `/account` | 個人帳號基本資料與最小 authenticated entry；提供 `/member/dashboard`、`/organizer/dashboard` 入口，但不在此載入 profile relations 或執行完整角色 launcher（`account-dashboard-navigation` 已確認） | Member, Organizer, Teacher, Admin |
 | `/notifications` | 查看自己收到的站內通知（own-scoped，唯讀）；`/account` 提供入口連結（`notification` 已確認） | Member, Organizer, Teacher, Admin |
 
 ## Teacher Routes
