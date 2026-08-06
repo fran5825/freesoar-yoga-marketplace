@@ -21,6 +21,10 @@ export type NotifyFn = (
 export type DemandLockHooks = {
   onBeforeLock?: () => void | Promise<void>;
   onLockAcquired?: () => void | Promise<void>;
+  // 第 8 節 Codex round 3 修正：onLockAcquired 只對應 ClassSession 的鎖，這裡另外開一個同步
+  // 點對應 TeacherProfile 的鎖——供 Playwright 測試證明「跟 Admin 執行 suspend 的獨立
+  // UPDATE 正確序列化」，不是機率性的 Promise.all。
+  onTeacherLockAcquired?: () => void | Promise<void>;
 };
 
 export type CreateEnrollmentInput = {
@@ -33,10 +37,11 @@ export type CreateEnrollmentForUserErrorCode =
   | "class_session_already_started"
   | "class_session_full"
   | "already_enrolled"
+  | "teacher_not_approved"
   | "create_failed";
 
 export type CreateEnrollmentForUserResult =
-  | { ok: true; enrollmentId: string }
+  | { ok: true; enrollmentId: string; status: "confirmed" | "pending" }
   | { ok: false; code: CreateEnrollmentForUserErrorCode };
 
 class ClassSessionNotFoundError extends Error {
@@ -74,14 +79,27 @@ class AlreadyEnrolledError extends Error {
   }
 }
 
-// D5/D14：整段包在 prisma.$transaction 內：
-// (a) 鎖住 ClassSession 並取回 status/capacity/startAt；
+class TeacherNotApprovedError extends Error {
+  constructor() {
+    super("Teacher profile is not approved");
+    this.name = "TeacherNotApprovedError";
+  }
+}
+
+// D5/D14 + teacher-initiated-open-classes 第 8 節（Gate G2/G3）：整段包在 prisma.$transaction 內：
+// (a) 鎖住 ClassSession 並取回 status/capacity/startAt/requiresApproval/teacherProfileId；
 // (b) 檢查 status === open_for_enrollment；
 // (c) 檢查 startAt > now（D14）；
-// (d) confirmed enrollment 數量 < capacity；
-// (e) 尚無 (classSessionId, userId) 的既有 enrollment（任何狀態，D8）；
-// (f) 建立 enrollment，寫入 consentedAt（D6）。
-// 檢查順序刻意如此（open_for_enrollment → 時間 → capacity → 重複報名），比照
+// (d) 鎖住這位老師的 TeacherProfile row 並讀出 status——鎖必須先於讀取，否則跟 Admin 執行
+//     suspend 的獨立 UPDATE 不會互相序列化，會有 TOCTOU 窗口（見 conflict-check.ts 同一套
+//     手法，這是本計畫第三次用「鎖 TeacherProfile 列」解決同一類問題）；非 approved 一律拒絕
+//     新報名，不論報名者是透過公開瀏覽還是已登入直連——但這個檢查只在「新建立報名」這個時間
+//     點生效，不回溯撤銷 suspend 生效前已經合法建立的報名；
+// (e) pending + confirmed 合計數量 < capacity（Gate G3 = A，pending 佔用名額）；
+// (f) 尚無 (classSessionId, userId) 的既有 enrollment（任何狀態，D8）；
+// (g) 建立 enrollment，依 requiresApproval 決定初始狀態是 confirmed 或 pending，寫入
+//     consentedAt（D6）。
+// 檢查順序刻意如此（open_for_enrollment → 時間 → 資格 → capacity → 重複報名），比照
 // class-session-creation D5 已驗證過的「檢查順序決定哪個錯誤碼可達」教訓。
 export async function createEnrollmentForUser(
   userId: string,
@@ -91,13 +109,20 @@ export async function createEnrollmentForUser(
   notifyOverride: NotifyFn = notifyUsers,
 ): Promise<CreateEnrollmentForUserResult> {
   try {
-    const enrollmentId = await prisma.$transaction(async (tx) => {
+    const { enrollmentId, status } = await prisma.$transaction(async (tx) => {
       await hooks?.onBeforeLock?.();
 
       const lockedClassSession = await tx.$queryRaw<
-        { id: string; status: string; capacity: number; startAt: Date }[]
+        {
+          id: string;
+          status: string;
+          capacity: number;
+          startAt: Date;
+          requiresApproval: boolean;
+          teacherProfileId: string;
+        }[]
       >`
-        SELECT "id", "status", "capacity", "startAt"
+        SELECT "id", "status", "capacity", "startAt", "requiresApproval", "teacherProfileId"
         FROM "ClassSession"
         WHERE "id" = ${classSessionId}
         FOR UPDATE
@@ -119,11 +144,23 @@ export async function createEnrollmentForUser(
         throw new ClassSessionAlreadyStartedError();
       }
 
-      const confirmedCount = await tx.enrollment.count({
-        where: { classSessionId, status: "confirmed" },
+      const lockedTeacherProfile = await tx.$queryRaw<{ status: string }[]>`
+        SELECT "status" FROM "TeacherProfile"
+        WHERE "id" = ${classSession.teacherProfileId}
+        FOR UPDATE
+      `;
+
+      await hooks?.onTeacherLockAcquired?.();
+
+      if (lockedTeacherProfile.length === 0 || lockedTeacherProfile[0].status !== "approved") {
+        throw new TeacherNotApprovedError();
+      }
+
+      const activeCount = await tx.enrollment.count({
+        where: { classSessionId, status: { in: ["confirmed", "pending"] } },
       });
 
-      if (confirmedCount >= classSession.capacity) {
+      if (activeCount >= classSession.capacity) {
         throw new ClassSessionFullError();
       }
 
@@ -136,18 +173,22 @@ export async function createEnrollmentForUser(
         throw new AlreadyEnrolledError();
       }
 
+      const resolvedStatus: "pending" | "confirmed" = classSession.requiresApproval
+        ? "pending"
+        : "confirmed";
+
       const enrollment = await tx.enrollment.create({
         data: {
           classSessionId,
           userId,
-          status: "confirmed",
+          status: resolvedStatus,
           notes: input.notes,
           consentedAt: new Date(),
         },
         select: { id: true },
       });
 
-      return enrollment.id;
+      return { enrollmentId: enrollment.id, status: resolvedStatus };
     });
 
     // D4/D7 修正版：resolver query + notify 一律在 tx commit 之後才執行，不進 tx；
@@ -156,19 +197,33 @@ export async function createEnrollmentForUser(
     try {
       const classSession = await prisma.classSession.findUnique({
         where: { id: classSessionId },
-        select: { title: true },
+        select: { title: true, teacherProfile: { select: { userId: true } } },
       });
 
-      await notifyOverride(
-        "enrollment_confirmed",
-        [{ userId, role: "self" }],
-        { classSessionTitle: classSession?.title },
-      );
+      if (status === "pending") {
+        // 老師也要收到通知才知道有新的 pending 報名需要審核，否則審核機制永遠不會被觸發。
+        await notifyOverride(
+          "enrollment_pending_review",
+          [
+            { userId, role: "self" },
+            ...(classSession
+              ? [{ userId: classSession.teacherProfile.userId, role: "counterpart" as const }]
+              : []),
+          ],
+          { classSessionTitle: classSession?.title },
+        );
+      } else {
+        await notifyOverride(
+          "enrollment_confirmed",
+          [{ userId, role: "self" }],
+          { classSessionTitle: classSession?.title },
+        );
+      }
     } catch (notifyError) {
-      console.error("[notification] enrollment_confirmed trigger failed", notifyError);
+      console.error("[notification] enrollment created trigger failed", notifyError);
     }
 
-    return { ok: true, enrollmentId };
+    return { ok: true, enrollmentId, status };
   } catch (error) {
     if (error instanceof ClassSessionNotFoundError) {
       return { ok: false, code: "class_session_not_found" };
@@ -182,6 +237,10 @@ export async function createEnrollmentForUser(
       return { ok: false, code: "class_session_already_started" };
     }
 
+    if (error instanceof TeacherNotApprovedError) {
+      return { ok: false, code: "teacher_not_approved" };
+    }
+
     if (error instanceof ClassSessionFullError) {
       return { ok: false, code: "class_session_full" };
     }
@@ -191,7 +250,7 @@ export async function createEnrollmentForUser(
     }
 
     if (isUniqueConstraintViolation(error)) {
-      // Defense-in-depth：正常路徑下 (e) 已經先擋掉重複，這裡只處理理論上的極端競態。
+      // Defense-in-depth：正常路徑下 (f) 已經先擋掉重複，這裡只處理理論上的極端競態。
       return { ok: false, code: "already_enrolled" };
     }
 

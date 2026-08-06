@@ -1,4 +1,4 @@
-import type { ClassSessionStatus } from "@prisma/client";
+import type { ClassSessionOrigin, ClassSessionStatus, EnrollmentStatus } from "@prisma/client";
 
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
@@ -16,7 +16,10 @@ export type OrganizerFacingClassSession = {
   isPublic: boolean;
   status: ClassSessionStatus;
   createdAt: Date;
-  demandRequest: { targetLevel: string | null };
+  // teacher-initiated-open-classes：demandRequest 改為 nullable（老師自建課程沒有對應
+  // DemandRequest），但 Organizer 自己建立的課程一律有 demandRequest；own-scoped 查詢仍只會
+  // 回傳 organizer_matched 來源的課程，型別上放寬是為了配合 schema 變更，不代表這裡真的會出現 null。
+  demandRequest: { targetLevel: string | null } | null;
   teacherProfile: { displayName: string | null };
 };
 
@@ -96,10 +99,19 @@ export type TeacherFacingClassSession = {
   isPublic: boolean;
   status: ClassSessionStatus;
   createdAt: Date;
-  demandRequest: { targetLevel: string | null };
-  organization: { name: string };
+  // teacher-initiated-open-classes：老師自建課程沒有 demandRequest／organization，兩者皆為
+  // nullable；origin／recurringClassSeriesId／requiresApproval 讓老師端統一列表能分辨並顯示
+  // 課程來源，不需要另開查詢。
+  origin: ClassSessionOrigin;
+  recurringClassSeriesId: string | null;
+  requiresApproval: boolean;
+  demandRequest: { targetLevel: string | null } | null;
+  organization: { name: string } | null;
+  // teacher-initiated-open-classes 第 8 節（Gate G2/G3）：涵蓋 pending，讓老師端 roster 能
+  // 看到並操作等待審核的報名；status 一起帶出讓 UI 分辨要不要顯示確認/拒絕按鈕。
   enrollments: {
     id: string;
+    status: EnrollmentStatus;
     notes: string | null;
     user: { name: string | null; email: string | null };
   }[];
@@ -143,11 +155,19 @@ export async function listOwnClassSessionsForTeacher(): Promise<
       isPublic: true,
       status: true,
       createdAt: true,
+      origin: true,
+      recurringClassSeriesId: true,
+      requiresApproval: true,
       demandRequest: { select: { targetLevel: true } },
       organization: { select: { name: true } },
       enrollments: {
-        where: { status: "confirmed" },
-        select: { id: true, notes: true, user: { select: { name: true, email: true } } },
+        where: { status: { in: ["confirmed", "pending"] } },
+        select: {
+          id: true,
+          status: true,
+          notes: true,
+          user: { select: { name: true, email: true } },
+        },
       },
       reviews: {
         select: {
@@ -162,4 +182,72 @@ export async function listOwnClassSessionsForTeacher(): Promise<
     },
     orderBy: { startAt: "asc" },
   });
+}
+
+// teacher-initiated-open-classes Slice B：常規／固定期課程系列管理頁。
+export type RecurringClassSeriesOccurrence = {
+  id: string;
+  startAt: Date;
+  endAt: Date;
+  status: ClassSessionStatus;
+};
+
+export type RecurringClassSeriesDetail = {
+  id: string;
+  title: string;
+  description: string | null;
+  serviceType: string | null;
+  dayOfWeek: number | null;
+  startTime: string;
+  endTime: string;
+  location: string;
+  capacity: number;
+  requiresApproval: boolean;
+  occurrences: RecurringClassSeriesOccurrence[];
+};
+
+// D15 既有慣例延伸：查看自己既有的系列不透過資格檢查把關——這是查看已存在的承諾，不是申請
+// 新機會；own-scope 檢查內建在查詢的 WHERE 子句本身（teacherProfileId 必須符合），不是先查
+// 再事後比對。
+export async function getOwnRecurringClassSeriesDetailForTeacher(
+  recurringClassSeriesId: string,
+): Promise<RecurringClassSeriesDetail | null> {
+  const currentUser = await requireUser();
+
+  const teacherProfile = await prisma.teacherProfile.findUnique({
+    where: { userId: currentUser.id },
+    select: { id: true },
+  });
+
+  if (!teacherProfile) {
+    return null;
+  }
+
+  const series = await prisma.recurringClassSeries.findFirst({
+    where: { id: recurringClassSeriesId, teacherProfileId: teacherProfile.id },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      serviceType: true,
+      dayOfWeek: true,
+      startTime: true,
+      endTime: true,
+      location: true,
+      capacity: true,
+      requiresApproval: true,
+      classSessions: {
+        select: { id: true, startAt: true, endAt: true, status: true },
+        orderBy: { startAt: "asc" },
+      },
+    },
+  });
+
+  if (!series) {
+    return null;
+  }
+
+  const { classSessions, ...rest } = series;
+
+  return { ...rest, occurrences: classSessions };
 }

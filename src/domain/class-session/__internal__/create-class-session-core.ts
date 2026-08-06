@@ -5,6 +5,7 @@
 // __internal__/select-and-submit-core.ts）。
 
 import { prisma } from "@/lib/prisma";
+import { lockTeacherScheduleAndCheckConflict } from "@/domain/class-session/conflict-check";
 import { markDemandRequestAsConvertedToClassIfMatched } from "@/domain/demand-request/matching-service";
 import { notifyUsers } from "@/domain/notification/create";
 
@@ -29,6 +30,7 @@ export type CreateClassSessionForOrganizerErrorCode =
   | "class_session_already_exists"
   | "demand_not_matched"
   | "demand_not_ready"
+  | "teacher_schedule_conflict"
   | "create_failed";
 
 export type CreateClassSessionForOrganizerResult =
@@ -60,6 +62,13 @@ class DemandNotReadyError extends Error {
   constructor() {
     super("Demand request has no selected response");
     this.name = "DemandNotReadyError";
+  }
+}
+
+class TeacherScheduleConflictError extends Error {
+  constructor() {
+    super("Teacher already has another class session in this time range");
+    this.name = "TeacherScheduleConflictError";
   }
 }
 
@@ -121,6 +130,20 @@ export async function createClassSessionForOrganizer(
         throw new DemandNotReadyError();
       }
 
+      // teacher-initiated-open-classes 第 6 節：一律先鎖 TeacherProfile（見
+      // conflict-check.ts），此時已經在同一 transaction 內鎖過 DemandRequest，這是額外多鎖
+      // 一個 row，不影響既有 DemandRequest 鎖的語意；鎖定順序必須跟老師自建路徑一致，避免死鎖。
+      const conflict = await lockTeacherScheduleAndCheckConflict(
+        tx,
+        selectedResponse.teacherProfileId,
+        input.startAt,
+        input.endAt,
+      );
+
+      if (conflict) {
+        throw new TeacherScheduleConflictError();
+      }
+
       const classSession = await tx.classSession.create({
         data: {
           demandRequestId,
@@ -156,14 +179,19 @@ export async function createClassSessionForOrganizer(
       });
 
       if (detail) {
-        await notifyUsers(
-          "class_session_created",
-          [
-            { userId: detail.organizerProfile.userId, role: "self" },
-            { userId: detail.teacherProfile.userId, role: "counterpart" },
-          ],
-          { classSessionTitle: detail.title },
-        );
+        // teacher-initiated-open-classes：organizerProfile 關聯型別上已變成 nullable（因為
+        // ClassSession 現在也可能是老師自建），但這個函式只服務 Organizer 建課路徑，實際上
+        // 永遠會有 organizerProfile；仍用條件式排除而非斷言，比照 cancel-class-session-core.ts
+        // 的既有修法風格，避免型別放寬之後留下斷言式的隱性假設。
+        const recipients: Parameters<typeof notifyUsers>[1] = [
+          { userId: detail.teacherProfile.userId, role: "counterpart" },
+        ];
+
+        if (detail.organizerProfile) {
+          recipients.push({ userId: detail.organizerProfile.userId, role: "self" });
+        }
+
+        await notifyUsers("class_session_created", recipients, { classSessionTitle: detail.title });
       }
     } catch (notifyError) {
       console.error("[notification] class_session_created trigger failed", notifyError);
@@ -185,6 +213,10 @@ export async function createClassSessionForOrganizer(
 
     if (error instanceof DemandNotReadyError) {
       return { ok: false, code: "demand_not_ready" };
+    }
+
+    if (error instanceof TeacherScheduleConflictError) {
+      return { ok: false, code: "teacher_schedule_conflict" };
     }
 
     if (isUniqueConstraintViolation(error)) {

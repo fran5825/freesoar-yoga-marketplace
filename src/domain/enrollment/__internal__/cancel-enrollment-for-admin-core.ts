@@ -26,8 +26,10 @@ export type CancelEnrollmentForAdminResult =
   | { ok: true }
   | { ok: false; code: CancelEnrollmentForAdminErrorCode };
 
-// D4（admin-class-enrollment-management）：Admin-scoped，資格條件跟既有 cancelOwnEnrollment
-// 完全相同（status="confirmed" 且 classSession.startAt 尚未到達），只是拿掉 userId 過濾。
+// D4（admin-class-enrollment-management）+ teacher-initiated-open-classes 第 8 節：
+// Admin-scoped，資格條件跟既有 cancelOwnEnrollment 完全相同（status 為
+// confirmed／pending 且 classSession.startAt 尚未到達），只是拿掉 userId 過濾——Admin
+// 也可以取消任何人還在等待老師審核中的報名。
 export async function cancelEnrollmentForAdminCore(
   enrollmentId: string,
   notifyOverride: NotifyFn = notifyUsers,
@@ -35,7 +37,7 @@ export async function cancelEnrollmentForAdminCore(
   const updateResult = await prisma.enrollment.updateMany({
     where: {
       id: enrollmentId,
-      status: "confirmed",
+      status: { in: ["confirmed", "pending"] },
       classSession: { startAt: { gt: new Date() } },
     },
     data: { status: "cancelled" },

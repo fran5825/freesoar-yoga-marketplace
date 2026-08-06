@@ -36,14 +36,19 @@ test.afterAll(async () => {
 
 // 比照既有 class-session-review.spec.ts 的兩段式作法：先用未來時間 + open_for_enrollment
 // 建立，完成報名後再回填成過去時間並轉成 completed（submitReviewForUser 要求 completed）。
+//
+// teacher-initiated-open-classes 第 8 節修正：這裡一律建立 approved 老師，不再接受
+// status 參數當場 suspend——createEnrollmentForUser 現在會在報名時鎖 TeacherProfile 並
+// 檢查 approved，若這裡建立時就先 suspend，後續 enrollNewMember() 一律會被
+// teacher_not_approved 擋下，整個 fixture 就建不出「暫停前已有的報名/評價」這個測試真正
+// 需要的情境。要測試「暫停老師仍顯示既有評價」，改用下面的 suspendTeacher()，在
+// enrollNewMember／submitReview 都完成之後才呼叫，比照「暫停不回溯既有承諾」的既有原則。
 async function seedTeacherWithCompletedClassSession({
   testRunId,
   teacherLabel,
-  status,
 }: {
   testRunId: string;
   teacherLabel: string;
-  status: "approved" | "suspended";
 }) {
   const organizerEmail = `organizer-${teacherLabel}-${testRunId}@${testEmailDomain}`;
   const teacherEmail = `teacher-${teacherLabel}-${testRunId}@${testEmailDomain}`;
@@ -89,13 +94,6 @@ async function seedTeacherWithCompletedClassSession({
     select: { id: true },
   });
 
-  if (status === "suspended") {
-    await prisma.teacherProfile.update({
-      where: { id: teacher.teacherProfileId },
-      data: { status: "suspended", suspensionReason: "test suspension" },
-    });
-  }
-
   return {
     classSessionId: classSession.id,
     teacherProfileId: teacher.teacherProfileId,
@@ -107,6 +105,15 @@ async function markCompleted(classSessionId: string) {
   await prisma.classSession.update({
     where: { id: classSessionId },
     data: { startAt: new Date("2020-01-01T09:00:00Z"), endAt: new Date("2020-01-01T10:00:00Z"), status: "completed" },
+  });
+}
+
+// 一律在 enrollNewMember／submitReview 都完成之後才呼叫——見上面 seedTeacherWithCompletedClassSession
+// 的說明。
+async function suspendTeacher(teacherProfileId: string) {
+  await prisma.teacherProfile.update({
+    where: { id: teacherProfileId },
+    data: { status: "suspended", suspensionReason: "test suspension" },
   });
 }
 
@@ -179,7 +186,6 @@ test.describe("review average rating display smoke", () => {
     const teacherA = await seedTeacherWithCompletedClassSession({
       testRunId,
       teacherLabel: "a",
-      status: "approved",
     });
     const memberA1 = await enrollNewMember({ testRunId, memberLabel: "a1", classSessionId: teacherA.classSessionId });
     const memberA2 = await enrollNewMember({ testRunId, memberLabel: "a2", classSessionId: teacherA.classSessionId });
@@ -192,7 +198,6 @@ test.describe("review average rating display smoke", () => {
     const teacherB = await seedTeacherWithCompletedClassSession({
       testRunId,
       teacherLabel: "b",
-      status: "approved",
     });
     const memberB1 = await enrollNewMember({ testRunId, memberLabel: "b1", classSessionId: teacherB.classSessionId });
     await markCompleted(teacherB.classSessionId);
@@ -234,11 +239,11 @@ test.describe("review average rating display smoke", () => {
     const teacher = await seedTeacherWithCompletedClassSession({
       testRunId,
       teacherLabel: "susp",
-      status: "suspended",
     });
     const member = await enrollNewMember({ testRunId, memberLabel: "susp1", classSessionId: teacher.classSessionId });
     await markCompleted(teacher.classSessionId);
     await submitReview({ userId: member.userId, classSessionId: teacher.classSessionId, rating: 2 });
+    await suspendTeacher(teacher.teacherProfileId);
 
     await addAuthSessionCookie(context, teacher.teacherSessionToken);
     await page.goto("/teacher/profile");
@@ -256,7 +261,6 @@ test.describe("review average rating display smoke", () => {
     const teacherA = await seedTeacherWithCompletedClassSession({
       testRunId,
       teacherLabel: "adminA",
-      status: "approved",
     });
     const memberAdminA1 = await enrollNewMember({ testRunId, memberLabel: "adminA1", classSessionId: teacherA.classSessionId });
     const memberAdminA2 = await enrollNewMember({ testRunId, memberLabel: "adminA2", classSessionId: teacherA.classSessionId });
@@ -267,11 +271,11 @@ test.describe("review average rating display smoke", () => {
     const teacherB = await seedTeacherWithCompletedClassSession({
       testRunId,
       teacherLabel: "adminB",
-      status: "suspended",
     });
     const memberAdminB1 = await enrollNewMember({ testRunId, memberLabel: "adminB1", classSessionId: teacherB.classSessionId });
     await markCompleted(teacherB.classSessionId);
     await submitReview({ userId: memberAdminB1.userId, classSessionId: teacherB.classSessionId, rating: 2 });
+    await suspendTeacher(teacherB.teacherProfileId);
 
     const adminEmail = `admin-${testRunId}@${testEmailDomain}`;
     createdEmails.push(adminEmail);
@@ -299,7 +303,6 @@ test.describe("review average rating display smoke", () => {
     const teacher = await seedTeacherWithCompletedClassSession({
       testRunId,
       teacherLabel: "rwd",
-      status: "approved",
     });
     const member = await enrollNewMember({ testRunId, memberLabel: "rwd1", classSessionId: teacher.classSessionId });
     await markCompleted(teacher.classSessionId);

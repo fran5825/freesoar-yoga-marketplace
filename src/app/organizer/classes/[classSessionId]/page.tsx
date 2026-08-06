@@ -98,7 +98,7 @@ export default async function OrganizerClassSessionDetailPage({
         <DetailField
           label="程度"
           value={
-            classSession.demandRequest.targetLevel
+            classSession.demandRequest?.targetLevel
               ? (demandRequestTargetLevelLabels[classSession.demandRequest.targetLevel] ??
                 classSession.demandRequest.targetLevel)
               : null

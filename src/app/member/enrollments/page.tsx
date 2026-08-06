@@ -90,7 +90,7 @@ export default async function MemberEnrollmentsPage({
                 {enrollment.classSession.location}
               </p>
 
-              {enrollment.status === "confirmed" ? (
+              {["confirmed", "pending"].includes(enrollment.status) ? (
                 <details className="rounded border border-amber-200 bg-amber-50/60">
                   <summary className="cursor-pointer list-none rounded px-4 py-2 text-sm font-medium text-amber-800 marker:hidden">
                     取消報名…

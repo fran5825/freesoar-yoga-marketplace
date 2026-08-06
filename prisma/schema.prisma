@@ -84,6 +84,7 @@ model TeacherProfile {
   classSessions          ClassSession[]
   teacherAvailabilities  TeacherAvailability[]
   availabilityExceptions AvailabilityException[]
+  recurringClassSeries   RecurringClassSeries[]
 }
 
 // teacher-availability D2/D11：不含原始草稿的 isRecurring 欄位——這個 model 本身就是
@@ -206,34 +207,74 @@ model DemandResponse {
   @@index([status])
 }
 
-model ClassSession {
-  id                 String             @id @default(cuid())
-  demandRequestId    String             @unique
-  teacherProfileId   String
-  organizerProfileId String
-  organizationId     String
-  title              String
-  description        String?
-  serviceType        String?
-  startAt            DateTime
-  endAt              DateTime
-  location           String
-  capacity           Int
-  isPublic           Boolean            @default(false)
-  status             ClassSessionStatus @default(draft)
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+// teacher-initiated-open-classes：origin 明確標記課程來源（organizer 媒合 vs 老師自建），
+// 不靠 demandRequestId/organizerProfileId/organizationId 是否為 null 隱含推導——應用層不變量：
+// origin = organizer_matched 時三者必須同時非 null；origin = teacher_initiated 時三者必須同時
+// 是 null。此不變量只由兩條建課路徑各自的核心函式保證，不做資料庫層防呆。
+enum ClassSessionOrigin {
+  organizer_matched
+  teacher_initiated
+}
 
-  demandRequest    DemandRequest    @relation(fields: [demandRequestId], references: [id], onDelete: Restrict)
-  teacherProfile   TeacherProfile   @relation(fields: [teacherProfileId], references: [id], onDelete: Restrict)
-  organizerProfile OrganizerProfile @relation(fields: [organizerProfileId], references: [id], onDelete: Restrict)
-  organization     Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  enrollments      Enrollment[]
-  reviews          Review[]
+// teacher-initiated-open-classes G1 = A：常規／固定期課程的「範本」，實際可報名的單位仍是
+// 下面 ClassSession 的逐筆記錄（materialize，不做動態展開）。dayOfWeek 只在「每週固定」模式
+// 使用；固定期課程（例如連續 4 週的特定日期組合）由 Builder 在生成時直接寫入每筆
+// ClassSession 的 startAt/endAt，series 本身不需要記錄每一個具體日期。
+model RecurringClassSeries {
+  id               String   @id @default(cuid())
+  teacherProfileId String
+  title            String
+  description      String?
+  serviceType      String?
+  dayOfWeek        Int? // 0（週日）–6，對齊既有 TeacherAvailability 慣例；固定期課程可為 null
+  startTime        String // "HH:mm"
+  endTime          String // "HH:mm"
+  location         String
+  capacity         Int
+  requiresApproval Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  teacherProfile TeacherProfile @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
+  classSessions  ClassSession[]
+
+  @@index([teacherProfileId])
+}
+
+model ClassSession {
+  id                     String             @id @default(cuid())
+  demandRequestId        String?            @unique // teacher-initiated-open-classes：改為 nullable；Postgres 唯一索引允許多筆 NULL，既有「一個 demand 最多一個 class」語意不受影響
+  teacherProfileId       String // 不變：一律必填，任何來源的課程都一定有授課老師
+  organizerProfileId     String? // teacher-initiated-open-classes：改為 nullable
+  organizationId         String? // teacher-initiated-open-classes：改為 nullable
+  origin                 ClassSessionOrigin @default(organizer_matched)
+  recurringClassSeriesId String?
+  requiresApproval       Boolean            @default(false)
+  title                  String
+  description            String?
+  serviceType            String?
+  startAt                DateTime
+  endAt                  DateTime
+  location               String
+  capacity               Int
+  isPublic               Boolean            @default(false)
+  status                 ClassSessionStatus @default(draft)
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  demandRequest        DemandRequest?        @relation(fields: [demandRequestId], references: [id], onDelete: Restrict)
+  teacherProfile       TeacherProfile        @relation(fields: [teacherProfileId], references: [id], onDelete: Restrict)
+  organizerProfile     OrganizerProfile?     @relation(fields: [organizerProfileId], references: [id], onDelete: Restrict)
+  organization         Organization?         @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  recurringClassSeries RecurringClassSeries? @relation(fields: [recurringClassSeriesId], references: [id], onDelete: SetNull)
+  enrollments          Enrollment[]
+  reviews              Review[]
 
   @@index([teacherProfileId])
   @@index([organizerProfileId])
   @@index([status])
+  @@index([recurringClassSeriesId])
+  @@index([origin])
 }
 
 model Enrollment {
@@ -363,6 +404,7 @@ enum NotificationType {
   class_session_cancelled
   class_session_completed
   enrollment_confirmed
+  enrollment_pending_review
   enrollment_cancelled
   class_reminder_basic
   review_submitted

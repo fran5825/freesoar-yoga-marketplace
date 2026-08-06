@@ -107,7 +107,9 @@ async function cancelClassSessionCore(
           id: string;
           status: string;
           startAt: Date;
-          organizerProfileId: string;
+          // teacher-initiated-open-classes：nullable 化之後，老師自建課程這裡讀回來就是
+          // 真正的 null（不只是型別上允許），下面的通知解析必須改成條件式查詢。
+          organizerProfileId: string | null;
           teacherProfileId: string;
           title: string;
         }[]
@@ -144,10 +146,13 @@ async function cancelClassSessionCore(
       });
 
       const now = new Date();
+      // teacher-initiated-open-classes 第 8 節：連帶取消同步涵蓋 pending——課程被取消時，
+      // 等待老師審核中的報名不該被遺留成孤兒資料，必須跟 confirmed 一起轉為 cancelled。
       const cancelledEnrollments = await tx.$queryRaw<{ userId: string }[]>`
           UPDATE "Enrollment"
           SET "status" = 'cancelled'::"EnrollmentStatus", "updatedAt" = ${now}
-          WHERE "classSessionId" = ${classSessionId} AND "status" = 'confirmed'::"EnrollmentStatus"
+          WHERE "classSessionId" = ${classSessionId}
+            AND "status" = ANY(ARRAY['confirmed', 'pending']::"EnrollmentStatus"[])
           RETURNING "userId"
         `;
 
@@ -162,11 +167,17 @@ async function cancelClassSessionCore(
     // D4/D7 修正版：resolver query + notify 一律在 tx commit 之後才執行，不進 tx；
     // 例外在這裡被吞掉，不影響回傳給呼叫端的結果。
     try {
+      // teacher-initiated-open-classes 第 7 節 Codex round 2 修正：resolvedOrganizerProfileId
+      // 現在可能是 null（老師自建課程），Prisma 的 findUnique({where:{id: null}}) 會拋驗證
+      // 例外——這段包在下面的 try/catch 裡，例外會被整批悄悄吞掉，結果是 Admin 取消一堂老師
+      // 自建課程時，取消本身成功，但老師與所有受影響會員的通知會無聲消失。改成條件式查詢。
       const [organizerProfile, teacherProfile] = await Promise.all([
-        prisma.organizerProfile.findUnique({
-          where: { id: resolvedOrganizerProfileId },
-          select: { userId: true },
-        }),
+        resolvedOrganizerProfileId
+          ? prisma.organizerProfile.findUnique({
+              where: { id: resolvedOrganizerProfileId },
+              select: { userId: true },
+            })
+          : Promise.resolve(null),
         prisma.teacherProfile.findUnique({
           where: { id: teacherProfileId },
           select: { userId: true },

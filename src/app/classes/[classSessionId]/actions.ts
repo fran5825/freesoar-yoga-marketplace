@@ -24,7 +24,11 @@ export async function enrollAction(formData: FormData): Promise<void> {
   }
 
   revalidatePath("/member/enrollments");
-  redirectWithFeedback(classSessionId, "success", "報名成功。");
+  redirectWithFeedback(
+    classSessionId,
+    "success",
+    result.status === "pending" ? "報名已送出，等待老師確認。" : "報名成功。",
+  );
 }
 
 function readFormString(formData: FormData, name: string): string {

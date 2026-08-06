@@ -20,9 +20,11 @@ export type AdminClassSessionSummary = {
   location: string;
   capacity: number;
   updatedAt: Date;
-  organizerDisplayName: string;
+  // teacher-initiated-open-classes：老師自建課程沒有 organizerProfile／organization，
+  // 兩個顯示欄位改為 nullable；消費頁面需自行提供中性 fallback 文案。
+  organizerDisplayName: string | null;
   teacherDisplayName: string | null;
-  organizationName: string;
+  organizationName: string | null;
   confirmedEnrollmentCount: number;
 };
 
@@ -56,9 +58,9 @@ export async function listAllClassSessionsForAdmin(): Promise<AdminClassSessionS
     location: classSession.location,
     capacity: classSession.capacity,
     updatedAt: classSession.updatedAt,
-    organizerDisplayName: classSession.organizerProfile.displayName,
+    organizerDisplayName: classSession.organizerProfile?.displayName ?? null,
     teacherDisplayName: classSession.teacherProfile.displayName,
-    organizationName: classSession.organization.name,
+    organizationName: classSession.organization?.name ?? null,
     confirmedEnrollmentCount: classSession._count.enrollments,
   }));
 }
@@ -85,10 +87,12 @@ export type AdminClassSessionDetail = {
   isPublic: boolean;
   status: ClassSessionStatus;
   createdAt: Date;
-  demandRequest: { targetLevel: string | null };
-  organizerProfile: { displayName: string };
+  // teacher-initiated-open-classes：老師自建課程沒有 demandRequest／organizerProfile／
+  // organization，三者皆改為 nullable；消費頁面需自行提供中性 fallback 文案。
+  demandRequest: { targetLevel: string | null } | null;
+  organizerProfile: { displayName: string } | null;
   teacherProfile: { displayName: string | null };
-  organization: { name: string };
+  organization: { name: string } | null;
   roster: AdminClassSessionRosterEntry[];
 };
 

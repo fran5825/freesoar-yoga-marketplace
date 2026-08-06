@@ -87,14 +87,17 @@ export default async function AdminClassSessionDetailPage({
       ) : null}
 
       <section className="grid gap-4 rounded border border-gray-200 bg-white p-6 sm:grid-cols-2">
-        <DetailField label="團主" value={classSession.organizerProfile.displayName} />
+        <DetailField
+          label="團主"
+          value={classSession.organizerProfile?.displayName ?? "（老師自建課程）"}
+        />
         <DetailField label="授課老師" value={classSession.teacherProfile.displayName} />
-        <DetailField label="團體" value={classSession.organization.name} />
+        <DetailField label="團體" value={classSession.organization?.name ?? "（老師自建課程）"} />
         <DetailField label="課程類型" value={classSession.serviceType} />
         <DetailField
           label="程度"
           value={
-            classSession.demandRequest.targetLevel
+            classSession.demandRequest?.targetLevel
               ? (demandRequestTargetLevelLabels[classSession.demandRequest.targetLevel] ??
                 classSession.demandRequest.targetLevel)
               : null

@@ -79,7 +79,9 @@ export default async function AdminClassesPage() {
                     <dl className="grid gap-2 text-sm text-gray-600 sm:grid-cols-2">
                       <div className="min-w-0">
                         <dt className="font-medium text-gray-950">團主</dt>
-                        <dd className="mt-1 break-words">{classSession.organizerDisplayName}</dd>
+                        <dd className="mt-1 break-words">
+                          {classSession.organizerDisplayName ?? "（老師自建課程）"}
+                        </dd>
                       </div>
                       <div className="min-w-0">
                         <dt className="font-medium text-gray-950">授課老師</dt>
@@ -89,7 +91,9 @@ export default async function AdminClassesPage() {
                       </div>
                       <div className="min-w-0">
                         <dt className="font-medium text-gray-950">團體</dt>
-                        <dd className="mt-1 break-words">{classSession.organizationName}</dd>
+                        <dd className="mt-1 break-words">
+                          {classSession.organizationName ?? "（老師自建課程）"}
+                        </dd>
                       </div>
                       <div className="min-w-0">
                         <dt className="font-medium text-gray-950">開始時間</dt>

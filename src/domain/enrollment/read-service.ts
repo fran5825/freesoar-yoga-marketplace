@@ -62,7 +62,9 @@ export type MemberFacingClassSession = {
   location: string;
   capacity: number;
   status: string;
-  organization: { name: string };
+  // teacher-initiated-open-classes：老師自建課程沒有 organization，改為 nullable；
+  // 消費頁面需自行提供中性 fallback 文案（不假設一律有團體名稱）。
+  organization: { name: string } | null;
   teacherProfile: { displayName: string | null };
   ownEnrollment: { id: string; status: EnrollmentStatus } | null;
 };

@@ -117,6 +117,19 @@ const COPY_TABLE: CopyTable = {
       body: `你已經成功報名「${classSessionTitle ?? ""}」。`,
     }),
   },
+  // teacher-initiated-open-classes 第 8 節（Gate G2/G3）：requiresApproval = true 的課程，
+  // 新報名先落在 pending，發送這個事件而不是 enrollment_confirmed；老師確認後才改發
+  // enrollment_confirmed。counterpart（老師）也要收到通知，否則審核機制永遠不會被觸發。
+  enrollment_pending_review: {
+    self: ({ classSessionTitle }) => ({
+      title: "報名已送出，等待老師確認",
+      body: `你已經送出「${classSessionTitle ?? ""}」的報名，老師確認後才算報名成功。`,
+    }),
+    counterpart: ({ classSessionTitle }) => ({
+      title: "有新的報名待確認",
+      body: `「${classSessionTitle ?? ""}」有新的報名，需要你確認或拒絕。`,
+    }),
+  },
   enrollment_cancelled: {
     self: ({ classSessionTitle }) => ({
       title: "報名已取消",

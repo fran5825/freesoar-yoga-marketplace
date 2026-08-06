@@ -7,6 +7,15 @@ import { requireUser } from "@/lib/auth/session";
 
 import { enrollAction } from "./actions";
 
+// teacher-initiated-open-classes 第 8 節（Gate G2/G3）：pending 是三態顯示的第三態，不再是
+// 「非 confirmed 就當作已取消」的二元判斷——沿用 member/enrollments/page.tsx 既有的
+// enrollmentStatusLabels 文案，保持兩處用語一致。
+const ownEnrollmentStatusLabels: Record<string, string> = {
+  confirmed: "已報名",
+  pending: "處理中",
+  cancelled: "已取消",
+};
+
 type MemberClassSessionPageProps = {
   params: Promise<{ classSessionId: string }>;
   searchParams?: Promise<{ result?: string; message?: string }>;
@@ -74,7 +83,7 @@ export default async function MemberClassSessionPage({
         <dl className="grid gap-3 text-sm text-gray-600 sm:grid-cols-2">
           <div className="min-w-0">
             <dt className="font-medium text-gray-950">團體</dt>
-            <dd className="mt-1 break-words">{classSession.organization.name}</dd>
+            <dd className="mt-1 break-words">{classSession.organization?.name ?? "老師自己開的課"}</dd>
           </div>
           <div className="min-w-0">
             <dt className="font-medium text-gray-950">授課老師</dt>
@@ -114,9 +123,15 @@ export default async function MemberClassSessionPage({
       {classSession.ownEnrollment ? (
         <section className="grid gap-3 rounded border border-gray-200 bg-white p-6">
           <span className="w-fit rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-800">
-            {classSession.ownEnrollment.status === "confirmed" ? "已報名" : "已取消"}
+            {ownEnrollmentStatusLabels[classSession.ownEnrollment.status] ??
+              classSession.ownEnrollment.status}
           </span>
-          {classSession.ownEnrollment.status === "confirmed" ? (
+          {classSession.ownEnrollment.status === "pending" ? (
+            <p className="text-sm leading-6 text-gray-600">
+              你的報名已經送出，等待老師確認後才算成立。
+            </p>
+          ) : null}
+          {["confirmed", "pending"].includes(classSession.ownEnrollment.status) ? (
             <p className="text-sm leading-6 text-gray-600">
               如需取消報名，請前往
               <Link className="text-sky-700 underline" href="/member/enrollments">
