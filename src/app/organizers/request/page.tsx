@@ -1,5 +1,8 @@
 import Link from "next/link";
 
+import { PublicFooter } from "../../_components/public-footer";
+import { PublicHeader } from "../../_components/public-header";
+
 const howItWorksSteps = [
   {
     title: "建立團主資料",
@@ -26,7 +29,9 @@ const audienceExamples = [
 
 export default function OrganizersRequestPage() {
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-10 px-5 py-10 sm:px-8 sm:py-14">
+    <div className="flex min-h-screen flex-col bg-stone-50 text-gray-950">
+      <PublicHeader />
+      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-10 px-5 py-10 sm:px-8 sm:py-14">
       <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
         <div>
           <p className="text-sm font-medium text-amber-700">
@@ -107,6 +112,8 @@ export default function OrganizersRequestPage() {
           ))}
         </ul>
       </section>
-    </main>
+      </main>
+      <PublicFooter />
+    </div>
   );
 }

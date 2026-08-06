@@ -10,13 +10,13 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 
 | Route | 目的 | 主要角色 |
 |---|---|---|
-| `/` | 品牌首頁，說明 Free Soar Yoga 的定位與主要入口 | Visitor |
-| `/about` | Free Soar Yoga 品牌與 marketplace 說明 | Visitor |
+| `/` | **已落地**：品牌首頁，說明 Free Soar Yoga 的定位、三種角色與主辦人／老師主要入口；不提供 public class discovery | Visitor |
+| `/about` | **已落地**：Free Soar Yoga 品牌與 marketplace 說明 | Visitor |
 | `/teachers/join` | 老師加入與申請入口 | Visitor, Teacher |
 | `/organizers/request` | 團主提出需求入口 | Visitor, Organizer |
 | `/classes` | 公開 class session 列表，optional / later，不作為 V1 必做 | Visitor, Member |
 | `/classes/[classSessionId]` | class session 詳情、share link 與 enrollment 入口（`enrollment` 已確認：V1 僅開放已登入 Member 存取，不對 Visitor 開放，也不檢查 `isPublic`——`isPublic` 目前只保留給未來公開列表使用，見 `class-session-creation` D11、`enrollment` D4） | Member |
-| `/faq` | 常見問題與信任說明 | Visitor |
+| `/faq` | **已落地**：常見問題與信任說明；不建立付款、退款或取消政策 | Visitor |
 
 ## Auth Routes
 

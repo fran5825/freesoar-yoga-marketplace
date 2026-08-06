@@ -191,6 +191,14 @@ test.describe("/admin/teachers smoke", () => {
     await application.getByRole("checkbox").check();
     await application.getByRole("button", { name: "確認退回" }).click();
 
+    await expect(page).toHaveURL(
+      (url) =>
+        url.pathname === "/admin/teachers" &&
+        url.searchParams.get("result") === "success" &&
+        url.searchParams.get("message") ===
+          "TeacherProfile application rejected.",
+      { timeout: 15_000 },
+    );
     await expect(
       page.getByText("TeacherProfile application rejected."),
     ).toBeVisible();

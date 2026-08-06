@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "pretest:smoke": "npm run build",
     "test:smoke": "playwright test"
   },
   "dependencies": {

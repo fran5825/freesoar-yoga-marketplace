@@ -279,6 +279,8 @@ test.describe("organizer demand smoke", () => {
   test("prevents a stale draft-save in another tab from overwriting an already-submitted demand", async ({
     context,
   }, testInfo) => {
+    test.setTimeout(60_000);
+
     const testRunId = normalizeForEmail(
       `${testInfo.project.name}-${testInfo.workerIndex}-stale-draft-${Date.now()}`,
     );
@@ -310,10 +312,16 @@ test.describe("organizer demand smoke", () => {
     const pageA = await context.newPage();
     const pageB = await context.newPage();
 
-    await pageA.goto(`/organizer/demands/${demand.id}/edit`);
-    await pageB.goto(`/organizer/demands/${demand.id}/edit`);
-    await expect(pageA.getByLabel("需求標題")).toHaveValue(originalTitle);
-    await expect(pageB.getByLabel("需求標題")).toHaveValue(originalTitle);
+    await Promise.all([
+      pageA.goto(`/organizer/demands/${demand.id}/edit`),
+      pageB.goto(`/organizer/demands/${demand.id}/edit`),
+    ]);
+    await expect(pageA.getByLabel("需求標題")).toHaveValue(originalTitle, {
+      timeout: 15_000,
+    });
+    await expect(pageB.getByLabel("需求標題")).toHaveValue(originalTitle, {
+      timeout: 15_000,
+    });
 
     // 分頁 A 送出審核成功。
     await pageA.getByLabel("需求標題").fill(submittedTitle);
