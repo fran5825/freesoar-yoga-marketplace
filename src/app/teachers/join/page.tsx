@@ -368,14 +368,14 @@ function RequirementBadge({
 }) {
   if (requirement === "submitRequired") {
     return (
-      <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-800">
+      <span className="rounded-full bg-[#dfe8dc] px-3 py-1 text-xs font-medium text-[#345343]">
         送審必填
       </span>
     );
   }
 
   return (
-    <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
+    <span className="rounded-full bg-[#ebe2d7] px-3 py-1 text-xs font-medium text-[#8a5c49]">
       建議，可留空
     </span>
   );
@@ -582,35 +582,35 @@ export default function TeacherJoinPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-stone-50 text-gray-950">
+    <div className="flex min-h-screen flex-col bg-[#f7f4ee] text-[#29382f]">
       <PublicHeader />
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-10 px-5 py-10 sm:px-8 sm:py-14">
       <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
         <div>
-          <p className="text-sm font-medium text-amber-700">
+          <p className="text-sm font-medium text-[#8a5c49]">
             Free Soar Yoga teacher community
           </p>
-          <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight text-gray-950 sm:text-5xl">
+          <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight text-[#29382f] sm:text-5xl">
             與我們一起建立更清楚、更安心的瑜伽團課合作
           </h1>
-          <p className="mt-5 max-w-2xl text-base leading-7 text-gray-600">
+          <p className="mt-5 max-w-2xl text-base leading-7 text-[#56645b]">
             Free Soar Yoga 重視老師的專業、風格與教學界線。我們希望讓團主的需求被清楚整理，也讓老師能被正確理解，回應真正適合自己的團課機會。
           </p>
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
             <a
-              className="rounded bg-gray-950 px-5 py-3 text-center text-sm font-medium text-white"
+              className="rounded bg-[#345343] px-5 py-3 text-center text-sm font-medium text-white"
               href="/sign-in"
             >
               登入並準備加入
             </a>
             <Link
-              className="rounded border border-gray-300 px-5 py-3 text-center text-sm font-medium text-gray-900"
+              className="rounded border border-[#29382f]/20 px-5 py-3 text-center text-sm font-medium text-[#29382f]"
               href="/"
             >
               回到首頁
             </Link>
           </div>
-          <p className="mt-4 text-sm leading-6 text-gray-500">
+          <p className="mt-4 text-sm leading-6 text-[#767c73]">
             {mutationBlockedCopy
               ? "下方會顯示目前老師申請資料與狀態；此狀態暫時不開放草稿儲存或送出審核。"
               : isRejectedProfile
@@ -619,11 +619,11 @@ export default function TeacherJoinPage() {
           </p>
         </div>
 
-        <div className="rounded border border-amber-100 bg-amber-50/60 p-5">
-          <h2 className="text-lg font-medium text-gray-950">
+        <div className="rounded border border-[#29382f]/10 bg-[#f3ebe4]/60 p-5">
+          <h2 className="text-lg font-medium text-[#29382f]">
             我們尋找的不是可被比較的商品，而是能共同照顧練習品質的合作夥伴。
           </h2>
-          <p className="mt-4 text-sm leading-6 text-gray-600">
+          <p className="mt-4 text-sm leading-6 text-[#56645b]">
             平台會以審核、需求整理與清楚的溝通流程，支持老師與團主建立信任，而不是用低價競標或倉促媒合推動合作。
           </p>
         </div>
@@ -632,31 +632,31 @@ export default function TeacherJoinPage() {
       <section className="grid gap-4 md:grid-cols-3">
         {collaborationPrinciples.map((principle) => (
           <article
-            className="rounded border border-gray-200 bg-white p-5"
+            className="rounded border border-[#29382f]/12 bg-white p-5"
             key={principle}
           >
-            <p className="text-sm leading-6 text-gray-700">{principle}</p>
+            <p className="text-sm leading-6 text-[#56645b]">{principle}</p>
           </article>
         ))}
       </section>
 
       <section
         aria-labelledby="application-form-title"
-        className="grid gap-6 border-y border-sky-100 bg-sky-50/60 py-6"
+        className="grid gap-6 border-y border-[#345343]/15 bg-[#eef2ee]/60 py-6"
       >
         <div className="grid gap-3 md:grid-cols-[0.8fr_1.2fr] md:items-start">
           <div>
-            <p className="text-sm font-medium text-sky-700">
+            <p className="text-sm font-medium text-[#345343]">
               Local-only application form
             </p>
             <h2
-              className="mt-2 text-2xl font-semibold tracking-tight text-gray-950"
+              className="mt-2 text-2xl font-semibold tracking-tight text-[#29382f]"
               id="application-form-title"
             >
               老師申請資料準備區
             </h2>
           </div>
-          <div className="text-sm leading-6 text-gray-600">
+          <div className="text-sm leading-6 text-[#56645b]">
             {mutationBlockedCopy ? (
               <p>
                 這份 TeacherProfile 目前已有狀態紀錄。此頁只做初始資料與狀態呈現，不開放此狀態的草稿儲存、重新送審或 Admin review 操作。
@@ -679,11 +679,11 @@ export default function TeacherJoinPage() {
         </div>
 
         {isRejectedProfile ? (
-          <div className="min-w-0 rounded border border-amber-200 bg-amber-50 p-4">
-            <h3 className="text-sm font-medium text-amber-950">
+          <div className="min-w-0 rounded border border-[#8a5c49]/25 bg-[#f3ebe4] p-4">
+            <h3 className="text-sm font-medium text-[#6d4738]">
               平台的退回說明
             </h3>
-            <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-amber-900">
+            <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-[#8a5c49]">
               {rejectionReason && rejectionReason.trim().length > 0
                 ? rejectionReason
                 : "平台尚未提供具體說明。你可以先檢查必填欄位並補充教學經歷，準備好後再重新送審。"}
@@ -700,14 +700,14 @@ export default function TeacherJoinPage() {
         >
           {applicationSections.map((section) => (
             <section
-              className="grid gap-5 border-t border-sky-100 pt-5 first:border-t-0 first:pt-0"
+              className="grid gap-5 border-t border-[#345343]/15 pt-5 first:border-t-0 first:pt-0"
               key={section.title}
             >
               <div className="max-w-2xl">
-                <h3 className="text-lg font-medium text-gray-950">
+                <h3 className="text-lg font-medium text-[#29382f]">
                   {section.title}
                 </h3>
-                <p className="mt-2 text-sm leading-6 text-gray-600">
+                <p className="mt-2 text-sm leading-6 text-[#56645b]">
                   {section.description}
                 </p>
               </div>
@@ -721,25 +721,25 @@ export default function TeacherJoinPage() {
 
                   return (
                     <div
-                      className="rounded border border-gray-200 bg-white p-4"
+                      className="rounded border border-[#29382f]/12 bg-white p-4"
                       key={field.name}
                     >
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                           <label
-                            className="text-sm font-medium text-gray-950"
+                            className="text-sm font-medium text-[#29382f]"
                             htmlFor={inputId}
                           >
                             {field.label}
                           </label>
-                          <p className="mt-1 font-mono text-xs text-gray-500">
+                          <p className="mt-1 font-mono text-xs text-[#767c73]">
                             {field.name}
                           </p>
                         </div>
                         <RequirementBadge requirement={field.requirement} />
                       </div>
 
-                      <p className="mt-3 text-sm leading-6 text-gray-600">
+                      <p className="mt-3 text-sm leading-6 text-[#56645b]">
                         {field.helper}
                       </p>
 
@@ -748,7 +748,7 @@ export default function TeacherJoinPage() {
                           aria-describedby={
                             showReminder ? `${inputId}-reminder` : undefined
                           }
-                          className="mt-3 min-h-28 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-600"
+                          className="mt-3 min-h-28 w-full rounded border border-[#29382f]/20 bg-white px-3 py-2 text-sm leading-6 text-[#29382f] outline-none transition focus:border-[#345343] focus:ring-2 focus:ring-[#345343]/15 disabled:cursor-not-allowed disabled:bg-[#efece4] disabled:text-[#56645b]"
                           disabled={mutationBlockedStatus !== null}
                           id={inputId}
                           onChange={(event) =>
@@ -762,7 +762,7 @@ export default function TeacherJoinPage() {
                           aria-describedby={
                             showReminder ? `${inputId}-reminder` : undefined
                           }
-                          className="mt-3 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-600"
+                          className="mt-3 w-full rounded border border-[#29382f]/20 bg-white px-3 py-2 text-sm leading-6 text-[#29382f] outline-none transition focus:border-[#345343] focus:ring-2 focus:ring-[#345343]/15 disabled:cursor-not-allowed disabled:bg-[#efece4] disabled:text-[#56645b]"
                           disabled={mutationBlockedStatus !== null}
                           id={inputId}
                           inputMode={field.inputMode}
@@ -784,7 +784,7 @@ export default function TeacherJoinPage() {
 
                       {showReminder ? (
                         <p
-                          className="mt-2 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900"
+                          className="mt-2 rounded border border-[#8a5c49]/25 bg-[#f3ebe4] px-3 py-2 text-sm leading-6 text-[#8a5c49]"
                           id={`${inputId}-reminder`}
                         >
                           {getReadinessMessage(field.name)}
@@ -797,10 +797,10 @@ export default function TeacherJoinPage() {
             </section>
           ))}
 
-          <div className="grid gap-4 rounded border border-gray-200 bg-white p-5 md:grid-cols-[1fr_auto] md:items-start">
+          <div className="grid gap-4 rounded border border-[#29382f]/12 bg-white p-5 md:grid-cols-[1fr_auto] md:items-start">
             <div>
-              <h3 className="text-lg font-medium text-gray-950">準備狀態</h3>
-              <p className="mt-2 text-sm leading-6 text-gray-600">
+              <h3 className="text-lg font-medium text-[#29382f]">準備狀態</h3>
+              <p className="mt-2 text-sm leading-6 text-[#56645b]">
                 {mutationBlockedCopy
                   ? "目前狀態不開放在加入表單中更新或送出。你仍可查看已保存的 Phase 1 TeacherProfile 內容。"
                   : isRejectedProfile
@@ -809,7 +809,7 @@ export default function TeacherJoinPage() {
               </p>
               <div aria-live="polite">
                 {mutationBlockedCopy ? (
-                  <p className="mt-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950">
+                  <p className="mt-4 rounded border border-[#8a5c49]/25 bg-[#f3ebe4] px-4 py-3 text-sm leading-6 text-[#6d4738]">
                     {mutationBlockedCopy.notice}
                   </p>
                 ) : null}
@@ -821,7 +821,7 @@ export default function TeacherJoinPage() {
                 ) : null}
 
                 {isSavingDraft ? (
-                  <p className="mt-4 rounded border border-sky-100 bg-sky-50 px-4 py-3 text-sm leading-6 text-sky-900">
+                  <p className="mt-4 rounded border border-[#345343]/15 bg-[#eef2ee] px-4 py-3 text-sm leading-6 text-[#293f35]">
                     正在儲存草稿...
                   </p>
                 ) : null}
@@ -831,7 +831,7 @@ export default function TeacherJoinPage() {
                     className={
                       draftSaveFeedback.kind === "success"
                         ? "mt-4 rounded border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
-                        : "mt-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
+                        : "mt-4 rounded border border-[#8a5c49]/25 bg-[#f3ebe4] px-4 py-3 text-sm leading-6 text-[#8a5c49]"
                     }
                   >
                     <p>{draftSaveFeedback.message}</p>
@@ -843,7 +843,7 @@ export default function TeacherJoinPage() {
                       "authentication_required" ||
                     draftSaveFeedback.showSignInLink ? (
                       <a
-                        className="mt-2 inline-flex font-medium text-gray-950 underline underline-offset-4"
+                        className="mt-2 inline-flex font-medium text-[#29382f] underline underline-offset-4"
                         href="/sign-in"
                       >
                         前往登入
@@ -864,7 +864,7 @@ export default function TeacherJoinPage() {
                 ) : null}
 
                 {isSubmitting ? (
-                  <p className="mt-4 rounded border border-sky-100 bg-sky-50 px-4 py-3 text-sm leading-6 text-sky-900">
+                  <p className="mt-4 rounded border border-[#345343]/15 bg-[#eef2ee] px-4 py-3 text-sm leading-6 text-[#293f35]">
                     正在送出審核...
                   </p>
                 ) : null}
@@ -874,13 +874,13 @@ export default function TeacherJoinPage() {
                     className={
                       submitFeedback.kind === "success"
                         ? "mt-4 rounded border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
-                        : "mt-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
+                        : "mt-4 rounded border border-[#8a5c49]/25 bg-[#f3ebe4] px-4 py-3 text-sm leading-6 text-[#8a5c49]"
                     }
                   >
                     <p>{submitFeedback.message}</p>
                     {submitFeedback.showSignInLink ? (
                       <a
-                        className="mt-2 inline-flex font-medium text-gray-950 underline underline-offset-4"
+                        className="mt-2 inline-flex font-medium text-[#29382f] underline underline-offset-4"
                         href="/sign-in"
                       >
                         前往登入
@@ -899,14 +899,14 @@ export default function TeacherJoinPage() {
                 ) : null}
               </div>
               {hasCheckedReadiness ? (
-                <div className="mt-4 rounded border border-sky-100 bg-sky-50 px-4 py-3 text-sm leading-6 text-gray-700">
+                <div className="mt-4 rounded border border-[#345343]/15 bg-[#eef2ee] px-4 py-3 text-sm leading-6 text-[#56645b]">
                   {isReadyForFutureSubmit ? (
                     <p>
                       送審必填欄位都已有內容。後續正式流程仍會由 server-side validation 再檢查一次，並提供清楚的送審確認。
                     </p>
                   ) : (
                     <>
-                      <p className="font-medium text-gray-950">
+                      <p className="font-medium text-[#29382f]">
                         還可以補充的地方
                       </p>
                       <ul className="mt-2 list-disc space-y-1 pl-5">
@@ -918,15 +918,15 @@ export default function TeacherJoinPage() {
                       </ul>
                     </>
                   )}
-                  <p className="mt-3 text-gray-600">
+                  <p className="mt-3 text-[#56645b]">
                     建議欄位目前已填 {optionalFieldsWithValue} / 3 項；可依你的準備狀態慢慢補上。
                   </p>
                 </div>
               ) : null}
 
               {isConfirmingSubmit ? (
-                <div className="mt-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950">
-                  <p className="font-medium text-gray-950">確認送出審核</p>
+                <div className="mt-4 rounded border border-[#8a5c49]/25 bg-[#f3ebe4] px-4 py-3 text-sm leading-6 text-[#6d4738]">
+                  <p className="font-medium text-[#29382f]">確認送出審核</p>
                   <p className="mt-2">
                     {isRejectedProfile
                       ? "重新送出後，這份老師申請會再次進入平台審核。請確認修正內容已準備好，再送出。"
@@ -934,7 +934,7 @@ export default function TeacherJoinPage() {
                   </p>
                   <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                     <button
-                      className="rounded bg-gray-950 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-600"
+                      className="rounded bg-[#345343] px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-[#29382f]/15 disabled:text-[#56645b]"
                       disabled={isSubmitting}
                       onClick={handleSubmitApplication}
                       type="button"
@@ -942,7 +942,7 @@ export default function TeacherJoinPage() {
                       {isSubmitting ? "正在送出..." : "確認送出審核"}
                     </button>
                     <button
-                      className="rounded border border-amber-300 bg-white px-4 py-2 text-sm font-medium text-gray-900 disabled:cursor-not-allowed disabled:text-gray-500"
+                      className="rounded border border-[#8a5c49]/40 bg-white px-4 py-2 text-sm font-medium text-[#29382f] disabled:cursor-not-allowed disabled:text-[#767c73]"
                       disabled={isSubmitting}
                       onClick={handleCancelSubmitConfirmation}
                       type="button"
@@ -956,7 +956,7 @@ export default function TeacherJoinPage() {
 
             <div className="flex w-full flex-col gap-3 md:w-auto">
               <button
-                className="w-full rounded bg-gray-950 px-5 py-3 text-center text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-600 md:w-auto"
+                className="w-full rounded bg-[#345343] px-5 py-3 text-center text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-[#29382f]/15 disabled:text-[#56645b] md:w-auto"
                 disabled={isDraftSaveDisabled}
                 onClick={handleSaveDraft}
                 type="button"
@@ -974,13 +974,13 @@ export default function TeacherJoinPage() {
                     : "儲存草稿"}
               </button>
               <button
-                className="w-full rounded border border-gray-300 px-5 py-3 text-center text-sm font-medium text-gray-900 md:w-auto"
+                className="w-full rounded border border-[#29382f]/20 px-5 py-3 text-center text-sm font-medium text-[#29382f] md:w-auto"
                 type="submit"
               >
                 檢查準備狀態
               </button>
               <button
-                className="w-full rounded border border-sky-700 bg-sky-700 px-5 py-3 text-center text-sm font-medium text-white disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-300 disabled:text-gray-600 md:w-auto"
+                className="w-full rounded border border-[#345343] bg-[#345343] px-5 py-3 text-center text-sm font-medium text-white disabled:cursor-not-allowed disabled:border-[#29382f]/20 disabled:bg-[#29382f]/15 disabled:text-[#56645b] md:w-auto"
                 disabled={isSubmitDisabled}
                 onClick={handleOpenSubmitConfirmation}
                 type="button"
@@ -1000,10 +1000,10 @@ export default function TeacherJoinPage() {
         </form>
       </section>
 
-      <section className="grid gap-6 rounded border border-gray-200 p-5 md:grid-cols-[0.8fr_1.2fr] md:p-6">
+      <section className="grid gap-6 rounded border border-[#29382f]/12 p-5 md:grid-cols-[0.8fr_1.2fr] md:p-6">
         <div>
-          <p className="text-sm font-medium text-amber-700">Next steps</p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-gray-950">
+          <p className="text-sm font-medium text-[#8a5c49]">Next steps</p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[#29382f]">
             申請流程將分階段開放
           </h2>
         </div>
@@ -1022,8 +1022,8 @@ export default function TeacherJoinPage() {
                 ]
             : nextSteps
           ).map((step, index) => (
-            <li className="flex gap-3 text-sm leading-6 text-gray-700" key={step}>
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-gray-300 text-xs font-medium text-gray-700">
+            <li className="flex gap-3 text-sm leading-6 text-[#56645b]" key={step}>
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#29382f]/20 text-xs font-medium text-[#56645b]">
                 {index + 1}
               </span>
               <span>{step}</span>

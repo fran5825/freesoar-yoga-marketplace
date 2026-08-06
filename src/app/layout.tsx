@@ -14,11 +14,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Free Soar Yoga",
-    template: "%s | Free Soar Yoga",
+    default: "Free Soar Yoga｜瑜伽團課共創平台",
+    template: "%s｜Free Soar Yoga",
   },
   description:
-    "以清楚、尊重的方式連結主辦人、瑜伽老師與學員，共創有品質的團體練習。",
+    "Free Soar Yoga 是品牌導向的瑜伽團課 marketplace，連結團主、瑜伽老師與學員，共創清楚、安心且高品質的身心練習。",
 };
 
 export default function RootLayout({

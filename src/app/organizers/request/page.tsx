@@ -29,44 +29,44 @@ const audienceExamples = [
 
 export default function OrganizersRequestPage() {
   return (
-    <div className="flex min-h-screen flex-col bg-stone-50 text-gray-950">
+    <div className="flex min-h-screen flex-col bg-[#f7f4ee] text-[#29382f]">
       <PublicHeader />
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-10 px-5 py-10 sm:px-8 sm:py-14">
       <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
         <div>
-          <p className="text-sm font-medium text-amber-700">
+          <p className="text-sm font-medium text-[#8a5c49]">
             Free Soar Yoga organizer community
           </p>
-          <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight text-gray-950 sm:text-5xl">
+          <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight text-[#29382f] sm:text-5xl">
             為公司社團與社區，找到適合的瑜伽老師
           </h1>
-          <p className="mt-5 max-w-2xl text-base leading-7 text-gray-600">
+          <p className="mt-5 max-w-2xl text-base leading-7 text-[#56645b]">
             Free Soar Yoga 協助團體把上課需求整理清楚，並在平台審核後，讓合適的老師理解並回應真正適合的合作機會。
           </p>
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
             <Link
-              className="rounded bg-gray-950 px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-gray-800"
+              className="rounded bg-[#345343] px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-[#293f35]"
               href="/organizer/profile"
             >
               建立團主資料
             </Link>
             <Link
-              className="rounded border border-gray-300 px-5 py-3 text-center text-sm font-medium text-gray-900 transition hover:bg-gray-50"
+              className="rounded border border-[#29382f]/20 px-5 py-3 text-center text-sm font-medium text-[#29382f] transition hover:bg-[#efece4]"
               href="/sign-in"
             >
               登入 / 註冊
             </Link>
           </div>
-          <p className="mt-4 text-sm leading-6 text-gray-500">
+          <p className="mt-4 text-sm leading-6 text-[#767c73]">
             建立團主資料只需要登入帳號，平台不會事先審核你的身分；提出的需求會先經過平台審核，才會進入老師可見的範圍。
           </p>
         </div>
 
-        <div className="rounded border border-amber-100 bg-amber-50/60 p-5">
-          <h2 className="text-lg font-medium text-gray-950">
+        <div className="rounded border border-[#29382f]/10 bg-[#f3ebe4]/60 p-5">
+          <h2 className="text-lg font-medium text-[#29382f]">
             我們重視清楚溝通，而不是低價競標。
           </h2>
-          <p className="mt-4 text-sm leading-6 text-gray-600">
+          <p className="mt-4 text-sm leading-6 text-[#56645b]">
             平台以審核與清楚的需求整理，協助團主與老師建立長期、互相尊重的合作關係。
           </p>
         </div>
@@ -75,36 +75,36 @@ export default function OrganizersRequestPage() {
       <section className="grid gap-4 md:grid-cols-3">
         {howItWorksSteps.map((step, index) => (
           <article
-            className="rounded border border-gray-200 bg-white p-5"
+            className="rounded border border-[#29382f]/12 bg-white p-5"
             key={step.title}
           >
-            <span className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-300 text-xs font-medium text-gray-700">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[#29382f]/20 text-xs font-medium text-[#56645b]">
               {index + 1}
             </span>
-            <h3 className="mt-3 text-base font-medium text-gray-950">
+            <h3 className="mt-3 text-base font-medium text-[#29382f]">
               {step.title}
             </h3>
-            <p className="mt-2 text-sm leading-6 text-gray-600">
+            <p className="mt-2 text-sm leading-6 text-[#56645b]">
               {step.description}
             </p>
           </article>
         ))}
       </section>
 
-      <section className="grid gap-6 rounded border border-gray-200 p-5 md:grid-cols-[0.8fr_1.2fr] md:p-6">
+      <section className="grid gap-6 rounded border border-[#29382f]/12 p-5 md:grid-cols-[0.8fr_1.2fr] md:p-6">
         <div>
-          <p className="text-sm font-medium text-amber-700">適合對象</p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-gray-950">
+          <p className="text-sm font-medium text-[#8a5c49]">適合對象</p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[#29382f]">
             這些團體最常與我們合作
           </h2>
         </div>
         <ul className="space-y-3">
           {audienceExamples.map((example) => (
             <li
-              className="flex gap-3 text-sm leading-6 text-gray-700"
+              className="flex gap-3 text-sm leading-6 text-[#56645b]"
               key={example}
             >
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-gray-300 text-xs font-medium text-gray-700">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#29382f]/20 text-xs font-medium text-[#56645b]">
                 •
               </span>
               <span>{example}</span>
