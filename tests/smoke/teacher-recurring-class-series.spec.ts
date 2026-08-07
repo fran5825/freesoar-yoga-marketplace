@@ -108,6 +108,12 @@ test.describe("teacher recurring class series smoke", () => {
         series.classSessions[i].startAt.getTime() - series.classSessions[i - 1].startAt.getTime();
       expect(gapMs).toBe(7 * 24 * 3600_000);
     }
+
+    // Slice E：/teacher/classes 統一列表要能看到「這一場屬於哪個系列」，且能點回系列管理頁。
+    await page.goto("/teacher/classes");
+    const seriesLink = page.getByRole("link", { name: `系列：${baseSeriesInput.title}` }).first();
+    await expect(seriesLink).toBeVisible();
+    await expect(seriesLink).toHaveAttribute("href", `/teacher/classes/series/${series.id}`);
   });
 
   test("creates a fixed-dates series through the UI, one ClassSession per date; a date colliding with an existing class is skipped and clearly listed, without failing the rest of the batch; the series page never offers 「生成更多」 for a fixed-dates series", async ({

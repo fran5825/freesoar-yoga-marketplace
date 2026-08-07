@@ -255,17 +255,18 @@ Status:
 
 ## ClassSession
 
-Represents a class session created from a matched demand request in V1.
-
-Teacher-created classes are future scope / non-V1.
+Represents a class session. **已落地並擴充**（`docs/superpowers/plans/2026-08-03-teacher-initiated-open-classes-plan.md` 已確認）：原本只能由「已媒合的 `DemandRequest`」轉換產生（Organizer 建課路徑），這一輪新增老師直接建課路徑（單堂、或屬於下方 `RecurringClassSeries` 系列底下的一場），兩條路徑產生的 `ClassSession` row 完全同構、共用同一套取消/開放報名/標記完成/報名邏輯，只有擁有權欄位是否為 `null` 不同。
 
 Fields:
 
 - id
-- demandRequestId
-- teacherProfileId
-- organizerProfileId
-- organizationId
+- demandRequestId（**nullable**——老師自建課程沒有對應的 `DemandRequest`）
+- teacherProfileId（不變：一律必填，任何來源的課程都一定有授課老師）
+- organizerProfileId（**nullable**——老師自建課程沒有團主）
+- organizationId（**nullable**，理由同上）
+- origin（新欄位，`ClassSessionOrigin`：`organizer_matched`／`teacher_initiated`，`@default(organizer_matched)`，見下方 enum）
+- recurringClassSeriesId（新欄位，nullable FK，指向下方 `RecurringClassSeries`；`onDelete: SetNull`——系列被刪除不會連帶刪除已經生成的獨立場次）
+- requiresApproval（新欄位，`Boolean @default(false)`；`true` 時新報名先落在 `Enrollment.status = "pending"`，需要老師確認才轉為 `confirmed`，見下方 `Enrollment` 說明與 Gate G2/G3）
 - title
 - description
 - serviceType
@@ -278,9 +279,46 @@ Fields:
 - createdAt
 - updatedAt
 
+`ClassSessionOrigin`（新 enum）：
+
+- organizer_matched（既有路徑：由已媒合的 `DemandRequest` 轉換產生）
+- teacher_initiated（新路徑：老師直接建課，不需要團主媒合）
+
+Phase 2 schema notes（`teacher-initiated-open-classes` 已確認）：
+
+- `demandRequestId`／`organizerProfileId`／`organizationId` 三個外鍵的 nullable 化是**additive-safe** migration：既有資料列的這三個欄位本來就有值，不受影響；PostgreSQL 的 `@unique` 索引允許多筆 `NULL`，`demandRequestId` 原本「一個 demand 最多一個 class」的語意不受影響。
+- **雙重預約衝突檢查**：任何建課路徑（Organizer 媒合或老師自建）都必須通過共用的 conflict-check（`src/domain/class-session/conflict-check.ts`）——鎖定同一位老師的 `TeacherProfile` row（`FOR UPDATE`，避免 TOCTOU），檢查該老師是否已有時間重疊、非 cancelled 的其他 `ClassSession`。這是本輪修的一個既有正確性缺口：舊的 Organizer 建課路徑從來沒有檢查過老師是否被同時排了兩堂課。
+- 老師自建課程的取消/標記完成走平行的 own-scoped 核心（`__internal__/*-core-for-teacher.ts`），不修改既有 Organizer/Admin 核心本體，只在既有核心新增前述 conflict-check 呼叫與 nullable 化後的通知解析修正。
+
+## RecurringClassSeries
+
+**已落地**（`teacher-initiated-open-classes` Slice B 已確認，Gate G1 = A：materialize）。代表老師自建的常規（每週固定星期）或固定期（明確日期清單）課程系列的「範本」——實際可報名、可取消、可完成的單位永遠是逐筆獨立生成的 `ClassSession` row，不是這個範本本身；建立系列時（與之後手動「生成更多」時）依範本立刻生成對應的 `ClassSession`，取消其中一場不影響系列其餘場次。
+
+Fields:
+
+- id
+- teacherProfileId
+- title
+- description（選填）
+- serviceType（選填）
+- dayOfWeek（0–6，比照 `TeacherAvailability` 慣例；**只在「每週固定」模式使用**，固定期課程此欄位為 `null`）
+- startTime（`HH:mm`）
+- endTime（`HH:mm`）
+- location
+- capacity
+- requiresApproval（`Boolean @default(false)`，套用到這個系列底下生成的每一場）
+- createdAt
+- updatedAt
+
+Phase 2 schema notes：
+
+- 固定期課程（例如連續 4 週的特定日期組合）不在這個 model 記錄每一個具體日期——生成時由呼叫端直接提供明確日期清單，逐筆寫入對應 `ClassSession.startAt`/`endAt`，系列本身只保留 `startTime`/`endTime` 這組共用的時鐘時間。
+- 沒有 `status`／`isPublic` 欄位：「取消系列」等同於「取消它底下所有還來得及取消的場次」，series 這一列本身仍會保留，之後仍可用「生成更多」再生成新的未來場次（僅限每週固定模式）；`isPublic` 只存在於每一筆獨立 `ClassSession`，系列生成的每一場目前一律預設 `isPublic = false`（V1 的刻意簡化，系列本身沒有能設定公開性的欄位/UI，且 `ClassSession` 建立後無法事後修改可見性）。
+- `onDelete: Cascade` 從 `TeacherProfile` 指向這個 model；`onDelete: SetNull` 從這個 model 指向底下生成的 `ClassSession`（見上方 `ClassSession.recurringClassSeriesId`）。
+
 ## Enrollment
 
-Represents member enrollment in a class session.
+Represents member enrollment in a class session. **已擴充**（`teacher-initiated-open-classes` Slice C 已確認，Gate G2/G3）：`pending` 這個既有保留但原本從未真正寫入的 enum 值，這一輪第一次被實際使用。
 
 Fields:
 
@@ -294,6 +332,12 @@ Fields:
 - updatedAt
 
 `consentedAt`（`enrollment` 已確認）：非 nullable，記錄使用者確認「了解此課程非醫療行為」的時間點；V1 唯一的建立路徑必定顯式寫入，不是選填的 UX 防誤觸欄位。
+
+Phase 2 schema notes（`teacher-initiated-open-classes` 已確認）：
+
+- 新報名的初始 `status` 依所屬 `ClassSession.requiresApproval` 決定：`false`（既有行為，維持不變）→ 直接 `confirmed`；`true` → 先落在 `pending`，需要授課老師明確確認才轉為 `confirmed`，或老師拒絕/會員自助取消/課程被整堂取消時轉為 `cancelled`。
+- 容量計算（Gate G3 = A）：`pending` 與 `confirmed` **合計**佔用名額（保留席位等老師確認），不是只算 `confirmed`。
+- `pending` 報名的資格檢查與 `teacher_initiated` 課程的建立資格檢查共用同一個手法：在同一個 transaction 內先鎖定 `TeacherProfile` row（`FOR UPDATE`）才讀取 `status`，避免跟 Admin 執行 suspend 的獨立 `UPDATE` 產生 TOCTOU 競態；`teacher_not_approved` 錯誤碼阻擋任何來源（公開瀏覽或已登入直連）對非 `approved` 老師課程的**新**報名，不回溯撤銷已經合法建立的既有報名。
 
 ## PaymentIntent
 
@@ -334,7 +378,7 @@ Fields:
 
 - id
 - userId
-- type（`NotificationType`，19 個 enum 值——原始 14 個事件表（`class-session-cancellation` 一輪把保留的 `class_session_cancelled` 接上，共接線 12 個）之外，`demand-request-cancellation` 一輪新增第 15 個全新值 `demand_request_cancelled`、`teacher-profile-suspension` 一輪再新增第 16、17 個全新值 `teacher_profile_suspended`／`teacher_profile_restored`、`class-session-review` 一輪再新增第 18、19 個全新值 `class_session_completed`（`completeOwnClassSession` 成功後通知 `affected_member` 角色）／`review_submitted`（`submitReviewForUser` 成功後通知 `counterpart` 角色，即授課老師）（五者都真的執行過 `ALTER TYPE ... ADD VALUE` migration，不是接上原本保留的值），V1 目前共接線 17 個；`class_session_changed`／`class_reminder_basic` 保留未接線）
+- type（`NotificationType`，20 個 enum 值——原始 14 個事件表（`class-session-cancellation` 一輪把保留的 `class_session_cancelled` 接上，共接線 12 個）之外，`demand-request-cancellation` 一輪新增第 15 個全新值 `demand_request_cancelled`、`teacher-profile-suspension` 一輪再新增第 16、17 個全新值 `teacher_profile_suspended`／`teacher_profile_restored`、`class-session-review` 一輪再新增第 18、19 個全新值 `class_session_completed`（`completeOwnClassSession` 成功後通知 `affected_member` 角色）／`review_submitted`（`submitReviewForUser` 成功後通知 `counterpart` 角色，即授課老師）、`teacher-initiated-open-classes` 一輪再新增第 20 個全新值 `enrollment_pending_review`（`requiresApproval=true` 課程的新報名發送給會員 `self` 與授課老師 `counterpart` 兩者，取代該筆報名原本會發的 `enrollment_confirmed`；老師確認後才真正發送 `enrollment_confirmed`）（六者都真的執行過 `ALTER TYPE ... ADD VALUE` migration，不是接上原本保留的值），V1 目前共接線 18 個；`class_session_changed`／`class_reminder_basic` 保留未接線）
 - channel（`NotificationChannel`：`email`／`in_app`／`line`／`sms`，V1 只寫入 `in_app`）
 - title
 - body

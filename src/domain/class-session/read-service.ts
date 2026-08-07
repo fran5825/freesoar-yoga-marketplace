@@ -107,6 +107,9 @@ export type TeacherFacingClassSession = {
   requiresApproval: boolean;
   demandRequest: { targetLevel: string | null } | null;
   organization: { name: string } | null;
+  // Slice E：統一列表要顯示常規/固定期課程系列的名稱，不是只顯示一個沒有名字的 id——
+  // recurringClassSeriesId 本身不足以讓老師分辨「這是哪一個系列」。
+  recurringClassSeries: { title: string } | null;
   // teacher-initiated-open-classes 第 8 節（Gate G2/G3）：涵蓋 pending，讓老師端 roster 能
   // 看到並操作等待審核的報名；status 一起帶出讓 UI 分辨要不要顯示確認/拒絕按鈕。
   enrollments: {
@@ -160,6 +163,7 @@ export async function listOwnClassSessionsForTeacher(): Promise<
       requiresApproval: true,
       demandRequest: { select: { targetLevel: true } },
       organization: { select: { name: true } },
+      recurringClassSeries: { select: { title: true } },
       enrollments: {
         where: { status: { in: ["confirmed", "pending"] } },
         select: {

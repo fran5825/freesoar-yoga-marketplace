@@ -141,6 +141,8 @@ Rules:
 
 **V1 落地範圍（`class-session-creation` D1/D2/D9、`enrollment` D2/D3/D14、`class-session-cancellation` D1/D2/D3/D4、`class-session-completion` D1/D2/D3/D5 已確認）**：上述完整狀態機是最終設計，目前**接線** `(none) → draft → open_for_enrollment`、`draft`／`open_for_enrollment → cancelled`，以及 `open_for_enrollment → completed`：Organizer 從自己 `matched` 的 demand 一次到位建立 `ClassSession`（必要欄位皆於建立當下填齊，不是分階段補齊的殘缺 `draft`），建立後不提供編輯；Organizer own-scoped 明確按鈕觸發 `draft → open_for_enrollment`，且 `startAt` 已過的 class session 不可開放（D14）。Organizer own-scoped 也可以把 `draft` 或 `open_for_enrollment` 明確取消為 `cancelled`，同樣要求 `startAt` 尚未到達（`class-session-cancellation` D2）；取消會在同一個 transaction 內把該課程底下所有 `confirmed` 的 Enrollment 一併轉成 `cancelled`（連帶取消，D4），且跟 `createEnrollmentForUser` 搶同一把 `ClassSession` 鎖以避免併發下殘留矛盾資料（D3）。**修正：`completed` 已經接線（`class-session-completion` 已確認）**——Organizer own-scoped 明確按鈕觸發 `open_for_enrollment → completed`，時間方向與取消/開放相反：`endAt` 必須**已經**過去才能標記完成。不連帶處理 `Enrollment`（D3，`confirmed` 報名維持原狀）、不新增 Notification（D5，理由與範圍留給未來 Review 一輪一起做）；沒有 `SELECT ... FOR UPDATE` 鎖序列，跟 `draft → open_for_enrollment` 同一種單一 organizer、單一狀態欄位翻轉的形狀。`pending_confirmation`/`confirmed` enum 值仍然保留但無對應 transition——`open_for_enrollment → confirmed` 沒有明確、機械式的觸發條件（不像 capacity 那樣可自動判斷），V1 不接線；`open_for_enrollment` 本身已足以讓 Member 報名到滿額為止。
 
+**老師自建課程（`teacher_initiated`）沿用完全相同的狀態機（`teacher-initiated-open-classes` 已確認）**：`origin` 欄位只影響擁有權（誰能操作、鎖查詢的 WHERE 過濾條件是 `teacherProfileId` 而不是 `organizerProfileId`），**不是**第二套狀態機——`draft → open_for_enrollment → completed`、`draft`／`open_for_enrollment → cancelled` 這兩條路徑對兩種 origin 完全同構，Teacher own-scoped 版本走平行的核心檔案（`__internal__/*-core-for-teacher.ts`），不修改既有 Organizer/Admin 版本本體。連帶取消的 Enrollment 條件也同步涵蓋 `pending`（見下方 Enrollment Status 的 Gate G2/G3 說明）。老師自建課程額外多了「建立」這一步的資格檢查（`TeacherProfile.status = 'approved'`）與跨 origin 共用的雙重預約衝突檢查（見 `docs/domain/data-model.md` 的 `ClassSession` 說明），但這些都是建立/報名這一層的規則，不影響狀態機本身。
+
 ## Enrollment Status
 
 ```text
@@ -161,7 +163,14 @@ attended
 no_show
 ```
 
-**V1 落地範圍（`enrollment` D1/D6/D8/D14 已確認）**：上述完整狀態機是最終設計，目前只**接線** `(none) → confirmed`（跳過 `pending`，`pending → confirmed` 沒有獨立於 capacity 檢查之外的業務動作）與 `confirmed → cancelled`。建立時同一 transaction 內原子檢查 capacity 與重複報名，成功即直接寫入 `confirmed`，並寫入 `consentedAt`（D6，非 nullable）。取消（`confirmed → cancelled`）與建立、開放報名一樣受 `startAt` 時間限制（D14）：課程開始後不提供自助取消，因為取消會抹除歷史報名紀錄，且讓這筆 enrollment 永遠無法銜接未來的 `confirmed → attended/no_show`。取消後**不可**對同一 class session 重新報名（D8，`@@unique([classSessionId, userId])` 不分狀態）。`pending`/`attended`/`no_show` enum 值保留但無對應 transition。
+**V1 落地範圍（`enrollment` D1/D6/D8/D14、`teacher-initiated-open-classes` Gate G2/G3 已確認）**：上述完整狀態機是最終設計，目前接線 `(none) → confirmed`、`(none) → pending → confirmed`，以及 `confirmed`／`pending → cancelled`。
+
+- **`(none) → confirmed`（原始行為，`requiresApproval = false` 時維持不變）**：建立時同一 transaction 內原子檢查 capacity 與重複報名，成功即直接寫入 `confirmed`，並寫入 `consentedAt`（D6，非 nullable）。
+- **`(none) → pending → confirmed`（`teacher-initiated-open-classes` 第一次真正接線 `pending`，Gate G2/G3）**：所屬 `ClassSession.requiresApproval = true` 時，新報名先落在 `pending`（而不是 `confirmed`），需要授課老師明確按「確認」才轉為 `confirmed`；容量計算把 `pending` 與 `confirmed` **合計**佔用名額（Gate G3 = A，保留席位等老師確認，不是先搶先贏）。老師「確認」／「拒絕」都受 `startAt` 時間邊界限制，跟既有取消/報名的時間 guard 保持一致的心智模型。
+- **`confirmed`／`pending → cancelled`**：與建立、開放報名一樣受 `startAt` 時間限制（D14）：課程開始後不提供自助取消，因為取消會抹除歷史報名紀錄，且讓這筆 enrollment 永遠無法銜接未來的 `confirmed → attended/no_show`。會員可自助取消自己還在 `pending` 的報名，不需要等老師處理；Admin 也可以取消任何人的 `pending` 報名（兩者原本都寫死只接受 `confirmed`，這一輪放寬為 `{ confirmed, pending }`）。老師「拒絕」`pending` 報名也會轉為 `cancelled`（reuse 既有值，不新增新的 enum）。課程整堂被取消時，該課程底下所有 `pending` 報名也一併轉為 `cancelled`（連帶取消同步涵蓋 `pending`，不只 `confirmed`）。
+- 取消後**不可**對同一 class session 重新報名（D8，`@@unique([classSessionId, userId])` 不分狀態）。
+- **資格檢查（`teacher-initiated-open-classes` 第 9 節）**：不論 `requiresApproval` 為何，建立新報名前都會檢查授課老師 `TeacherProfile.status = 'approved'`，非 approved（含 `suspended`）回傳 `teacher_not_approved`，阻擋任何來源（公開瀏覽或已登入直連）的新報名；已經合法建立的既有報名不受影響（暫停不回溯）。這個檢查在同一個 transaction 內先鎖定 `TeacherProfile` row 才讀取 `status`，避免跟 Admin 執行 suspend 的獨立 `UPDATE` 產生 TOCTOU 競態。
+- `attended`/`no_show` enum 值保留但無對應 transition。
 
 Rules:
 

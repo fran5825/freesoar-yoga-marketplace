@@ -111,6 +111,14 @@ export default async function TeacherClassesPage({ searchParams }: TeacherClasse
                 <span className="w-fit rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
                   {originLabels[classSession.origin] ?? classSession.origin}
                 </span>
+                {classSession.recurringClassSeriesId ? (
+                  <Link
+                    className="w-fit rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-800 transition hover:bg-sky-200"
+                    href={`/teacher/classes/series/${classSession.recurringClassSeriesId}`}
+                  >
+                    系列：{classSession.recurringClassSeries?.title ?? "課程系列"}
+                  </Link>
+                ) : null}
               </div>
               <dl className="grid gap-2 text-sm text-gray-600 sm:grid-cols-2">
                 <div className="min-w-0">
