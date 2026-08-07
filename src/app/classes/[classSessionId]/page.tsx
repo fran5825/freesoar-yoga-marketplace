@@ -1,9 +1,13 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 
 import { getClassSessionForMember } from "@/domain/enrollment/read-service";
+import {
+  getPublicClassSessionDetail,
+  type PublicClassSessionDetail,
+} from "@/domain/class-session/public-read-service";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
-import { requireUser } from "@/lib/auth/session";
+import { getCurrentUser } from "@/lib/auth/session";
 
 import { enrollAction } from "./actions";
 
@@ -25,15 +29,10 @@ export default async function MemberClassSessionPage({
   params,
   searchParams,
 }: MemberClassSessionPageProps) {
-  try {
-    await requireUser();
-  } catch {
-    redirect("/sign-in");
-  }
-
-  const [{ classSessionId }, resolvedSearchParams] = await Promise.all([
+  const [{ classSessionId }, resolvedSearchParams, currentUser] = await Promise.all([
     params,
     searchParams,
+    getCurrentUser(),
   ]);
 
   const feedback =
@@ -46,6 +45,23 @@ export default async function MemberClassSessionPage({
           message: resolvedSearchParams.message,
         }
       : null;
+
+  // teacher-initiated-open-classes 第 9 節（Slice D）：未登入 Visitor 換一條不需要
+  // requireUser() 的資料路徑（getPublicClassSessionDetail），不是單純放寬既有函式的條件——
+  // getClassSessionForMember() 本身無條件要求登入，改不了。未登入且不符合公開條件（含
+  // isPublic=false／狀態不符／老師已被暫停）一律 notFound()，不揭露存在性差異，比照既有
+  // draft class session 對 Visitor 的既有慣例。
+  if (!currentUser) {
+    const publicClassSession = await getPublicClassSessionDetail(classSessionId);
+
+    if (!publicClassSession) {
+      notFound();
+    }
+
+    return (
+      <VisitorClassSessionView classSession={publicClassSession} classSessionId={classSessionId} />
+    );
+  }
 
   // D4：draft 一律回傳 null（not-found），open_for_enrollment 才會回傳，
   // 即使 startAt 已過（D14：那時交由下方的時間檢查顯示「目前無法報名」）。
@@ -197,4 +213,73 @@ export default async function MemberClassSessionPage({
 
 function hasClassSessionStarted(startAt: Date): boolean {
   return startAt.getTime() <= Date.now();
+}
+
+// 未登入 Visitor 專用的唯讀畫面：顯示課程詳情，不渲染報名表單本身——報名動作最終仍會在
+// createOwnEnrollment 這一層要求登入（Visitor 沒有 identity flow 就不能報名，既有
+// permissions.md 規則不變），這裡只是提早在 UI 層給出明確引導。
+function VisitorClassSessionView({
+  classSession,
+  classSessionId,
+}: {
+  classSession: PublicClassSessionDetail;
+  classSessionId: string;
+}) {
+  return (
+    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-5 py-10 sm:px-8">
+      <header className="border-b border-gray-200 pb-6">
+        <p className="text-sm font-medium text-sky-700">Class</p>
+        <h1 className="mt-2 min-w-0 break-words text-2xl font-semibold tracking-tight text-gray-950">
+          {classSession.title}
+        </h1>
+      </header>
+
+      <section className="grid gap-4 rounded border border-gray-200 bg-white p-6">
+        <dl className="grid gap-3 text-sm text-gray-600 sm:grid-cols-2">
+          <div className="min-w-0">
+            <dt className="font-medium text-gray-950">授課老師</dt>
+            <dd className="mt-1 break-words">
+              {classSession.teacherProfile.displayName ?? "老師"}
+            </dd>
+          </div>
+          {classSession.serviceType ? (
+            <div className="min-w-0">
+              <dt className="font-medium text-gray-950">課程類型</dt>
+              <dd className="mt-1 break-words">{classSession.serviceType}</dd>
+            </div>
+          ) : null}
+          <div className="min-w-0">
+            <dt className="font-medium text-gray-950">開始時間</dt>
+            <dd className="mt-1">{formatTaipeiDatetime(classSession.startAt)}</dd>
+          </div>
+          <div className="min-w-0">
+            <dt className="font-medium text-gray-950">結束時間</dt>
+            <dd className="mt-1">{formatTaipeiDatetime(classSession.endAt)}</dd>
+          </div>
+          <div className="min-w-0">
+            <dt className="font-medium text-gray-950">地點</dt>
+            <dd className="mt-1 break-words">{classSession.location}</dd>
+          </div>
+        </dl>
+        {classSession.description ? (
+          <div className="min-w-0">
+            <p className="font-medium text-gray-950">課程說明</p>
+            <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-gray-600">
+              {classSession.description}
+            </p>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="grid gap-3 rounded border border-gray-200 bg-white p-6">
+        <p className="text-sm leading-6 text-gray-600">登入後即可直接報名這堂課程。</p>
+        <Link
+          className="w-fit rounded bg-gray-950 px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-gray-800"
+          href={`/sign-in?callbackUrl=${encodeURIComponent(`/classes/${classSessionId}`)}`}
+        >
+          登入後報名
+        </Link>
+      </section>
+    </main>
+  );
 }

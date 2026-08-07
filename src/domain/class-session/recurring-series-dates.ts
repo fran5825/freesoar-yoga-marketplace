@@ -33,7 +33,9 @@ function taipeiDateString(date: Date): string {
   return TAIPEI_DATE_FORMATTER.format(date);
 }
 
-function taipeiDayOfWeek(date: Date): number {
+// 匯出給 public-read-service.ts（Slice D）用來從單堂 ClassSession 的 startAt 推算星期幾，
+// 用於公開列表的星期幾篩選——這是同一份「台灣當地星期幾」邏輯的唯一實作，不要另外複製一份。
+export function taipeiDayOfWeek(date: Date): number {
   const label = TAIPEI_WEEKDAY_FORMATTER.format(date);
   return WEEKDAY_INDEX[label];
 }

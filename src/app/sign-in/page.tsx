@@ -1,8 +1,15 @@
 import { auth, signIn, signOut } from "@/auth";
 import Link from "next/link";
 
-export default async function SignInPage() {
-  const session = await auth();
+import { sanitizeCallbackUrl } from "@/lib/auth/callback-url";
+
+type SignInPageProps = {
+  searchParams?: Promise<{ callbackUrl?: string }>;
+};
+
+export default async function SignInPage({ searchParams }: SignInPageProps) {
+  const [session, resolvedSearchParams] = await Promise.all([auth(), searchParams]);
+  const callbackUrl = sanitizeCallbackUrl(resolvedSearchParams?.callbackUrl) ?? "/account";
 
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-6 py-12">
@@ -63,7 +70,7 @@ export default async function SignInPage() {
           <form
             action={async () => {
               "use server";
-              await signIn("google", { redirectTo: "/account" });
+              await signIn("google", { redirectTo: callbackUrl });
             }}
           >
             <button
