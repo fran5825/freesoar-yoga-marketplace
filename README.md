@@ -24,6 +24,10 @@ It supports:
 - Email notifications
 - RWD/mobile-first experience
 
+## Contributing
+
+If you're a human developer setting up this repo locally (cloning, `.env`, running the dev server, git workflow), see `CONTRIBUTING.md`.
+
 ## How to use this repo with AI agents
 
 Before asking any AI coding agent to implement features, ask it to read:
