@@ -16,23 +16,23 @@ type DashboardStatusCopy = {
 
 const statusCopy: Record<TeacherProfileStatus, DashboardStatusCopy> = {
   draft: {
-    label: "Draft",
+    label: "草稿",
     title: "你的老師申請草稿正在整理中",
-    body: "你可以回到申請頁繼續補齊 TeacherProfile。草稿不會進入 Admin review，也不會出現在 marketplace。",
+    body: "你可以回到申請頁繼續補齊資料。草稿不會進入平台審核，也不會出現在平台上。",
     actionLabel: "繼續整理申請",
     actionHref: "/teachers/join",
     tone: "sky",
   },
   submitted: {
-    label: "Submitted",
+    label: "已送出",
     title: "你的老師申請已送出審核",
-    body: "目前請等待平台確認。審核期間不需要重複送出，也不會開放 demand response capability。",
+    body: "目前請等待平台確認。審核期間不需要重複送出，也還不能回應團課需求。",
     actionLabel: "查看申請內容",
     actionHref: "/teachers/join",
     tone: "amber",
   },
   rejected: {
-    label: "Rejected",
+    label: "已退回",
     title: "你的老師申請可修正後重新送出",
     body: "請依平台提供的修正方向調整內容。準備好後，可以回到申請頁重新送出審核。",
     actionLabel: "修正並重新送審",
@@ -40,17 +40,17 @@ const statusCopy: Record<TeacherProfileStatus, DashboardStatusCopy> = {
     tone: "amber",
   },
   approved: {
-    label: "Approved",
+    label: "已核准",
     title: "你的老師資料已通過審核",
-    body: "你已具備 marketplace capability，可以瀏覽並回應團體需求、查看已建立的課程、管理你的可授課時間，並編輯你的老師個人資料。",
+    body: "你已經可以在平台上瀏覽並回應團體需求、查看已建立的課程、管理你的可授課時間，並編輯你的老師個人資料。",
     actionLabel: "編輯我的資料",
     actionHref: "/teacher/profile",
     tone: "emerald",
   },
   suspended: {
-    label: "Suspended",
+    label: "已暫停",
     title: "你的老師狀態目前暫停中",
-    body: "此狀態下不會公開顯示，也不能回應新的 demand request。若需要協助，請聯絡平台管理者。",
+    body: "此狀態下不會公開顯示，也不能回應新的團課需求。若需要協助，請聯絡平台管理者。",
     actionLabel: "查看目前資料",
     actionHref: "/teacher/profile",
     tone: "gray",
@@ -79,21 +79,21 @@ export default async function TeacherDashboardPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-8 px-6 py-10">
       <header className="grid gap-4 border-b border-gray-200 pb-6">
-        <p className="text-sm font-medium text-sky-700">Teacher dashboard</p>
+        <p className="text-sm font-medium text-sky-700">老師專區</p>
         <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
           <div className="min-w-0">
             <h1 className="text-3xl font-semibold tracking-tight text-gray-950">
               老師狀態中心
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-600">
-              這裡顯示你的 TeacherProfile 目前狀態與下一步。
+              這裡顯示你的老師申請目前狀態與下一步。
             </p>
           </div>
           <Link
             className="rounded border border-gray-300 px-4 py-2 text-center text-sm font-medium text-gray-900 transition hover:bg-gray-50"
             href="/account"
           >
-            Account
+            我的帳戶
           </Link>
         </div>
       </header>
@@ -107,7 +107,7 @@ export default async function TeacherDashboardPage() {
               {profileStatus.copy.label}
             </span>
             <p className="text-sm text-gray-500">
-              Last updated: {formatDateTime(profileStatus.profile.updatedAt)}
+              最後更新：{formatDateTime(profileStatus.profile.updatedAt)}
             </p>
           </div>
 
@@ -150,23 +150,23 @@ export default async function TeacherDashboardPage() {
 
           <div className="grid gap-3 rounded border border-gray-100 bg-gray-50 p-4 text-sm md:grid-cols-2">
             <ReadOnlyItem
-              label="Display name"
+              label="公開顯示名稱"
               value={profileStatus.profile.displayName ?? "尚未填寫"}
             />
             <ReadOnlyItem
-              label="Experience"
+              label="教學年資"
               value={
                 typeof profileStatus.profile.experienceYears === "number"
-                  ? `${profileStatus.profile.experienceYears} years`
+                  ? `${profileStatus.profile.experienceYears} 年`
                   : "尚未填寫"
               }
             />
             <ReadOnlyItem
-              label="Specialties"
+              label="擅長類型"
               value={formatList(profileStatus.profile.specialties)}
             />
             <ReadOnlyItem
-              label="Service areas"
+              label="可服務區域"
               value={formatList(profileStatus.profile.serviceAreas)}
             />
           </div>
@@ -192,14 +192,14 @@ export default async function TeacherDashboardPage() {
       ) : (
         <section className="grid gap-5 rounded border border-gray-200 bg-white p-6">
           <span className="w-fit rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
-            No profile
+            尚未申請
           </span>
           <div className="min-w-0">
             <h2 className="text-2xl font-semibold tracking-tight text-gray-950">
               你還沒有建立老師申請
             </h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-600">
-              可以先前往 Teacher Join 頁整理申請草稿。建立草稿不代表送審，也不會公開顯示。
+              可以先前往老師申請頁整理申請草稿。建立草稿不代表送審，也不會公開顯示。
             </p>
           </div>
           <div>
@@ -207,7 +207,7 @@ export default async function TeacherDashboardPage() {
               className="inline-flex rounded bg-gray-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-gray-800"
               href="/teachers/join"
             >
-              建立 teacher application
+              建立老師申請
             </Link>
           </div>
         </section>

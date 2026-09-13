@@ -86,9 +86,14 @@ test.describe("public trust pages", () => {
     await page.goto("/organizers/request");
     await expect(page.getByRole("link", { name: "建立團主資料" })).toHaveAttribute("href", "/organizer/profile");
 
+    // teacher-join-gated-application：未登入訪客現在看到的是導覽說明頁，不是可填表單
+    // （G1／Definition of Done），入口控制項換成帶 callbackUrl 的登入 CTA。
     await page.goto("/teachers/join");
-    await expect(page.getByRole("button", { name: "儲存草稿" })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole("button", { name: "檢查準備狀態" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "送出審核" })).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "登入／建立帳號並開始申請" }),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(
+      page.getByRole("heading", { name: "審核怎麼進行" }),
+    ).toBeVisible();
   });
 });

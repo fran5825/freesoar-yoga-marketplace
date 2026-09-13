@@ -15,6 +15,15 @@ V1 的重點是品質、信任與清楚流程，不是讓老師建立完整 SaaS
 - **通知**：新增 `teacher_profile_suspended`／`teacher_profile_restored` 兩個 `NotificationType`（原始事件表沒有規劃過，真的跑了 migration），只通知 Teacher 自己。
 - 不動下方第 88–121 行的既有敘述本身——那些描述的是這一輪之前的既有設計狀態，仍然正確，只是在本輪之前從未真正落地。
 
+## 落地現況（2026-09-13 更新）
+
+下方 User Flow 第 2–4 步描述的「Visitor 了解定位 → 註冊或登入 → 才填寫申請表」順序，在 `docs/superpowers/plans/2026-09-13-teacher-join-gated-application-plan.md` 之前**沒有落地**——`/teachers/join`（`src/app/teachers/join/page.tsx`）不論登入與否都直接顯示完整申請表單，未登入訪客可以把整份表單填完，直到按下「儲存草稿」或「送出審核」才會發現需要登入，而且登入後的整頁導航會讓表單內容全部歸零。本輪把這個落差補上：
+
+- `page.tsx` 改為依登入狀態分支的 Server Component（`getCurrentUser()`）：未登入渲染新的訪客導覽內容（品牌定位、合作原則、審核流程、資料預覽、FAQ、CTA），已登入才渲染完整申請表單，對齊下方 User Flow 第 2–4 步原本的順序。
+- 所有「前往登入」連結補上 `callbackUrl=/teachers/join`，登入完成後會回到這一頁，不再掉回 `/account`。
+- 表單區塊移除「Local-only application form」「Phase 1 TeacherProfile」等內部開發用語，改用對外文案。
+- `TeacherProfile` 的欄位、狀態機（`draft`／`submitted`／`approved`／`rejected`／`suspended`）與 Admin 審核流程完全不動，下方 User Flow 第 5–9 步與 State Transitions／Status Definitions 三節維持正確、不受影響。
+
 ## User Role
 
 主要角色：

@@ -1,26 +1,10 @@
 import Link from "next/link";
 
+import { getOwnOrganizerContext } from "@/domain/organizer-profile/service";
+import { getOwnTeacherProfileApplicationSnapshot } from "@/domain/teacher-profile/service";
+
 import { PublicFooter } from "./_components/public-footer";
 import { PublicHeader } from "./_components/public-header";
-
-const pathways = [
-  {
-    eyebrow: "給瑜伽老師",
-    title: "帶著你的專業，被合適的團體看見",
-    description:
-      "建立老師資料、說明教學風格與可服務方式，再回應真正適合你的團課需求。",
-    href: "/teachers/join",
-    action: "了解老師加入",
-  },
-  {
-    eyebrow: "給團主與組織者",
-    title: "從一個清楚的需求，開始一堂好課",
-    description:
-      "說明團體情境、期待與時間，讓平台協助你與合適的老師展開合作。",
-    href: "/organizers/request",
-    action: "提出團課需求",
-  },
-];
 
 const principles = [
   ["尊重專業", "老師不是被比價的商品；每一次合作都從理解教學與團體需求開始。"],
@@ -28,7 +12,49 @@ const principles = [
   ["共同成長", "團主、老師、學員與平台一起守住安全、品質與可持續的練習關係。"],
 ];
 
-export default function Home() {
+// homepage-role-aware-entry：首頁原本不管登入與否、有沒有身分，一律顯示同一組
+// 「我想發起團課／我是瑜伽老師」引導文案——對已經有 TeacherProfile／OrganizerProfile
+// 的使用者來說，這兩個連結應該是回到自己的總覽，而不是再導向一次申請/建立頁。
+// getOwnTeacherProfileApplicationSnapshot()／getOwnOrganizerContext() 對未登入或
+// 尚未建立過資料的情況都已經安全回傳 null（見各自 service.ts），這裡不需要另外呼叫
+// getCurrentUser() 判斷登入狀態——null 時原本連到 /teachers/join、/organizers/request
+// 的行為本來就是對的，不管是「未登入」還是「已登入但還沒申請」。
+export default async function Home() {
+  const [teacherProfile, organizerContext] = await Promise.all([
+    getOwnTeacherProfileApplicationSnapshot(),
+    getOwnOrganizerContext(),
+  ]);
+
+  const teacherHref = teacherProfile ? "/teacher/dashboard" : "/teachers/join";
+  const organizerHref = organizerContext
+    ? "/organizer/dashboard"
+    : "/organizers/request";
+
+  const pathways = [
+    {
+      eyebrow: "給瑜伽老師",
+      title: teacherProfile
+        ? "查看你的老師申請與課程狀態"
+        : "帶著你的專業，被合適的團體看見",
+      description: teacherProfile
+        ? "回到老師總覽，查看目前的審核狀態、已建立的課程，或編輯你的老師資料。"
+        : "建立老師資料、說明教學風格與可服務方式，再回應真正適合你的團課需求。",
+      href: teacherHref,
+      action: teacherProfile ? "前往老師總覽" : "了解老師加入",
+    },
+    {
+      eyebrow: "給團主與組織者",
+      title: organizerContext
+        ? "查看你的團課需求與合作進度"
+        : "從一個清楚的需求，開始一堂好課",
+      description: organizerContext
+        ? "回到團主總覽，查看目前的需求狀態、老師回覆，或管理已成立的課程。"
+        : "說明團體情境、期待與時間，讓平台協助你與合適的老師展開合作。",
+      href: organizerHref,
+      action: organizerContext ? "前往團主總覽" : "提出團課需求",
+    },
+  ];
+
   return (
     <main className="min-h-screen overflow-hidden bg-[#f7f4ee] text-[#29382f]">
       <PublicHeader />
@@ -43,11 +69,11 @@ export default function Home() {
               Free Soar Yoga 以品牌、信任與共創為核心，陪伴團主提出需求、老師回應專業，讓學員在清楚安心的關係裡參與高品質的身心練習。
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-              <Link className="rounded-full bg-[#345343] px-6 py-3 text-center font-medium text-white transition hover:bg-[#293f35]" href="/organizers/request">
-                我想發起團課
+              <Link className="rounded-full bg-[#345343] px-6 py-3 text-center font-medium text-white transition hover:bg-[#293f35]" href={organizerHref}>
+                {organizerContext ? "前往團主總覽" : "我想發起團課"}
               </Link>
-              <Link className="rounded-full border border-[#345343]/30 bg-white/50 px-6 py-3 text-center font-medium transition hover:border-[#345343]" href="/teachers/join">
-                我是瑜伽老師
+              <Link className="rounded-full border border-[#345343]/30 bg-white/50 px-6 py-3 text-center font-medium transition hover:border-[#345343]" href={teacherHref}>
+                {teacherProfile ? "前往老師總覽" : "我是瑜伽老師"}
               </Link>
             </div>
           </div>

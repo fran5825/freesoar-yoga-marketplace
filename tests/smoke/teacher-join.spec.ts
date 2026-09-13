@@ -42,9 +42,70 @@ test.afterAll(async () => {
 });
 
 test.describe("/teachers/join smoke", () => {
-  test("shows teacher application controls and submit confirmation", async ({
+  test("shows a visitor-facing explainer, not a fillable form, when signed out", async ({
     page,
   }) => {
+    await page.goto("/teachers/join");
+
+    await expect(
+      page.getByRole("heading", {
+        name: "與我們一起建立更清楚、更安心的瑜伽團課合作",
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "審核怎麼進行" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "申請前可以先準備這些" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "常見問題" }),
+    ).toBeVisible();
+
+    // teacher-join-gated-application：未登入訪客只看得到唯讀導覽內容，不會看到
+    // 任何可以送出但送不出去的表單輸入框（G1／Definition of Done）。
+    await expect(page.getByRole("textbox")).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "儲存草稿" }),
+    ).not.toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "送出審核" }),
+    ).not.toBeVisible();
+
+    const signInCta = page.getByRole("link", {
+      name: "登入／建立帳號並開始申請",
+    });
+    await expect(signInCta).toBeVisible();
+    // G3：CTA 帶 callbackUrl，登入完成後導回這一頁，不會掉回 /account。
+    await expect(signInCta).toHaveAttribute(
+      "href",
+      "/sign-in?callbackUrl=%2Fteachers%2Fjoin",
+    );
+  });
+
+  test("shows teacher application controls and submit confirmation", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-${Date.now()}`,
+    );
+    const email = `new-teacher-${testRunId}@${testEmailDomain}`;
+    const sessionToken = await createSignedInSessionWithoutTeacherProfile({
+      email,
+    });
+
+    await context.addCookies([
+      {
+        name: authCookieName,
+        value: sessionToken,
+        domain: "127.0.0.1",
+        path: "/",
+        httpOnly: true,
+        sameSite: "Lax",
+      },
+    ]);
+
     await page.goto("/teachers/join");
 
     await expect(
@@ -139,6 +200,36 @@ test.describe("/teachers/join smoke", () => {
     });
   });
 });
+
+// teacher-join-gated-application：一個「已登入、但還沒建立過 TeacherProfile」的老師——
+// 資料庫裡完全沒有這個 user 的 TeacherProfile 記錄（不是 status="draft"，是根本不存在），
+// 對應到 getInitialTeacherProfileApplicationSnapshotAction() 回傳 null 的那個分支。
+async function createSignedInSessionWithoutTeacherProfile({
+  email,
+}: {
+  email: string;
+}) {
+  createdEmails.push(email);
+
+  const user = await prisma.user.create({
+    data: {
+      email,
+      name: email.split("@")[0],
+    },
+    select: { id: true },
+  });
+  const sessionToken = randomUUID();
+
+  await prisma.session.create({
+    data: {
+      sessionToken,
+      userId: user.id,
+      expires: new Date(Date.now() + 1000 * 60 * 60),
+    },
+  });
+
+  return sessionToken;
+}
 
 async function createRejectedTeacherProfileSession({
   email,

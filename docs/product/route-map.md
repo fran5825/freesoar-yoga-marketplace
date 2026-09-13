@@ -12,7 +12,7 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 |---|---|---|
 | `/` | **已落地**：品牌首頁，說明 Free Soar Yoga 的定位、三種角色與主辦人／老師主要入口；不提供 public class discovery | Visitor |
 | `/about` | **已落地**：Free Soar Yoga 品牌與 marketplace 說明 | Visitor |
-| `/teachers/join` | 老師加入與申請入口 | Visitor, Teacher |
+| `/teachers/join` | 老師加入與申請入口。**已擴充**（`teacher-join-gated-application` 已確認）：依登入狀態分支——未登入顯示品牌定位、審核流程、資料預覽、FAQ 與帶 `callbackUrl` 的登入 CTA（唯讀導覽，不渲染可填表單）；已登入才顯示完整申請表單（draft 儲存、送審、四種既有狀態顯示），行為與擴充前一致 | Visitor, Teacher |
 | `/organizers/request` | 團主提出需求入口 | Visitor, Organizer |
 | `/classes` | **已落地**（`teacher-initiated-open-classes` Slice D 已確認）：公開 class session 列表，任何人（含未登入 Visitor）都能瀏覽，可依課程類型／星期幾篩選；只顯示 `isPublic=true`、狀態符合、且授課老師 `approved` 的課程 | Visitor, Member |
 | `/classes/[classSessionId]` | class session 詳情、share link 與 enrollment 入口。**已落地並擴充（`teacher-initiated-open-classes` Slice D 已確認）**：依登入狀態分支——已登入沿用既有 `getClassSessionForMember()`（不檢查 `isPublic`，維持既有 share-link 查看模式不變）；未登入改走新的 `getPublicClassSessionDetail()`，只顯示公開條件符合的課程，顯示唯讀詳情＋「登入後報名」連結（不渲染報名表單），不符合公開條件一律回傳 not-found，不揭露存在性 | Visitor, Member |
