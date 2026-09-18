@@ -3,10 +3,10 @@ import Link from "next/link";
 import { auth, signOut } from "@/auth";
 
 const publicLinks = [
-  { href: "/about", label: "關於我們" },
-  { href: "/faq", label: "常見問題" },
-  { href: "/teachers/join", label: "我是老師" },
-  { href: "/organizers/request", label: "我是主辦人" },
+  { href: "/organizers/request", label: "發起團課" },
+  { href: "/classes", label: "搜尋課程" },
+  { href: "/teachers/join", label: "老師合作" },
+  { href: "/about", label: "關於飛索" },
 ];
 
 // public-header-shows-signed-in-state：這個 header 原本不管有沒有登入都同時顯示
@@ -21,58 +21,61 @@ export async function PublicHeader() {
     : null;
 
   return (
-    <header className="border-b border-[#29382f]/10">
+    <header className="border-b border-ink/10">
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-5 py-4 sm:px-8">
         <Link
-          className="text-base font-semibold uppercase tracking-[0.16em] text-[#29382f] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#8a5c49]"
+          className="flex flex-col leading-tight focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-clay"
           href="/"
         >
-          Free Soar Yoga
+          <span className="text-base font-semibold tracking-[0.04em] text-ink">Free Soar Yoga</span>
+          <span className="text-xs tracking-[0.08em] text-ink-soft">飛索・瑜伽團課共創平台</span>
         </Link>
-        <nav aria-label="公開網站導覽" className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-[#56645b]">
+        <nav aria-label="公開網站導覽" className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-ink-soft">
           {publicLinks.map((link) => (
             <Link
-              className="rounded px-1 py-1 transition hover:text-[#8a5c49] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8a5c49]"
+              className="rounded px-1 py-1 transition hover:text-clay focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
               href={link.href}
               key={link.href}
             >
               {link.label}
             </Link>
           ))}
+        </nav>
+        <div className="flex flex-wrap items-center gap-2 text-sm">
           {signedInLabel ? (
-            <span className="rounded-full border border-[#29382f]/20 bg-[#eef2ee] px-3 py-1 text-xs font-medium text-[#345343]">
-              已登入：{signedInLabel}
-            </span>
+            <>
+              <span className="rounded-full border border-ink/20 bg-pine-tint px-3 py-1 text-xs font-medium text-pine">
+                已登入：{signedInLabel}
+              </span>
+              <form
+                action={async () => {
+                  "use server";
+                  await signOut({ redirectTo: "/" });
+                }}
+              >
+                <button
+                  className="rounded-full border border-ink/30 px-4 py-2 font-medium text-ink transition hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+                  type="submit"
+                >
+                  登出
+                </button>
+              </form>
+            </>
           ) : (
             <Link
-              className="rounded-full border border-[#29382f]/30 px-4 py-2 font-medium text-[#29382f] transition hover:border-[#29382f] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8a5c49]"
+              className="rounded-full border border-ink/30 px-4 py-2 font-medium text-ink transition hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
               href="/sign-in"
             >
               登入
             </Link>
           )}
           <Link
-            className="rounded px-1 py-1 transition hover:text-[#8a5c49] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8a5c49]"
+            className="rounded-full bg-pine px-5 py-2 font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
             href="/account"
           >
             我的帳戶
           </Link>
-          {signedInLabel ? (
-            <form
-              action={async () => {
-                "use server";
-                await signOut({ redirectTo: "/" });
-              }}
-            >
-              <button
-                className="rounded px-1 py-1 text-[#56645b] transition hover:text-[#8a5c49] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8a5c49]"
-                type="submit"
-              >
-                登出
-              </button>
-            </form>
-          ) : null}
-        </nav>
+        </div>
       </div>
     </header>
   );

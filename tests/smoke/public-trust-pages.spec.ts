@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 const publicRoutes = [
   {
     path: "/",
-    heading: "連結好老師與真實需求的瑜伽團課 marketplace",
+    heading: "連結好老師與你的瑜伽團課平台",
     title: "Free Soar Yoga｜瑜伽團課共創平台",
   },
   {
@@ -50,10 +50,10 @@ test.describe("public trust pages", () => {
       await expect(page).toHaveTitle(route.title);
       await expect(page.getByRole("heading", { name: route.heading, level: 1 })).toBeVisible();
       await expect(page.locator("header").getByRole("link", { name: "Free Soar Yoga" })).toHaveAttribute("href", "/");
-      await expect(page.locator("header").getByRole("link", { name: "關於我們" })).toHaveAttribute("href", "/about");
-      await expect(page.locator("header").getByRole("link", { name: "常見問題" })).toHaveAttribute("href", "/faq");
-      await expect(page.locator("header").getByRole("link", { name: "我是老師" })).toHaveAttribute("href", "/teachers/join");
-      await expect(page.locator("header").getByRole("link", { name: "我是主辦人" })).toHaveAttribute("href", "/organizers/request");
+      await expect(page.locator("header").getByRole("link", { name: "發起團課" })).toHaveAttribute("href", "/organizers/request");
+      await expect(page.locator("header").getByRole("link", { name: "搜尋課程" })).toHaveAttribute("href", "/classes");
+      await expect(page.locator("header").getByRole("link", { name: "老師合作" })).toHaveAttribute("href", "/teachers/join");
+      await expect(page.locator("header").getByRole("link", { name: "關於飛索" })).toHaveAttribute("href", "/about");
       await expect(page.locator("header").getByRole("link", { name: "登入" })).toHaveAttribute("href", "/sign-in");
       await expect(page.locator("header").getByRole("link", { name: "我的帳戶" })).toHaveAttribute("href", "/account");
       await expect(page.locator("footer").getByRole("link", { name: "關於我們" })).toHaveAttribute("href", "/about");
@@ -63,14 +63,15 @@ test.describe("public trust pages", () => {
     });
   }
 
-  test("keeps only teacher and organizer as home primary calls to action", async ({ page }) => {
+  test("home offers organizer, member and teacher as parallel primary entry points", async ({ page }) => {
     await page.goto("/");
 
     const main = page.getByRole("main");
-    await expect(main.getByRole("link", { name: "我想發起團課", exact: true })).toHaveAttribute("href", "/organizers/request");
-    await expect(main.getByRole("link", { name: "我是瑜伽老師", exact: true })).toHaveAttribute("href", "/teachers/join");
-    await expect(page.getByText("目前不提供公開課程列表")).toHaveCount(0);
-    await expect(page.locator("a[href=\"/classes\"]")).toHaveCount(0);
+    await expect(main.getByRole("link", { name: "我想發起團課 →", exact: true })).toHaveAttribute("href", "/organizers/request");
+    await expect(main.getByRole("link", { name: "找一堂適合我的課", exact: true })).toHaveAttribute("href", "/classes");
+    await expect(main.getByRole("link", { name: "提出團課需求" })).toHaveAttribute("href", "/organizers/request");
+    await expect(main.getByRole("link", { name: "探索課程" })).toHaveAttribute("href", "/classes");
+    await expect(main.getByRole("link", { name: "了解老師加入" })).toHaveAttribute("href", "/teachers/join");
   });
 
   test("exposes accessible FAQ answers without inventing cancellation policy", async ({ page }) => {

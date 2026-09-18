@@ -6,14 +6,8 @@ import { getOwnTeacherProfileApplicationSnapshot } from "@/domain/teacher-profil
 import { PublicFooter } from "./_components/public-footer";
 import { PublicHeader } from "./_components/public-header";
 
-const principles = [
-  ["尊重專業", "老師不是被比價的商品；每一次合作都從理解教學與團體需求開始。"],
-  ["清楚流程", "老師與需求經過平台審核，合作、成課與報名都有明確的下一步。"],
-  ["共同成長", "團主、老師、學員與平台一起守住安全、品質與可持續的練習關係。"],
-];
-
 // homepage-role-aware-entry：首頁原本不管登入與否、有沒有身分，一律顯示同一組
-// 「我想發起團課／我是瑜伽老師」引導文案——對已經有 TeacherProfile／OrganizerProfile
+// 「我想發起團課／了解老師加入」引導文案——對已經有 TeacherProfile／OrganizerProfile
 // 的使用者來說，這兩個連結應該是回到自己的總覽，而不是再導向一次申請/建立頁。
 // getOwnTeacherProfileApplicationSnapshot()／getOwnOrganizerContext() 對未登入或
 // 尚未建立過資料的情況都已經安全回傳 null（見各自 service.ts），這裡不需要另外呼叫
@@ -32,67 +26,74 @@ export default async function Home() {
 
   const pathways = [
     {
-      eyebrow: "給瑜伽老師",
-      title: teacherProfile
-        ? "查看你的老師申請與課程狀態"
-        : "帶著你的專業，被合適的團體看見",
-      description: teacherProfile
-        ? "回到老師總覽，查看目前的審核狀態、已建立的課程，或編輯你的老師資料。"
-        : "建立老師資料、說明教學風格與可服務方式，再回應真正適合你的團課需求。",
-      href: teacherHref,
-      action: teacherProfile ? "前往老師總覽" : "了解老師加入",
-    },
-    {
       eyebrow: "給團主與組織者",
       title: organizerContext
         ? "查看你的團課需求與合作進度"
-        : "從一個清楚的需求，開始一堂好課",
+        : "為一群人開一堂課",
       description: organizerContext
         ? "回到團主總覽，查看目前的需求狀態、老師回覆，或管理已成立的課程。"
-        : "說明團體情境、期待與時間，讓平台協助你與合適的老師展開合作。",
+        : "公司、社區與朋友團體，說明情境與期待，讓平台協助你找到合適的老師。",
       href: organizerHref,
       action: organizerContext ? "前往團主總覽" : "提出團課需求",
+    },
+    {
+      eyebrow: "給想上課的學員",
+      title: "開始你的練習",
+      description: "依照程度與生活節奏，探索可以報名的課，找到適合自己的那一堂。",
+      href: "/classes",
+      action: "探索課程",
+    },
+    {
+      eyebrow: "給瑜伽老師",
+      title: teacherProfile
+        ? "查看你的老師申請與課程狀態"
+        : "分享你的教學",
+      description: teacherProfile
+        ? "回到老師總覽，查看目前的審核狀態、已建立的課程，或編輯你的老師資料。"
+        : "回應真正適合你的團課需求，或開設自己的固定課程，被合適的團體看見。",
+      href: teacherHref,
+      action: teacherProfile ? "前往老師總覽" : "了解老師加入",
     },
   ];
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#f7f4ee] text-[#29382f]">
+    <main className="min-h-screen overflow-hidden bg-cream text-ink">
       <PublicHeader />
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
-        <section className="grid gap-12 py-16 sm:py-24 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:py-32">
+        <section className="grid gap-12 py-16 sm:py-24 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:py-20">
           <div>
-            <p className="text-sm font-medium tracking-[0.2em] text-[#8a5c49]">讓團體練習，自然發生</p>
+            <p className="text-sm font-medium tracking-[0.2em] text-clay">讓團體練習，自然發生</p>
             <h1 className="mt-6 max-w-3xl text-4xl font-semibold leading-[1.15] tracking-[-0.03em] sm:text-6xl">
-              連結好老師與真實需求的瑜伽團課 marketplace
+              連結好老師與你的瑜伽團課平台
             </h1>
             <p className="mt-7 max-w-2xl text-lg leading-8 text-[#536158]">
-              Free Soar Yoga 以品牌、信任與共創為核心，陪伴團主提出需求、老師回應專業，讓學員在清楚安心的關係裡參與高品質的身心練習。
+              連結真實的團課需求與專業瑜伽老師，與團主、學員共同形成安心而有品質的團課。
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-              <Link className="rounded-full bg-[#345343] px-6 py-3 text-center font-medium text-white transition hover:bg-[#293f35]" href={organizerHref}>
-                {organizerContext ? "前往團主總覽" : "我想發起團課"}
+              <Link className="rounded-full bg-pine px-6 py-3 text-center font-medium text-white transition hover:bg-pine-deep" href={organizerHref}>
+                {organizerContext ? "前往團主總覽" : "我想發起團課 →"}
               </Link>
-              <Link className="rounded-full border border-[#345343]/30 bg-white/50 px-6 py-3 text-center font-medium transition hover:border-[#345343]" href={teacherHref}>
-                {teacherProfile ? "前往老師總覽" : "我是瑜伽老師"}
+              <Link className="rounded-full border border-pine/30 bg-white/50 px-6 py-3 text-center font-medium transition hover:border-pine" href="/classes">
+                找一堂適合我的課
               </Link>
             </div>
           </div>
 
-          <div aria-label="Free Soar 品牌精神" className="relative mx-auto aspect-square w-full max-w-md rounded-[42%_58%_52%_48%] bg-[#dfe8dc] p-8 sm:p-12">
+          <div aria-label="Free Soar 品牌精神" className="relative mx-auto aspect-square w-full max-w-md rounded-[42%_58%_52%_48%] bg-sage p-8 sm:p-12">
             <div className="flex h-full flex-col justify-between rounded-[38%_62%_45%_55%] border border-white/80 bg-white/45 p-7 backdrop-blur-sm">
               <p className="text-sm tracking-[0.18em] text-[#6d7d70]">FREEDOM · AWAKENING</p>
-              <p className="text-3xl font-medium leading-snug text-[#345343]">在身體裡安住，<br />在關係中展開。</p>
+              <p className="text-3xl font-medium leading-snug text-pine">從舒展身體開始，<br />慢慢找回內在寧靜</p>
               <p className="text-sm tracking-[0.18em] text-[#6d7d70]">GROWTH · COMMUNITY</p>
             </div>
           </div>
         </section>
       </div>
 
-      <section className="bg-[#345343] py-16 text-white sm:py-24">
+      <section className="bg-pine py-16 text-white sm:py-24">
         <div className="mx-auto max-w-6xl px-5 sm:px-8">
           <p className="text-sm font-medium tracking-[0.2em] text-[#cfdbd1]">找到你的起點</p>
-          <h2 className="mt-4 max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">每一堂團課，都從彼此理解開始</h2>
-          <div className="mt-10 grid gap-5 md:grid-cols-2">
+          <h2 className="mt-4 max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">不論你是團主、老師，還是想找一堂課的學員</h2>
+          <div className="mt-10 grid gap-5 md:grid-cols-3">
             {pathways.map((pathway) => (
               <article className="flex flex-col rounded-3xl border border-white/15 bg-white/[0.07] p-7 sm:p-9" key={pathway.href}>
                 <p className="text-sm text-[#cfdbd1]">{pathway.eyebrow}</p>
@@ -103,35 +104,6 @@ export default async function Home() {
                 </Link>
               </article>
             ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-24">
-        <div className="grid gap-10 lg:grid-cols-[0.7fr_1.3fr]">
-          <div>
-            <p className="text-sm font-medium tracking-[0.2em] text-[#8a5c49]">我們如何守住品質</p>
-            <h2 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">溫柔，不等於模糊</h2>
-          </div>
-          <div className="grid gap-5 sm:grid-cols-3">
-            {principles.map(([title, description], index) => (
-              <article className="border-t border-[#29382f]/20 pt-5" key={title}>
-                <p className="text-sm text-[#8a5c49]">0{index + 1}</p>
-                <h3 className="mt-4 text-xl font-medium">{title}</h3>
-                <p className="mt-3 leading-7 text-[#5d6a61]">{description}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-16 flex flex-col items-start justify-between gap-6 rounded-3xl bg-[#ebe2d7] p-7 sm:flex-row sm:items-center sm:p-10">
-          <div>
-            <h2 className="text-2xl font-semibold">想先多了解一點？</h2>
-            <p className="mt-2 leading-7 text-[#5d625c]">認識 Free Soar 的品牌精神，或查看審核、報名與取消方式。</p>
-          </div>
-          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-            <Link className="min-h-11 rounded-full border border-[#29382f]/30 px-5 py-2.5 text-center font-medium" href="/about">關於 Free Soar</Link>
-            <Link className="min-h-11 rounded-full border border-[#29382f]/30 px-5 py-2.5 text-center font-medium" href="/faq">查看常見問題</Link>
           </div>
         </div>
       </section>

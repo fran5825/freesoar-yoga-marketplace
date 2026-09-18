@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 const publicPages = [
-  { path: "/", heading: "連結好老師與真實需求的瑜伽團課 marketplace" },
+  { path: "/", heading: "連結好老師與你的瑜伽團課平台" },
   { path: "/about", heading: "讓自由與覺察，長成有品質的共同練習" },
   { path: "/faq", heading: "開始以前，先把重要的事說清楚" },
 ];
@@ -30,8 +30,8 @@ test.describe("public brand foundation", () => {
 
     await expect(page).toHaveTitle("Free Soar Yoga｜瑜伽團課共創平台");
     await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /品牌導向的瑜伽團課 marketplace/);
-    await expect(page.getByRole("link", { name: "我是瑜伽老師" })).toHaveAttribute("href", "/teachers/join");
-    await expect(page.getByRole("link", { name: "我想發起團課" })).toHaveAttribute("href", "/organizers/request");
+    await expect(page.getByRole("link", { name: "了解老師加入" })).toHaveAttribute("href", "/teachers/join");
+    await expect(page.getByRole("link", { name: "我想發起團課 →" })).toHaveAttribute("href", "/organizers/request");
     await expect(page.getByRole("link", { name: "關於我們" }).first()).toHaveAttribute("href", "/about");
     await expect(page.getByRole("link", { name: "常見問題" }).first()).toHaveAttribute("href", "/faq");
     await expect(page.getByRole("link", { name: "登入" }).first()).toHaveAttribute("href", "/sign-in");

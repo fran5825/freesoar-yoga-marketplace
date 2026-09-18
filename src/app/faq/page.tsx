@@ -21,22 +21,22 @@ const questions = [
 
 export default function FaqPage() {
   return (
-    <main className="flex min-h-screen flex-col bg-[#f7f4ee] text-[#29382f]">
+    <main className="flex min-h-screen flex-col bg-cream text-ink">
       <PublicHeader />
       <div className="mx-auto max-w-4xl flex-1 px-5 sm:px-8">
         <section className="py-16 sm:py-24">
-          <p className="text-sm font-medium tracking-[0.2em] text-[#8a5c49]">FAQ</p>
+          <p className="text-sm font-medium tracking-[0.2em] text-clay">FAQ</p>
           <h1 className="mt-6 text-4xl font-semibold tracking-[-0.03em] sm:text-6xl">開始以前，先把重要的事說清楚</h1>
-          <p className="mt-7 max-w-2xl text-lg leading-8 text-[#56645b]">關於審核、報名、取消與平台能守住的信任邊界，我們整理了目前 V1 的實際做法。</p>
+          <p className="mt-7 max-w-2xl text-lg leading-8 text-ink-soft">關於審核、報名、取消與平台能守住的信任邊界，我們整理了目前 V1 的實際做法。</p>
         </section>
 
         <section aria-labelledby="questions-heading" className="pb-16 sm:pb-24">
           <h2 className="sr-only" id="questions-heading">常見問題列表</h2>
-          <div className="divide-y divide-[#29382f]/15 border-y border-[#29382f]/15">
+          <div className="divide-y divide-ink/15 border-y border-ink/15">
             {questions.map(([question, answer], index) => (
               <details className="group py-6" key={question} open={index === 0}>
                 <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-5 text-lg font-medium marker:hidden sm:text-xl">
-                  <span>{question}</span><span aria-hidden="true" className="text-2xl font-light text-[#8a5c49] group-open:rotate-45">＋</span>
+                  <span>{question}</span><span aria-hidden="true" className="text-2xl font-light text-clay group-open:rotate-45">＋</span>
                 </summary>
                 <p className="max-w-3xl pr-8 pt-4 leading-7 text-[#5d6a61]">{answer}</p>
               </details>
@@ -44,11 +44,11 @@ export default function FaqPage() {
           </div>
         </section>
 
-        <section className="mb-16 rounded-3xl bg-[#ebe2d7] p-7 sm:mb-24 sm:flex sm:items-center sm:justify-between sm:gap-8 sm:p-9">
+        <section className="mb-16 rounded-3xl bg-sand p-7 sm:mb-24 sm:flex sm:items-center sm:justify-between sm:gap-8 sm:p-9">
           <div><h2 className="text-2xl font-semibold">準備好展開下一步了嗎？</h2><p className="mt-2 leading-7 text-[#5d625c]">依你的角色選擇入口，也可以先登入查看自己的帳號。</p></div>
           <div className="mt-6 flex flex-col gap-3 sm:mt-0 sm:min-w-48">
-            <Link className="rounded-full bg-[#345343] px-5 py-3 text-center font-medium text-white" href="/teachers/join">老師加入</Link>
-            <Link className="rounded-full border border-[#345343]/30 px-5 py-3 text-center font-medium" href="/organizers/request">提出需求</Link>
+            <Link className="rounded-full bg-pine px-5 py-3 text-center font-medium text-white" href="/teachers/join">老師加入</Link>
+            <Link className="rounded-full border border-pine/30 px-5 py-3 text-center font-medium" href="/organizers/request">提出需求</Link>
           </div>
         </section>
       </div>

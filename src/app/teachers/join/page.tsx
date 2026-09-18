@@ -14,7 +14,7 @@ export default async function TeacherJoinPage() {
   const currentUser = await getCurrentUser();
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#f7f4ee] text-[#29382f]">
+    <div className="flex min-h-screen flex-col bg-cream text-ink">
       <PublicHeader />
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-10 px-5 py-10 sm:px-8 sm:py-14">
         {currentUser ? <TeacherApplicationForm /> : <TeacherJoinExplainer />}

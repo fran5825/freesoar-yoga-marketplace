@@ -27,20 +27,20 @@ const roles = [
 
 export default function AboutPage() {
   return (
-    <main className="flex min-h-screen flex-col bg-[#f7f4ee] text-[#29382f]">
+    <main className="flex min-h-screen flex-col bg-cream text-ink">
       <PublicHeader />
       <div className="mx-auto max-w-5xl flex-1 px-5 sm:px-8">
         <section className="py-16 sm:py-24">
-          <p className="text-sm font-medium tracking-[0.2em] text-[#8a5c49]">ABOUT FREE SOAR</p>
+          <p className="text-sm font-medium tracking-[0.2em] text-clay">ABOUT FREE SOAR</p>
           <h1 className="mt-6 max-w-4xl text-4xl font-semibold leading-tight tracking-[-0.03em] sm:text-6xl">讓自由與覺察，長成有品質的共同練習</h1>
-          <p className="mt-8 max-w-3xl text-lg leading-8 text-[#56645b]">
+          <p className="mt-8 max-w-3xl text-lg leading-8 text-ink-soft">
             Free Soar Yoga 是 Free Soar 品牌的第一階段實踐。我們從瑜伽團課出發，建立一個以人、專業與信任為核心的 marketplace，讓需求與教學不是倉促配對，而是經過理解後展開的合作。
           </p>
         </section>
 
-        <section aria-labelledby="spirit-heading" className="border-t border-[#29382f]/15 py-16 sm:py-20">
+        <section aria-labelledby="spirit-heading" className="border-t border-ink/15 py-16 sm:py-20">
           <h2 className="text-3xl font-semibold" id="spirit-heading">品牌精神</h2>
-          <div className="mt-9 grid gap-px overflow-hidden rounded-3xl bg-[#29382f]/10 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-9 grid gap-px overflow-hidden rounded-3xl bg-ink/10 sm:grid-cols-2 lg:grid-cols-3">
             {spirits.map(([title, description]) => (
               <article className="bg-[#fcfaf6] p-7" key={title}>
                 <h3 className="text-lg font-medium">{title}</h3>
@@ -53,13 +53,13 @@ export default function AboutPage() {
         <section aria-labelledby="roles-heading" className="py-16 sm:py-20">
           <div className="grid gap-10 lg:grid-cols-[0.7fr_1.3fr]">
             <div>
-              <p className="text-sm font-medium tracking-[0.2em] text-[#8a5c49]">FOUR-WAY CO-CREATION</p>
+              <p className="text-sm font-medium tracking-[0.2em] text-clay">FOUR-WAY CO-CREATION</p>
               <h2 className="mt-4 text-3xl font-semibold" id="roles-heading">四方共創，不是單向交易</h2>
             </div>
             <div className="space-y-4">
               {roles.map(([title, description], index) => (
-                <article className="grid gap-2 rounded-2xl border border-[#29382f]/10 bg-white/55 p-6 sm:grid-cols-[3rem_1fr]" key={title}>
-                  <span className="text-sm text-[#8a5c49]">0{index + 1}</span>
+                <article className="grid gap-2 rounded-2xl border border-ink/10 bg-white/55 p-6 sm:grid-cols-[3rem_1fr]" key={title}>
+                  <span className="text-sm text-clay">0{index + 1}</span>
                   <div><h3 className="text-xl font-medium">{title}</h3><p className="mt-2 leading-7 text-[#5d6a61]">{description}</p></div>
                 </article>
               ))}
@@ -67,14 +67,14 @@ export default function AboutPage() {
           </div>
         </section>
 
-        <section className="mb-16 rounded-3xl bg-[#dfe8dc] p-7 sm:mb-24 sm:p-10">
+        <section className="mb-16 rounded-3xl bg-sage p-7 sm:mb-24 sm:p-10">
           <h2 className="text-2xl font-semibold">我們此刻專注的事</h2>
           <p className="mt-4 max-w-3xl leading-7 text-[#506056]">
             現階段聚焦瑜伽團課 marketplace：團主提出需求、老師建立資料並回應、團主選擇老師形成課程，以及學員報名參與。我們寧可先把這段關係做得清楚可信，也不急著承諾尚未落地的服務。
           </p>
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-            <Link className="rounded-full bg-[#345343] px-5 py-3 text-center font-medium text-white" href="/teachers/join">了解老師加入</Link>
-            <Link className="rounded-full border border-[#345343]/30 px-5 py-3 text-center font-medium" href="/organizers/request">提出團課需求</Link>
+            <Link className="rounded-full bg-pine px-5 py-3 text-center font-medium text-white" href="/teachers/join">了解老師加入</Link>
+            <Link className="rounded-full border border-pine/30 px-5 py-3 text-center font-medium" href="/organizers/request">提出團課需求</Link>
           </div>
         </section>
       </div>

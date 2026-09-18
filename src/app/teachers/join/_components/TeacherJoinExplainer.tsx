@@ -70,39 +70,39 @@ export function TeacherJoinExplainer() {
     <>
       <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
         <div>
-          <p className="text-sm font-medium text-[#8a5c49]">
+          <p className="text-sm font-medium text-clay">
             Free Soar Yoga teacher community
           </p>
-          <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight text-[#29382f] sm:text-5xl">
+          <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
             與我們一起建立更清楚、更安心的瑜伽團課合作
           </h1>
-          <p className="mt-5 max-w-2xl text-base leading-7 text-[#56645b]">
+          <p className="mt-5 max-w-2xl text-base leading-7 text-ink-soft">
             Free Soar Yoga 重視老師的專業、風格與教學界線。我們希望讓團主的需求被清楚整理，也讓老師能被正確理解，回應真正適合自己的團課機會。
           </p>
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
             <a
-              className="rounded bg-[#345343] px-5 py-3 text-center text-sm font-medium text-white"
+              className="rounded bg-pine px-5 py-3 text-center text-sm font-medium text-white"
               href={signInHref}
             >
               登入／建立帳號並開始申請
             </a>
             <Link
-              className="rounded border border-[#29382f]/20 px-5 py-3 text-center text-sm font-medium text-[#29382f]"
+              className="rounded border border-ink/20 px-5 py-3 text-center text-sm font-medium text-ink"
               href="/"
             >
               回到首頁
             </Link>
           </div>
-          <p className="mt-4 text-sm leading-6 text-[#767c73]">
+          <p className="mt-4 text-sm leading-6 text-ink-faint">
             登入或建立帳號後，就會看到完整的申請表單；下方可以先了解審核流程與需要準備的資料。
           </p>
         </div>
 
-        <div className="rounded border border-[#29382f]/10 bg-[#f3ebe4]/60 p-5">
-          <h2 className="text-lg font-medium text-[#29382f]">
+        <div className="rounded border border-ink/10 bg-clay-tint/60 p-5">
+          <h2 className="text-lg font-medium text-ink">
             我們尋找的不是可被比較的商品，而是能共同照顧練習品質的合作夥伴。
           </h2>
-          <p className="mt-4 text-sm leading-6 text-[#56645b]">
+          <p className="mt-4 text-sm leading-6 text-ink-soft">
             平台會以審核、需求整理與清楚的溝通流程，支持老師與團主建立信任，而不是用低價競標或倉促媒合推動合作。
           </p>
         </div>
@@ -111,19 +111,19 @@ export function TeacherJoinExplainer() {
       <section className="grid gap-4 md:grid-cols-3">
         {collaborationPrinciples.map((principle) => (
           <article
-            className="rounded border border-[#29382f]/12 bg-white p-5"
+            className="rounded border border-ink/12 bg-white p-5"
             key={principle}
           >
-            <p className="text-sm leading-6 text-[#56645b]">{principle}</p>
+            <p className="text-sm leading-6 text-ink-soft">{principle}</p>
           </article>
         ))}
       </section>
 
       <section aria-labelledby="review-process-title" className="grid gap-6">
         <div>
-          <p className="text-sm font-medium text-[#345343]">老師申請</p>
+          <p className="text-sm font-medium text-pine">老師申請</p>
           <h2
-            className="mt-2 text-2xl font-semibold tracking-tight text-[#29382f]"
+            className="mt-2 text-2xl font-semibold tracking-tight text-ink"
             id="review-process-title"
           >
             審核怎麼進行
@@ -132,16 +132,16 @@ export function TeacherJoinExplainer() {
         <div className="grid gap-4 md:grid-cols-3">
           {reviewProcessSteps.map((step, index) => (
             <article
-              className="rounded border border-[#29382f]/12 bg-white p-5"
+              className="rounded border border-ink/12 bg-white p-5"
               key={step.title}
             >
-              <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[#29382f]/20 text-xs font-medium text-[#56645b]">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full border border-ink/20 text-xs font-medium text-ink-soft">
                 {index + 1}
               </span>
-              <h3 className="mt-3 text-sm font-medium text-[#29382f]">
+              <h3 className="mt-3 text-sm font-medium text-ink">
                 {step.title}
               </h3>
-              <p className="mt-2 text-sm leading-6 text-[#56645b]">
+              <p className="mt-2 text-sm leading-6 text-ink-soft">
                 {step.description}
               </p>
             </article>
@@ -151,28 +151,28 @@ export function TeacherJoinExplainer() {
 
       <section
         aria-labelledby="application-preview-title"
-        className="grid gap-6 border-y border-[#345343]/15 bg-[#eef2ee]/60 py-6"
+        className="grid gap-6 border-y border-pine/15 bg-pine-tint/60 py-6"
       >
         <div>
-          <p className="text-sm font-medium text-[#345343]">申請前可以先準備</p>
+          <p className="text-sm font-medium text-pine">申請前可以先準備</p>
           <h2
-            className="mt-2 text-2xl font-semibold tracking-tight text-[#29382f]"
+            className="mt-2 text-2xl font-semibold tracking-tight text-ink"
             id="application-preview-title"
           >
             申請前可以先準備這些
           </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#56645b]">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-soft">
             這是登入後申請表單會用到的欄位預覽，讓你可以先想好要怎麼填。
           </p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="rounded border border-[#29382f]/12 bg-white p-5">
-            <h3 className="text-sm font-medium text-[#29382f]">送審必填</h3>
+          <div className="rounded border border-ink/12 bg-white p-5">
+            <h3 className="text-sm font-medium text-ink">送審必填</h3>
             <ul className="mt-3 space-y-2">
               {requiredFieldPreviewLabels.map((label) => (
                 <li
-                  className="rounded-full bg-[#dfe8dc] px-3 py-1 text-sm text-[#345343]"
+                  className="rounded-full bg-sage px-3 py-1 text-sm text-pine"
                   key={label}
                 >
                   {label}
@@ -180,12 +180,12 @@ export function TeacherJoinExplainer() {
               ))}
             </ul>
           </div>
-          <div className="rounded border border-[#29382f]/12 bg-white p-5">
-            <h3 className="text-sm font-medium text-[#29382f]">建議，可留空</h3>
+          <div className="rounded border border-ink/12 bg-white p-5">
+            <h3 className="text-sm font-medium text-ink">建議，可留空</h3>
             <ul className="mt-3 space-y-2">
               {optionalFieldPreviewLabels.map((label) => (
                 <li
-                  className="rounded-full bg-[#ebe2d7] px-3 py-1 text-sm text-[#8a5c49]"
+                  className="rounded-full bg-sand px-3 py-1 text-sm text-clay"
                   key={label}
                 >
                   {label}
@@ -198,9 +198,9 @@ export function TeacherJoinExplainer() {
 
       <section aria-labelledby="faq-title" className="grid gap-6">
         <div>
-          <p className="text-sm font-medium text-[#8a5c49]">FAQ</p>
+          <p className="text-sm font-medium text-clay">FAQ</p>
           <h2
-            className="mt-2 text-2xl font-semibold tracking-tight text-[#29382f]"
+            className="mt-2 text-2xl font-semibold tracking-tight text-ink"
             id="faq-title"
           >
             常見問題
@@ -209,13 +209,13 @@ export function TeacherJoinExplainer() {
         <div className="grid gap-4">
           {faqItems.map((item) => (
             <article
-              className="rounded border border-[#29382f]/12 bg-white p-5"
+              className="rounded border border-ink/12 bg-white p-5"
               key={item.question}
             >
-              <h3 className="text-sm font-medium text-[#29382f]">
+              <h3 className="text-sm font-medium text-ink">
                 {item.question}
               </h3>
-              <p className="mt-2 text-sm leading-6 text-[#56645b]">
+              <p className="mt-2 text-sm leading-6 text-ink-soft">
                 {item.answer}
               </p>
             </article>
