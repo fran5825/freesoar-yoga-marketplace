@@ -6,7 +6,7 @@ import { PublicHeader } from "../_components/public-header";
 
 export const metadata: Metadata = {
   title: "常見問題",
-  description: "了解 Free Soar Yoga 的老師與需求審核、課程報名、取消方式及平台信任邊界。",
+  description: "了解飛索的老師與需求審核、課程報名、取消方式及平台信任邊界。",
 };
 
 const questions = [

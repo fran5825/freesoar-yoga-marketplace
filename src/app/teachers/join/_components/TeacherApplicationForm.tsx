@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -57,12 +56,6 @@ const collaborationPrinciples = [
   "尊重老師的教學風格、時間安排與專業界線。",
   "讓團主清楚表達需求，再由適合的老師回應合作機會。",
   "透過審核與清楚流程，守住課程品質與平台信任。",
-];
-
-const nextSteps = [
-  "你可以先手動儲存草稿，讓申請內容不必一次完成。",
-  "儲存草稿只會建立或更新 draft，不會送出審核，也不會進入 Admin review。",
-  "準備好後，可以經過二次確認正式送出審核，接下來會等待平台確認。",
 ];
 
 const draftSaveRequestTimeoutMs = 10000;
@@ -260,8 +253,6 @@ export function TeacherApplicationForm() {
   const [submitFeedback, setSubmitFeedback] = useState<SubmitFeedback | null>(
     null,
   );
-  const [hasSubmittedApplication, setHasSubmittedApplication] =
-    useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [hydratedProfileStatus, setHydratedProfileStatus] =
     useState<HydratedTeacherProfileStatus | null>(null);
@@ -282,7 +273,6 @@ export function TeacherApplicationForm() {
       setHydratedProfileStatus(profile.status);
       setRejectionReason(profile.rejectionReason);
       setLastSavedAt(profile.updatedAt);
-      setHasSubmittedApplication(profile.status === "submitted");
     }
 
     void hydrateOwnTeacherProfile();
@@ -321,6 +311,19 @@ export function TeacherApplicationForm() {
   const isDraftSaveDisabled =
     isSavingDraft || isSubmitting || mutationBlockedStatus !== null;
   const isSubmitDisabled = isSubmitting || mutationBlockedStatus !== null;
+  const statusBadge = mutationBlockedCopy
+    ? {
+        label: mutationBlockedCopy.saveButton,
+        className:
+          mutationBlockedStatus === "approved"
+            ? "bg-emerald-100 text-emerald-800"
+            : mutationBlockedStatus === "suspended"
+              ? "bg-ink/10 text-ink-soft"
+              : "bg-amber-100 text-amber-800",
+      }
+    : isRejectedProfile
+      ? { label: "已退回，待修正", className: "bg-clay-tint text-clay-deep" }
+      : { label: "草稿", className: "bg-sage text-pine" };
 
   function updateField(fieldName: FormFieldName, value: string) {
     setFormState((currentState) => ({
@@ -414,7 +417,6 @@ export function TeacherApplicationForm() {
       const result = await submitTeacherProfileApplicationAction(formState);
 
       if (result.ok) {
-        setHasSubmittedApplication(true);
         setHydratedProfileStatus(result.profile.status);
         setIsConfirmingSubmit(false);
         setLastSavedAt(result.profile.updatedAt);
@@ -448,98 +450,146 @@ export function TeacherApplicationForm() {
     }
   }
 
+  const statusPill = (
+    <span
+      className={`w-fit rounded-full px-3 py-1 text-xs font-medium ${statusBadge.className}`}
+    >
+      {statusBadge.label}
+    </span>
+  );
+
+  const readinessSummary = hasCheckedReadiness ? (
+    <div className="rounded-xl border border-pine/15 bg-pine-tint px-4 py-3 text-sm leading-6 text-ink-soft">
+      {isReadyForFutureSubmit ? (
+        <p>
+          送審必填欄位都已有內容。後續正式流程仍會由 server-side validation 再檢查一次，並提供清楚的送審確認。
+        </p>
+      ) : (
+        <>
+          <p className="font-medium text-ink">還可以補充的地方</p>
+          <ul className="mt-2 list-disc space-y-1 pl-5">
+            {missingRequiredFields.map((fieldName) => (
+              <li key={fieldName}>{getReadinessMessage(fieldName)}</li>
+            ))}
+          </ul>
+        </>
+      )}
+      <p className="mt-3 text-ink-soft">
+        建議欄位目前已填 {optionalFieldsWithValue} / 3 項；可依你的準備狀態慢慢補上。
+      </p>
+    </div>
+  ) : null;
+
+  const statusActionBar = (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-full border border-ink/12 bg-white px-4 py-2.5">
+      {statusPill}
+      {mutationBlockedCopy ? (
+        <p className="text-xs leading-5 text-ink-faint">
+          {mutationBlockedCopy.notice}
+        </p>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            className="rounded-full border border-ink/20 px-4 py-2 text-sm font-medium text-ink"
+            onClick={handleReadinessCheck}
+            type="button"
+          >
+            檢查準備狀態
+          </button>
+          <button
+            className="rounded-full border border-pine/40 px-4 py-2 text-sm font-medium text-pine disabled:cursor-not-allowed disabled:border-ink/15 disabled:text-ink-faint"
+            disabled={isDraftSaveDisabled}
+            onClick={handleSaveDraft}
+            type="button"
+          >
+            {isRejectedProfile
+              ? isSavingDraft
+                ? "正在儲存..."
+                : "儲存修正"
+              : isSavingDraft
+                ? "正在儲存..."
+                : "儲存草稿"}
+          </button>
+          <button
+            className="rounded-full bg-pine px-5 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-ink/15 disabled:text-ink-soft"
+            disabled={isSubmitDisabled}
+            onClick={handleOpenSubmitConfirmation}
+            type="button"
+          >
+            {isSubmitting
+              ? "正在送出..."
+              : isRejectedProfile
+                ? "重新送出審核"
+                : "送出審核"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <>
       <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
         <div>
-          <p className="text-sm font-medium text-clay">
-            Free Soar Yoga teacher community
-          </p>
-          <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
-            與我們一起建立更清楚、更安心的瑜伽團課合作
+          <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
+            一起建立清楚、安心的瑜伽團課合作
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-7 text-ink-soft">
-            Free Soar Yoga 重視老師的專業、風格與教學界線。我們希望讓團主的需求被清楚整理，也讓老師能被正確理解，回應真正適合自己的團課機會。
+            飛索重視老師的專業、風格與教學界線，也提供老師管理日常課程的工具。我們希望讓團主的需求被清楚整理，也讓老師能被正確理解，回應真正適合自己的團課機會。
           </p>
-          <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-            <a
-              className="rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white"
-              href={signInHref}
-            >
-              登入並準備加入
-            </a>
-            <Link
-              className="rounded-full border border-ink/20 px-5 py-3 text-center text-sm font-medium text-ink"
-              href="/"
-            >
-              回到首頁
-            </Link>
-          </div>
-          <p className="mt-4 text-sm leading-6 text-ink-faint">
-            {mutationBlockedCopy
-              ? "下方會顯示目前老師申請資料與狀態；此狀態暫時不開放草稿儲存或送出審核。"
-              : isRejectedProfile
+          {mutationBlockedCopy ? null : (
+            <p className="mt-4 text-sm leading-6 text-ink-faint">
+              {isRejectedProfile
                 ? "下方會顯示被退回的申請資料；你可以依修正方向調整後重新送審。"
-              : "下方表單可手動儲存草稿；準備好後，請經過二次確認再正式送出審核。"}
-          </p>
+                : "下方表單可手動儲存草稿；準備好後，請經過二次確認再正式送出審核。"}
+            </p>
+          )}
         </div>
 
-        <div className="rounded-2xl border border-ink/10 bg-clay-tint/60 p-5">
-          <h2 className="text-lg font-medium text-ink">
-            我們尋找的不是可被比較的商品，而是能共同照顧練習品質的合作夥伴。
+        <div className="rounded-2xl border border-ink/10 bg-clay-tint/60 p-6">
+          <h2 className="border-l-4 border-clay/50 pl-4 text-lg font-medium leading-relaxed text-ink">
+            我們尋找的是能共同照顧練習品質的合作夥伴。
           </h2>
-          <p className="mt-4 text-sm leading-6 text-ink-soft">
-            平台會以審核、需求整理與清楚的溝通流程，支持老師與團主建立信任，而不是用低價競標或倉促媒合推動合作。
-          </p>
+          <ul className="mt-5 space-y-3 pl-4">
+            {collaborationPrinciples.map((principle) => (
+              <li className="flex items-start gap-3" key={principle}>
+                <span
+                  aria-hidden="true"
+                  className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-clay"
+                />
+                <span className="text-sm leading-6 text-ink-soft">
+                  {principle}
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
-      </section>
-
-      <section className="grid gap-4 md:grid-cols-3">
-        {collaborationPrinciples.map((principle) => (
-          <article
-            className="rounded-2xl border border-ink/12 bg-white p-5"
-            key={principle}
-          >
-            <p className="text-sm leading-6 text-ink-soft">{principle}</p>
-          </article>
-        ))}
       </section>
 
       <section
         aria-labelledby="application-form-title"
         className="grid gap-6 border-y border-pine/15 bg-pine-tint/60 py-6"
       >
-        <div className="grid gap-3 md:grid-cols-[0.8fr_1.2fr] md:items-start">
-          <div>
-            <p className="text-sm font-medium text-pine">老師申請</p>
-            <h2
-              className="mt-2 text-2xl font-semibold tracking-tight text-ink"
-              id="application-form-title"
-            >
-              老師申請資料準備區
-            </h2>
-          </div>
-          <div className="text-sm leading-6 text-ink-soft">
-            {mutationBlockedCopy ? (
-              <p>
-                你的申請資料目前已有紀錄。此頁只顯示目前狀態，不提供這個狀態下的草稿儲存或送審操作。
-              </p>
-            ) : isRejectedProfile ? (
-              <p>
-                這份申請已退回修正。你可以依平台提供的修正方向更新內容，儲存修正後再重新送出審核。
-              </p>
-            ) : (
-              <>
-                <p>
-                  你可以先在這裡整理申請需要的內容，並在登入後手動儲存草稿。儲存草稿只會建立或更新草稿，不會送出審核，也不會進入平台審核。
-                </p>
-                <p className="mt-2">
-                  按下「檢查準備狀態」只會顯示溫和提醒；正式送出審核前，系統會再請你確認一次。
-                </p>
-              </>
-            )}
-          </div>
+        <div>
+          <h2
+            className="text-2xl font-semibold tracking-tight text-ink"
+            id="application-form-title"
+          >
+            老師申請資料準備區
+          </h2>
+          {mutationBlockedCopy ? null : isRejectedProfile ? (
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-soft">
+              這份申請已退回修正。你可以依平台提供的修正方向更新內容，儲存修正後再重新送出審核。
+            </p>
+          ) : (
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-soft">
+              你可以先在這裡整理申請需要的內容並手動儲存草稿；準備好後，正式送出審核前系統會再請你確認一次。
+            </p>
+          )}
         </div>
+
+        {statusActionBar}
+        {readinessSummary}
 
         {isRejectedProfile ? (
           <div className="min-w-0 rounded-2xl border border-clay/25 bg-clay-tint p-4">
@@ -660,239 +710,115 @@ export function TeacherApplicationForm() {
             </section>
           ))}
 
-          <div className="grid gap-4 rounded-2xl border border-ink/12 bg-white p-5 md:grid-cols-[1fr_auto] md:items-start">
-            <div>
-              <h3 className="text-lg font-medium text-ink">準備狀態</h3>
-              <p className="mt-2 text-sm leading-6 text-ink-soft">
-                {mutationBlockedCopy
-                  ? "目前狀態不開放在加入表單中更新或送出。你仍可查看已保存的申請內容。"
-                  : isRejectedProfile
-                    ? "這份申請已退回修正。你可以更新內容、儲存修正，準備好後重新送出審核。"
-                  : "「檢查準備狀態」不是正式送出；「儲存草稿」也不會送審。這裡只是協助你用低壓方式整理申請內容。"}
-              </p>
-              <div aria-live="polite">
-                {mutationBlockedCopy ? (
-                  <p className="mt-4 rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep">
-                    {mutationBlockedCopy.notice}
-                  </p>
-                ) : null}
+        </form>
 
-                {hasSubmittedApplication && !mutationBlockedCopy ? (
-                  <p className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900">
-                    申請已送審，目前暫時不需要再儲存草稿。接下來請等待平台確認。
-                  </p>
-                ) : null}
+        {statusActionBar}
+        {readinessSummary}
 
-                {isSavingDraft ? (
-                  <p className="mt-4 rounded-xl border border-pine/15 bg-pine-tint px-4 py-3 text-sm leading-6 text-pine-deep">
-                    正在儲存草稿...
-                  </p>
-                ) : null}
+        <div aria-live="polite" className="grid gap-3">
+          {isSavingDraft ? (
+            <p className="rounded-xl border border-pine/15 bg-pine-tint px-4 py-3 text-sm leading-6 text-pine-deep">
+              正在儲存草稿...
+            </p>
+          ) : null}
 
-                {draftSaveFeedback ? (
-                  <div
-                    className={
-                      draftSaveFeedback.kind === "success"
-                        ? "mt-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
-                        : "mt-4 rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay"
-                    }
-                  >
-                    <p>{draftSaveFeedback.message}</p>
-                    {draftSaveFeedback.kind === "success" &&
-                    lastSavedAtLabel ? (
-                      <p className="mt-2">上次儲存：{lastSavedAtLabel}</p>
-                    ) : null}
-                    {draftSaveFeedback.result?.code ===
-                      "authentication_required" ||
-                    draftSaveFeedback.showSignInLink ? (
-                      <a
-                        className="mt-2 inline-flex font-medium text-ink underline underline-offset-4"
-                        href={signInHref}
-                      >
-                        前往登入
-                      </a>
-                    ) : null}
-                    {draftSaveFeedback.result?.validationErrors?.length ? (
-                      <ul className="mt-2 list-disc space-y-1 pl-5">
-                        {draftSaveFeedback.result.validationErrors.map(
-                          (error) => (
-                            <li key={`${error.field}-${error.code}`}>
-                              {error.message}
-                            </li>
-                          ),
-                        )}
-                      </ul>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                {isSubmitting ? (
-                  <p className="mt-4 rounded-xl border border-pine/15 bg-pine-tint px-4 py-3 text-sm leading-6 text-pine-deep">
-                    正在送出審核...
-                  </p>
-                ) : null}
-
-                {submitFeedback ? (
-                  <div
-                    className={
-                      submitFeedback.kind === "success"
-                        ? "mt-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
-                        : "mt-4 rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay"
-                    }
-                  >
-                    <p>{submitFeedback.message}</p>
-                    {submitFeedback.showSignInLink ? (
-                      <a
-                        className="mt-2 inline-flex font-medium text-ink underline underline-offset-4"
-                        href={signInHref}
-                      >
-                        前往登入
-                      </a>
-                    ) : null}
-                    {submitFeedback.result?.validationErrors?.length ? (
-                      <ul className="mt-2 list-disc space-y-1 pl-5">
-                        {submitFeedback.result.validationErrors.map((error) => (
-                          <li key={`${error.field}-${error.code}`}>
-                            {error.message}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
-              {hasCheckedReadiness ? (
-                <div className="mt-4 rounded-xl border border-pine/15 bg-pine-tint px-4 py-3 text-sm leading-6 text-ink-soft">
-                  {isReadyForFutureSubmit ? (
-                    <p>
-                      送審必填欄位都已有內容。後續正式流程仍會由 server-side validation 再檢查一次，並提供清楚的送審確認。
-                    </p>
-                  ) : (
-                    <>
-                      <p className="font-medium text-ink">
-                        還可以補充的地方
-                      </p>
-                      <ul className="mt-2 list-disc space-y-1 pl-5">
-                        {missingRequiredFields.map((fieldName) => (
-                          <li key={fieldName}>
-                            {getReadinessMessage(fieldName)}
-                          </li>
-                        ))}
-                      </ul>
-                    </>
-                  )}
-                  <p className="mt-3 text-ink-soft">
-                    建議欄位目前已填 {optionalFieldsWithValue} / 3 項；可依你的準備狀態慢慢補上。
-                  </p>
-                </div>
+          {draftSaveFeedback ? (
+            <div
+              className={
+                draftSaveFeedback.kind === "success"
+                  ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
+                  : "rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay"
+              }
+            >
+              <p>{draftSaveFeedback.message}</p>
+              {draftSaveFeedback.kind === "success" && lastSavedAtLabel ? (
+                <p className="mt-2">上次儲存：{lastSavedAtLabel}</p>
               ) : null}
-
-              {isConfirmingSubmit ? (
-                <div className="mt-4 rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep">
-                  <p className="font-medium text-ink">確認送出審核</p>
-                  <p className="mt-2">
-                    {isRejectedProfile
-                      ? "重新送出後，這份老師申請會再次進入平台審核。請確認修正內容已準備好，再送出。"
-                      : "送出後，這份老師申請會進入平台審核。審核期間暫時不需要再儲存草稿；請確認主要資料已準備好，再送出。"}
-                  </p>
-                  <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                    <button
-                      className="rounded-full bg-pine px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-ink/15 disabled:text-ink-soft"
-                      disabled={isSubmitting}
-                      onClick={handleSubmitApplication}
-                      type="button"
-                    >
-                      {isSubmitting ? "正在送出..." : "確認送出審核"}
-                    </button>
-                    <button
-                      className="rounded-full border border-clay/40 bg-white px-4 py-2 text-sm font-medium text-ink disabled:cursor-not-allowed disabled:text-ink-faint"
-                      disabled={isSubmitting}
-                      onClick={handleCancelSubmitConfirmation}
-                      type="button"
-                    >
-                      先回來調整
-                    </button>
-                  </div>
-                </div>
+              {draftSaveFeedback.result?.code === "authentication_required" ||
+              draftSaveFeedback.showSignInLink ? (
+                <a
+                  className="mt-2 inline-flex font-medium text-ink underline underline-offset-4"
+                  href={signInHref}
+                >
+                  前往登入
+                </a>
+              ) : null}
+              {draftSaveFeedback.result?.validationErrors?.length ? (
+                <ul className="mt-2 list-disc space-y-1 pl-5">
+                  {draftSaveFeedback.result.validationErrors.map((error) => (
+                    <li key={`${error.field}-${error.code}`}>
+                      {error.message}
+                    </li>
+                  ))}
+                </ul>
               ) : null}
             </div>
+          ) : null}
 
-            <div className="flex w-full flex-col gap-3 md:w-auto">
+          {isSubmitting ? (
+            <p className="rounded-xl border border-pine/15 bg-pine-tint px-4 py-3 text-sm leading-6 text-pine-deep">
+              正在送出審核...
+            </p>
+          ) : null}
+
+          {submitFeedback ? (
+            <div
+              className={
+                submitFeedback.kind === "success"
+                  ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
+                  : "rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay"
+              }
+            >
+              <p>{submitFeedback.message}</p>
+              {submitFeedback.showSignInLink ? (
+                <a
+                  className="mt-2 inline-flex font-medium text-ink underline underline-offset-4"
+                  href={signInHref}
+                >
+                  前往登入
+                </a>
+              ) : null}
+              {submitFeedback.result?.validationErrors?.length ? (
+                <ul className="mt-2 list-disc space-y-1 pl-5">
+                  {submitFeedback.result.validationErrors.map((error) => (
+                    <li key={`${error.field}-${error.code}`}>
+                      {error.message}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+
+        {isConfirmingSubmit ? (
+          <div className="rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep">
+            <p className="font-medium text-ink">確認送出審核</p>
+            <p className="mt-2">
+              {isRejectedProfile
+                ? "重新送出後，這份老師申請會再次進入平台審核。請確認修正內容已準備好，再送出。"
+                : "送出後，這份老師申請會進入平台審核。審核期間暫時不需要再儲存草稿；請確認主要資料已準備好，再送出。"}
+            </p>
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
               <button
-                className="w-full rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-ink/15 disabled:text-ink-soft md:w-auto"
-                disabled={isDraftSaveDisabled}
-                onClick={handleSaveDraft}
+                className="rounded-full bg-pine px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-ink/15 disabled:text-ink-soft"
+                disabled={isSubmitting}
+                onClick={handleSubmitApplication}
                 type="button"
               >
-                {mutationBlockedCopy
-                  ? mutationBlockedCopy.saveButton
-                  : isRejectedProfile
-                    ? isSavingDraft
-                      ? "正在儲存..."
-                      : "儲存修正"
-                  : hasSubmittedApplication
-                    ? "申請已送審"
-                  : isSavingDraft
-                    ? "正在儲存..."
-                    : "儲存草稿"}
+                {isSubmitting ? "正在送出..." : "確認送出審核"}
               </button>
               <button
-                className="w-full rounded-xl border border-ink/20 px-5 py-3 text-center text-sm font-medium text-ink md:w-auto"
-                type="submit"
-              >
-                檢查準備狀態
-              </button>
-              <button
-                className="w-full rounded-full border border-pine bg-pine px-5 py-3 text-center text-sm font-medium text-white disabled:cursor-not-allowed disabled:border-ink/20 disabled:bg-ink/15 disabled:text-ink-soft md:w-auto"
-                disabled={isSubmitDisabled}
-                onClick={handleOpenSubmitConfirmation}
+                className="rounded-full border border-clay/40 bg-white px-4 py-2 text-sm font-medium text-ink disabled:cursor-not-allowed disabled:text-ink-faint"
+                disabled={isSubmitting}
+                onClick={handleCancelSubmitConfirmation}
                 type="button"
               >
-                {isSubmitting
-                  ? "正在送出..."
-                  : mutationBlockedCopy
-                    ? mutationBlockedCopy.submitButton
-                    : isRejectedProfile
-                      ? "重新送出審核"
-                    : hasSubmittedApplication
-                      ? "已送出審核"
-                    : "送出審核"}
+                先回來調整
               </button>
             </div>
           </div>
-        </form>
-      </section>
-
-      <section className="grid gap-6 rounded-2xl border border-ink/12 p-5 md:grid-cols-[0.8fr_1.2fr] md:p-6">
-        <div>
-          <p className="text-sm font-medium text-clay">Next steps</p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-ink">
-            申請流程將分階段開放
-          </h2>
-        </div>
-        <ol className="space-y-4">
-          {(mutationBlockedCopy
-            ? [
-                mutationBlockedCopy.notice,
-                "此頁不導向 dashboard，也不新增 Admin review、通知或重新送審流程。",
-                "後續資料調整會依正式產品流程另行開放。",
-              ]
-            : isRejectedProfile
-              ? [
-                  "依照退回說明更新需要修正的欄位。",
-                  "可以先儲存修正，確認主要資料完整後再重新送出審核。",
-                  "重新送出後，申請會回到平台審核流程。",
-                ]
-            : nextSteps
-          ).map((step, index) => (
-            <li className="flex gap-3 text-sm leading-6 text-ink-soft" key={step}>
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-ink/20 text-xs font-medium text-ink-soft">
-                {index + 1}
-              </span>
-              <span>{step}</span>
-            </li>
-          ))}
-        </ol>
+        ) : null}
       </section>
     </>
   );

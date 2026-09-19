@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import {
   applicationSections,
   fieldLabels,
@@ -29,7 +27,7 @@ const reviewProcessSteps = [
   {
     title: "平台確認",
     description:
-      "平台會確認教學背景與服務範圍是否符合 Free Soar 的合作定位。審核期間你可以隨時回來查看進度。",
+      "平台會確認教學背景與服務範圍是否符合飛索的合作定位。審核期間你可以隨時回來查看進度。",
   },
   {
     title: "結果與後續",
@@ -70,53 +68,43 @@ export function TeacherJoinExplainer() {
     <>
       <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
         <div>
-          <p className="text-sm font-medium text-clay">
-            Free Soar Yoga teacher community
-          </p>
-          <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
-            與我們一起建立更清楚、更安心的瑜伽團課合作
+          <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
+            一起建立清楚、安心的瑜伽團課合作
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-7 text-ink-soft">
-            Free Soar Yoga 重視老師的專業、風格與教學界線。我們希望讓團主的需求被清楚整理，也讓老師能被正確理解，回應真正適合自己的團課機會。
+            飛索重視老師的專業、風格與教學界線，也提供老師管理日常課程的工具。我們希望讓團主的需求被清楚整理，也讓老師能被正確理解，回應真正適合自己的團課機會。
           </p>
-          <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-7">
             <a
-              className="rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white"
+              className="inline-flex rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white"
               href={signInHref}
             >
               登入／建立帳號並開始申請
             </a>
-            <Link
-              className="rounded-full border border-ink/20 px-5 py-3 text-center text-sm font-medium text-ink"
-              href="/"
-            >
-              回到首頁
-            </Link>
           </div>
           <p className="mt-4 text-sm leading-6 text-ink-faint">
             登入或建立帳號後，就會看到完整的申請表單；下方可以先了解審核流程與需要準備的資料。
           </p>
         </div>
 
-        <div className="rounded-2xl border border-ink/10 bg-clay-tint/60 p-5">
-          <h2 className="text-lg font-medium text-ink">
-            我們尋找的不是可被比較的商品，而是能共同照顧練習品質的合作夥伴。
+        <div className="rounded-2xl border border-ink/10 bg-clay-tint/60 p-6">
+          <h2 className="border-l-4 border-clay/50 pl-4 text-lg font-medium leading-relaxed text-ink">
+            我們尋找的是能共同照顧練習品質的合作夥伴。
           </h2>
-          <p className="mt-4 text-sm leading-6 text-ink-soft">
-            平台會以審核、需求整理與清楚的溝通流程，支持老師與團主建立信任，而不是用低價競標或倉促媒合推動合作。
-          </p>
+          <ul className="mt-5 space-y-3 pl-4">
+            {collaborationPrinciples.map((principle) => (
+              <li className="flex items-start gap-3" key={principle}>
+                <span
+                  aria-hidden="true"
+                  className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-clay"
+                />
+                <span className="text-sm leading-6 text-ink-soft">
+                  {principle}
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
-      </section>
-
-      <section className="grid gap-4 md:grid-cols-3">
-        {collaborationPrinciples.map((principle) => (
-          <article
-            className="rounded-2xl border border-ink/12 bg-white p-5"
-            key={principle}
-          >
-            <p className="text-sm leading-6 text-ink-soft">{principle}</p>
-          </article>
-        ))}
       </section>
 
       <section aria-labelledby="review-process-title" className="grid gap-6">

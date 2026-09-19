@@ -23,35 +23,35 @@ export default async function AccountSmokePage() {
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-6 py-12">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">
-          Account
+          我的帳戶
         </h1>
         <p className="mt-3 text-sm text-ink-soft">
-          You are signed in to Free Soar Yoga.
+          你已登入飛索。
         </p>
       </div>
 
       <section className="rounded-2xl border border-ink/15 p-4 text-sm">
-        <h2 className="text-lg font-medium">Your account</h2>
+        <h2 className="text-lg font-medium">帳戶資料</h2>
         <div className="mt-4 space-y-3">
           <p>
-            <span className="font-medium">Name: </span>
-            {user.name ?? "Not provided"}
+            <span className="font-medium">姓名：</span>
+            {user.name ?? "未提供"}
           </p>
           <p className="break-all">
-            <span className="font-medium">Email: </span>
-            {user.email ?? "Not provided"}
+            <span className="font-medium">電子郵件：</span>
+            {user.email ?? "未提供"}
           </p>
         </div>
       </section>
 
       <section className="rounded-2xl border border-ink/15 p-4 text-sm">
-        <h2 className="text-lg font-medium">Account status</h2>
+        <h2 className="text-lg font-medium">帳戶狀態</h2>
         <div className="mt-4 space-y-3">
           <p>
-            <span className="font-medium">Signed in: </span>
-            yes
+            <span className="font-medium">登入狀態：</span>
+            是
           </p>
-          <p>Member account active.</p>
+          <p>會員帳戶為啟用狀態。</p>
         </div>
       </section>
 
@@ -83,7 +83,7 @@ export default async function AccountSmokePage() {
       </section>
 
       <section className="rounded-2xl border border-ink/15 p-4 text-sm">
-        <h2 className="text-lg font-medium">Notifications</h2>
+        <h2 className="text-lg font-medium">通知</h2>
         <p className="mt-3 text-sm text-ink-soft">
           <Link className="text-clay underline underline-offset-2" href="/notifications">
             查看我的通知

@@ -6,7 +6,7 @@ import { PublicHeader } from "../_components/public-header";
 
 export const metadata: Metadata = {
   title: "關於我們",
-  description: "認識 Free Soar Yoga 的品牌精神、共創角色與瑜伽團課 marketplace 定位。",
+  description: "認識飛索的品牌精神、共創角色與瑜伽團課 marketplace 定位。",
 };
 
 const spirits = [
@@ -34,7 +34,7 @@ export default function AboutPage() {
           <p className="text-sm font-medium tracking-[0.2em] text-clay">ABOUT FREE SOAR</p>
           <h1 className="mt-6 max-w-4xl text-4xl font-semibold leading-tight tracking-[-0.03em] sm:text-6xl">讓自由與覺察，長成有品質的共同練習</h1>
           <p className="mt-8 max-w-3xl text-lg leading-8 text-ink-soft">
-            Free Soar Yoga 是 Free Soar 品牌的第一階段實踐。我們從瑜伽團課出發，建立一個以人、專業與信任為核心的 marketplace，讓需求與教學不是倉促配對，而是經過理解後展開的合作。
+            飛索是 Free Soar 品牌的第一階段實踐。我們從瑜伽團課出發，建立一個以人、專業與信任為核心的 marketplace，讓需求與教學不是倉促配對，而是經過理解後展開的合作。
           </p>
         </section>
 

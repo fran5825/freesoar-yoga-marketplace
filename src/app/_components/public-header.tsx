@@ -27,8 +27,8 @@ export async function PublicHeader() {
           className="flex flex-col leading-tight focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-clay"
           href="/"
         >
-          <span className="text-base font-semibold tracking-[0.04em] text-ink">Free Soar Yoga</span>
-          <span className="text-xs tracking-[0.08em] text-ink-soft">飛索・瑜伽團課共創平台</span>
+          <span className="text-base font-semibold tracking-[0.04em] text-ink">飛索・瑜伽團課共創平台</span>
+          <span className="text-xs tracking-[0.08em] text-ink-soft">Free Soar Yoga</span>
         </Link>
         <nav aria-label="公開網站導覽" className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-ink-soft">
           {publicLinks.map((link) => (

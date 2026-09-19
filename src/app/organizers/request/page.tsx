@@ -34,14 +34,11 @@ export default function OrganizersRequestPage() {
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-10 px-5 py-10 sm:px-8 sm:py-14">
       <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
         <div>
-          <p className="text-sm font-medium text-clay">
-            Free Soar Yoga organizer community
-          </p>
-          <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
+          <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
             為公司社團與社區，找到適合的瑜伽老師
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-7 text-ink-soft">
-            Free Soar Yoga 協助團體把上課需求整理清楚，並在平台審核後，讓合適的老師理解並回應真正適合的合作機會。
+            飛索協助團體把上課需求整理清楚，並在平台審核後，讓合適的老師理解並回應真正適合的合作機會。
           </p>
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
             <Link
