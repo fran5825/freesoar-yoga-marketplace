@@ -83,7 +83,7 @@ export default async function TeacherDashboardPage() {
         <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
           <div className="min-w-0">
             <h1 className="text-3xl font-semibold tracking-tight text-ink">
-              老師狀態中心
+              老師總覽
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
               這裡顯示你的老師申請目前狀態與下一步。

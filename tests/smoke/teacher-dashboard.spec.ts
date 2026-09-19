@@ -99,19 +99,13 @@ test.describe("/teacher/dashboard smoke", () => {
     await page.goto(dashboardPath);
 
     await expect(
-      page.getByRole("heading", { name: "老師狀態中心" }),
+      page.getByRole("heading", { name: "老師總覽" }),
     ).toBeVisible();
-    await expect(page.getByText("No profile")).toBeVisible();
+    await expect(page.getByText("尚未申請", { exact: true })).toBeVisible();
     await expect(
-      page.getByRole("link", { name: "建立 teacher application" }),
+      page.getByRole("link", { name: "建立老師申請" }),
     ).toHaveAttribute("href", "/teachers/join");
-    await expect(page.getByRole("link", { name: "Demand pool" })).toHaveCount(
-      0,
-    );
-    await expect(page.getByRole("link", { name: "Availability" })).toHaveCount(
-      0,
-    );
-    await expect(page.getByRole("link", { name: "Classes" })).toHaveCount(0);
+    await expectNoMarketplaceActions(page);
   });
 
   for (const statusCase of statusCases) {
@@ -140,20 +134,23 @@ test.describe("/teacher/dashboard smoke", () => {
       await expect(
         page.getByRole("link", { name: statusCase.actionLabel }),
       ).toHaveAttribute("href", statusCase.actionHref);
-      await expect(page.getByRole("link", { name: "Demand pool" })).toHaveCount(
-        0,
-      );
-      await expect(page.getByRole("link", { name: "Availability" })).toHaveCount(
-        0,
-      );
-      await expect(page.getByRole("link", { name: "Classes" })).toHaveCount(0);
+      await expect(page.locator('a[href="/teacher/demands"]')).toHaveCount(0);
+      await expect(page.locator('a[href="/teacher/classes"]')).toHaveCount(0);
+      if (
+        statusCase.status !== "approved" &&
+        statusCase.status !== "suspended"
+      ) {
+        await expect(
+          page.getByRole("link", { name: "管理可授課時間" }),
+        ).toHaveCount(0);
+      }
 
       if (statusCase.status === "approved") {
         // teacher-profile-edit D9：approved 的 body 與主要 action 連結再次更新，
         // 補上「編輯個人資料」這個新落地的能力。
         await expect(
           page.getByText(
-            "你已具備 marketplace capability，可以瀏覽並回應團體需求、查看已建立的課程、管理你的可授課時間，並編輯你的老師個人資料。",
+            "你已經可以在平台上瀏覽並回應團體需求、查看已建立的課程、管理你的可授課時間，並編輯你的老師個人資料。",
           ),
         ).toBeVisible();
         await expect(
@@ -333,6 +330,20 @@ function normalizeForEmail(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 }
 
+const statusLabels: Record<TeacherProfileStatus, string> = {
+  draft: "草稿",
+  submitted: "已送出",
+  rejected: "已退回",
+  approved: "已核准",
+  suspended: "已暫停",
+};
+
 function toStatusLabel(status: TeacherProfileStatus) {
-  return status.charAt(0).toUpperCase() + status.slice(1);
+  return statusLabels[status];
+}
+
+async function expectNoMarketplaceActions(page: import("@playwright/test").Page) {
+  await expect(page.locator('a[href="/teacher/demands"]')).toHaveCount(0);
+  await expect(page.locator('a[href="/teacher/classes"]')).toHaveCount(0);
+  await expect(page.locator('a[href="/teacher/availability"]')).toHaveCount(0);
 }
