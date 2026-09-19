@@ -23,10 +23,7 @@ export default async function NewDemandRequestPage() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-8 px-5 py-10 sm:px-8 sm:py-14">
       <header className="border-b border-ink/15 pb-6">
-        <p className="text-sm font-medium text-amber-700">
-          Organizer demand request
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
+        <h1 className="text-3xl font-semibold tracking-tight text-ink">
           建立新的團課需求
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">

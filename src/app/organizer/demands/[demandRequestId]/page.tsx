@@ -64,9 +64,6 @@ export default async function DemandRequestDetailPage({
     <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-8 px-5 py-10 sm:px-8 sm:py-14">
       <header className="border-b border-ink/15 pb-6">
         <div className="flex flex-wrap items-center gap-3">
-          <p className="text-sm font-medium text-amber-700">
-            Organizer demand
-          </p>
           <span
             className={`w-fit rounded-full px-3 py-1 text-xs font-medium ${demandRequestStatusToneClasses[demandRequest.status]}`}
           >

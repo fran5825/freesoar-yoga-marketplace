@@ -22,8 +22,7 @@ export default async function AccountSmokePage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-6 py-12">
       <div>
-        <p className="text-sm font-medium text-amber-700">Account</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight">
+        <h1 className="text-3xl font-semibold tracking-tight">
           Account
         </h1>
         <p className="mt-3 text-sm text-ink-soft">
