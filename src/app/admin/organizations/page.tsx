@@ -16,62 +16,62 @@ export default async function AdminOrganizationsPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-8 px-6 py-10">
-      <header className="border-b border-gray-200 pb-6">
-        <p className="text-sm font-medium text-sky-700">Admin</p>
+      <header className="border-b border-ink/15 pb-6">
+        <p className="text-sm font-medium text-clay">Admin</p>
         <AdminNav />
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-gray-950">
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
           Organizations
         </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-600">
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
           查看全平台所有團體，包含所屬團主與相關需求、課程數量。
         </p>
       </header>
 
       {organizations.length === 0 ? (
-        <section className="rounded border border-gray-200 bg-white p-6">
-          <h2 className="text-lg font-medium text-gray-950">目前沒有任何團體</h2>
+        <section className="rounded-2xl border border-ink/15 bg-white p-6">
+          <h2 className="text-lg font-medium text-ink">目前沒有任何團體</h2>
         </section>
       ) : (
         <section className="grid gap-4">
           {organizations.map((organization) => (
             <article
-              className="grid gap-4 rounded border border-gray-200 bg-white p-5"
+              className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-5"
               key={organization.id}
             >
               <div className="flex flex-wrap items-center gap-3">
-                <h2 className="min-w-0 break-words text-xl font-semibold text-gray-950">
+                <h2 className="min-w-0 break-words text-xl font-semibold text-ink">
                   {organization.name}
                 </h2>
-                <span className="w-fit rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-800">
+                <span className="w-fit rounded-full bg-sand px-3 py-1 text-xs font-medium text-ink">
                   {organizationTypeLabels[organization.type]}
                 </span>
               </div>
 
-              <dl className="grid gap-3 text-sm text-gray-600 sm:grid-cols-2">
+              <dl className="grid gap-3 text-sm text-ink-soft sm:grid-cols-2">
                 <div className="min-w-0">
-                  <dt className="font-medium text-gray-950">Contact name</dt>
+                  <dt className="font-medium text-ink">Contact name</dt>
                   <dd className="mt-1 break-words">
                     {organization.contactName ?? "未提供"}
                   </dd>
                 </div>
                 <div className="min-w-0">
-                  <dt className="font-medium text-gray-950">Contact email</dt>
+                  <dt className="font-medium text-ink">Contact email</dt>
                   <dd className="mt-1 break-words">
                     {organization.contactEmail ?? "未提供"}
                   </dd>
                 </div>
                 <div className="min-w-0">
-                  <dt className="font-medium text-gray-950">Contact phone</dt>
+                  <dt className="font-medium text-ink">Contact phone</dt>
                   <dd className="mt-1 break-words">
                     {organization.contactPhone ?? "未提供"}
                   </dd>
                 </div>
                 <div className="min-w-0">
-                  <dt className="font-medium text-gray-950">Last updated</dt>
+                  <dt className="font-medium text-ink">Last updated</dt>
                   <dd className="mt-1">{formatDateTime(organization.updatedAt)}</dd>
                 </div>
                 <div className="min-w-0 sm:col-span-2">
-                  <dt className="font-medium text-gray-950">Organizers</dt>
+                  <dt className="font-medium text-ink">Organizers</dt>
                   {organization.organizers.length > 0 ? (
                     <ul className="mt-1 grid gap-1">
                       {organization.organizers.map((organizer) => (
@@ -87,7 +87,7 @@ export default async function AdminOrganizationsPage() {
                 </div>
               </dl>
 
-              <div className="flex flex-wrap gap-4 border-t border-gray-100 pt-4 text-sm text-gray-600">
+              <div className="flex flex-wrap gap-4 border-t border-ink/10 pt-4 text-sm text-ink-soft">
                 <span>需求數：{organization.demandRequestCount}</span>
                 <span>課程數：{organization.classSessionCount}</span>
               </div>

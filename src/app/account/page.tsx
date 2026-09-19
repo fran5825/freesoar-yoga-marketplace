@@ -26,12 +26,12 @@ export default async function AccountSmokePage() {
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">
           Account
         </h1>
-        <p className="mt-3 text-sm text-gray-600">
+        <p className="mt-3 text-sm text-ink-soft">
           You are signed in to Free Soar Yoga.
         </p>
       </div>
 
-      <section className="rounded border border-gray-200 p-4 text-sm">
+      <section className="rounded-2xl border border-ink/15 p-4 text-sm">
         <h2 className="text-lg font-medium">Your account</h2>
         <div className="mt-4 space-y-3">
           <p>
@@ -45,7 +45,7 @@ export default async function AccountSmokePage() {
         </div>
       </section>
 
-      <section className="rounded border border-gray-200 p-4 text-sm">
+      <section className="rounded-2xl border border-ink/15 p-4 text-sm">
         <h2 className="text-lg font-medium">Account status</h2>
         <div className="mt-4 space-y-3">
           <p>
@@ -56,9 +56,9 @@ export default async function AccountSmokePage() {
         </div>
       </section>
 
-      <section className="rounded border border-gray-200 p-4 text-sm">
+      <section className="rounded-2xl border border-ink/15 p-4 text-sm">
         <h2 className="text-lg font-medium">我的使用入口</h2>
-        <p className="mt-2 text-gray-600">
+        <p className="mt-2 text-ink-soft">
           依照你現在想完成的事情，前往適合的總覽。
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -66,27 +66,27 @@ export default async function AccountSmokePage() {
             className="rounded-lg border border-amber-200 bg-amber-50 p-4 transition hover:border-amber-300 hover:bg-amber-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700"
             href="/member/dashboard"
           >
-            <span className="block font-medium text-gray-900">會員總覽</span>
-            <span className="mt-1 block leading-6 text-gray-600">
+            <span className="block font-medium text-ink">會員總覽</span>
+            <span className="mt-1 block leading-6 text-ink-soft">
               查看近期通知、報名狀態與即將到來的課程。
             </span>
           </Link>
           <Link
-            className="rounded-lg border border-sky-200 bg-sky-50 p-4 transition hover:border-sky-300 hover:bg-sky-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
+            className="rounded-lg border border-pine/25 bg-pine-tint p-4 transition hover:border-pine/40 hover:bg-pine/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
             href="/organizer/dashboard"
           >
-            <span className="block font-medium text-gray-900">團主總覽</span>
-            <span className="mt-1 block leading-6 text-gray-600">
+            <span className="block font-medium text-ink">團主總覽</span>
+            <span className="mt-1 block leading-6 text-ink-soft">
               建立團主資料，或查看與管理自己的團課需求。
             </span>
           </Link>
         </div>
       </section>
 
-      <section className="rounded border border-gray-200 p-4 text-sm">
+      <section className="rounded-2xl border border-ink/15 p-4 text-sm">
         <h2 className="text-lg font-medium">Notifications</h2>
-        <p className="mt-3 text-sm text-gray-600">
-          <Link className="text-sky-700 underline underline-offset-2" href="/notifications">
+        <p className="mt-3 text-sm text-ink-soft">
+          <Link className="text-clay underline underline-offset-2" href="/notifications">
             查看我的通知
           </Link>
         </p>

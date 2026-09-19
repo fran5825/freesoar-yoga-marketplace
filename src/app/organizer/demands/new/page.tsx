@@ -22,14 +22,14 @@ export default async function NewDemandRequestPage() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-8 px-5 py-10 sm:px-8 sm:py-14">
-      <header className="border-b border-gray-200 pb-6">
+      <header className="border-b border-ink/15 pb-6">
         <p className="text-sm font-medium text-amber-700">
           Organizer demand request
         </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-gray-950">
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
           建立新的團課需求
         </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-600">
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
           你可以先儲存草稿，不需要一次填完；準備好後再送出，平台會先審核再公開給合適的老師。
         </p>
       </header>

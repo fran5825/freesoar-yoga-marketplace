@@ -62,7 +62,7 @@ export default async function DemandRequestDetailPage({
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-8 px-5 py-10 sm:px-8 sm:py-14">
-      <header className="border-b border-gray-200 pb-6">
+      <header className="border-b border-ink/15 pb-6">
         <div className="flex flex-wrap items-center gap-3">
           <p className="text-sm font-medium text-amber-700">
             Organizer demand
@@ -73,10 +73,10 @@ export default async function DemandRequestDetailPage({
             {demandRequestStatusLabels[demandRequest.status]}
           </span>
         </div>
-        <h1 className="mt-2 min-w-0 break-words text-3xl font-semibold tracking-tight text-gray-950">
+        <h1 className="mt-2 min-w-0 break-words text-3xl font-semibold tracking-tight text-ink">
           {demandRequest.title ?? "尚未命名的需求"}
         </h1>
-        <p className="mt-3 text-sm text-gray-500">
+        <p className="mt-3 text-sm text-ink-faint">
           最後更新：{formatDemandRequestDateTime(demandRequest.updatedAt)}
         </p>
       </header>
@@ -86,8 +86,8 @@ export default async function DemandRequestDetailPage({
           aria-live="polite"
           className={
             feedback.kind === "success"
-              ? "rounded border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
-              : "rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
+              ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
+              : "rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
           }
         >
           {feedback.message}
@@ -95,7 +95,7 @@ export default async function DemandRequestDetailPage({
       ) : null}
 
       {demandRequest.status === "rejected" ? (
-        <section className="min-w-0 rounded border border-amber-200 bg-amber-50 p-4">
+        <section className="min-w-0 rounded-2xl border border-amber-200 bg-amber-50 p-4">
           <h2 className="text-sm font-medium text-amber-950">
             平台的退回說明
           </h2>
@@ -108,7 +108,7 @@ export default async function DemandRequestDetailPage({
         </section>
       ) : null}
 
-      <section className="grid gap-4 rounded border border-gray-200 bg-white p-6 sm:grid-cols-2">
+      <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6 sm:grid-cols-2">
         <ReadOnlyText label="服務類型" value={demandRequest.serviceType} />
         <ReadOnlyText
           label="適合對象"
@@ -174,10 +174,10 @@ export default async function DemandRequestDetailPage({
       />
 
       {demandRequest.status === "matched" ? (
-        <section className="grid gap-5 rounded border border-gray-200 bg-white p-6">
+        <section className="grid gap-5 rounded-2xl border border-ink/15 bg-white p-6">
           <div>
-            <h2 className="text-lg font-medium text-gray-950">建立課程</h2>
-            <p className="mt-2 text-sm leading-6 text-gray-600">
+            <h2 className="text-lg font-medium text-ink">建立課程</h2>
+            <p className="mt-2 text-sm leading-6 text-ink-soft">
               這會把這則需求轉為正式課程，之後無法修改，請確認資訊無誤後再送出。
             </p>
           </div>
@@ -186,11 +186,11 @@ export default async function DemandRequestDetailPage({
             <input name="demandRequestId" type="hidden" value={demandRequestId} />
 
             <div>
-              <label className="text-sm font-medium text-gray-950" htmlFor="title">
+              <label className="text-sm font-medium text-ink" htmlFor="title">
                 課程名稱
               </label>
               <input
-                className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                 defaultValue={demandRequest.title ?? ""}
                 id="title"
                 maxLength={200}
@@ -201,11 +201,11 @@ export default async function DemandRequestDetailPage({
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-950" htmlFor="serviceType">
+              <label className="text-sm font-medium text-ink" htmlFor="serviceType">
                 課程類型
               </label>
               <select
-                className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                 defaultValue={demandRequest.serviceType ?? ""}
                 id="serviceType"
                 name="serviceType"
@@ -225,13 +225,13 @@ export default async function DemandRequestDetailPage({
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label
-                  className="text-sm font-medium text-gray-950"
+                  className="text-sm font-medium text-ink"
                   htmlFor="startAt"
                 >
                   開始時間
                 </label>
                 <input
-                  className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                  className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                   id="startAt"
                   name="startAt"
                   required
@@ -239,11 +239,11 @@ export default async function DemandRequestDetailPage({
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-950" htmlFor="endAt">
+                <label className="text-sm font-medium text-ink" htmlFor="endAt">
                   結束時間
                 </label>
                 <input
-                  className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                  className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                   id="endAt"
                   name="endAt"
                   required
@@ -253,11 +253,11 @@ export default async function DemandRequestDetailPage({
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-950" htmlFor="location">
+              <label className="text-sm font-medium text-ink" htmlFor="location">
                 地點
               </label>
               <input
-                className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                 id="location"
                 maxLength={200}
                 name="location"
@@ -268,11 +268,11 @@ export default async function DemandRequestDetailPage({
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-950" htmlFor="capacity">
+              <label className="text-sm font-medium text-ink" htmlFor="capacity">
                 名額上限
               </label>
               <input
-                className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                 id="capacity"
                 max={500}
                 min={1}
@@ -284,13 +284,13 @@ export default async function DemandRequestDetailPage({
 
             <div>
               <label
-                className="text-sm font-medium text-gray-950"
+                className="text-sm font-medium text-ink"
                 htmlFor="description"
               >
                 課程說明（選填）
               </label>
               <textarea
-                className="mt-2 min-h-24 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                className="mt-2 min-h-24 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                 id="description"
                 maxLength={2000}
                 name="description"
@@ -298,12 +298,12 @@ export default async function DemandRequestDetailPage({
               />
             </div>
 
-            <label className="flex items-start gap-2 text-sm leading-6 text-gray-700">
+            <label className="flex items-start gap-2 text-sm leading-6 text-ink-soft">
               <input className="mt-1 shrink-0" name="isPublic" type="checkbox" value="yes" />
               允許公開課程詳情頁與分享連結（未來功能，本輪送出後暫不生效）
             </label>
 
-            <label className="flex items-start gap-2 text-sm leading-6 text-gray-700">
+            <label className="flex items-start gap-2 text-sm leading-6 text-ink-soft">
               <input
                 className="mt-1 shrink-0"
                 name="confirmCreate"
@@ -315,7 +315,7 @@ export default async function DemandRequestDetailPage({
             </label>
 
             <button
-              className="w-full rounded bg-gray-950 px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-gray-800 sm:w-auto"
+              className="w-full rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-pine-deep sm:w-auto"
               type="submit"
             >
               建立課程
@@ -325,19 +325,19 @@ export default async function DemandRequestDetailPage({
       ) : null}
 
       {["draft", "submitted", "published", "matched"].includes(demandRequest.status) ? (
-        <section className="rounded border border-rose-200 bg-white p-6">
+        <section className="rounded-2xl border border-rose-200 bg-white p-6">
           <details className="grid gap-4">
             <summary className="cursor-pointer list-none text-lg font-medium text-rose-800 marker:hidden">
               取消需求…
             </summary>
             <div>
-              <p className="text-sm leading-6 text-gray-600">
+              <p className="text-sm leading-6 text-ink-soft">
                 取消後無法復原，已提交或已選定的老師回應也會一併取消，並會收到通知。
               </p>
             </div>
             <form action={cancelDemandRequestAction} className="grid gap-3">
               <input name="demandRequestId" type="hidden" value={demandRequestId} />
-              <label className="flex items-start gap-2 text-sm leading-6 text-gray-700">
+              <label className="flex items-start gap-2 text-sm leading-6 text-ink-soft">
                 <input
                   className="mt-1 shrink-0"
                   name="confirmCancel"
@@ -348,7 +348,7 @@ export default async function DemandRequestDetailPage({
                 我確認要取消這則需求，且已提交或已選定的老師回應也會一併取消。
               </label>
               <button
-                className="w-full rounded bg-rose-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-800 sm:w-auto"
+                className="w-full rounded-full bg-rose-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-800 sm:w-auto"
                 type="submit"
               >
                 確認取消需求
@@ -360,14 +360,14 @@ export default async function DemandRequestDetailPage({
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <Link
-          className="rounded border border-gray-300 px-5 py-3 text-center text-sm font-medium text-gray-900 transition hover:bg-gray-50"
+          className="rounded-full border border-ink/25 px-5 py-3 text-center text-sm font-medium text-ink transition hover:bg-cream"
           href="/organizer/demands"
         >
           回到需求列表
         </Link>
         {demandRequest.status === "draft" ? (
           <Link
-            className="rounded bg-gray-950 px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-gray-800"
+            className="rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-pine-deep"
             href={`/organizer/demands/${demandRequest.id}/edit`}
           >
             繼續編輯草稿
@@ -389,9 +389,9 @@ function ReadOnlyText({
 }) {
   return (
     <div className="min-w-0 text-sm">
-      <h3 className="font-medium text-gray-950">{label}</h3>
+      <h3 className="font-medium text-ink">{label}</h3>
       <p
-        className={`mt-2 break-words leading-6 text-gray-600 ${multiline ? "whitespace-pre-wrap" : ""}`}
+        className={`mt-2 break-words leading-6 text-ink-soft ${multiline ? "whitespace-pre-wrap" : ""}`}
       >
         {value && value.trim().length > 0 ? value : "尚未填寫"}
       </p>
@@ -410,12 +410,12 @@ function ReadOnlyList({
 
   return (
     <div className="min-w-0 text-sm">
-      <h3 className="font-medium text-gray-950">{label}</h3>
+      <h3 className="font-medium text-ink">{label}</h3>
       {visibleValues.length > 0 ? (
         <ul className="mt-2 flex flex-wrap gap-2">
           {visibleValues.map((value) => (
             <li
-              className="rounded-full border border-gray-200 px-3 py-1 text-gray-700"
+              className="rounded-full border border-ink/15 px-3 py-1 text-ink-soft"
               key={value}
             >
               {value}
@@ -423,7 +423,7 @@ function ReadOnlyList({
           ))}
         </ul>
       ) : (
-        <p className="mt-2 leading-6 text-gray-600">尚未填寫</p>
+        <p className="mt-2 leading-6 text-ink-soft">尚未填寫</p>
       )}
     </div>
   );

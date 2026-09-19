@@ -55,20 +55,20 @@ export default async function AdminDemandsPage({
 
   return (
     <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-8 px-6 py-10">
-      <header className="grid gap-3 border-b border-gray-200 pb-6 md:grid-cols-[1fr_auto] md:items-end">
+      <header className="grid gap-3 border-b border-ink/15 pb-6 md:grid-cols-[1fr_auto] md:items-end">
         <div>
-          <p className="text-sm font-medium text-sky-700">Admin review</p>
+          <p className="text-sm font-medium text-clay">Admin review</p>
           <AdminNav />
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-gray-950">
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
             Demand requests
           </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-600">
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
             檢視已送出審核的團課需求，公開合適的需求，或退回並說明原因。
           </p>
         </div>
-        <div className="rounded border border-gray-200 bg-white px-4 py-3 text-sm">
-          <p className="font-medium text-gray-950">Submitted</p>
-          <p className="mt-1 text-2xl font-semibold text-gray-950">
+        <div className="rounded-xl border border-ink/15 bg-white px-4 py-3 text-sm">
+          <p className="font-medium text-ink">Submitted</p>
+          <p className="mt-1 text-2xl font-semibold text-ink">
             {demandRequests.length}
           </p>
         </div>
@@ -79,8 +79,8 @@ export default async function AdminDemandsPage({
           aria-live="polite"
           className={
             feedback.kind === "success"
-              ? "rounded border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
-              : "rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
+              ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
+              : "rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
           }
         >
           {feedback.message}
@@ -88,11 +88,11 @@ export default async function AdminDemandsPage({
       ) : null}
 
       {demandRequests.length === 0 ? (
-        <section className="rounded border border-gray-200 bg-white p-6">
-          <h2 className="text-lg font-medium text-gray-950">
+        <section className="rounded-2xl border border-ink/15 bg-white p-6">
+          <h2 className="text-lg font-medium text-ink">
             No submitted demand requests
           </h2>
-          <p className="mt-2 text-sm leading-6 text-gray-600">
+          <p className="mt-2 text-sm leading-6 text-ink-soft">
             Draft、published、rejected 的需求不會顯示在此審核佇列中。
           </p>
         </section>
@@ -100,28 +100,28 @@ export default async function AdminDemandsPage({
         <section className="grid gap-4">
           {demandRequests.map((demandRequest) => (
             <article
-              className="grid gap-5 rounded border border-gray-200 bg-white p-5"
+              className="grid gap-5 rounded-2xl border border-ink/15 bg-white p-5"
               key={demandRequest.id}
             >
               <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-start">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-3">
-                    <h2 className="min-w-0 break-words text-xl font-semibold text-gray-950">
+                    <h2 className="min-w-0 break-words text-xl font-semibold text-ink">
                       {demandRequest.title ?? "尚未命名的需求"}
                     </h2>
-                    <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-800">
+                    <span className="rounded-full bg-pine-tint px-3 py-1 text-xs font-medium text-pine">
                       submitted
                     </span>
                   </div>
-                  <dl className="mt-4 grid gap-3 text-sm text-gray-600 sm:grid-cols-2">
+                  <dl className="mt-4 grid gap-3 text-sm text-ink-soft sm:grid-cols-2">
                     <div className="min-w-0">
-                      <dt className="font-medium text-gray-950">Organizer</dt>
+                      <dt className="font-medium text-ink">Organizer</dt>
                       <dd className="mt-1 break-words">
                         {demandRequest.organizerProfile.displayName}
                       </dd>
                     </div>
                     <div className="min-w-0">
-                      <dt className="font-medium text-gray-950">
+                      <dt className="font-medium text-ink">
                         Organization
                       </dt>
                       <dd className="mt-1 break-words">
@@ -132,7 +132,7 @@ export default async function AdminDemandsPage({
                       </dd>
                     </div>
                     <div className="min-w-0">
-                      <dt className="font-medium text-gray-950">
+                      <dt className="font-medium text-ink">
                         Contact name
                       </dt>
                       <dd className="mt-1 break-words">
@@ -141,7 +141,7 @@ export default async function AdminDemandsPage({
                       </dd>
                     </div>
                     <div className="min-w-0">
-                      <dt className="font-medium text-gray-950">
+                      <dt className="font-medium text-ink">
                         Contact email
                       </dt>
                       <dd className="mt-1 break-words">
@@ -150,7 +150,7 @@ export default async function AdminDemandsPage({
                       </dd>
                     </div>
                     <div className="min-w-0">
-                      <dt className="font-medium text-gray-950">
+                      <dt className="font-medium text-ink">
                         Contact phone
                       </dt>
                       <dd className="mt-1 break-words">
@@ -159,7 +159,7 @@ export default async function AdminDemandsPage({
                       </dd>
                     </div>
                     <div className="min-w-0">
-                      <dt className="font-medium text-gray-950">Submitted</dt>
+                      <dt className="font-medium text-ink">Submitted</dt>
                       <dd className="mt-1">
                         {formatDateTime(demandRequest.updatedAt)}
                       </dd>
@@ -175,15 +175,15 @@ export default async function AdminDemandsPage({
                       value={demandRequest.id}
                     />
                     <button
-                      className="w-full rounded bg-gray-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-800"
+                      className="w-full rounded-full bg-pine px-4 py-2 text-sm font-medium text-white transition hover:bg-pine-deep"
                       type="submit"
                     >
                       Publish
                     </button>
                   </form>
 
-                  <details className="rounded border border-rose-200 bg-rose-50/60">
-                    <summary className="cursor-pointer list-none rounded px-4 py-2 text-sm font-medium text-rose-800 marker:hidden">
+                  <details className="rounded-xl border border-rose-200 bg-rose-50/60">
+                    <summary className="cursor-pointer list-none rounded-full px-4 py-2 text-sm font-medium text-rose-800 marker:hidden">
                       Reject…
                     </summary>
                     <form
@@ -197,16 +197,16 @@ export default async function AdminDemandsPage({
                       />
                       <div>
                         <label
-                          className="text-sm font-medium text-gray-950"
+                          className="text-sm font-medium text-ink"
                           htmlFor={`reject-reason-${demandRequest.id}`}
                         >
                           退回原因
                         </label>
-                        <p className="mt-1 text-xs leading-5 text-gray-600">
+                        <p className="mt-1 text-xs leading-5 text-ink-soft">
                           此說明會顯示給團主，請具體、溫和地寫出需要修正的方向（10–1000 字）。
                         </p>
                         <textarea
-                          className="mt-2 min-h-24 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
+                          className="mt-2 min-h-24 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
                           id={`reject-reason-${demandRequest.id}`}
                           maxLength={1000}
                           minLength={10}
@@ -215,7 +215,7 @@ export default async function AdminDemandsPage({
                           required
                         />
                       </div>
-                      <label className="flex items-start gap-2 text-sm leading-6 text-gray-700">
+                      <label className="flex items-start gap-2 text-sm leading-6 text-ink-soft">
                         <input
                           className="mt-1 shrink-0"
                           name="confirmReject"
@@ -226,7 +226,7 @@ export default async function AdminDemandsPage({
                         我確認要退回這筆需求，且以上原因會顯示給團主。
                       </label>
                       <button
-                        className="w-full rounded bg-rose-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-800"
+                        className="w-full rounded-full bg-rose-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-800"
                         type="submit"
                       >
                         確認退回
@@ -236,7 +236,7 @@ export default async function AdminDemandsPage({
                 </div>
               </div>
 
-              <div className="grid gap-4 border-t border-gray-100 pt-4 md:grid-cols-2">
+              <div className="grid gap-4 border-t border-ink/10 pt-4 md:grid-cols-2">
                 <ReadOnlyText
                   label="Service type"
                   value={demandRequest.serviceType}
@@ -322,9 +322,9 @@ function ReadOnlyText({
 }) {
   return (
     <div className="min-w-0 text-sm">
-      <h3 className="font-medium text-gray-950">{label}</h3>
+      <h3 className="font-medium text-ink">{label}</h3>
       <p
-        className={`mt-2 break-words leading-6 text-gray-600 ${multiline ? "whitespace-pre-wrap" : ""}`}
+        className={`mt-2 break-words leading-6 text-ink-soft ${multiline ? "whitespace-pre-wrap" : ""}`}
       >
         {value && value.trim().length > 0 ? value : "Not provided"}
       </p>
@@ -343,12 +343,12 @@ function ReadOnlyList({
 
   return (
     <div className="min-w-0 text-sm">
-      <h3 className="font-medium text-gray-950">{label}</h3>
+      <h3 className="font-medium text-ink">{label}</h3>
       {visibleValues.length > 0 ? (
         <ul className="mt-2 flex flex-wrap gap-2">
           {visibleValues.map((value) => (
             <li
-              className="rounded-full border border-gray-200 px-3 py-1 text-gray-700"
+              className="rounded-full border border-ink/15 px-3 py-1 text-ink-soft"
               key={value}
             >
               {value}
@@ -356,7 +356,7 @@ function ReadOnlyList({
           ))}
         </ul>
       ) : (
-        <p className="mt-2 leading-6 text-gray-600">Not provided</p>
+        <p className="mt-2 leading-6 text-ink-soft">Not provided</p>
       )}
     </div>
   );

@@ -11,10 +11,10 @@ export const classSessionStatusLabels: Record<ClassSessionStatus, string> = {
 };
 
 export const classSessionStatusToneClasses: Record<ClassSessionStatus, string> = {
-  draft: "bg-gray-100 text-gray-700",
-  pending_confirmation: "bg-sky-100 text-sky-800",
+  draft: "bg-sand text-ink-soft",
+  pending_confirmation: "bg-pine-tint text-pine",
   open_for_enrollment: "bg-emerald-100 text-emerald-800",
   confirmed: "bg-emerald-100 text-emerald-800",
   completed: "bg-emerald-100 text-emerald-800",
-  cancelled: "bg-gray-100 text-gray-700",
+  cancelled: "bg-sand text-ink-soft",
 };

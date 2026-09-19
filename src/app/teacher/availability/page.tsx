@@ -82,18 +82,18 @@ export default async function TeacherAvailabilityPage({
 
     return (
       <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-5 py-10 sm:px-8">
-        <header className="border-b border-gray-200 pb-6">
-          <p className="text-sm font-medium text-sky-700">Teacher availability</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-gray-950">
+        <header className="border-b border-ink/15 pb-6">
+          <p className="text-sm font-medium text-clay">Teacher availability</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
             可授課時間
           </h1>
         </header>
-        <section className="grid gap-4 rounded border border-gray-200 bg-white p-6">
-          <h2 className="text-xl font-medium text-gray-950">{copy.title}</h2>
-          <p className="text-sm leading-6 text-gray-600">{copy.body}</p>
+        <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
+          <h2 className="text-xl font-medium text-ink">{copy.title}</h2>
+          <p className="text-sm leading-6 text-ink-soft">{copy.body}</p>
           <div>
             <Link
-              className="inline-flex rounded bg-gray-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-gray-800"
+              className="inline-flex rounded-full bg-pine px-5 py-3 text-sm font-medium text-white transition hover:bg-pine-deep"
               href="/teacher/dashboard"
             >
               {copy.actionLabel}
@@ -108,12 +108,12 @@ export default async function TeacherAvailabilityPage({
 
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-5 py-10 sm:px-8">
-      <header className="border-b border-gray-200 pb-6">
-        <p className="text-sm font-medium text-sky-700">Teacher availability</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-gray-950">
+      <header className="border-b border-ink/15 pb-6">
+        <p className="text-sm font-medium text-clay">Teacher availability</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
           可授課時間
         </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-600">
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
           管理你每週固定的可授課時段，以及特定日期的封鎖或額外開放。
         </p>
       </header>
@@ -123,8 +123,8 @@ export default async function TeacherAvailabilityPage({
           aria-live="polite"
           className={
             feedback.kind === "success"
-              ? "rounded border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
-              : "rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
+              ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
+              : "rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
           }
         >
           {feedback.message}
@@ -134,48 +134,48 @@ export default async function TeacherAvailabilityPage({
       {!isApproved ? (
         <section
           aria-live="polite"
-          className="rounded border border-gray-200 bg-gray-50 px-4 py-3 text-sm leading-6 text-gray-700"
+          className="rounded-xl border border-ink/15 bg-cream px-4 py-3 text-sm leading-6 text-ink-soft"
         >
           帳號目前暫停中，暫時無法新增、編輯或刪除可授課時間，但你仍然可以查看既有資料。
         </section>
       ) : null}
 
-      <section className="grid gap-4 rounded border border-gray-200 bg-white p-6">
-        <h2 className="text-lg font-medium text-gray-950">固定可授課時段</h2>
+      <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
+        <h2 className="text-lg font-medium text-ink">固定可授課時段</h2>
         {overview.availability.length === 0 ? (
-          <p className="text-sm leading-6 text-gray-600">目前還沒有任何固定時段。</p>
+          <p className="text-sm leading-6 text-ink-soft">目前還沒有任何固定時段。</p>
         ) : (
           <ul className="grid gap-2">
             {overview.availability.map((entry) => (
               <li
-                className="min-w-0 rounded border border-gray-100 bg-gray-50 p-3 text-sm"
+                className="min-w-0 rounded-2xl border border-ink/10 bg-cream p-3 text-sm"
                 key={entry.id}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="min-w-0 break-words font-medium text-gray-950">
+                  <p className="min-w-0 break-words font-medium text-ink">
                     {dayOfWeekLabels[entry.dayOfWeek]}・{entry.startTime}–{entry.endTime}
                     {entry.locationArea ? `・${entry.locationArea}` : ""}
                   </p>
                   {isApproved ? (
                     <div className="flex shrink-0 items-center gap-2">
                       <details>
-                        <summary className="cursor-pointer list-none rounded border border-gray-300 px-3 py-1 text-xs font-medium text-gray-900 marker:hidden hover:bg-gray-100">
+                        <summary className="cursor-pointer list-none rounded-full border border-ink/25 px-3 py-1 text-xs font-medium text-ink marker:hidden hover:bg-sand">
                           編輯…
                         </summary>
                         <form
                           action={updateTeacherAvailabilityAction}
-                          className="mt-3 grid gap-3 rounded border border-gray-200 bg-white p-3"
+                          className="mt-3 grid gap-3 rounded-2xl border border-ink/15 bg-white p-3"
                         >
                           <input name="availabilityId" type="hidden" value={entry.id} />
                           <div>
                             <label
-                              className="text-sm font-medium text-gray-950"
+                              className="text-sm font-medium text-ink"
                               htmlFor={`edit-dayOfWeek-${entry.id}`}
                             >
                               星期幾
                             </label>
                             <select
-                              className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                              className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                               defaultValue={entry.dayOfWeek}
                               id={`edit-dayOfWeek-${entry.id}`}
                               name="dayOfWeek"
@@ -191,13 +191,13 @@ export default async function TeacherAvailabilityPage({
                           <div className="grid gap-3 sm:grid-cols-2">
                             <div>
                               <label
-                                className="text-sm font-medium text-gray-950"
+                                className="text-sm font-medium text-ink"
                                 htmlFor={`edit-startTime-${entry.id}`}
                               >
                                 開始時間
                               </label>
                               <input
-                                className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                                className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                                 defaultValue={entry.startTime}
                                 id={`edit-startTime-${entry.id}`}
                                 name="startTime"
@@ -207,13 +207,13 @@ export default async function TeacherAvailabilityPage({
                             </div>
                             <div>
                               <label
-                                className="text-sm font-medium text-gray-950"
+                                className="text-sm font-medium text-ink"
                                 htmlFor={`edit-endTime-${entry.id}`}
                               >
                                 結束時間
                               </label>
                               <input
-                                className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                                className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                                 defaultValue={entry.endTime}
                                 id={`edit-endTime-${entry.id}`}
                                 name="endTime"
@@ -224,13 +224,13 @@ export default async function TeacherAvailabilityPage({
                           </div>
                           <div>
                             <label
-                              className="text-sm font-medium text-gray-950"
+                              className="text-sm font-medium text-ink"
                               htmlFor={`edit-locationArea-${entry.id}`}
                             >
                               地區（選填）
                             </label>
                             <input
-                              className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                              className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                               defaultValue={entry.locationArea ?? ""}
                               id={`edit-locationArea-${entry.id}`}
                               maxLength={100}
@@ -238,7 +238,7 @@ export default async function TeacherAvailabilityPage({
                             />
                           </div>
                           <button
-                            className="w-full rounded bg-sky-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-800 sm:w-auto"
+                            className="w-full rounded-full bg-pine px-4 py-2 text-sm font-medium text-white transition hover:bg-pine-deep sm:w-auto"
                             type="submit"
                           >
                             儲存變更
@@ -248,7 +248,7 @@ export default async function TeacherAvailabilityPage({
                       <form action={deleteTeacherAvailabilityAction}>
                         <input name="availabilityId" type="hidden" value={entry.id} />
                         <button
-                          className="rounded border border-rose-200 px-3 py-1 text-xs font-medium text-rose-800 transition hover:bg-rose-50"
+                          className="rounded-full border border-rose-200 px-3 py-1 text-xs font-medium text-rose-800 transition hover:bg-rose-50"
                           type="submit"
                         >
                           刪除
@@ -265,14 +265,14 @@ export default async function TeacherAvailabilityPage({
         {isApproved ? (
           <form
             action={createTeacherAvailabilityAction}
-            className="grid gap-3 border-t border-gray-100 pt-4"
+            className="grid gap-3 border-t border-ink/10 pt-4"
           >
             <div>
-              <label className="text-sm font-medium text-gray-950" htmlFor="dayOfWeek">
+              <label className="text-sm font-medium text-ink" htmlFor="dayOfWeek">
                 星期幾
               </label>
               <select
-                className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                 defaultValue=""
                 id="dayOfWeek"
                 name="dayOfWeek"
@@ -290,11 +290,11 @@ export default async function TeacherAvailabilityPage({
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label className="text-sm font-medium text-gray-950" htmlFor="startTime">
+                <label className="text-sm font-medium text-ink" htmlFor="startTime">
                   開始時間
                 </label>
                 <input
-                  className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                  className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                   id="startTime"
                   name="startTime"
                   required
@@ -302,11 +302,11 @@ export default async function TeacherAvailabilityPage({
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-950" htmlFor="endTime">
+                <label className="text-sm font-medium text-ink" htmlFor="endTime">
                   結束時間
                 </label>
                 <input
-                  className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                  className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                   id="endTime"
                   name="endTime"
                   required
@@ -315,11 +315,11 @@ export default async function TeacherAvailabilityPage({
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-950" htmlFor="locationArea">
+              <label className="text-sm font-medium text-ink" htmlFor="locationArea">
                 地區（選填）
               </label>
               <input
-                className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                 id="locationArea"
                 maxLength={100}
                 name="locationArea"
@@ -327,7 +327,7 @@ export default async function TeacherAvailabilityPage({
               />
             </div>
             <button
-              className="w-full rounded bg-sky-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-800 sm:w-auto"
+              className="w-full rounded-full bg-pine px-4 py-2 text-sm font-medium text-white transition hover:bg-pine-deep sm:w-auto"
               type="submit"
             >
               新增固定時段
@@ -336,32 +336,32 @@ export default async function TeacherAvailabilityPage({
         ) : null}
       </section>
 
-      <section className="grid gap-4 rounded border border-gray-200 bg-white p-6">
-        <h2 className="text-lg font-medium text-gray-950">特殊日期例外</h2>
+      <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
+        <h2 className="text-lg font-medium text-ink">特殊日期例外</h2>
         {overview.exceptions.length === 0 ? (
-          <p className="text-sm leading-6 text-gray-600">目前還沒有任何日期例外。</p>
+          <p className="text-sm leading-6 text-ink-soft">目前還沒有任何日期例外。</p>
         ) : (
           <ul className="grid gap-2">
             {overview.exceptions.map((entry) => (
               <li
-                className="min-w-0 rounded border border-gray-100 bg-gray-50 p-3 text-sm"
+                className="min-w-0 rounded-2xl border border-ink/10 bg-cream p-3 text-sm"
                 key={entry.id}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="flex flex-wrap items-center gap-2 font-medium text-gray-950">
+                    <p className="flex flex-wrap items-center gap-2 font-medium text-ink">
                       {formatAvailabilityExceptionDate(entry.date)}
-                      <span className="w-fit rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-700">
+                      <span className="w-fit rounded-full bg-ink/10 px-2 py-0.5 text-xs font-medium text-ink-soft">
                         {exceptionTypeLabels[entry.type] ?? entry.type}
                       </span>
                     </p>
-                    <p className="mt-1 text-gray-600">
+                    <p className="mt-1 text-ink-soft">
                       {entry.startTime && entry.endTime
                         ? `${entry.startTime}–${entry.endTime}`
                         : "整天"}
                     </p>
                     {entry.reason ? (
-                      <p className="mt-1 whitespace-pre-wrap break-words text-gray-600">
+                      <p className="mt-1 whitespace-pre-wrap break-words text-ink-soft">
                         {entry.reason}
                       </p>
                     ) : null}
@@ -369,23 +369,23 @@ export default async function TeacherAvailabilityPage({
                   {isApproved ? (
                     <div className="flex shrink-0 items-center gap-2">
                       <details>
-                        <summary className="cursor-pointer list-none rounded border border-gray-300 px-3 py-1 text-xs font-medium text-gray-900 marker:hidden hover:bg-gray-100">
+                        <summary className="cursor-pointer list-none rounded-full border border-ink/25 px-3 py-1 text-xs font-medium text-ink marker:hidden hover:bg-sand">
                           編輯…
                         </summary>
                         <form
                           action={updateAvailabilityExceptionAction}
-                          className="mt-3 grid gap-3 rounded border border-gray-200 bg-white p-3"
+                          className="mt-3 grid gap-3 rounded-2xl border border-ink/15 bg-white p-3"
                         >
                           <input name="exceptionId" type="hidden" value={entry.id} />
                           <div>
                             <label
-                              className="text-sm font-medium text-gray-950"
+                              className="text-sm font-medium text-ink"
                               htmlFor={`edit-date-${entry.id}`}
                             >
                               日期
                             </label>
                             <input
-                              className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                              className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                               defaultValue={formatAvailabilityExceptionDate(entry.date)}
                               id={`edit-date-${entry.id}`}
                               name="date"
@@ -394,8 +394,8 @@ export default async function TeacherAvailabilityPage({
                             />
                           </div>
                           <fieldset className="grid gap-2">
-                            <legend className="text-sm font-medium text-gray-950">類型</legend>
-                            <label className="flex items-center gap-2 text-sm text-gray-700">
+                            <legend className="text-sm font-medium text-ink">類型</legend>
+                            <label className="flex items-center gap-2 text-sm text-ink-soft">
                               <input
                                 defaultChecked={entry.type === "blocked"}
                                 name="type"
@@ -404,7 +404,7 @@ export default async function TeacherAvailabilityPage({
                               />
                               封鎖（這天無法授課）
                             </label>
-                            <label className="flex items-center gap-2 text-sm text-gray-700">
+                            <label className="flex items-center gap-2 text-sm text-ink-soft">
                               <input
                                 defaultChecked={entry.type === "extra_available"}
                                 name="type"
@@ -417,13 +417,13 @@ export default async function TeacherAvailabilityPage({
                           <div className="grid gap-3 sm:grid-cols-2">
                             <div>
                               <label
-                                className="text-sm font-medium text-gray-950"
+                                className="text-sm font-medium text-ink"
                                 htmlFor={`edit-startTime-${entry.id}`}
                               >
                                 開始時間（選填，留空代表整天）
                               </label>
                               <input
-                                className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                                className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                                 defaultValue={entry.startTime ?? ""}
                                 id={`edit-startTime-${entry.id}`}
                                 name="startTime"
@@ -432,13 +432,13 @@ export default async function TeacherAvailabilityPage({
                             </div>
                             <div>
                               <label
-                                className="text-sm font-medium text-gray-950"
+                                className="text-sm font-medium text-ink"
                                 htmlFor={`edit-endTime-${entry.id}`}
                               >
                                 結束時間（選填）
                               </label>
                               <input
-                                className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                                className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                                 defaultValue={entry.endTime ?? ""}
                                 id={`edit-endTime-${entry.id}`}
                                 name="endTime"
@@ -448,13 +448,13 @@ export default async function TeacherAvailabilityPage({
                           </div>
                           <div>
                             <label
-                              className="text-sm font-medium text-gray-950"
+                              className="text-sm font-medium text-ink"
                               htmlFor={`edit-reason-${entry.id}`}
                             >
                               原因（選填）
                             </label>
                             <textarea
-                              className="mt-2 min-h-20 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                              className="mt-2 min-h-20 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                               defaultValue={entry.reason ?? ""}
                               id={`edit-reason-${entry.id}`}
                               maxLength={500}
@@ -462,7 +462,7 @@ export default async function TeacherAvailabilityPage({
                             />
                           </div>
                           <button
-                            className="w-full rounded bg-sky-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-800 sm:w-auto"
+                            className="w-full rounded-full bg-pine px-4 py-2 text-sm font-medium text-white transition hover:bg-pine-deep sm:w-auto"
                             type="submit"
                           >
                             儲存變更
@@ -472,7 +472,7 @@ export default async function TeacherAvailabilityPage({
                       <form action={deleteAvailabilityExceptionAction}>
                         <input name="exceptionId" type="hidden" value={entry.id} />
                         <button
-                          className="rounded border border-rose-200 px-3 py-1 text-xs font-medium text-rose-800 transition hover:bg-rose-50"
+                          className="rounded-full border border-rose-200 px-3 py-1 text-xs font-medium text-rose-800 transition hover:bg-rose-50"
                           type="submit"
                         >
                           刪除
@@ -489,14 +489,14 @@ export default async function TeacherAvailabilityPage({
         {isApproved ? (
           <form
             action={createAvailabilityExceptionAction}
-            className="grid gap-3 border-t border-gray-100 pt-4"
+            className="grid gap-3 border-t border-ink/10 pt-4"
           >
             <div>
-              <label className="text-sm font-medium text-gray-950" htmlFor="date">
+              <label className="text-sm font-medium text-ink" htmlFor="date">
                 日期
               </label>
               <input
-                className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                 id="date"
                 name="date"
                 required
@@ -504,34 +504,34 @@ export default async function TeacherAvailabilityPage({
               />
             </div>
             <fieldset className="grid gap-2">
-              <legend className="text-sm font-medium text-gray-950">類型</legend>
-              <label className="flex items-center gap-2 text-sm text-gray-700">
+              <legend className="text-sm font-medium text-ink">類型</legend>
+              <label className="flex items-center gap-2 text-sm text-ink-soft">
                 <input defaultChecked name="type" type="radio" value="blocked" />
                 封鎖（這天無法授課）
               </label>
-              <label className="flex items-center gap-2 text-sm text-gray-700">
+              <label className="flex items-center gap-2 text-sm text-ink-soft">
                 <input name="type" type="radio" value="extra_available" />
                 額外開放（原本沒有排班，但這天可以授課）
               </label>
             </fieldset>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label className="text-sm font-medium text-gray-950" htmlFor="exceptionStartTime">
+                <label className="text-sm font-medium text-ink" htmlFor="exceptionStartTime">
                   開始時間（選填，留空代表整天）
                 </label>
                 <input
-                  className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                  className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                   id="exceptionStartTime"
                   name="startTime"
                   type="time"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-950" htmlFor="exceptionEndTime">
+                <label className="text-sm font-medium text-ink" htmlFor="exceptionEndTime">
                   結束時間（選填）
                 </label>
                 <input
-                  className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                  className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                   id="exceptionEndTime"
                   name="endTime"
                   type="time"
@@ -539,11 +539,11 @@ export default async function TeacherAvailabilityPage({
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-950" htmlFor="reason">
+              <label className="text-sm font-medium text-ink" htmlFor="reason">
                 原因（選填）
               </label>
               <textarea
-                className="mt-2 min-h-20 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                className="mt-2 min-h-20 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                 id="reason"
                 maxLength={500}
                 name="reason"
@@ -551,7 +551,7 @@ export default async function TeacherAvailabilityPage({
               />
             </div>
             <button
-              className="w-full rounded bg-sky-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-800 sm:w-auto"
+              className="w-full rounded-full bg-pine px-4 py-2 text-sm font-medium text-white transition hover:bg-pine-deep sm:w-auto"
               type="submit"
             >
               新增例外

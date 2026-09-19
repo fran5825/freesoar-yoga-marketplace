@@ -55,27 +55,27 @@ export default async function RecurringClassSeriesPage({
 
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-5 py-10 sm:px-8">
-      <header className="border-b border-gray-200 pb-6">
+      <header className="border-b border-ink/15 pb-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-sm font-medium text-sky-700">Teacher classes / 系列管理</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-gray-950">
+            <p className="text-sm font-medium text-clay">Teacher classes / 系列管理</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
               {series.title}
             </h1>
           </div>
           <Link
-            className="inline-flex rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-900 transition hover:border-gray-400"
+            className="inline-flex rounded-full border border-ink/25 px-4 py-2 text-sm font-medium text-ink transition hover:border-ink/40"
             href="/teacher/classes"
           >
             回到我的課程
           </Link>
         </div>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-600">
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
           {series.dayOfWeek === null
             ? "固定期課程系列——日期在建立當下已經一次到位，不支援生成更多。"
             : `常規課程系列——每週${dayOfWeekLabels[series.dayOfWeek]}${series.startTime}–${series.endTime}。`}
         </p>
-        <p className="mt-1 text-sm leading-6 text-gray-600">
+        <p className="mt-1 text-sm leading-6 text-ink-soft">
           {series.requiresApproval
             ? "這個系列底下的新報名需要你確認才算成立。"
             : "這個系列底下的新報名送出即成立。"}
@@ -87,52 +87,52 @@ export default async function RecurringClassSeriesPage({
           aria-live="polite"
           className={
             feedback.kind === "success"
-              ? "rounded border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
-              : "rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
+              ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
+              : "rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
           }
         >
           {feedback.message}
         </section>
       ) : null}
 
-      <section className="grid gap-3 rounded border border-gray-200 bg-white p-5">
-        <dl className="grid gap-2 text-sm text-gray-600 sm:grid-cols-2">
+      <section className="grid gap-3 rounded-2xl border border-ink/15 bg-white p-5">
+        <dl className="grid gap-2 text-sm text-ink-soft sm:grid-cols-2">
           <div>
-            <dt className="font-medium text-gray-950">地點</dt>
+            <dt className="font-medium text-ink">地點</dt>
             <dd className="mt-1 break-words">{series.location}</dd>
           </div>
           <div>
-            <dt className="font-medium text-gray-950">名額上限</dt>
+            <dt className="font-medium text-ink">名額上限</dt>
             <dd className="mt-1">{series.capacity} 人</dd>
           </div>
           {series.serviceType ? (
             <div>
-              <dt className="font-medium text-gray-950">課程類型</dt>
+              <dt className="font-medium text-ink">課程類型</dt>
               <dd className="mt-1">{series.serviceType}</dd>
             </div>
           ) : null}
         </dl>
         {series.description ? (
-          <p className="whitespace-pre-wrap break-words border-t border-gray-100 pt-3 text-sm leading-6 text-gray-600">
+          <p className="whitespace-pre-wrap break-words border-t border-ink/10 pt-3 text-sm leading-6 text-ink-soft">
             {series.description}
           </p>
         ) : null}
       </section>
 
-      <section className="grid gap-3 rounded border border-gray-200 bg-white p-5">
-        <h2 className="text-lg font-medium text-gray-950">
+      <section className="grid gap-3 rounded-2xl border border-ink/15 bg-white p-5">
+        <h2 className="text-lg font-medium text-ink">
           已生成場次（{series.occurrences.length}）
         </h2>
         {series.occurrences.length === 0 ? (
-          <p className="text-sm leading-6 text-gray-600">目前還沒有生成任何場次。</p>
+          <p className="text-sm leading-6 text-ink-soft">目前還沒有生成任何場次。</p>
         ) : (
           <ul className="grid gap-2">
             {series.occurrences.map((occurrence) => (
               <li
-                className="flex flex-wrap items-center justify-between gap-2 rounded border border-gray-100 bg-gray-50 p-3 text-sm"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-ink/10 bg-cream p-3 text-sm"
                 key={occurrence.id}
               >
-                <span className="text-gray-950">
+                <span className="text-ink">
                   {formatTaipeiDatetime(occurrence.startAt)} – {formatTaipeiDatetime(occurrence.endAt)}
                 </span>
                 <span
@@ -146,16 +146,16 @@ export default async function RecurringClassSeriesPage({
         )}
       </section>
 
-      <section className="grid gap-4 rounded border border-gray-200 bg-white p-5">
+      <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-5">
         {series.dayOfWeek !== null ? (
           <form action={generateMoreOccurrencesAction} className="grid gap-3">
             <input name="recurringClassSeriesId" type="hidden" value={series.id} />
-            <label className="text-sm font-medium text-gray-950" htmlFor="count">
+            <label className="text-sm font-medium text-ink" htmlFor="count">
               生成更多場次
             </label>
             <div className="flex flex-wrap items-center gap-3">
               <input
-                className="w-24 rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                className="w-24 rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                 defaultValue={8}
                 id="count"
                 max={26}
@@ -165,7 +165,7 @@ export default async function RecurringClassSeriesPage({
                 type="number"
               />
               <button
-                className="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-900 transition hover:border-sky-300 hover:bg-sky-50"
+                className="rounded-full border border-ink/25 px-4 py-2 text-sm font-medium text-ink transition hover:border-pine/40 hover:bg-pine-tint"
                 type="submit"
               >
                 生成
@@ -175,10 +175,10 @@ export default async function RecurringClassSeriesPage({
         ) : null}
 
         {hasFutureCancellableOccurrence ? (
-          <form action={cancelRecurringClassSeriesAction} className="border-t border-gray-100 pt-4">
+          <form action={cancelRecurringClassSeriesAction} className="border-t border-ink/10 pt-4">
             <input name="recurringClassSeriesId" type="hidden" value={series.id} />
             <button
-              className="rounded border border-amber-200 px-4 py-2 text-sm font-medium text-amber-900 transition hover:bg-amber-50"
+              className="rounded-full border border-amber-200 px-4 py-2 text-sm font-medium text-amber-900 transition hover:bg-amber-50"
               type="submit"
             >
               取消整個系列（僅影響尚未開始的場次）

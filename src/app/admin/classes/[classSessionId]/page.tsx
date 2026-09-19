@@ -59,16 +59,16 @@ export default async function AdminClassSessionDetailPage({
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-8 px-5 py-10 sm:px-8 sm:py-14">
-      <header className="border-b border-gray-200 pb-6">
+      <header className="border-b border-ink/15 pb-6">
         <div className="flex flex-wrap items-center gap-3">
-          <p className="text-sm font-medium text-sky-700">Admin classes</p>
+          <p className="text-sm font-medium text-clay">Admin classes</p>
           <span
             className={`w-fit rounded-full px-3 py-1 text-xs font-medium ${classSessionStatusToneClasses[classSession.status]}`}
           >
             {classSessionStatusLabels[classSession.status]}
           </span>
         </div>
-        <h1 className="mt-2 min-w-0 break-words text-3xl font-semibold tracking-tight text-gray-950">
+        <h1 className="mt-2 min-w-0 break-words text-3xl font-semibold tracking-tight text-ink">
           {classSession.title}
         </h1>
       </header>
@@ -78,15 +78,15 @@ export default async function AdminClassSessionDetailPage({
           aria-live="polite"
           className={
             feedback.kind === "success"
-              ? "rounded border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
-              : "rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
+              ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
+              : "rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
           }
         >
           {feedback.message}
         </section>
       ) : null}
 
-      <section className="grid gap-4 rounded border border-gray-200 bg-white p-6 sm:grid-cols-2">
+      <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6 sm:grid-cols-2">
         <DetailField
           label="團主"
           value={classSession.organizerProfile?.displayName ?? "（老師自建課程）"}
@@ -112,36 +112,36 @@ export default async function AdminClassSessionDetailPage({
         </div>
       </section>
 
-      <section className="grid gap-4 rounded border border-gray-200 bg-white p-6">
-        <h2 className="text-lg font-medium text-gray-950">
+      <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
+        <h2 className="text-lg font-medium text-ink">
           報名名單（{classSession.roster.length} 人）
         </h2>
         {classSession.roster.length === 0 ? (
-          <p className="text-sm leading-6 text-gray-600">目前還沒有任何報名紀錄。</p>
+          <p className="text-sm leading-6 text-ink-soft">目前還沒有任何報名紀錄。</p>
         ) : (
           <ul className="grid gap-2">
             {classSession.roster.map((entry) => (
               <li
-                className="min-w-0 rounded border border-gray-100 bg-gray-50 p-3 text-sm"
+                className="min-w-0 rounded-2xl border border-ink/10 bg-cream p-3 text-sm"
                 key={entry.id}
               >
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="min-w-0 break-words font-medium text-gray-950">
+                  <p className="min-w-0 break-words font-medium text-ink">
                     {entry.memberLabel}
                   </p>
-                  <span className="w-fit rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-700">
+                  <span className="w-fit rounded-full bg-ink/10 px-2 py-0.5 text-xs font-medium text-ink-soft">
                     {enrollmentStatusLabels[entry.status] ?? entry.status}
                   </span>
                 </div>
                 {entry.notes ? (
-                  <p className="mt-1 min-w-0 whitespace-pre-wrap break-words text-gray-600">
+                  <p className="mt-1 min-w-0 whitespace-pre-wrap break-words text-ink-soft">
                     {entry.notes}
                   </p>
                 ) : null}
 
                 {entry.status === "confirmed" && !started ? (
-                  <details className="mt-2 rounded border border-rose-200 bg-rose-50/60">
-                    <summary className="cursor-pointer list-none rounded px-3 py-1.5 text-xs font-medium text-rose-800 marker:hidden">
+                  <details className="mt-2 rounded-xl border border-rose-200 bg-rose-50/60">
+                    <summary className="cursor-pointer list-none rounded-full px-3 py-1.5 text-xs font-medium text-rose-800 marker:hidden">
                       取消這筆報名…
                     </summary>
                     <form
@@ -150,7 +150,7 @@ export default async function AdminClassSessionDetailPage({
                     >
                       <input name="classSessionId" type="hidden" value={classSessionId} />
                       <input name="enrollmentId" type="hidden" value={entry.id} />
-                      <label className="flex items-start gap-2 text-xs leading-5 text-gray-700">
+                      <label className="flex items-start gap-2 text-xs leading-5 text-ink-soft">
                         <input
                           className="mt-0.5 shrink-0"
                           name="confirmCancel"
@@ -161,7 +161,7 @@ export default async function AdminClassSessionDetailPage({
                         我確認要取消這筆報名，取消後無法復原，也無法重新建立。
                       </label>
                       <button
-                        className="w-full rounded bg-rose-700 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-rose-800 sm:w-auto"
+                        className="w-full rounded-full bg-rose-700 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-rose-800 sm:w-auto"
                         type="submit"
                       >
                         確認取消
@@ -176,19 +176,19 @@ export default async function AdminClassSessionDetailPage({
       </section>
 
       {canCancelClassSession ? (
-        <section className="rounded border border-rose-200 bg-white p-6">
+        <section className="rounded-2xl border border-rose-200 bg-white p-6">
           <details className="grid gap-4">
             <summary className="cursor-pointer list-none text-lg font-medium text-rose-800 marker:hidden">
               取消課程…
             </summary>
             <div>
-              <p className="text-sm leading-6 text-gray-600">
+              <p className="text-sm leading-6 text-ink-soft">
                 取消後無法復原，也無法重新建立，已報名的會員報名也會一併取消，並會收到通知。
               </p>
             </div>
             <form action={cancelClassSessionAdminAction} className="grid gap-3">
               <input name="classSessionId" type="hidden" value={classSessionId} />
-              <label className="flex items-start gap-2 text-sm leading-6 text-gray-700">
+              <label className="flex items-start gap-2 text-sm leading-6 text-ink-soft">
                 <input
                   className="mt-1 shrink-0"
                   name="confirmCancel"
@@ -199,7 +199,7 @@ export default async function AdminClassSessionDetailPage({
                 我確認要取消這堂課程，取消後無法復原，也無法重新建立，且已報名的會員也會一併取消。
               </label>
               <button
-                className="w-full rounded bg-rose-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-800 sm:w-auto"
+                className="w-full rounded-full bg-rose-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-800 sm:w-auto"
                 type="submit"
               >
                 確認取消課程
@@ -223,9 +223,9 @@ function DetailField({
 }) {
   return (
     <div className="min-w-0 text-sm">
-      <h3 className="font-medium text-gray-950">{label}</h3>
+      <h3 className="font-medium text-ink">{label}</h3>
       <p
-        className={`mt-2 break-words leading-6 text-gray-600 ${multiline ? "whitespace-pre-wrap" : ""}`}
+        className={`mt-2 break-words leading-6 text-ink-soft ${multiline ? "whitespace-pre-wrap" : ""}`}
       >
         {value && value.trim().length > 0 ? value : "尚未填寫"}
       </p>

@@ -58,10 +58,10 @@ const statusCopy: Record<TeacherProfileStatus, DashboardStatusCopy> = {
 };
 
 const badgeToneClasses: Record<DashboardStatusCopy["tone"], string> = {
-  sky: "bg-sky-100 text-sky-800",
+  sky: "bg-pine-tint text-pine",
   amber: "bg-amber-100 text-amber-900",
   emerald: "bg-emerald-100 text-emerald-800",
-  gray: "bg-gray-100 text-gray-700",
+  gray: "bg-sand text-ink-soft",
 };
 
 export default async function TeacherDashboardPage() {

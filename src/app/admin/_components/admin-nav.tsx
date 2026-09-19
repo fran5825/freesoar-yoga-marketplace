@@ -6,19 +6,19 @@ import Link from "next/link";
 export function AdminNav() {
   return (
     <nav className="mt-2 flex flex-wrap gap-3 text-sm">
-      <Link className="text-sky-700 hover:underline" href="/admin/dashboard">
+      <Link className="text-clay hover:underline" href="/admin/dashboard">
         Dashboard
       </Link>
-      <Link className="text-sky-700 hover:underline" href="/admin/teachers">
+      <Link className="text-clay hover:underline" href="/admin/teachers">
         Teachers
       </Link>
-      <Link className="text-sky-700 hover:underline" href="/admin/demands">
+      <Link className="text-clay hover:underline" href="/admin/demands">
         Demands
       </Link>
-      <Link className="text-sky-700 hover:underline" href="/admin/classes">
+      <Link className="text-clay hover:underline" href="/admin/classes">
         Classes
       </Link>
-      <Link className="text-sky-700 hover:underline" href="/admin/organizations">
+      <Link className="text-clay hover:underline" href="/admin/organizations">
         Organizations
       </Link>
     </nav>

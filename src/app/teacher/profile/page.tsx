@@ -90,18 +90,18 @@ export default async function TeacherProfilePage({
 
     return (
       <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-5 py-10 sm:px-8">
-        <header className="border-b border-gray-200 pb-6">
-          <p className="text-sm font-medium text-sky-700">Teacher profile</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-gray-950">
+        <header className="border-b border-ink/15 pb-6">
+          <p className="text-sm font-medium text-clay">Teacher profile</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
             個人資料
           </h1>
         </header>
-        <section className="grid gap-4 rounded border border-gray-200 bg-white p-6">
-          <h2 className="text-xl font-medium text-gray-950">{copy.title}</h2>
-          <p className="text-sm leading-6 text-gray-600">{copy.body}</p>
+        <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
+          <h2 className="text-xl font-medium text-ink">{copy.title}</h2>
+          <p className="text-sm leading-6 text-ink-soft">{copy.body}</p>
           <div>
             <Link
-              className="inline-flex rounded bg-gray-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-gray-800"
+              className="inline-flex rounded-full bg-pine px-5 py-3 text-sm font-medium text-white transition hover:bg-pine-deep"
               href="/teachers/join"
             >
               {copy.actionLabel}
@@ -117,12 +117,12 @@ export default async function TeacherProfilePage({
 
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-5 py-10 sm:px-8">
-      <header className="border-b border-gray-200 pb-6">
-        <p className="text-sm font-medium text-sky-700">Teacher profile</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-gray-950">
+      <header className="border-b border-ink/15 pb-6">
+        <p className="text-sm font-medium text-clay">Teacher profile</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
           個人資料
         </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-600">
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
           管理團主與平台看到的老師個人資料。
         </p>
       </header>
@@ -132,17 +132,17 @@ export default async function TeacherProfilePage({
           aria-live="polite"
           className={
             feedback.kind === "success"
-              ? "rounded border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
-              : "rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
+              ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
+              : "rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
           }
         >
           {feedback.message}
         </section>
       ) : null}
 
-      <section className="rounded border border-gray-200 bg-white px-4 py-3 text-sm">
-        <p className="font-medium text-gray-950">平均評分</p>
-        <p className="mt-1 text-gray-700">
+      <section className="rounded-xl border border-ink/15 bg-white px-4 py-3 text-sm">
+        <p className="font-medium text-ink">平均評分</p>
+        <p className="mt-1 text-ink-soft">
           {ratingSummary ? formatTeacherRatingSummary(ratingSummary) : "尚無評價"}
         </p>
       </section>
@@ -150,7 +150,7 @@ export default async function TeacherProfilePage({
       {!isApproved ? (
         <section
           aria-live="polite"
-          className="rounded border border-gray-200 bg-gray-50 px-4 py-3 text-sm leading-6 text-gray-700"
+          className="rounded-xl border border-ink/15 bg-cream px-4 py-3 text-sm leading-6 text-ink-soft"
         >
           帳號目前暫停中，暫時無法編輯個人資料，但你仍然可以查看既有資料。
         </section>
@@ -159,15 +159,15 @@ export default async function TeacherProfilePage({
       {isApproved ? (
         <form
           action={updateTeacherProfileAction}
-          className="grid gap-6 rounded border border-gray-200 bg-white p-6"
+          className="grid gap-6 rounded-2xl border border-ink/15 bg-white p-6"
         >
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="text-sm font-medium text-gray-950" htmlFor="displayName">
+              <label className="text-sm font-medium text-ink" htmlFor="displayName">
                 {fieldLabels.displayName}
               </label>
               <input
-                className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                 defaultValue={profile.displayName ?? ""}
                 id="displayName"
                 name="displayName"
@@ -175,11 +175,11 @@ export default async function TeacherProfilePage({
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-950" htmlFor="experienceYears">
+              <label className="text-sm font-medium text-ink" htmlFor="experienceYears">
                 {fieldLabels.experienceYears}
               </label>
               <input
-                className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                 defaultValue={
                   typeof profile.experienceYears === "number" ? profile.experienceYears : ""
                 }
@@ -191,11 +191,11 @@ export default async function TeacherProfilePage({
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-950" htmlFor="profilePhotoUrl">
+              <label className="text-sm font-medium text-ink" htmlFor="profilePhotoUrl">
                 {fieldLabels.profilePhotoUrl}（選填）
               </label>
               <input
-                className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                 defaultValue={profile.profilePhotoUrl ?? ""}
                 id="profilePhotoUrl"
                 name="profilePhotoUrl"
@@ -203,11 +203,11 @@ export default async function TeacherProfilePage({
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-950" htmlFor="priceRange">
+              <label className="text-sm font-medium text-ink" htmlFor="priceRange">
                 {fieldLabels.priceRange}（選填）
               </label>
               <input
-                className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                 defaultValue={profile.priceRange ?? ""}
                 id="priceRange"
                 name="priceRange"
@@ -217,11 +217,11 @@ export default async function TeacherProfilePage({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="text-sm font-medium text-gray-950" htmlFor="bio">
+              <label className="text-sm font-medium text-ink" htmlFor="bio">
                 {fieldLabels.bio}
               </label>
               <textarea
-                className="mt-2 min-h-28 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                className="mt-2 min-h-28 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                 defaultValue={profile.bio ?? ""}
                 id="bio"
                 name="bio"
@@ -229,11 +229,11 @@ export default async function TeacherProfilePage({
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-950" htmlFor="teachingStyle">
+              <label className="text-sm font-medium text-ink" htmlFor="teachingStyle">
                 {fieldLabels.teachingStyle}
               </label>
               <textarea
-                className="mt-2 min-h-28 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                className="mt-2 min-h-28 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                 defaultValue={profile.teachingStyle ?? ""}
                 id="teachingStyle"
                 name="teachingStyle"
@@ -241,11 +241,11 @@ export default async function TeacherProfilePage({
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-950" htmlFor="certifications">
+              <label className="text-sm font-medium text-ink" htmlFor="certifications">
                 {fieldLabels.certifications}（選填，可用逗號或換行分隔）
               </label>
               <textarea
-                className="mt-2 min-h-28 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                className="mt-2 min-h-28 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                 defaultValue={toListText(profile.certifications)}
                 id="certifications"
                 name="certifications"
@@ -255,11 +255,11 @@ export default async function TeacherProfilePage({
 
           <div className="grid gap-4 sm:grid-cols-3">
             <div>
-              <label className="text-sm font-medium text-gray-950" htmlFor="specialties">
+              <label className="text-sm font-medium text-ink" htmlFor="specialties">
                 {fieldLabels.specialties}（可用逗號或換行分隔）
               </label>
               <textarea
-                className="mt-2 min-h-24 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                className="mt-2 min-h-24 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                 defaultValue={toListText(profile.specialties)}
                 id="specialties"
                 name="specialties"
@@ -267,11 +267,11 @@ export default async function TeacherProfilePage({
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-950" htmlFor="serviceAreas">
+              <label className="text-sm font-medium text-ink" htmlFor="serviceAreas">
                 {fieldLabels.serviceAreas}（可用逗號或換行分隔）
               </label>
               <textarea
-                className="mt-2 min-h-24 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                className="mt-2 min-h-24 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                 defaultValue={toListText(profile.serviceAreas)}
                 id="serviceAreas"
                 name="serviceAreas"
@@ -279,11 +279,11 @@ export default async function TeacherProfilePage({
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-950" htmlFor="teachingFormats">
+              <label className="text-sm font-medium text-ink" htmlFor="teachingFormats">
                 {fieldLabels.teachingFormats}（可用逗號或換行分隔）
               </label>
               <textarea
-                className="mt-2 min-h-24 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                className="mt-2 min-h-24 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                 defaultValue={toListText(profile.teachingFormats)}
                 id="teachingFormats"
                 name="teachingFormats"
@@ -293,14 +293,14 @@ export default async function TeacherProfilePage({
           </div>
 
           <button
-            className="w-full rounded bg-sky-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-800 sm:w-auto"
+            className="w-full rounded-full bg-pine px-4 py-2 text-sm font-medium text-white transition hover:bg-pine-deep sm:w-auto"
             type="submit"
           >
             儲存變更
           </button>
         </form>
       ) : (
-        <section className="grid gap-4 rounded border border-gray-200 bg-white p-6 text-sm leading-6">
+        <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6 text-sm leading-6">
           <div className="grid gap-4 sm:grid-cols-2">
             <ReadOnlyItem label={fieldLabels.displayName} value={profile.displayName ?? "尚未填寫"} />
             <ReadOnlyItem
@@ -327,8 +327,8 @@ export default async function TeacherProfilePage({
 function ReadOnlyItem({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <p className="font-medium text-gray-950">{label}</p>
-      <p className="mt-1 whitespace-pre-wrap break-words text-gray-600">{value}</p>
+      <p className="font-medium text-ink">{label}</p>
+      <p className="mt-1 whitespace-pre-wrap break-words text-ink-soft">{value}</p>
     </div>
   );
 }

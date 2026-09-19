@@ -463,13 +463,13 @@ export function TeacherApplicationForm() {
           </p>
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
             <a
-              className="rounded bg-pine px-5 py-3 text-center text-sm font-medium text-white"
+              className="rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white"
               href={signInHref}
             >
               登入並準備加入
             </a>
             <Link
-              className="rounded border border-ink/20 px-5 py-3 text-center text-sm font-medium text-ink"
+              className="rounded-full border border-ink/20 px-5 py-3 text-center text-sm font-medium text-ink"
               href="/"
             >
               回到首頁
@@ -484,7 +484,7 @@ export function TeacherApplicationForm() {
           </p>
         </div>
 
-        <div className="rounded border border-ink/10 bg-clay-tint/60 p-5">
+        <div className="rounded-2xl border border-ink/10 bg-clay-tint/60 p-5">
           <h2 className="text-lg font-medium text-ink">
             我們尋找的不是可被比較的商品，而是能共同照顧練習品質的合作夥伴。
           </h2>
@@ -497,7 +497,7 @@ export function TeacherApplicationForm() {
       <section className="grid gap-4 md:grid-cols-3">
         {collaborationPrinciples.map((principle) => (
           <article
-            className="rounded border border-ink/12 bg-white p-5"
+            className="rounded-2xl border border-ink/12 bg-white p-5"
             key={principle}
           >
             <p className="text-sm leading-6 text-ink-soft">{principle}</p>
@@ -542,7 +542,7 @@ export function TeacherApplicationForm() {
         </div>
 
         {isRejectedProfile ? (
-          <div className="min-w-0 rounded border border-clay/25 bg-clay-tint p-4">
+          <div className="min-w-0 rounded-2xl border border-clay/25 bg-clay-tint p-4">
             <h3 className="text-sm font-medium text-clay-deep">
               平台的退回說明
             </h3>
@@ -584,7 +584,7 @@ export function TeacherApplicationForm() {
 
                   return (
                     <div
-                      className="rounded border border-ink/12 bg-white p-4"
+                      className="rounded-2xl border border-ink/12 bg-white p-4"
                       key={field.name}
                     >
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -611,7 +611,7 @@ export function TeacherApplicationForm() {
                           aria-describedby={
                             showReminder ? `${inputId}-reminder` : undefined
                           }
-                          className="mt-3 min-h-28 w-full rounded border border-ink/20 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15 disabled:cursor-not-allowed disabled:bg-[#efece4] disabled:text-ink-soft"
+                          className="mt-3 min-h-28 w-full rounded-xl border border-ink/20 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15 disabled:cursor-not-allowed disabled:bg-[#efece4] disabled:text-ink-soft"
                           disabled={mutationBlockedStatus !== null}
                           id={inputId}
                           onChange={(event) =>
@@ -625,7 +625,7 @@ export function TeacherApplicationForm() {
                           aria-describedby={
                             showReminder ? `${inputId}-reminder` : undefined
                           }
-                          className="mt-3 w-full rounded border border-ink/20 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15 disabled:cursor-not-allowed disabled:bg-[#efece4] disabled:text-ink-soft"
+                          className="mt-3 w-full rounded-xl border border-ink/20 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15 disabled:cursor-not-allowed disabled:bg-[#efece4] disabled:text-ink-soft"
                           disabled={mutationBlockedStatus !== null}
                           id={inputId}
                           inputMode={field.inputMode}
@@ -647,7 +647,7 @@ export function TeacherApplicationForm() {
 
                       {showReminder ? (
                         <p
-                          className="mt-2 rounded border border-clay/25 bg-clay-tint px-3 py-2 text-sm leading-6 text-clay"
+                          className="mt-2 rounded-xl border border-clay/25 bg-clay-tint px-3 py-2 text-sm leading-6 text-clay"
                           id={`${inputId}-reminder`}
                         >
                           {getReadinessMessage(field.name)}
@@ -660,7 +660,7 @@ export function TeacherApplicationForm() {
             </section>
           ))}
 
-          <div className="grid gap-4 rounded border border-ink/12 bg-white p-5 md:grid-cols-[1fr_auto] md:items-start">
+          <div className="grid gap-4 rounded-2xl border border-ink/12 bg-white p-5 md:grid-cols-[1fr_auto] md:items-start">
             <div>
               <h3 className="text-lg font-medium text-ink">準備狀態</h3>
               <p className="mt-2 text-sm leading-6 text-ink-soft">
@@ -672,19 +672,19 @@ export function TeacherApplicationForm() {
               </p>
               <div aria-live="polite">
                 {mutationBlockedCopy ? (
-                  <p className="mt-4 rounded border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep">
+                  <p className="mt-4 rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep">
                     {mutationBlockedCopy.notice}
                   </p>
                 ) : null}
 
                 {hasSubmittedApplication && !mutationBlockedCopy ? (
-                  <p className="mt-4 rounded border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900">
+                  <p className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900">
                     申請已送審，目前暫時不需要再儲存草稿。接下來請等待平台確認。
                   </p>
                 ) : null}
 
                 {isSavingDraft ? (
-                  <p className="mt-4 rounded border border-pine/15 bg-pine-tint px-4 py-3 text-sm leading-6 text-pine-deep">
+                  <p className="mt-4 rounded-xl border border-pine/15 bg-pine-tint px-4 py-3 text-sm leading-6 text-pine-deep">
                     正在儲存草稿...
                   </p>
                 ) : null}
@@ -693,8 +693,8 @@ export function TeacherApplicationForm() {
                   <div
                     className={
                       draftSaveFeedback.kind === "success"
-                        ? "mt-4 rounded border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
-                        : "mt-4 rounded border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay"
+                        ? "mt-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
+                        : "mt-4 rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay"
                     }
                   >
                     <p>{draftSaveFeedback.message}</p>
@@ -727,7 +727,7 @@ export function TeacherApplicationForm() {
                 ) : null}
 
                 {isSubmitting ? (
-                  <p className="mt-4 rounded border border-pine/15 bg-pine-tint px-4 py-3 text-sm leading-6 text-pine-deep">
+                  <p className="mt-4 rounded-xl border border-pine/15 bg-pine-tint px-4 py-3 text-sm leading-6 text-pine-deep">
                     正在送出審核...
                   </p>
                 ) : null}
@@ -736,8 +736,8 @@ export function TeacherApplicationForm() {
                   <div
                     className={
                       submitFeedback.kind === "success"
-                        ? "mt-4 rounded border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
-                        : "mt-4 rounded border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay"
+                        ? "mt-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
+                        : "mt-4 rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay"
                     }
                   >
                     <p>{submitFeedback.message}</p>
@@ -762,7 +762,7 @@ export function TeacherApplicationForm() {
                 ) : null}
               </div>
               {hasCheckedReadiness ? (
-                <div className="mt-4 rounded border border-pine/15 bg-pine-tint px-4 py-3 text-sm leading-6 text-ink-soft">
+                <div className="mt-4 rounded-xl border border-pine/15 bg-pine-tint px-4 py-3 text-sm leading-6 text-ink-soft">
                   {isReadyForFutureSubmit ? (
                     <p>
                       送審必填欄位都已有內容。後續正式流程仍會由 server-side validation 再檢查一次，並提供清楚的送審確認。
@@ -788,7 +788,7 @@ export function TeacherApplicationForm() {
               ) : null}
 
               {isConfirmingSubmit ? (
-                <div className="mt-4 rounded border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep">
+                <div className="mt-4 rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep">
                   <p className="font-medium text-ink">確認送出審核</p>
                   <p className="mt-2">
                     {isRejectedProfile
@@ -797,7 +797,7 @@ export function TeacherApplicationForm() {
                   </p>
                   <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                     <button
-                      className="rounded bg-pine px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-ink/15 disabled:text-ink-soft"
+                      className="rounded-full bg-pine px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-ink/15 disabled:text-ink-soft"
                       disabled={isSubmitting}
                       onClick={handleSubmitApplication}
                       type="button"
@@ -805,7 +805,7 @@ export function TeacherApplicationForm() {
                       {isSubmitting ? "正在送出..." : "確認送出審核"}
                     </button>
                     <button
-                      className="rounded border border-clay/40 bg-white px-4 py-2 text-sm font-medium text-ink disabled:cursor-not-allowed disabled:text-ink-faint"
+                      className="rounded-full border border-clay/40 bg-white px-4 py-2 text-sm font-medium text-ink disabled:cursor-not-allowed disabled:text-ink-faint"
                       disabled={isSubmitting}
                       onClick={handleCancelSubmitConfirmation}
                       type="button"
@@ -819,7 +819,7 @@ export function TeacherApplicationForm() {
 
             <div className="flex w-full flex-col gap-3 md:w-auto">
               <button
-                className="w-full rounded bg-pine px-5 py-3 text-center text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-ink/15 disabled:text-ink-soft md:w-auto"
+                className="w-full rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-ink/15 disabled:text-ink-soft md:w-auto"
                 disabled={isDraftSaveDisabled}
                 onClick={handleSaveDraft}
                 type="button"
@@ -837,13 +837,13 @@ export function TeacherApplicationForm() {
                     : "儲存草稿"}
               </button>
               <button
-                className="w-full rounded border border-ink/20 px-5 py-3 text-center text-sm font-medium text-ink md:w-auto"
+                className="w-full rounded-xl border border-ink/20 px-5 py-3 text-center text-sm font-medium text-ink md:w-auto"
                 type="submit"
               >
                 檢查準備狀態
               </button>
               <button
-                className="w-full rounded border border-pine bg-pine px-5 py-3 text-center text-sm font-medium text-white disabled:cursor-not-allowed disabled:border-ink/20 disabled:bg-ink/15 disabled:text-ink-soft md:w-auto"
+                className="w-full rounded-full border border-pine bg-pine px-5 py-3 text-center text-sm font-medium text-white disabled:cursor-not-allowed disabled:border-ink/20 disabled:bg-ink/15 disabled:text-ink-soft md:w-auto"
                 disabled={isSubmitDisabled}
                 onClick={handleOpenSubmitConfirmation}
                 type="button"
@@ -863,7 +863,7 @@ export function TeacherApplicationForm() {
         </form>
       </section>
 
-      <section className="grid gap-6 rounded border border-ink/12 p-5 md:grid-cols-[0.8fr_1.2fr] md:p-6">
+      <section className="grid gap-6 rounded-2xl border border-ink/12 p-5 md:grid-cols-[0.8fr_1.2fr] md:p-6">
         <div>
           <p className="text-sm font-medium text-clay">Next steps</p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight text-ink">

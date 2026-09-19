@@ -75,9 +75,9 @@ export default async function MemberClassSessionPage({
 
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-5 py-10 sm:px-8">
-      <header className="border-b border-gray-200 pb-6">
-        <p className="text-sm font-medium text-sky-700">Class</p>
-        <h1 className="mt-2 min-w-0 break-words text-2xl font-semibold tracking-tight text-gray-950">
+      <header className="border-b border-ink/15 pb-6">
+        <p className="text-sm font-medium text-clay">Class</p>
+        <h1 className="mt-2 min-w-0 break-words text-2xl font-semibold tracking-tight text-ink">
           {classSession.title}
         </h1>
       </header>
@@ -87,49 +87,49 @@ export default async function MemberClassSessionPage({
           aria-live="polite"
           className={
             feedback.kind === "success"
-              ? "rounded border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
-              : "rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
+              ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
+              : "rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
           }
         >
           {feedback.message}
         </section>
       ) : null}
 
-      <section className="grid gap-4 rounded border border-gray-200 bg-white p-6">
-        <dl className="grid gap-3 text-sm text-gray-600 sm:grid-cols-2">
+      <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
+        <dl className="grid gap-3 text-sm text-ink-soft sm:grid-cols-2">
           <div className="min-w-0">
-            <dt className="font-medium text-gray-950">團體</dt>
+            <dt className="font-medium text-ink">團體</dt>
             <dd className="mt-1 break-words">{classSession.organization?.name ?? "老師自己開的課"}</dd>
           </div>
           <div className="min-w-0">
-            <dt className="font-medium text-gray-950">授課老師</dt>
+            <dt className="font-medium text-ink">授課老師</dt>
             <dd className="mt-1 break-words">
               {classSession.teacherProfile.displayName ?? "老師"}
             </dd>
           </div>
           {classSession.serviceType ? (
             <div className="min-w-0">
-              <dt className="font-medium text-gray-950">課程類型</dt>
+              <dt className="font-medium text-ink">課程類型</dt>
               <dd className="mt-1 break-words">{classSession.serviceType}</dd>
             </div>
           ) : null}
           <div className="min-w-0">
-            <dt className="font-medium text-gray-950">開始時間</dt>
+            <dt className="font-medium text-ink">開始時間</dt>
             <dd className="mt-1">{formatTaipeiDatetime(classSession.startAt)}</dd>
           </div>
           <div className="min-w-0">
-            <dt className="font-medium text-gray-950">結束時間</dt>
+            <dt className="font-medium text-ink">結束時間</dt>
             <dd className="mt-1">{formatTaipeiDatetime(classSession.endAt)}</dd>
           </div>
           <div className="min-w-0">
-            <dt className="font-medium text-gray-950">地點</dt>
+            <dt className="font-medium text-ink">地點</dt>
             <dd className="mt-1 break-words">{classSession.location}</dd>
           </div>
         </dl>
         {classSession.description ? (
           <div className="min-w-0">
-            <p className="font-medium text-gray-950">課程說明</p>
-            <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-gray-600">
+            <p className="font-medium text-ink">課程說明</p>
+            <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-ink-soft">
               {classSession.description}
             </p>
           </div>
@@ -137,20 +137,20 @@ export default async function MemberClassSessionPage({
       </section>
 
       {classSession.ownEnrollment ? (
-        <section className="grid gap-3 rounded border border-gray-200 bg-white p-6">
-          <span className="w-fit rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-800">
+        <section className="grid gap-3 rounded-2xl border border-ink/15 bg-white p-6">
+          <span className="w-fit rounded-full bg-pine-tint px-3 py-1 text-xs font-medium text-pine">
             {ownEnrollmentStatusLabels[classSession.ownEnrollment.status] ??
               classSession.ownEnrollment.status}
           </span>
           {classSession.ownEnrollment.status === "pending" ? (
-            <p className="text-sm leading-6 text-gray-600">
+            <p className="text-sm leading-6 text-ink-soft">
               你的報名已經送出，等待老師確認後才算成立。
             </p>
           ) : null}
           {["confirmed", "pending"].includes(classSession.ownEnrollment.status) ? (
-            <p className="text-sm leading-6 text-gray-600">
+            <p className="text-sm leading-6 text-ink-soft">
               如需取消報名，請前往
-              <Link className="text-sky-700 underline" href="/member/enrollments">
+              <Link className="text-clay underline" href="/member/enrollments">
                 我的報名列表
               </Link>
               。
@@ -158,36 +158,36 @@ export default async function MemberClassSessionPage({
           ) : null}
         </section>
       ) : hasStarted ? (
-        <section className="rounded border border-gray-200 bg-white p-6">
-          <p className="text-sm leading-6 text-gray-600">
+        <section className="rounded-2xl border border-ink/15 bg-white p-6">
+          <p className="text-sm leading-6 text-ink-soft">
             這堂課程目前無法報名，可能已經開始。
           </p>
         </section>
       ) : (
-        <section className="grid gap-5 rounded border border-gray-200 bg-white p-6">
+        <section className="grid gap-5 rounded-2xl border border-ink/15 bg-white p-6">
           <div>
-            <h2 className="text-lg font-medium text-gray-950">報名這堂課程</h2>
+            <h2 className="text-lg font-medium text-ink">報名這堂課程</h2>
           </div>
 
           <form action={enrollAction} className="grid gap-4">
             <input name="classSessionId" type="hidden" value={classSessionId} />
 
             <div>
-              <label className="text-sm font-medium text-gray-950" htmlFor="notes">
+              <label className="text-sm font-medium text-ink" htmlFor="notes">
                 備註（選填）
               </label>
-              <p className="mt-1 text-xs leading-5 text-gray-600">
+              <p className="mt-1 text-xs leading-5 text-ink-soft">
                 例如身體狀況提醒，讓老師與團主更了解你的需求。
               </p>
               <textarea
-                className="mt-2 min-h-20 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                className="mt-2 min-h-20 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                 id="notes"
                 maxLength={500}
                 name="notes"
               />
             </div>
 
-            <label className="flex items-start gap-2 text-sm leading-6 text-gray-700">
+            <label className="flex items-start gap-2 text-sm leading-6 text-ink-soft">
               <input
                 className="mt-1 shrink-0"
                 name="basicConsent"
@@ -199,7 +199,7 @@ export default async function MemberClassSessionPage({
             </label>
 
             <button
-              className="w-full rounded bg-gray-950 px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-gray-800 sm:w-auto"
+              className="w-full rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-pine-deep sm:w-auto"
               type="submit"
             >
               確認報名
@@ -227,54 +227,54 @@ function VisitorClassSessionView({
 }) {
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-5 py-10 sm:px-8">
-      <header className="border-b border-gray-200 pb-6">
-        <p className="text-sm font-medium text-sky-700">Class</p>
-        <h1 className="mt-2 min-w-0 break-words text-2xl font-semibold tracking-tight text-gray-950">
+      <header className="border-b border-ink/15 pb-6">
+        <p className="text-sm font-medium text-clay">Class</p>
+        <h1 className="mt-2 min-w-0 break-words text-2xl font-semibold tracking-tight text-ink">
           {classSession.title}
         </h1>
       </header>
 
-      <section className="grid gap-4 rounded border border-gray-200 bg-white p-6">
-        <dl className="grid gap-3 text-sm text-gray-600 sm:grid-cols-2">
+      <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
+        <dl className="grid gap-3 text-sm text-ink-soft sm:grid-cols-2">
           <div className="min-w-0">
-            <dt className="font-medium text-gray-950">授課老師</dt>
+            <dt className="font-medium text-ink">授課老師</dt>
             <dd className="mt-1 break-words">
               {classSession.teacherProfile.displayName ?? "老師"}
             </dd>
           </div>
           {classSession.serviceType ? (
             <div className="min-w-0">
-              <dt className="font-medium text-gray-950">課程類型</dt>
+              <dt className="font-medium text-ink">課程類型</dt>
               <dd className="mt-1 break-words">{classSession.serviceType}</dd>
             </div>
           ) : null}
           <div className="min-w-0">
-            <dt className="font-medium text-gray-950">開始時間</dt>
+            <dt className="font-medium text-ink">開始時間</dt>
             <dd className="mt-1">{formatTaipeiDatetime(classSession.startAt)}</dd>
           </div>
           <div className="min-w-0">
-            <dt className="font-medium text-gray-950">結束時間</dt>
+            <dt className="font-medium text-ink">結束時間</dt>
             <dd className="mt-1">{formatTaipeiDatetime(classSession.endAt)}</dd>
           </div>
           <div className="min-w-0">
-            <dt className="font-medium text-gray-950">地點</dt>
+            <dt className="font-medium text-ink">地點</dt>
             <dd className="mt-1 break-words">{classSession.location}</dd>
           </div>
         </dl>
         {classSession.description ? (
           <div className="min-w-0">
-            <p className="font-medium text-gray-950">課程說明</p>
-            <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-gray-600">
+            <p className="font-medium text-ink">課程說明</p>
+            <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-ink-soft">
               {classSession.description}
             </p>
           </div>
         ) : null}
       </section>
 
-      <section className="grid gap-3 rounded border border-gray-200 bg-white p-6">
-        <p className="text-sm leading-6 text-gray-600">登入後即可直接報名這堂課程。</p>
+      <section className="grid gap-3 rounded-2xl border border-ink/15 bg-white p-6">
+        <p className="text-sm leading-6 text-ink-soft">登入後即可直接報名這堂課程。</p>
         <Link
-          className="w-fit rounded bg-gray-950 px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-gray-800"
+          className="w-fit rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-pine-deep"
           href={`/sign-in?callbackUrl=${encodeURIComponent(`/classes/${classSessionId}`)}`}
         >
           登入後報名

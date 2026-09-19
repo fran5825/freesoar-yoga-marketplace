@@ -25,21 +25,21 @@ export default async function OrganizerDemandsPage() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-8 px-5 py-10 sm:px-8 sm:py-14">
-      <header className="grid gap-3 border-b border-gray-200 pb-6 md:grid-cols-[1fr_auto] md:items-end">
+      <header className="grid gap-3 border-b border-ink/15 pb-6 md:grid-cols-[1fr_auto] md:items-end">
         <div className="min-w-0">
           <p className="text-sm font-medium text-amber-700">
             Organizer demands
           </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-gray-950">
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
             我的需求列表
           </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-600">
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
             這裡列出你提出過的所有團課需求與目前狀態。
           </p>
         </div>
         {organizerContext ? (
           <Link
-            className="inline-flex justify-center rounded bg-gray-950 px-4 py-2 text-center text-sm font-medium text-white transition hover:bg-gray-800"
+            className="inline-flex justify-center rounded-full bg-pine px-4 py-2 text-center text-sm font-medium text-white transition hover:bg-pine-deep"
             href="/organizer/demands/new"
           >
             建立新的需求
@@ -48,16 +48,16 @@ export default async function OrganizerDemandsPage() {
       </header>
 
       {!organizerContext ? (
-        <section className="grid gap-4 rounded border border-gray-200 bg-white p-6">
-          <h2 className="text-xl font-semibold text-gray-950">
+        <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
+          <h2 className="text-xl font-semibold text-ink">
             請先建立團主資料
           </h2>
-          <p className="text-sm leading-6 text-gray-600">
+          <p className="text-sm leading-6 text-ink-soft">
             建立團主資料後，你就可以開始提出並管理團課需求。
           </p>
           <div>
             <Link
-              className="inline-flex rounded bg-gray-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-gray-800"
+              className="inline-flex rounded-full bg-pine px-5 py-3 text-sm font-medium text-white transition hover:bg-pine-deep"
               href="/organizer/profile"
             >
               前往建立團主資料
@@ -65,16 +65,16 @@ export default async function OrganizerDemandsPage() {
           </div>
         </section>
       ) : demandRequests.length === 0 ? (
-        <section className="grid gap-4 rounded border border-gray-200 bg-white p-6">
-          <h2 className="text-xl font-semibold text-gray-950">
+        <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
+          <h2 className="text-xl font-semibold text-ink">
             尚未提出任何需求
           </h2>
-          <p className="text-sm leading-6 text-gray-600">
+          <p className="text-sm leading-6 text-ink-soft">
             你可以先建立一筆需求草稿，準備好後再送出審核。
           </p>
           <div>
             <Link
-              className="inline-flex rounded bg-gray-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-gray-800"
+              className="inline-flex rounded-full bg-pine px-5 py-3 text-sm font-medium text-white transition hover:bg-pine-deep"
               href="/organizer/demands/new"
             >
               建立新的需求
@@ -85,11 +85,11 @@ export default async function OrganizerDemandsPage() {
         <section className="grid gap-4">
           {demandRequests.map((demandRequest) => (
             <article
-              className="grid gap-3 rounded border border-gray-200 bg-white p-5"
+              className="grid gap-3 rounded-2xl border border-ink/15 bg-white p-5"
               key={demandRequest.id}
             >
               <div className="flex flex-wrap items-center gap-3">
-                <h2 className="min-w-0 break-words text-lg font-semibold text-gray-950">
+                <h2 className="min-w-0 break-words text-lg font-semibold text-ink">
                   {demandRequest.title ?? "尚未命名的需求"}
                 </h2>
                 <span
@@ -98,19 +98,19 @@ export default async function OrganizerDemandsPage() {
                   {demandRequestStatusLabels[demandRequest.status]}
                 </span>
               </div>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-ink-faint">
                 最後更新：{formatDemandRequestDateTime(demandRequest.updatedAt)}
               </p>
               <div className="flex flex-col gap-3 sm:flex-row">
                 <Link
-                  className="rounded border border-gray-300 px-4 py-2 text-center text-sm font-medium text-gray-900 transition hover:bg-gray-50"
+                  className="rounded-full border border-ink/25 px-4 py-2 text-center text-sm font-medium text-ink transition hover:bg-cream"
                   href={`/organizer/demands/${demandRequest.id}`}
                 >
                   查看詳情
                 </Link>
                 {demandRequest.status === "draft" ? (
                   <Link
-                    className="rounded bg-gray-950 px-4 py-2 text-center text-sm font-medium text-white transition hover:bg-gray-800"
+                    className="rounded-full bg-pine px-4 py-2 text-center text-sm font-medium text-white transition hover:bg-pine-deep"
                     href={`/organizer/demands/${demandRequest.id}/edit`}
                   >
                     繼續編輯草稿

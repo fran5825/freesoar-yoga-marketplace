@@ -43,9 +43,9 @@ export default async function MemberEnrollmentsPage({
 
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-5 py-10 sm:px-8">
-      <header className="border-b border-gray-200 pb-6">
-        <p className="text-sm font-medium text-sky-700">Member</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-gray-950">
+      <header className="border-b border-ink/15 pb-6">
+        <p className="text-sm font-medium text-clay">Member</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
           我的報名
         </h1>
       </header>
@@ -55,8 +55,8 @@ export default async function MemberEnrollmentsPage({
           aria-live="polite"
           className={
             feedback.kind === "success"
-              ? "rounded border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
-              : "rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
+              ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
+              : "rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
           }
         >
           {feedback.message}
@@ -64,9 +64,9 @@ export default async function MemberEnrollmentsPage({
       ) : null}
 
       {enrollments.length === 0 ? (
-        <section className="rounded border border-gray-200 bg-white p-6">
-          <h2 className="text-lg font-medium text-gray-950">目前沒有任何報名</h2>
-          <p className="mt-2 text-sm leading-6 text-gray-600">
+        <section className="rounded-2xl border border-ink/15 bg-white p-6">
+          <h2 className="text-lg font-medium text-ink">目前沒有任何報名</h2>
+          <p className="mt-2 text-sm leading-6 text-ink-soft">
             透過團主分享的課程連結報名後，會顯示在這裡。
           </p>
         </section>
@@ -74,25 +74,25 @@ export default async function MemberEnrollmentsPage({
         <section className="grid gap-4">
           {enrollments.map((enrollment) => (
             <article
-              className="grid gap-3 rounded border border-gray-200 bg-white p-5"
+              className="grid gap-3 rounded-2xl border border-ink/15 bg-white p-5"
               key={enrollment.id}
             >
               <div className="flex flex-wrap items-center gap-3">
-                <h2 className="min-w-0 break-words text-lg font-medium text-gray-950">
+                <h2 className="min-w-0 break-words text-lg font-medium text-ink">
                   {enrollment.classSession.title}
                 </h2>
-                <span className="w-fit rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-800">
+                <span className="w-fit rounded-full bg-pine-tint px-3 py-1 text-xs font-medium text-pine">
                   {enrollmentStatusLabels[enrollment.status] ?? enrollment.status}
                 </span>
               </div>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-ink-soft">
                 {formatTaipeiDatetime(enrollment.classSession.startAt)} 開始・
                 {enrollment.classSession.location}
               </p>
 
               {["confirmed", "pending"].includes(enrollment.status) ? (
-                <details className="rounded border border-amber-200 bg-amber-50/60">
-                  <summary className="cursor-pointer list-none rounded px-4 py-2 text-sm font-medium text-amber-800 marker:hidden">
+                <details className="rounded-xl border border-amber-200 bg-amber-50/60">
+                  <summary className="cursor-pointer list-none rounded-full px-4 py-2 text-sm font-medium text-amber-800 marker:hidden">
                     取消報名…
                   </summary>
                   <form
@@ -100,7 +100,7 @@ export default async function MemberEnrollmentsPage({
                     className="grid gap-3 border-t border-amber-100 p-4"
                   >
                     <input name="enrollmentId" type="hidden" value={enrollment.id} />
-                    <label className="flex items-start gap-2 text-sm leading-6 text-gray-700">
+                    <label className="flex items-start gap-2 text-sm leading-6 text-ink-soft">
                       <input
                         className="mt-1 shrink-0"
                         name="confirmCancel"
@@ -111,7 +111,7 @@ export default async function MemberEnrollmentsPage({
                       我確認要取消這則報名。
                     </label>
                     <button
-                      className="w-full rounded bg-amber-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-800 sm:w-auto"
+                      className="w-full rounded-full bg-amber-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-800 sm:w-auto"
                       type="submit"
                     >
                       確認取消
@@ -123,7 +123,7 @@ export default async function MemberEnrollmentsPage({
               {enrollment.status === "confirmed" &&
               enrollment.classSession.status === "completed" ? (
                 enrollment.classSession.reviews.length > 0 ? (
-                  <div className="rounded border border-emerald-100 bg-emerald-50 p-4">
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
                     <p className="text-sm font-medium text-emerald-900">
                       你的評價：{"★".repeat(enrollment.classSession.reviews[0].rating)}
                     </p>
@@ -134,13 +134,13 @@ export default async function MemberEnrollmentsPage({
                     ) : null}
                   </div>
                 ) : (
-                  <details className="rounded border border-sky-200 bg-sky-50/60">
-                    <summary className="cursor-pointer list-none rounded px-4 py-2 text-sm font-medium text-sky-800 marker:hidden">
+                  <details className="rounded-xl border border-pine/25 bg-pine-tint/60">
+                    <summary className="cursor-pointer list-none rounded-full px-4 py-2 text-sm font-medium text-pine marker:hidden">
                       留下評價…
                     </summary>
                     <form
                       action={submitReviewAction}
-                      className="grid gap-3 border-t border-sky-100 p-4"
+                      className="grid gap-3 border-t border-pine/15 p-4"
                     >
                       <input
                         name="classSessionId"
@@ -149,13 +149,13 @@ export default async function MemberEnrollmentsPage({
                       />
                       <div>
                         <label
-                          className="text-sm font-medium text-gray-950"
+                          className="text-sm font-medium text-ink"
                           htmlFor={`rating-${enrollment.id}`}
                         >
                           星等
                         </label>
                         <select
-                          className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                          className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                           defaultValue=""
                           id={`rating-${enrollment.id}`}
                           name="rating"
@@ -173,13 +173,13 @@ export default async function MemberEnrollmentsPage({
                       </div>
                       <div>
                         <label
-                          className="text-sm font-medium text-gray-950"
+                          className="text-sm font-medium text-ink"
                           htmlFor={`comment-${enrollment.id}`}
                         >
                           評語（選填）
                         </label>
                         <textarea
-                          className="mt-2 min-h-20 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                          className="mt-2 min-h-20 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
                           id={`comment-${enrollment.id}`}
                           maxLength={500}
                           name="comment"
@@ -187,7 +187,7 @@ export default async function MemberEnrollmentsPage({
                         />
                       </div>
                       <button
-                        className="w-full rounded bg-sky-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-800 sm:w-auto"
+                        className="w-full rounded-full bg-pine px-4 py-2 text-sm font-medium text-white transition hover:bg-pine-deep sm:w-auto"
                         type="submit"
                       >
                         送出評價

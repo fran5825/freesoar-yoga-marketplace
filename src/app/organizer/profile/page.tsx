@@ -14,7 +14,7 @@ import {
 } from "./actions";
 
 const inputClassName =
-  "mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100";
+  "mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15";
 
 type OrganizerProfilePageProps = {
   searchParams?: Promise<{
@@ -50,14 +50,14 @@ export default async function OrganizerProfilePage({
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-8 px-5 py-10 sm:px-8 sm:py-14">
-      <header className="border-b border-gray-200 pb-6">
+      <header className="border-b border-ink/15 pb-6">
         <p className="text-sm font-medium text-amber-700">
           Organizer capability
         </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-gray-950">
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
           團主資料
         </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-600">
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
           建立團主資料後，你可以開始整理需求、送出審核，讓平台協助你找到合適的瑜伽老師。
         </p>
       </header>
@@ -67,8 +67,8 @@ export default async function OrganizerProfilePage({
           aria-live="polite"
           className={
             feedback.kind === "success"
-              ? "rounded border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
-              : "rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
+              ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
+              : "rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
           }
         >
           {feedback.message}
@@ -76,12 +76,12 @@ export default async function OrganizerProfilePage({
       ) : null}
 
       {!organizerContext ? (
-        <section className="grid gap-5 rounded border border-gray-200 bg-white p-6">
+        <section className="grid gap-5 rounded-2xl border border-ink/15 bg-white p-6">
           <div>
-            <h2 className="text-xl font-semibold text-gray-950">
+            <h2 className="text-xl font-semibold text-ink">
               建立你的團主資料
             </h2>
-            <p className="mt-2 text-sm leading-6 text-gray-600">
+            <p className="mt-2 text-sm leading-6 text-ink-soft">
               請先建立一組團主顯示名稱與所屬組織，之後即可提出團課需求。每位使用者僅能建立一組團主資料。
             </p>
           </div>
@@ -130,7 +130,7 @@ export default async function OrganizerProfilePage({
             </Field>
 
             <button
-              className="w-full rounded bg-gray-950 px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-gray-800 sm:w-auto"
+              className="w-full rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-pine-deep sm:w-auto"
               type="submit"
             >
               建立團主資料
@@ -139,12 +139,12 @@ export default async function OrganizerProfilePage({
         </section>
       ) : (
         <>
-          <section className="grid gap-4 rounded border border-gray-200 bg-white p-6">
+          <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
             <div>
               <span className="w-fit rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800">
                 已建立
               </span>
-              <h2 className="mt-3 text-xl font-semibold text-gray-950">
+              <h2 className="mt-3 text-xl font-semibold text-ink">
                 {organizerContext.organizerProfile.displayName}
               </h2>
             </div>
@@ -160,7 +160,7 @@ export default async function OrganizerProfilePage({
                 />
               </Field>
               <button
-                className="w-fit rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-900 transition hover:bg-gray-50"
+                className="w-fit rounded-full border border-ink/25 px-4 py-2 text-sm font-medium text-ink transition hover:bg-cream"
                 type="submit"
               >
                 儲存顯示名稱
@@ -169,7 +169,7 @@ export default async function OrganizerProfilePage({
 
             <div>
               <Link
-                className="inline-flex rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-900 transition hover:bg-gray-50"
+                className="inline-flex rounded-full border border-ink/25 px-4 py-2 text-sm font-medium text-ink transition hover:bg-cream"
                 href="/organizer/demands/new"
               >
                 建立新的需求
@@ -177,12 +177,12 @@ export default async function OrganizerProfilePage({
             </div>
           </section>
 
-          <section className="grid gap-5 rounded border border-gray-200 bg-white p-6">
+          <section className="grid gap-5 rounded-2xl border border-ink/15 bg-white p-6">
             <div>
-              <h2 className="text-xl font-semibold text-gray-950">
+              <h2 className="text-xl font-semibold text-ink">
                 組織資訊
               </h2>
-              <p className="mt-2 text-sm leading-6 text-gray-600">
+              <p className="mt-2 text-sm leading-6 text-ink-soft">
                 聯絡資訊會在你送出需求審核時顯示給平台，請確認齊全；送出需求前系統會再次確認這些欄位是否已完整填寫。
               </p>
             </div>
@@ -247,7 +247,7 @@ export default async function OrganizerProfilePage({
               </Field>
 
               <button
-                className="w-full rounded bg-gray-950 px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-gray-800 sm:w-auto"
+                className="w-full rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-pine-deep sm:w-auto"
                 type="submit"
               >
                 儲存組織資訊
@@ -271,9 +271,9 @@ function Field({
 }) {
   return (
     <label className="block text-sm">
-      <span className="font-medium text-gray-950">{label}</span>
+      <span className="font-medium text-ink">{label}</span>
       {hint ? (
-        <p className="mt-1 text-xs leading-5 text-gray-600">{hint}</p>
+        <p className="mt-1 text-xs leading-5 text-ink-soft">{hint}</p>
       ) : null}
       {children}
     </label>

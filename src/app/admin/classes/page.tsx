@@ -33,20 +33,20 @@ export default async function AdminClassesPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-8 px-6 py-10">
-      <header className="border-b border-gray-200 pb-6">
-        <p className="text-sm font-medium text-sky-700">Admin</p>
+      <header className="border-b border-ink/15 pb-6">
+        <p className="text-sm font-medium text-clay">Admin</p>
         <AdminNav />
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-gray-950">
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
           Class sessions
         </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-600">
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
           查看全平台所有課程場次，並在必要時介入取消。
         </p>
       </header>
 
       {classSessions.length === 0 ? (
-        <section className="rounded border border-gray-200 bg-white p-6">
-          <h2 className="text-lg font-medium text-gray-950">目前沒有任何課程</h2>
+        <section className="rounded-2xl border border-ink/15 bg-white p-6">
+          <h2 className="text-lg font-medium text-ink">目前沒有任何課程</h2>
         </section>
       ) : (
         statusGroups.map(({ status, heading }) => {
@@ -54,20 +54,20 @@ export default async function AdminClassesPage() {
 
           return (
             <section className="grid gap-4" key={status}>
-              <h2 className="text-xl font-semibold text-gray-950">
+              <h2 className="text-xl font-semibold text-ink">
                 {heading}（{group.length}）
               </h2>
               {group.length === 0 ? (
-                <p className="text-sm leading-6 text-gray-600">目前沒有這個狀態的課程。</p>
+                <p className="text-sm leading-6 text-ink-soft">目前沒有這個狀態的課程。</p>
               ) : (
                 group.map((classSession) => (
                   <Link
-                    className="grid gap-3 rounded border border-gray-200 bg-white p-5 transition hover:border-sky-300"
+                    className="grid gap-3 rounded-2xl border border-ink/15 bg-white p-5 transition hover:border-pine/40"
                     href={`/admin/classes/${classSession.id}`}
                     key={classSession.id}
                   >
                     <div className="flex flex-wrap items-center gap-3">
-                      <h3 className="min-w-0 break-words text-lg font-medium text-gray-950">
+                      <h3 className="min-w-0 break-words text-lg font-medium text-ink">
                         {classSession.title}
                       </h3>
                       <span
@@ -76,31 +76,31 @@ export default async function AdminClassesPage() {
                         {classSessionStatusLabels[classSession.status]}
                       </span>
                     </div>
-                    <dl className="grid gap-2 text-sm text-gray-600 sm:grid-cols-2">
+                    <dl className="grid gap-2 text-sm text-ink-soft sm:grid-cols-2">
                       <div className="min-w-0">
-                        <dt className="font-medium text-gray-950">團主</dt>
+                        <dt className="font-medium text-ink">團主</dt>
                         <dd className="mt-1 break-words">
                           {classSession.organizerDisplayName ?? "（老師自建課程）"}
                         </dd>
                       </div>
                       <div className="min-w-0">
-                        <dt className="font-medium text-gray-950">授課老師</dt>
+                        <dt className="font-medium text-ink">授課老師</dt>
                         <dd className="mt-1 break-words">
                           {classSession.teacherDisplayName ?? "尚未填寫"}
                         </dd>
                       </div>
                       <div className="min-w-0">
-                        <dt className="font-medium text-gray-950">團體</dt>
+                        <dt className="font-medium text-ink">團體</dt>
                         <dd className="mt-1 break-words">
                           {classSession.organizationName ?? "（老師自建課程）"}
                         </dd>
                       </div>
                       <div className="min-w-0">
-                        <dt className="font-medium text-gray-950">開始時間</dt>
+                        <dt className="font-medium text-ink">開始時間</dt>
                         <dd className="mt-1">{formatTaipeiDatetime(classSession.startAt)}</dd>
                       </div>
                       <div className="min-w-0">
-                        <dt className="font-medium text-gray-950">已報名（confirmed）</dt>
+                        <dt className="font-medium text-ink">已報名（confirmed）</dt>
                         <dd className="mt-1">{classSession.confirmedEnrollmentCount} 人</dd>
                       </div>
                     </dl>

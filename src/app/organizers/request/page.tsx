@@ -45,13 +45,13 @@ export default function OrganizersRequestPage() {
           </p>
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
             <Link
-              className="rounded bg-pine px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-pine-deep"
+              className="rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-pine-deep"
               href="/organizer/profile"
             >
               建立團主資料
             </Link>
             <Link
-              className="rounded border border-ink/20 px-5 py-3 text-center text-sm font-medium text-ink transition hover:bg-[#efece4]"
+              className="rounded-full border border-ink/20 px-5 py-3 text-center text-sm font-medium text-ink transition hover:bg-[#efece4]"
               href="/sign-in"
             >
               登入 / 註冊
@@ -62,7 +62,7 @@ export default function OrganizersRequestPage() {
           </p>
         </div>
 
-        <div className="rounded border border-ink/10 bg-clay-tint/60 p-5">
+        <div className="rounded-2xl border border-ink/10 bg-clay-tint/60 p-5">
           <h2 className="text-lg font-medium text-ink">
             我們重視清楚溝通，而不是低價競標。
           </h2>
@@ -75,7 +75,7 @@ export default function OrganizersRequestPage() {
       <section className="grid gap-4 md:grid-cols-3">
         {howItWorksSteps.map((step, index) => (
           <article
-            className="rounded border border-ink/12 bg-white p-5"
+            className="rounded-2xl border border-ink/12 bg-white p-5"
             key={step.title}
           >
             <span className="flex h-7 w-7 items-center justify-center rounded-full border border-ink/20 text-xs font-medium text-ink-soft">
@@ -91,7 +91,7 @@ export default function OrganizersRequestPage() {
         ))}
       </section>
 
-      <section className="grid gap-6 rounded border border-ink/12 p-5 md:grid-cols-[0.8fr_1.2fr] md:p-6">
+      <section className="grid gap-6 rounded-2xl border border-ink/12 p-5 md:grid-cols-[0.8fr_1.2fr] md:p-6">
         <div>
           <p className="text-sm font-medium text-clay">適合對象</p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight text-ink">

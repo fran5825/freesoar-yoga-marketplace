@@ -354,14 +354,14 @@ export function DemandRequestForm({
         />
 
         <div>
-          <span className="text-sm font-medium text-gray-950">期望時段</span>
-          <p className="mt-1 text-xs leading-5 text-gray-600">
+          <span className="text-sm font-medium text-ink">期望時段</span>
+          <p className="mt-1 text-xs leading-5 text-ink-soft">
             可複選，至少選擇一項。
           </p>
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
             {PREFERRED_TIME_SLOTS.map((slot) => (
               <label
-                className="flex items-center gap-2 rounded border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800"
+                className="flex items-center gap-2 rounded-xl border border-ink/15 bg-white px-3 py-2 text-sm text-ink"
                 key={slot}
               >
                 <input
@@ -418,7 +418,7 @@ export function DemandRequestForm({
         />
       </FieldSet>
 
-      <div className="grid gap-4 rounded border border-gray-200 bg-white p-5">
+      <div className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-5">
         <div aria-live="polite">
           {draftFeedback ? (
             <FeedbackBanner
@@ -438,14 +438,14 @@ export function DemandRequestForm({
         </div>
 
         {isConfirmingSubmit ? (
-          <div className="rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950">
-            <p className="font-medium text-gray-950">確認送出需求</p>
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950">
+            <p className="font-medium text-ink">確認送出需求</p>
             <p className="mt-2">
               送出後，這筆需求會進入平台審核；審核通過前不會公開給老師。請確認內容已準備好，再送出。
             </p>
             <div className="mt-4 flex flex-col gap-3 sm:flex-row">
               <button
-                className="rounded bg-gray-950 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-gray-300"
+                className="rounded-full bg-pine px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-ink/20"
                 disabled={isSubmitting}
                 onClick={handleSubmit}
                 type="button"
@@ -453,7 +453,7 @@ export function DemandRequestForm({
                 {isSubmitting ? "正在送出..." : "確認送出"}
               </button>
               <button
-                className="rounded border border-amber-300 bg-white px-4 py-2 text-sm font-medium text-gray-900 disabled:cursor-not-allowed disabled:text-gray-500"
+                className="rounded-full border border-amber-300 bg-white px-4 py-2 text-sm font-medium text-ink disabled:cursor-not-allowed disabled:text-ink-faint"
                 disabled={isSubmitting}
                 onClick={handleCancelSubmitConfirmation}
                 type="button"
@@ -466,7 +466,7 @@ export function DemandRequestForm({
 
         <div className="flex flex-col gap-3 sm:flex-row">
           <button
-            className="w-full rounded bg-gray-950 px-5 py-3 text-center text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-gray-300 sm:w-auto"
+            className="w-full rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-ink/20 sm:w-auto"
             disabled={isSavingDraft || isSubmitting || isLocked}
             onClick={handleSaveDraft}
             type="button"
@@ -478,7 +478,7 @@ export function DemandRequestForm({
                 : "儲存草稿"}
           </button>
           <button
-            className="w-full rounded border border-sky-700 bg-sky-700 px-5 py-3 text-center text-sm font-medium text-white disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-300 sm:w-auto"
+            className="w-full rounded-full border border-pine bg-pine px-5 py-3 text-center text-sm font-medium text-white disabled:cursor-not-allowed disabled:border-ink/25 disabled:bg-ink/20 sm:w-auto"
             disabled={isSubmitting || isLocked}
             onClick={handleOpenSubmitConfirmation}
             type="button"
@@ -508,8 +508,8 @@ function FeedbackBanner({
     <div
       className={
         kind === "success"
-          ? "rounded border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
-          : "rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
+          ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
+          : "rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
       }
     >
       <p>{message}</p>
@@ -532,8 +532,8 @@ function FieldSet({
   children: ReactNode;
 }) {
   return (
-    <fieldset className="grid gap-4 rounded border border-gray-200 bg-white p-5">
-      <legend className="px-1 text-lg font-medium text-gray-950">
+    <fieldset className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-5">
+      <legend className="px-1 text-lg font-medium text-ink">
         {legend}
       </legend>
       {children}
@@ -564,12 +564,12 @@ function TextField({
 }) {
   return (
     <label className="block text-sm">
-      <span className="font-medium text-gray-950">{label}</span>
+      <span className="font-medium text-ink">{label}</span>
       {hint ? (
-        <p className="mt-1 text-xs leading-5 text-gray-600">{hint}</p>
+        <p className="mt-1 text-xs leading-5 text-ink-soft">{hint}</p>
       ) : null}
       <input
-        className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-gray-50"
+        className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15 disabled:cursor-not-allowed disabled:bg-cream"
         disabled={disabled}
         inputMode={inputMode}
         maxLength={maxLength}
@@ -599,12 +599,12 @@ function TextAreaField({
 }) {
   return (
     <label className="block text-sm">
-      <span className="font-medium text-gray-950">{label}</span>
+      <span className="font-medium text-ink">{label}</span>
       {hint ? (
-        <p className="mt-1 text-xs leading-5 text-gray-600">{hint}</p>
+        <p className="mt-1 text-xs leading-5 text-ink-soft">{hint}</p>
       ) : null}
       <textarea
-        className="mt-2 min-h-28 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-gray-50"
+        className="mt-2 min-h-28 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15 disabled:cursor-not-allowed disabled:bg-cream"
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
@@ -631,12 +631,12 @@ function SelectField({
 }) {
   return (
     <label className="block text-sm">
-      <span className="font-medium text-gray-950">{label}</span>
+      <span className="font-medium text-ink">{label}</span>
       {hint ? (
-        <p className="mt-1 text-xs leading-5 text-gray-600">{hint}</p>
+        <p className="mt-1 text-xs leading-5 text-ink-soft">{hint}</p>
       ) : null}
       <select
-        className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-gray-50"
+        className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15 disabled:cursor-not-allowed disabled:bg-cream"
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
         value={value}

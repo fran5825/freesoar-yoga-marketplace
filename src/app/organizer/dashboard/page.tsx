@@ -31,23 +31,23 @@ export default async function OrganizerDashboardPage() {
   if (!organizerContext) {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-8 px-5 py-10 sm:px-8 sm:py-14">
-        <header className="border-b border-gray-200 pb-6">
+        <header className="border-b border-ink/15 pb-6">
           <p className="text-sm font-medium text-amber-700">Organizer</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-gray-950">
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
             我的總覽
           </h1>
         </header>
 
-        <section className="grid gap-4 rounded border border-gray-200 bg-white p-6">
-          <h2 className="text-xl font-semibold text-gray-950">
+        <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
+          <h2 className="text-xl font-semibold text-ink">
             請先建立團主資料
           </h2>
-          <p className="text-sm leading-6 text-gray-600">
+          <p className="text-sm leading-6 text-ink-soft">
             建立團主資料後，你就可以開始提出並管理團課需求。
           </p>
           <div>
             <Link
-              className="inline-flex rounded bg-gray-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-gray-800"
+              className="inline-flex rounded-full bg-pine px-5 py-3 text-sm font-medium text-white transition hover:bg-pine-deep"
               href="/organizer/profile"
             >
               前往建立團主資料
@@ -79,29 +79,29 @@ export default async function OrganizerDashboardPage() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-8 px-5 py-10 sm:px-8 sm:py-14">
-      <header className="grid gap-3 border-b border-gray-200 pb-6 md:grid-cols-[1fr_auto] md:items-end">
+      <header className="grid gap-3 border-b border-ink/15 pb-6 md:grid-cols-[1fr_auto] md:items-end">
         <div className="min-w-0">
           <p className="text-sm font-medium text-amber-700">Organizer</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-gray-950">
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
             我的總覽
           </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-600">
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
             這裡彙整你最近的通知與需求狀態。
           </p>
         </div>
         <Link
-          className="inline-flex justify-center rounded bg-gray-950 px-4 py-2 text-center text-sm font-medium text-white transition hover:bg-gray-800"
+          className="inline-flex justify-center rounded-full bg-pine px-4 py-2 text-center text-sm font-medium text-white transition hover:bg-pine-deep"
           href="/organizer/demands/new"
         >
           建立新的需求
         </Link>
       </header>
 
-      <section className="rounded border border-gray-200 bg-white p-6">
+      <section className="rounded-2xl border border-ink/15 bg-white p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-gray-950">近期通知</h2>
+          <h2 className="text-lg font-semibold text-ink">近期通知</h2>
           <Link
-            className="text-sm font-medium text-sky-700 hover:underline"
+            className="text-sm font-medium text-clay hover:underline"
             href="/notifications"
           >
             查看全部通知
@@ -109,23 +109,23 @@ export default async function OrganizerDashboardPage() {
         </div>
 
         {recentNotifications.length === 0 ? (
-          <p className="mt-4 text-sm leading-6 text-gray-600">
+          <p className="mt-4 text-sm leading-6 text-ink-soft">
             目前沒有任何通知。重要狀態變更（例如需求公開、老師回應）都會顯示在這裡。
           </p>
         ) : (
           <ul className="mt-4 grid gap-4">
             {recentNotifications.map((notification) => (
               <li
-                className="border-t border-gray-100 pt-4 first:border-t-0 first:pt-0"
+                className="border-t border-ink/10 pt-4 first:border-t-0 first:pt-0"
                 key={notification.id}
               >
-                <p className="text-sm font-medium text-gray-950">
+                <p className="text-sm font-medium text-ink">
                   {notification.title}
                 </p>
-                <p className="mt-1 text-sm leading-6 text-gray-700">
+                <p className="mt-1 text-sm leading-6 text-ink-soft">
                   {notification.body}
                 </p>
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-ink-faint">
                   {formatTaipeiDatetime(notification.createdAt)}
                 </p>
               </li>
@@ -134,11 +134,11 @@ export default async function OrganizerDashboardPage() {
         )}
       </section>
 
-      <section className="rounded border border-gray-200 bg-white p-6">
+      <section className="rounded-2xl border border-ink/15 bg-white p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-gray-950">我的需求</h2>
+          <h2 className="text-lg font-semibold text-ink">我的需求</h2>
           <Link
-            className="text-sm font-medium text-sky-700 hover:underline"
+            className="text-sm font-medium text-clay hover:underline"
             href="/organizer/demands"
           >
             查看全部需求
@@ -146,7 +146,7 @@ export default async function OrganizerDashboardPage() {
         </div>
 
         {demandRequests.length === 0 ? (
-          <p className="mt-4 text-sm leading-6 text-gray-600">
+          <p className="mt-4 text-sm leading-6 text-ink-soft">
             尚未提出任何需求。你可以先建立一筆需求草稿，準備好後再送出審核。
           </p>
         ) : (
@@ -165,12 +165,12 @@ export default async function OrganizerDashboardPage() {
             <div className="mt-6 grid gap-3">
               {recentDemandRequests.map((demandRequest) => (
                 <Link
-                  className="grid gap-2 rounded border border-gray-100 bg-gray-50 p-4 transition hover:bg-gray-100"
+                  className="grid gap-2 rounded-2xl border border-ink/10 bg-cream p-4 transition hover:bg-sand"
                   href={`/organizer/demands/${demandRequest.id}`}
                   key={demandRequest.id}
                 >
                   <div className="flex flex-wrap items-center gap-3">
-                    <p className="min-w-0 break-words text-sm font-medium text-gray-950">
+                    <p className="min-w-0 break-words text-sm font-medium text-ink">
                       {demandRequest.title ?? "尚未命名的需求"}
                     </p>
                     <span
@@ -179,7 +179,7 @@ export default async function OrganizerDashboardPage() {
                       {demandRequestStatusLabels[demandRequest.status]}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-ink-faint">
                     最後更新：{formatDemandRequestDateTime(demandRequest.updatedAt)}
                   </p>
                 </Link>

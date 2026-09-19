@@ -81,13 +81,13 @@ export function TeacherJoinExplainer() {
           </p>
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
             <a
-              className="rounded bg-pine px-5 py-3 text-center text-sm font-medium text-white"
+              className="rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white"
               href={signInHref}
             >
               登入／建立帳號並開始申請
             </a>
             <Link
-              className="rounded border border-ink/20 px-5 py-3 text-center text-sm font-medium text-ink"
+              className="rounded-full border border-ink/20 px-5 py-3 text-center text-sm font-medium text-ink"
               href="/"
             >
               回到首頁
@@ -98,7 +98,7 @@ export function TeacherJoinExplainer() {
           </p>
         </div>
 
-        <div className="rounded border border-ink/10 bg-clay-tint/60 p-5">
+        <div className="rounded-2xl border border-ink/10 bg-clay-tint/60 p-5">
           <h2 className="text-lg font-medium text-ink">
             我們尋找的不是可被比較的商品，而是能共同照顧練習品質的合作夥伴。
           </h2>
@@ -111,7 +111,7 @@ export function TeacherJoinExplainer() {
       <section className="grid gap-4 md:grid-cols-3">
         {collaborationPrinciples.map((principle) => (
           <article
-            className="rounded border border-ink/12 bg-white p-5"
+            className="rounded-2xl border border-ink/12 bg-white p-5"
             key={principle}
           >
             <p className="text-sm leading-6 text-ink-soft">{principle}</p>
@@ -132,7 +132,7 @@ export function TeacherJoinExplainer() {
         <div className="grid gap-4 md:grid-cols-3">
           {reviewProcessSteps.map((step, index) => (
             <article
-              className="rounded border border-ink/12 bg-white p-5"
+              className="rounded-2xl border border-ink/12 bg-white p-5"
               key={step.title}
             >
               <span className="flex h-7 w-7 items-center justify-center rounded-full border border-ink/20 text-xs font-medium text-ink-soft">
@@ -167,7 +167,7 @@ export function TeacherJoinExplainer() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="rounded border border-ink/12 bg-white p-5">
+          <div className="rounded-2xl border border-ink/12 bg-white p-5">
             <h3 className="text-sm font-medium text-ink">送審必填</h3>
             <ul className="mt-3 space-y-2">
               {requiredFieldPreviewLabels.map((label) => (
@@ -180,7 +180,7 @@ export function TeacherJoinExplainer() {
               ))}
             </ul>
           </div>
-          <div className="rounded border border-ink/12 bg-white p-5">
+          <div className="rounded-2xl border border-ink/12 bg-white p-5">
             <h3 className="text-sm font-medium text-ink">建議，可留空</h3>
             <ul className="mt-3 space-y-2">
               {optionalFieldPreviewLabels.map((label) => (
@@ -209,7 +209,7 @@ export function TeacherJoinExplainer() {
         <div className="grid gap-4">
           {faqItems.map((item) => (
             <article
-              className="rounded border border-ink/12 bg-white p-5"
+              className="rounded-2xl border border-ink/12 bg-white p-5"
               key={item.question}
             >
               <h3 className="text-sm font-medium text-ink">

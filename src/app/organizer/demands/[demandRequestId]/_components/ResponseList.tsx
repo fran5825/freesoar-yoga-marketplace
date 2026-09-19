@@ -24,36 +24,36 @@ export function ResponseList({
   );
 
   return (
-    <section className="grid gap-4 rounded border border-gray-200 bg-white p-6">
+    <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
       <div>
-        <h2 className="text-lg font-medium text-gray-950">收到的老師回應</h2>
-        <p className="mt-2 text-sm leading-6 text-gray-600">
+        <h2 className="text-lg font-medium text-ink">收到的老師回應</h2>
+        <p className="mt-2 text-sm leading-6 text-ink-soft">
           以下是老師針對這則需求提交的回應，依送出時間排列。
         </p>
       </div>
 
       {responses.length === 0 ? (
-        <p className="text-sm leading-6 text-gray-600">
+        <p className="text-sm leading-6 text-ink-soft">
           目前還沒有老師回應，之後有回應會顯示在這裡。
         </p>
       ) : (
         <ul className="grid gap-4">
           {responses.map((response) => (
             <li
-              className="min-w-0 rounded border border-gray-100 bg-gray-50 p-4"
+              className="min-w-0 rounded-2xl border border-ink/10 bg-cream p-4"
               key={response.id}
             >
               <div className="flex flex-wrap items-center gap-3">
-                <h3 className="min-w-0 break-words text-base font-medium text-gray-950">
+                <h3 className="min-w-0 break-words text-base font-medium text-ink">
                   {response.teacherProfile.displayName ?? "老師"}
                 </h3>
-                <span className="w-fit rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-800">
+                <span className="w-fit rounded-full bg-pine-tint px-3 py-1 text-xs font-medium text-pine">
                   {responseStatusLabels[response.status] ?? response.status}
                 </span>
               </div>
 
               {response.teacherProfile.teachingStyle ? (
-                <p className="mt-2 min-w-0 break-words text-sm leading-6 text-gray-600">
+                <p className="mt-2 min-w-0 break-words text-sm leading-6 text-ink-soft">
                   {response.teacherProfile.teachingStyle}
                 </p>
               ) : null}
@@ -62,7 +62,7 @@ export function ResponseList({
                 <div className="mt-2 flex flex-wrap gap-2">
                   {response.teacherProfile.specialties.map((specialty) => (
                     <span
-                      className="rounded-full border border-gray-200 bg-white px-2 py-1 text-xs text-gray-700"
+                      className="rounded-full border border-ink/15 bg-white px-2 py-1 text-xs text-ink-soft"
                       key={specialty}
                     >
                       {specialty}
@@ -71,29 +71,29 @@ export function ResponseList({
                 </div>
               ) : null}
 
-              <div className="mt-3 min-w-0 rounded border border-gray-200 bg-white p-3">
-                <p className="text-xs font-medium text-gray-500">回覆內容</p>
-                <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-gray-700">
+              <div className="mt-3 min-w-0 rounded-2xl border border-ink/15 bg-white p-3">
+                <p className="text-xs font-medium text-ink-faint">回覆內容</p>
+                <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-ink-soft">
                   {response.message}
                 </p>
               </div>
 
               {response.proposedTimeSlots.length > 0 ? (
-                <p className="mt-2 min-w-0 break-words text-sm leading-6 text-gray-600">
-                  <span className="font-medium text-gray-950">可配合時段：</span>
+                <p className="mt-2 min-w-0 break-words text-sm leading-6 text-ink-soft">
+                  <span className="font-medium text-ink">可配合時段：</span>
                   {response.proposedTimeSlots.join("、")}
                 </p>
               ) : null}
 
               {response.proposedPrice ? (
-                <p className="mt-1 min-w-0 break-words text-xs leading-5 text-gray-500">
+                <p className="mt-1 min-w-0 break-words text-xs leading-5 text-ink-faint">
                   參考價格：{response.proposedPrice}
                 </p>
               ) : null}
 
               {!hasSelectedResponse && response.status === "submitted" ? (
-                <details className="mt-3 rounded border border-emerald-200 bg-emerald-50/60">
-                  <summary className="cursor-pointer list-none rounded px-4 py-2 text-sm font-medium text-emerald-800 marker:hidden">
+                <details className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50/60">
+                  <summary className="cursor-pointer list-none rounded-full px-4 py-2 text-sm font-medium text-emerald-800 marker:hidden">
                     選定這位老師…
                   </summary>
                   <form
@@ -110,10 +110,10 @@ export function ResponseList({
                       type="hidden"
                       value={response.id}
                     />
-                    <p className="text-sm leading-6 text-gray-700">
+                    <p className="text-sm leading-6 text-ink-soft">
                       選定後，其餘老師的回應會自動標記為未獲選，且無法復原。
                     </p>
-                    <label className="flex items-start gap-2 text-sm leading-6 text-gray-700">
+                    <label className="flex items-start gap-2 text-sm leading-6 text-ink-soft">
                       <input
                         className="mt-1 shrink-0"
                         name="confirmSelect"
@@ -124,7 +124,7 @@ export function ResponseList({
                       我確認要選定這位老師。
                     </label>
                     <button
-                      className="w-full rounded bg-emerald-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-800 sm:w-auto"
+                      className="w-full rounded-full bg-emerald-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-800 sm:w-auto"
                       type="submit"
                     >
                       確認選定

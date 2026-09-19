@@ -18,10 +18,10 @@ const modeOptions: { value: Mode; label: string }[] = [
 ];
 
 const inputClassName =
-  "mt-2 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-6 text-gray-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100";
-const labelClassName = "text-sm font-medium text-gray-950";
+  "mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15";
+const labelClassName = "text-sm font-medium text-ink";
 const submitButtonClassName =
-  "w-full rounded bg-gray-950 px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-gray-800 sm:w-auto";
+  "w-full rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-pine-deep sm:w-auto";
 
 // teacher-initiated-open-classes Slice B：三個模式各自是獨立的 <form>，用 CSS 顯示/隱藏切換，
 // 每個 form 的 action 一律綁定固定的 Server Action 參考——不在提交當下動態決定要呼叫哪個
@@ -37,8 +37,8 @@ export function ClassSessionCreateForm() {
             aria-pressed={mode === option.value}
             className={
               mode === option.value
-                ? "rounded-full bg-gray-950 px-4 py-2 text-sm font-medium text-white"
-                : "rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:border-gray-400"
+                ? "rounded-full bg-pine px-4 py-2 text-sm font-medium text-white"
+                : "rounded-full border border-ink/25 px-4 py-2 text-sm font-medium text-ink-soft hover:border-ink/40"
             }
             key={option.value}
             onClick={() => setMode(option.value)}
@@ -82,7 +82,7 @@ export function ClassSessionCreateForm() {
           <LocationField />
           <CapacityField />
           <DescriptionField />
-          <label className="flex items-start gap-2 text-sm leading-6 text-gray-700">
+          <label className="flex items-start gap-2 text-sm leading-6 text-ink-soft">
             <input className="mt-1 shrink-0" name="isPublic" type="checkbox" value="yes" />
             公開這堂課，讓其他人可以在瀏覽頁面看到並直接報名
           </label>
@@ -139,7 +139,7 @@ export function ClassSessionCreateForm() {
               required
               type="number"
             />
-            <p className="mt-1 text-xs leading-5 text-gray-500">
+            <p className="mt-1 text-xs leading-5 text-ink-faint">
               之後可以在系列管理頁手動生成更多場次，目前不支援自動無上限延伸。
             </p>
           </div>
@@ -171,7 +171,7 @@ export function ClassSessionCreateForm() {
               placeholder={"2026-09-01\n2026-09-08\n2026-09-15\n2026-09-22"}
               required
             />
-            <p className="mt-1 text-xs leading-5 text-gray-500">
+            <p className="mt-1 text-xs leading-5 text-ink-faint">
               每一個日期都會用上面同一組開始/結束時間生成一場課程，最多 26 個日期。
             </p>
           </div>
@@ -317,7 +317,7 @@ function DescriptionField({ idPrefix = "" }: { idPrefix?: string }) {
 
 function RequiresApprovalField({ idPrefix = "" }: { idPrefix?: string }) {
   return (
-    <label className="flex items-start gap-2 text-sm leading-6 text-gray-700">
+    <label className="flex items-start gap-2 text-sm leading-6 text-ink-soft">
       <input
         className="mt-1 shrink-0"
         id={`${idPrefix}requiresApproval`}
@@ -332,7 +332,7 @@ function RequiresApprovalField({ idPrefix = "" }: { idPrefix?: string }) {
 
 function ConfirmField({ idPrefix = "" }: { idPrefix?: string }) {
   return (
-    <label className="flex items-start gap-2 text-sm leading-6 text-gray-700">
+    <label className="flex items-start gap-2 text-sm leading-6 text-ink-soft">
       <input
         className="mt-1 shrink-0"
         id={`${idPrefix}confirmCreate`}

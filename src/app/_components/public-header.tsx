@@ -33,7 +33,7 @@ export async function PublicHeader() {
         <nav aria-label="公開網站導覽" className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-ink-soft">
           {publicLinks.map((link) => (
             <Link
-              className="rounded px-1 py-1 transition hover:text-clay focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+              className="rounded-xl px-1 py-1 transition hover:text-clay focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
               href={link.href}
               key={link.href}
             >

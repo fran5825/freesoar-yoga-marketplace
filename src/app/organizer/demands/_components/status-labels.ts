@@ -21,16 +21,16 @@ export const demandRequestStatusToneClasses: Record<
   DemandRequestSnapshot["status"],
   string
 > = {
-  draft: "bg-gray-100 text-gray-700",
-  submitted: "bg-sky-100 text-sky-800",
-  under_review: "bg-sky-100 text-sky-800",
+  draft: "bg-sand text-ink-soft",
+  submitted: "bg-pine-tint text-pine",
+  under_review: "bg-pine-tint text-pine",
   published: "bg-emerald-100 text-emerald-800",
   teacher_responded: "bg-emerald-100 text-emerald-800",
   matched: "bg-emerald-100 text-emerald-800",
   converted_to_class: "bg-emerald-100 text-emerald-800",
   completed: "bg-emerald-100 text-emerald-800",
-  cancelled: "bg-gray-100 text-gray-700",
-  expired: "bg-gray-100 text-gray-700",
+  cancelled: "bg-sand text-ink-soft",
+  expired: "bg-sand text-ink-soft",
   rejected: "bg-amber-100 text-amber-900",
 };
 
