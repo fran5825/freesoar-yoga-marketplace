@@ -13,8 +13,8 @@ import {
 const signInHref = `/sign-in?callbackUrl=${encodeURIComponent("/teachers/join")}`;
 
 const collaborationPrinciples = [
-  "尊重老師的教學風格、時間安排與專業界線。",
-  "讓團主清楚表達需求，再由適合的老師回應合作機會。",
+  "尊重老師的時間安排與教學界線。",
+  "讓團主的需求被清楚整理，老師能被正確理解，回應真正適合自己的團課機會。",
   "透過審核與清楚流程，守住課程品質與平台信任。",
 ];
 
@@ -66,32 +66,15 @@ const optionalFieldPreviewLabels = applicationSections
 export function TeacherJoinExplainer() {
   return (
     <>
-      <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-        <div>
-          <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
-            一起建立清楚、安心的瑜伽團課合作
-          </h1>
-          <p className="mt-5 max-w-2xl text-base leading-7 text-ink-soft">
-            飛索重視老師的專業、風格與教學界線，也提供老師管理日常課程的工具。我們希望讓團主的需求被清楚整理，也讓老師能被正確理解，回應真正適合自己的團課機會。
+      <section>
+        <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
+          一起建立清楚、安心的瑜伽團課合作
+        </h1>
+        <div className="mt-6 ml-6 max-w-2xl border-l-4 border-clay/50 pl-4">
+          <p className="text-base leading-7 text-ink-soft">
+            飛索重視老師的專業，也提供老師管理日常課程的工具：
           </p>
-          <div className="mt-7">
-            <a
-              className="inline-flex rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white"
-              href={signInHref}
-            >
-              登入／建立帳號並開始申請
-            </a>
-          </div>
-          <p className="mt-4 text-sm leading-6 text-ink-faint">
-            登入或建立帳號後，就會看到完整的申請表單；下方可以先了解審核流程與需要準備的資料。
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-ink/10 bg-clay-tint/60 p-6">
-          <h2 className="border-l-4 border-clay/50 pl-4 text-lg font-medium leading-relaxed text-ink">
-            我們尋找的是能共同照顧練習品質的合作夥伴。
-          </h2>
-          <ul className="mt-5 space-y-3 pl-4">
+          <ul className="mt-4 space-y-3">
             {collaborationPrinciples.map((principle) => (
               <li className="flex items-start gap-3" key={principle}>
                 <span
@@ -105,6 +88,17 @@ export function TeacherJoinExplainer() {
             ))}
           </ul>
         </div>
+        <div className="mt-7 ml-6">
+          <a
+            className="inline-flex rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white"
+            href={signInHref}
+          >
+            登入／建立帳號並開始申請
+          </a>
+        </div>
+        <p className="mt-4 ml-6 text-sm leading-6 text-ink-faint">
+          登入或建立帳號後，就會看到完整的申請表單；下方可以先了解審核流程與需要準備的資料。
+        </p>
       </section>
 
       <section aria-labelledby="review-process-title" className="grid gap-6">

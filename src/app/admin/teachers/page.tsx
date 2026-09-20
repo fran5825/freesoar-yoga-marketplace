@@ -245,6 +245,26 @@ export default async function AdminTeachersPage({
                   label="Profile photo URL"
                   value={application.profilePhotoUrl}
                 />
+                <ReadOnlyText
+                  label="Preferred session length"
+                  value={
+                    typeof application.preferredSessionLengthMinutes === "number"
+                      ? `${application.preferredSessionLengthMinutes} minutes`
+                      : null
+                  }
+                />
+                <ReadOnlyText
+                  label="Preferred frequency"
+                  value={application.preferredFrequency}
+                />
+                <ReadOnlyText
+                  label="Preferred location"
+                  value={application.preferredLocationType}
+                />
+                <ReadOnlyText
+                  label="Preference notes"
+                  value={application.preferenceNotes}
+                />
               </div>
             </article>
           ))}
@@ -319,6 +339,26 @@ export default async function AdminTeachersPage({
                     <ReadOnlyText
                       label="Profile photo URL"
                       value={teacher.profilePhotoUrl}
+                    />
+                    <ReadOnlyText
+                      label="Preferred session length"
+                      value={
+                        typeof teacher.preferredSessionLengthMinutes === "number"
+                          ? `${teacher.preferredSessionLengthMinutes} minutes`
+                          : null
+                      }
+                    />
+                    <ReadOnlyText
+                      label="Preferred frequency"
+                      value={teacher.preferredFrequency}
+                    />
+                    <ReadOnlyText
+                      label="Preferred location"
+                      value={teacher.preferredLocationType}
+                    />
+                    <ReadOnlyText
+                      label="Preference notes"
+                      value={teacher.preferenceNotes}
                     />
                   </div>
                 </details>
@@ -448,6 +488,26 @@ export default async function AdminTeachersPage({
                     <ReadOnlyText
                       label="Profile photo URL"
                       value={teacher.profilePhotoUrl}
+                    />
+                    <ReadOnlyText
+                      label="Preferred session length"
+                      value={
+                        typeof teacher.preferredSessionLengthMinutes === "number"
+                          ? `${teacher.preferredSessionLengthMinutes} minutes`
+                          : null
+                      }
+                    />
+                    <ReadOnlyText
+                      label="Preferred frequency"
+                      value={teacher.preferredFrequency}
+                    />
+                    <ReadOnlyText
+                      label="Preferred location"
+                      value={teacher.preferredLocationType}
+                    />
+                    <ReadOnlyText
+                      label="Preference notes"
+                      value={teacher.preferenceNotes}
                     />
                   </div>
                 </details>

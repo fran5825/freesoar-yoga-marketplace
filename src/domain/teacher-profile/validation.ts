@@ -9,6 +9,10 @@ export type TeacherProfileApplicationInput = {
   teachingFormats?: string[] | null;
   priceRange?: string | null;
   profilePhotoUrl?: string | null;
+  preferredSessionLengthMinutes?: number | null;
+  preferredFrequency?: string | null;
+  preferredLocationType?: string | null;
+  preferenceNotes?: string | null;
 };
 
 export type TeacherProfileValidationErrorCode =

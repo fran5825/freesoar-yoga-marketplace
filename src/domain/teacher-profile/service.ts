@@ -40,6 +40,10 @@ export type TeacherProfileDraftSaveProfile = {
   teachingFormats: string[];
   priceRange: string | null;
   profilePhotoUrl: string | null;
+  preferredSessionLengthMinutes: number | null;
+  preferredFrequency: string | null;
+  preferredLocationType: string | null;
+  preferenceNotes: string | null;
   status: TeacherProfileStatus;
   rejectionReason: string | null;
   suspensionReason: string | null;
@@ -80,6 +84,10 @@ export type TeacherProfileSubmitProfile = {
   teachingFormats: string[];
   priceRange: string | null;
   profilePhotoUrl: string | null;
+  preferredSessionLengthMinutes: number | null;
+  preferredFrequency: string | null;
+  preferredLocationType: string | null;
+  preferenceNotes: string | null;
   status: TeacherProfileStatus;
   rejectionReason: string | null;
   suspensionReason: string | null;
@@ -121,6 +129,10 @@ export type TeacherProfileApplicationSnapshot = {
   teachingFormats: string[];
   priceRange: string | null;
   profilePhotoUrl: string | null;
+  preferredSessionLengthMinutes: number | null;
+  preferredFrequency: string | null;
+  preferredLocationType: string | null;
+  preferenceNotes: string | null;
   status: TeacherProfileStatus;
   rejectionReason: string | null;
   suspensionReason: string | null;
@@ -186,6 +198,10 @@ const teacherProfileDraftSelect = {
   teachingFormats: true,
   priceRange: true,
   profilePhotoUrl: true,
+  preferredSessionLengthMinutes: true,
+  preferredFrequency: true,
+  preferredLocationType: true,
+  preferenceNotes: true,
   status: true,
   rejectionReason: true,
   suspensionReason: true,
@@ -805,6 +821,10 @@ export type ApprovedOrSuspendedTeacherProfileForAdmin = {
   teachingFormats: string[];
   priceRange: string | null;
   profilePhotoUrl: string | null;
+  preferredSessionLengthMinutes: number | null;
+  preferredFrequency: string | null;
+  preferredLocationType: string | null;
+  preferenceNotes: string | null;
   status: TeacherProfileStatus;
   suspensionReason: string | null;
   updatedAt: Date;
@@ -841,6 +861,10 @@ export async function listApprovedAndSuspendedTeacherProfilesForAdmin(): Promise
       teachingFormats: true,
       priceRange: true,
       profilePhotoUrl: true,
+      preferredSessionLengthMinutes: true,
+      preferredFrequency: true,
+      preferredLocationType: true,
+      preferenceNotes: true,
       status: true,
       suspensionReason: true,
       updatedAt: true,
@@ -893,6 +917,10 @@ function toTeacherProfileDraftData(input: TeacherProfileApplicationInput) {
     teachingFormats: input.teachingFormats ?? [],
     priceRange: input.priceRange ?? null,
     profilePhotoUrl: input.profilePhotoUrl ?? null,
+    preferredSessionLengthMinutes: input.preferredSessionLengthMinutes ?? null,
+    preferredFrequency: input.preferredFrequency ?? null,
+    preferredLocationType: input.preferredLocationType ?? null,
+    preferenceNotes: input.preferenceNotes ?? null,
   };
 }
 

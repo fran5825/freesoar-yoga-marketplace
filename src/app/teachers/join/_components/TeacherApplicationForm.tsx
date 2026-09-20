@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   applicationSections,
+  buildCheckboxGroupValue,
   fieldLabels,
+  parseCheckboxGroupValue,
   requiredFields,
   type FormFieldName,
   type TextField,
@@ -29,7 +31,16 @@ type TeacherApplicationFormState = {
   teachingFormats: string;
   priceRange: string;
   profilePhotoUrl: string;
+  preferredSessionLengthMinutes: string;
+  preferredFrequency: string;
+  preferredLocationType: string;
+  preferenceNotes: string;
 };
+
+const optionalFieldNames = applicationSections
+  .flatMap((section) => section.fields)
+  .filter((field) => field.requirement === "optionalRecommended")
+  .map((field) => field.name);
 
 type HydratedTeacherProfileStatus =
   TeacherProfileApplicationSnapshotActionProfile["status"];
@@ -53,8 +64,8 @@ type SubmitFeedback = {
 const signInHref = `/sign-in?callbackUrl=${encodeURIComponent("/teachers/join")}`;
 
 const collaborationPrinciples = [
-  "尊重老師的教學風格、時間安排與專業界線。",
-  "讓團主清楚表達需求，再由適合的老師回應合作機會。",
+  "尊重老師的時間安排與教學界線。",
+  "讓團主的需求被清楚整理，老師能被正確理解，回應真正適合自己的團課機會。",
   "透過審核與清楚流程，守住課程品質與平台信任。",
 ];
 
@@ -71,6 +82,10 @@ const initialFormState: TeacherApplicationFormState = {
   teachingFormats: "",
   priceRange: "",
   profilePhotoUrl: "",
+  preferredSessionLengthMinutes: "",
+  preferredFrequency: "",
+  preferredLocationType: "",
+  preferenceNotes: "",
 };
 
 const mutationBlockedStatusLabels: Record<
@@ -218,6 +233,13 @@ function toTeacherApplicationFormState(
     teachingFormats: profile.teachingFormats.join("\n"),
     priceRange: profile.priceRange ?? "",
     profilePhotoUrl: profile.profilePhotoUrl ?? "",
+    preferredSessionLengthMinutes:
+      typeof profile.preferredSessionLengthMinutes === "number"
+        ? String(profile.preferredSessionLengthMinutes)
+        : "",
+    preferredFrequency: profile.preferredFrequency ?? "",
+    preferredLocationType: profile.preferredLocationType ?? "",
+    preferenceNotes: profile.preferenceNotes ?? "",
   };
 }
 
@@ -238,6 +260,146 @@ function RequirementBadge({
     <span className="rounded-full bg-sand px-3 py-1 text-xs font-medium text-clay">
       建議，可留空
     </span>
+  );
+}
+
+const controlClassName =
+  "mt-3 w-full rounded-xl border border-ink/20 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15 disabled:cursor-not-allowed disabled:bg-[#efece4] disabled:text-ink-soft";
+
+// 用純 CSS 的 peer-checked 呈現勾選狀態，而不是用 JS 算 className——這樣同一套標記在
+// 老師編輯頁那個沒有 client state 的 Server Component表單裡也能用一樣的視覺效果。
+function TagCheckbox({
+  label,
+  checked,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: () => void;
+  disabled: boolean;
+}) {
+  return (
+    <label className="cursor-pointer">
+      <input
+        checked={checked}
+        className="peer sr-only"
+        disabled={disabled}
+        onChange={onChange}
+        type="checkbox"
+      />
+      <span className="inline-flex rounded-full border border-ink/20 px-3 py-1.5 text-sm text-ink-soft transition peer-checked:border-pine peer-checked:bg-pine peer-checked:text-white peer-disabled:cursor-not-allowed peer-disabled:opacity-60">
+        {label}
+      </span>
+    </label>
+  );
+}
+
+function FieldControl({
+  field,
+  value,
+  onChange,
+  disabled,
+  inputId,
+  showReminder,
+}: {
+  field: TextField;
+  value: string;
+  onChange: (value: string) => void;
+  disabled: boolean;
+  inputId: string;
+  showReminder: boolean;
+}) {
+  const describedBy = showReminder ? `${inputId}-reminder` : undefined;
+
+  if (field.kind === "textarea") {
+    return (
+      <textarea
+        aria-describedby={describedBy}
+        className={`${controlClassName} min-h-28`}
+        disabled={disabled}
+        id={inputId}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={field.placeholder}
+        value={value}
+      />
+    );
+  }
+
+  if (field.kind === "select") {
+    return (
+      <select
+        aria-describedby={describedBy}
+        className={controlClassName}
+        disabled={disabled}
+        id={inputId}
+        onChange={(event) => onChange(event.target.value)}
+        value={value}
+      >
+        <option value="">請選擇</option>
+        {field.options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    );
+  }
+
+  if (field.kind === "checkboxGroup") {
+    const { selectedValues, otherText } = parseCheckboxGroupValue(
+      value,
+      field.groups,
+    );
+    const flatOptions = field.groups.flatMap((group) => group.options);
+
+    function toggleOption(optionValue: string) {
+      const nextSelected = selectedValues.includes(optionValue)
+        ? selectedValues.filter((item) => item !== optionValue)
+        : [...selectedValues, optionValue];
+      onChange(buildCheckboxGroupValue(nextSelected, otherText));
+    }
+
+    return (
+      <div aria-describedby={describedBy} className="mt-3 grid gap-3">
+        <div className="flex flex-wrap gap-2">
+          {flatOptions.map((option) => (
+            <TagCheckbox
+              checked={selectedValues.includes(option.value)}
+              disabled={disabled}
+              key={option.value}
+              label={option.label}
+              onChange={() => toggleOption(option.value)}
+            />
+          ))}
+        </div>
+        <input
+          className={controlClassName}
+          disabled={disabled}
+          onChange={(event) =>
+            onChange(
+              buildCheckboxGroupValue(selectedValues, event.target.value),
+            )
+          }
+          placeholder={field.otherPlaceholder}
+          value={otherText}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <input
+      aria-describedby={describedBy}
+      className={controlClassName}
+      disabled={disabled}
+      id={inputId}
+      inputMode={field.inputMode}
+      onChange={(event) => onChange(event.target.value)}
+      placeholder={field.placeholder}
+      type="text"
+      value={value}
+    />
   );
 }
 
@@ -292,8 +454,8 @@ export function TeacherApplicationForm() {
   );
   const optionalFieldsWithValue = useMemo(
     () =>
-      (["certifications", "priceRange", "profilePhotoUrl"] as FormFieldName[])
-        .filter((fieldName) => !isBlank(formState[fieldName])).length,
+      optionalFieldNames.filter((fieldName) => !isBlank(formState[fieldName]))
+        .length,
     [formState],
   );
   const isReadyForFutureSubmit = missingRequiredFields.length === 0;
@@ -310,7 +472,8 @@ export function TeacherApplicationForm() {
     : null;
   const isDraftSaveDisabled =
     isSavingDraft || isSubmitting || mutationBlockedStatus !== null;
-  const isSubmitDisabled = isSubmitting || mutationBlockedStatus !== null;
+  const isSubmitDisabled =
+    isSubmitting || mutationBlockedStatus !== null || !isReadyForFutureSubmit;
   const statusBadge = mutationBlockedCopy
     ? {
         label: mutationBlockedCopy.saveButton,
@@ -335,6 +498,8 @@ export function TeacherApplicationForm() {
 
   function handleReadinessCheck() {
     setHasCheckedReadiness(true);
+    setDraftSaveFeedback(null);
+    setSubmitFeedback(null);
   }
 
   async function handleSaveDraft() {
@@ -342,6 +507,8 @@ export function TeacherApplicationForm() {
       return;
     }
 
+    setHasCheckedReadiness(false);
+    setSubmitFeedback(null);
     setIsSavingDraft(true);
     setDraftSaveFeedback(null);
 
@@ -392,7 +559,7 @@ export function TeacherApplicationForm() {
       return;
     }
 
-    setHasCheckedReadiness(true);
+    setDraftSaveFeedback(null);
     setSubmitFeedback(null);
     setIsConfirmingSubmit(true);
   }
@@ -410,6 +577,8 @@ export function TeacherApplicationForm() {
       return;
     }
 
+    setHasCheckedReadiness(false);
+    setDraftSaveFeedback(null);
     setIsSubmitting(true);
     setSubmitFeedback(null);
 
@@ -459,23 +628,27 @@ export function TeacherApplicationForm() {
   );
 
   const readinessSummary = hasCheckedReadiness ? (
-    <div className="rounded-xl border border-pine/15 bg-pine-tint px-4 py-3 text-sm leading-6 text-ink-soft">
-      {isReadyForFutureSubmit ? (
-        <p>
-          送審必填欄位都已有內容。後續正式流程仍會由 server-side validation 再檢查一次，並提供清楚的送審確認。
-        </p>
-      ) : (
-        <>
-          <p className="font-medium text-ink">還可以補充的地方</p>
-          <ul className="mt-2 list-disc space-y-1 pl-5">
-            {missingRequiredFields.map((fieldName) => (
-              <li key={fieldName}>{getReadinessMessage(fieldName)}</li>
-            ))}
-          </ul>
-        </>
-      )}
-      <p className="mt-3 text-ink-soft">
-        建議欄位目前已填 {optionalFieldsWithValue} / 3 項；可依你的準備狀態慢慢補上。
+    <div
+      className={
+        isReadyForFutureSubmit
+          ? "rounded-xl border border-pine/15 bg-pine-tint px-4 py-3 text-sm leading-6 text-ink-soft"
+          : "rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep"
+      }
+    >
+      <p>
+        {isReadyForFutureSubmit ? (
+          "送審必填欄位都已有內容，正式送出前系統還會再確認一次。"
+        ) : (
+          <>
+            <span className="font-medium">還有必填欄位尚未完成：</span>
+            {missingRequiredFields
+              .map((fieldName) => fieldLabels[fieldName])
+              .join("、")}
+          </>
+        )}
+      </p>
+      <p className="mt-1">
+        建議欄位已填 {optionalFieldsWithValue} / {optionalFieldNames.length} 項，可以之後再補。
       </p>
     </div>
   ) : null;
@@ -527,30 +700,131 @@ export function TeacherApplicationForm() {
     </div>
   );
 
+  const actionFeedback = (
+    <div aria-live="polite" className="grid gap-3">
+      {isSavingDraft ? (
+        <p className="rounded-xl border border-pine/15 bg-pine-tint px-4 py-3 text-sm leading-6 text-pine-deep">
+          正在儲存草稿...
+        </p>
+      ) : null}
+
+      {draftSaveFeedback ? (
+        <div
+          className={
+            draftSaveFeedback.kind === "success"
+              ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
+              : "rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay"
+          }
+        >
+          <p>{draftSaveFeedback.message}</p>
+          {draftSaveFeedback.kind === "success" && lastSavedAtLabel ? (
+            <p className="mt-2">上次儲存：{lastSavedAtLabel}</p>
+          ) : null}
+          {draftSaveFeedback.result?.code === "authentication_required" ||
+          draftSaveFeedback.showSignInLink ? (
+            <a
+              className="mt-2 inline-flex font-medium text-ink underline underline-offset-4"
+              href={signInHref}
+            >
+              前往登入
+            </a>
+          ) : null}
+          {draftSaveFeedback.result?.validationErrors?.length ? (
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              {draftSaveFeedback.result.validationErrors.map((error) => (
+                <li key={`${error.field}-${error.code}`}>{error.message}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
+
+      {isSubmitting ? (
+        <p className="rounded-xl border border-pine/15 bg-pine-tint px-4 py-3 text-sm leading-6 text-pine-deep">
+          正在送出審核...
+        </p>
+      ) : null}
+
+      {submitFeedback ? (
+        <div
+          className={
+            submitFeedback.kind === "success"
+              ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
+              : "rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay"
+          }
+        >
+          <p>{submitFeedback.message}</p>
+          {submitFeedback.showSignInLink ? (
+            <a
+              className="mt-2 inline-flex font-medium text-ink underline underline-offset-4"
+              href={signInHref}
+            >
+              前往登入
+            </a>
+          ) : null}
+          {submitFeedback.result?.validationErrors?.length ? (
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              {submitFeedback.result.validationErrors.map((error) => (
+                <li key={`${error.field}-${error.code}`}>{error.message}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+
+  const submitConfirmation = isConfirmingSubmit ? (
+    <div className="rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep">
+      <p className="font-medium text-ink">確認送出審核</p>
+      <p className="mt-2">
+        {isRejectedProfile
+          ? "重新送出後，這份老師申請會再次進入平台審核。請確認修正內容已準備好，再送出。"
+          : "送出後，這份老師申請會進入平台審核。審核期間暫時不需要再儲存草稿；請確認主要資料已準備好，再送出。"}
+      </p>
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+        <button
+          className="rounded-full bg-pine px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-ink/15 disabled:text-ink-soft"
+          disabled={isSubmitting}
+          onClick={handleSubmitApplication}
+          type="button"
+        >
+          {isSubmitting ? "正在送出..." : "確認送出審核"}
+        </button>
+        <button
+          className="rounded-full border border-clay/40 bg-white px-4 py-2 text-sm font-medium text-ink disabled:cursor-not-allowed disabled:text-ink-faint"
+          disabled={isSubmitting}
+          onClick={handleCancelSubmitConfirmation}
+          type="button"
+        >
+          先回來調整
+        </button>
+      </div>
+    </div>
+  ) : null;
+
+  // 確認送出審核時，先把準備狀態跟儲存/送出的結果訊息收起來，只留確認框——避免三個
+  // 提示框一起疊在畫面上，同一套內容也讓上下兩條狀態列的顯示邏輯完全一致。
+  const statusExtras = isConfirmingSubmit ? (
+    submitConfirmation
+  ) : (
+    <>
+      {readinessSummary}
+      {actionFeedback}
+    </>
+  );
+
   return (
     <>
-      <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-        <div>
-          <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
-            一起建立清楚、安心的瑜伽團課合作
-          </h1>
-          <p className="mt-5 max-w-2xl text-base leading-7 text-ink-soft">
-            飛索重視老師的專業、風格與教學界線，也提供老師管理日常課程的工具。我們希望讓團主的需求被清楚整理，也讓老師能被正確理解，回應真正適合自己的團課機會。
+      <section>
+        <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
+          一起建立清楚、安心的瑜伽團課合作
+        </h1>
+        <div className="mt-6 ml-6 max-w-2xl border-l-4 border-clay/50 pl-4">
+          <p className="text-base leading-7 text-ink-soft">
+            飛索重視老師的專業，也提供老師管理日常課程的工具：
           </p>
-          {mutationBlockedCopy ? null : (
-            <p className="mt-4 text-sm leading-6 text-ink-faint">
-              {isRejectedProfile
-                ? "下方會顯示被退回的申請資料；你可以依修正方向調整後重新送審。"
-                : "下方表單可手動儲存草稿；準備好後，請經過二次確認再正式送出審核。"}
-            </p>
-          )}
-        </div>
-
-        <div className="rounded-2xl border border-ink/10 bg-clay-tint/60 p-6">
-          <h2 className="border-l-4 border-clay/50 pl-4 text-lg font-medium leading-relaxed text-ink">
-            我們尋找的是能共同照顧練習品質的合作夥伴。
-          </h2>
-          <ul className="mt-5 space-y-3 pl-4">
+          <ul className="mt-4 space-y-3">
             {collaborationPrinciples.map((principle) => (
               <li className="flex items-start gap-3" key={principle}>
                 <span
@@ -564,6 +838,13 @@ export function TeacherApplicationForm() {
             ))}
           </ul>
         </div>
+        {mutationBlockedCopy ? null : (
+          <p className="mt-4 ml-6 text-sm leading-6 text-ink-faint">
+            {isRejectedProfile
+              ? "下方會顯示被退回的申請資料；你可以依修正方向調整後重新送審。"
+              : "下方表單可手動儲存草稿；準備好後，請經過二次確認再正式送出審核。"}
+          </p>
+        )}
       </section>
 
       <section
@@ -589,7 +870,7 @@ export function TeacherApplicationForm() {
         </div>
 
         {statusActionBar}
-        {readinessSummary}
+        {statusExtras}
 
         {isRejectedProfile ? (
           <div className="min-w-0 rounded-2xl border border-clay/25 bg-clay-tint p-4">
@@ -645,9 +926,6 @@ export function TeacherApplicationForm() {
                           >
                             {field.label}
                           </label>
-                          <p className="mt-1 font-mono text-xs text-ink-faint">
-                            {field.name}
-                          </p>
                         </div>
                         <RequirementBadge requirement={field.requirement} />
                       </div>
@@ -656,44 +934,14 @@ export function TeacherApplicationForm() {
                         {field.helper}
                       </p>
 
-                      {field.multiline ? (
-                        <textarea
-                          aria-describedby={
-                            showReminder ? `${inputId}-reminder` : undefined
-                          }
-                          className="mt-3 min-h-28 w-full rounded-xl border border-ink/20 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15 disabled:cursor-not-allowed disabled:bg-[#efece4] disabled:text-ink-soft"
-                          disabled={mutationBlockedStatus !== null}
-                          id={inputId}
-                          onChange={(event) =>
-                            updateField(field.name, event.target.value)
-                          }
-                          placeholder={field.placeholder}
-                          value={formState[field.name]}
-                        />
-                      ) : (
-                        <input
-                          aria-describedby={
-                            showReminder ? `${inputId}-reminder` : undefined
-                          }
-                          className="mt-3 w-full rounded-xl border border-ink/20 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15 disabled:cursor-not-allowed disabled:bg-[#efece4] disabled:text-ink-soft"
-                          disabled={mutationBlockedStatus !== null}
-                          id={inputId}
-                          inputMode={field.inputMode}
-                          min={
-                            field.name === "experienceYears" ? 0 : undefined
-                          }
-                          onChange={(event) =>
-                            updateField(field.name, event.target.value)
-                          }
-                          placeholder={field.placeholder}
-                          type={
-                            field.name === "experienceYears"
-                              ? "number"
-                              : "text"
-                          }
-                          value={formState[field.name]}
-                        />
-                      )}
+                      <FieldControl
+                        disabled={mutationBlockedStatus !== null}
+                        field={field}
+                        inputId={inputId}
+                        onChange={(value) => updateField(field.name, value)}
+                        showReminder={showReminder}
+                        value={formState[field.name]}
+                      />
 
                       {showReminder ? (
                         <p
@@ -713,112 +961,7 @@ export function TeacherApplicationForm() {
         </form>
 
         {statusActionBar}
-        {readinessSummary}
-
-        <div aria-live="polite" className="grid gap-3">
-          {isSavingDraft ? (
-            <p className="rounded-xl border border-pine/15 bg-pine-tint px-4 py-3 text-sm leading-6 text-pine-deep">
-              正在儲存草稿...
-            </p>
-          ) : null}
-
-          {draftSaveFeedback ? (
-            <div
-              className={
-                draftSaveFeedback.kind === "success"
-                  ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
-                  : "rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay"
-              }
-            >
-              <p>{draftSaveFeedback.message}</p>
-              {draftSaveFeedback.kind === "success" && lastSavedAtLabel ? (
-                <p className="mt-2">上次儲存：{lastSavedAtLabel}</p>
-              ) : null}
-              {draftSaveFeedback.result?.code === "authentication_required" ||
-              draftSaveFeedback.showSignInLink ? (
-                <a
-                  className="mt-2 inline-flex font-medium text-ink underline underline-offset-4"
-                  href={signInHref}
-                >
-                  前往登入
-                </a>
-              ) : null}
-              {draftSaveFeedback.result?.validationErrors?.length ? (
-                <ul className="mt-2 list-disc space-y-1 pl-5">
-                  {draftSaveFeedback.result.validationErrors.map((error) => (
-                    <li key={`${error.field}-${error.code}`}>
-                      {error.message}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </div>
-          ) : null}
-
-          {isSubmitting ? (
-            <p className="rounded-xl border border-pine/15 bg-pine-tint px-4 py-3 text-sm leading-6 text-pine-deep">
-              正在送出審核...
-            </p>
-          ) : null}
-
-          {submitFeedback ? (
-            <div
-              className={
-                submitFeedback.kind === "success"
-                  ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
-                  : "rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay"
-              }
-            >
-              <p>{submitFeedback.message}</p>
-              {submitFeedback.showSignInLink ? (
-                <a
-                  className="mt-2 inline-flex font-medium text-ink underline underline-offset-4"
-                  href={signInHref}
-                >
-                  前往登入
-                </a>
-              ) : null}
-              {submitFeedback.result?.validationErrors?.length ? (
-                <ul className="mt-2 list-disc space-y-1 pl-5">
-                  {submitFeedback.result.validationErrors.map((error) => (
-                    <li key={`${error.field}-${error.code}`}>
-                      {error.message}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-
-        {isConfirmingSubmit ? (
-          <div className="rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep">
-            <p className="font-medium text-ink">確認送出審核</p>
-            <p className="mt-2">
-              {isRejectedProfile
-                ? "重新送出後，這份老師申請會再次進入平台審核。請確認修正內容已準備好，再送出。"
-                : "送出後，這份老師申請會進入平台審核。審核期間暫時不需要再儲存草稿；請確認主要資料已準備好，再送出。"}
-            </p>
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-              <button
-                className="rounded-full bg-pine px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-ink/15 disabled:text-ink-soft"
-                disabled={isSubmitting}
-                onClick={handleSubmitApplication}
-                type="button"
-              >
-                {isSubmitting ? "正在送出..." : "確認送出審核"}
-              </button>
-              <button
-                className="rounded-full border border-clay/40 bg-white px-4 py-2 text-sm font-medium text-ink disabled:cursor-not-allowed disabled:text-ink-faint"
-                disabled={isSubmitting}
-                onClick={handleCancelSubmitConfirmation}
-                type="button"
-              >
-                先回來調整
-              </button>
-            </div>
-          </div>
-        ) : null}
+        {statusExtras}
       </section>
     </>
   );

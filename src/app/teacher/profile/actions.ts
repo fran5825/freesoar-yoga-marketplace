@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { buildCheckboxGroupValue } from "@/app/teachers/join/_lib/application-fields";
 import { normalizeTeacherProfileDraftInput } from "@/domain/teacher-profile/input";
 import { updateOwnTeacherProfile } from "@/domain/teacher-profile/service";
 
@@ -13,11 +14,22 @@ export async function updateTeacherProfileAction(formData: FormData): Promise<vo
     teachingStyle: readFormString(formData, "teachingStyle"),
     experienceYears: readFormString(formData, "experienceYears"),
     certifications: readFormString(formData, "certifications"),
-    specialties: readFormString(formData, "specialties"),
-    serviceAreas: readFormString(formData, "serviceAreas"),
-    teachingFormats: readFormString(formData, "teachingFormats"),
+    specialties: readCheckboxGroupValue(formData, "specialties", "specialtiesOther"),
+    serviceAreas: readCheckboxGroupValue(formData, "serviceAreas", "serviceAreasOther"),
+    teachingFormats: readCheckboxGroupValue(
+      formData,
+      "teachingFormats",
+      "teachingFormatsOther",
+    ),
     priceRange: readFormString(formData, "priceRange"),
     profilePhotoUrl: readFormString(formData, "profilePhotoUrl"),
+    preferredSessionLengthMinutes: readFormString(
+      formData,
+      "preferredSessionLengthMinutes",
+    ),
+    preferredFrequency: readFormString(formData, "preferredFrequency"),
+    preferredLocationType: readFormString(formData, "preferredLocationType"),
+    preferenceNotes: readFormString(formData, "preferenceNotes"),
   });
 
   const result = await updateOwnTeacherProfile(input);
@@ -36,6 +48,18 @@ function readFormString(formData: FormData, name: string): string {
   const value = formData.get(name);
 
   return typeof value === "string" ? value : "";
+}
+
+function readCheckboxGroupValue(
+  formData: FormData,
+  name: string,
+  otherName: string,
+): string {
+  const selectedValues = formData
+    .getAll(name)
+    .filter((value): value is string => typeof value === "string");
+
+  return buildCheckboxGroupValue(selectedValues, readFormString(formData, otherName));
 }
 
 function redirectWithFeedback(result: "success" | "error", message: string): never {

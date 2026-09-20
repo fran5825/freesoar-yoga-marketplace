@@ -11,6 +11,10 @@ export type TeacherProfileDraftFormInput = {
   teachingFormats: string;
   priceRange: string;
   profilePhotoUrl: string;
+  preferredSessionLengthMinutes: string;
+  preferredFrequency: string;
+  preferredLocationType: string;
+  preferenceNotes: string;
 };
 
 export function normalizeTeacherProfileDraftInput(
@@ -27,6 +31,12 @@ export function normalizeTeacherProfileDraftInput(
     teachingFormats: normalizeStringList(input.teachingFormats),
     priceRange: normalizeOptionalString(input.priceRange),
     profilePhotoUrl: normalizeOptionalString(input.profilePhotoUrl),
+    preferredSessionLengthMinutes: normalizeOptionalNumber(
+      input.preferredSessionLengthMinutes,
+    ),
+    preferredFrequency: normalizeOptionalString(input.preferredFrequency),
+    preferredLocationType: normalizeOptionalString(input.preferredLocationType),
+    preferenceNotes: normalizeOptionalString(input.preferenceNotes),
   };
 }
 

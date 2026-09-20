@@ -1,6 +1,19 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
+import {
+  EXPERIENCE_YEARS_OPTIONS,
+  FREQUENCY_OPTIONS,
+  LOCATION_TYPE_OPTIONS,
+  matchExperienceYearsOptionValue,
+  parseCheckboxGroupValue,
+  SERVICE_AREA_OPTIONS,
+  SESSION_LENGTH_OPTIONS,
+  SPECIALTY_GROUPS,
+  TEACHING_FORMAT_GROUPS,
+  fieldLabels,
+  type OptionGroup,
+} from "@/app/teachers/join/_lib/application-fields";
 import { formatTeacherRatingSummary } from "@/domain/review/rating-summary";
 import { getOwnTeacherRatingSummary } from "@/domain/review/read-service";
 import { getOwnTeacherProfileApplicationSnapshot } from "@/domain/teacher-profile/service";
@@ -40,25 +53,65 @@ const nonApprovedCopy: Record<
   },
 };
 
-const fieldLabels = {
-  displayName: "公開顯示名稱",
-  bio: "老師簡介",
-  teachingStyle: "教學風格",
-  experienceYears: "教學年資",
-  specialties: "擅長類型",
-  serviceAreas: "可服務區域",
-  teachingFormats: "授課形式",
-  certifications: "證照或訓練背景",
-  priceRange: "參考收費區間",
-  profilePhotoUrl: "老師照片連結",
-} as const;
-
 function toListText(values: string[]) {
   return values.join("\n");
 }
 
 function toListDisplay(values: string[]) {
   return values.length > 0 ? values.join("、") : "尚未填寫";
+}
+
+const controlClassName =
+  "mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15";
+
+// 這頁是純 Server Component（用 <form action> 送出，沒有 client-side state），所以
+// 每個複選群組的「其他」欄位維持一直顯示，不做勾選後才展開的互動——不需要為此多開一個
+// client island。
+function CheckboxGroupFields({
+  groups,
+  name,
+  otherName,
+  values,
+  otherPlaceholder,
+}: {
+  groups: OptionGroup[];
+  name: string;
+  otherName: string;
+  values: string[];
+  otherPlaceholder: string;
+}) {
+  const { selectedValues, otherText } = parseCheckboxGroupValue(
+    values.join("\n"),
+    groups,
+  );
+  const flatOptions = groups.flatMap((group) => group.options);
+
+  return (
+    <div className="mt-2 grid gap-3">
+      <div className="flex flex-wrap gap-2">
+        {flatOptions.map((option) => (
+          <label className="cursor-pointer" key={option.value}>
+            <input
+              className="peer sr-only"
+              defaultChecked={selectedValues.includes(option.value)}
+              name={name}
+              type="checkbox"
+              value={option.value}
+            />
+            <span className="inline-flex rounded-full border border-ink/20 px-3 py-1.5 text-sm text-ink-soft transition peer-checked:border-pine peer-checked:bg-pine peer-checked:text-white">
+              {option.label}
+            </span>
+          </label>
+        ))}
+      </div>
+      <input
+        className={controlClassName}
+        defaultValue={otherText}
+        name={otherName}
+        placeholder={otherPlaceholder}
+      />
+    </div>
+  );
 }
 
 export default async function TeacherProfilePage({
@@ -178,17 +231,22 @@ export default async function TeacherProfilePage({
               <label className="text-sm font-medium text-ink" htmlFor="experienceYears">
                 {fieldLabels.experienceYears}
               </label>
-              <input
-                className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
-                defaultValue={
-                  typeof profile.experienceYears === "number" ? profile.experienceYears : ""
-                }
+              <select
+                className={controlClassName}
+                defaultValue={matchExperienceYearsOptionValue(profile.experienceYears)}
                 id="experienceYears"
-                min={0}
                 name="experienceYears"
                 required
-                type="number"
-              />
+              >
+                <option disabled value="">
+                  請選擇
+                </option>
+                {EXPERIENCE_YEARS_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="text-sm font-medium text-ink" htmlFor="profilePhotoUrl">
@@ -253,41 +311,110 @@ export default async function TeacherProfilePage({
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-6 sm:grid-cols-3">
             <div>
-              <label className="text-sm font-medium text-ink" htmlFor="specialties">
-                {fieldLabels.specialties}（可用逗號或換行分隔）
-              </label>
-              <textarea
-                className="mt-2 min-h-24 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
-                defaultValue={toListText(profile.specialties)}
-                id="specialties"
+              <p className="text-sm font-medium text-ink">{fieldLabels.specialties}</p>
+              <CheckboxGroupFields
+                groups={SPECIALTY_GROUPS}
                 name="specialties"
-                required
+                otherName="specialtiesOther"
+                otherPlaceholder="其他你擅長但沒列出的風格"
+                values={profile.specialties}
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-ink" htmlFor="serviceAreas">
-                {fieldLabels.serviceAreas}（可用逗號或換行分隔）
-              </label>
-              <textarea
-                className="mt-2 min-h-24 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
-                defaultValue={toListText(profile.serviceAreas)}
-                id="serviceAreas"
+              <p className="text-sm font-medium text-ink">{fieldLabels.serviceAreas}</p>
+              <CheckboxGroupFields
+                groups={[{ title: "", options: SERVICE_AREA_OPTIONS }]}
                 name="serviceAreas"
-                required
+                otherName="serviceAreasOther"
+                otherPlaceholder="其他縣市或線上教學"
+                values={profile.serviceAreas}
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-ink" htmlFor="teachingFormats">
-                {fieldLabels.teachingFormats}（可用逗號或換行分隔）
+              <p className="text-sm font-medium text-ink">{fieldLabels.teachingFormats}</p>
+              <CheckboxGroupFields
+                groups={TEACHING_FORMAT_GROUPS}
+                name="teachingFormats"
+                otherName="teachingFormatsOther"
+                otherPlaceholder="其他你提供的授課形式"
+                values={profile.teachingFormats}
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label
+                className="text-sm font-medium text-ink"
+                htmlFor="preferredSessionLengthMinutes"
+              >
+                {fieldLabels.preferredSessionLengthMinutes}（選填）
+              </label>
+              <select
+                className={controlClassName}
+                defaultValue={
+                  typeof profile.preferredSessionLengthMinutes === "number"
+                    ? String(profile.preferredSessionLengthMinutes)
+                    : ""
+                }
+                id="preferredSessionLengthMinutes"
+                name="preferredSessionLengthMinutes"
+              >
+                <option value="">尚未選擇</option>
+                {SESSION_LENGTH_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-ink" htmlFor="preferredFrequency">
+                {fieldLabels.preferredFrequency}（選填）
+              </label>
+              <select
+                className={controlClassName}
+                defaultValue={profile.preferredFrequency ?? ""}
+                id="preferredFrequency"
+                name="preferredFrequency"
+              >
+                <option value="">尚未選擇</option>
+                {FREQUENCY_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-ink" htmlFor="preferredLocationType">
+                {fieldLabels.preferredLocationType}（選填）
+              </label>
+              <select
+                className={controlClassName}
+                defaultValue={profile.preferredLocationType ?? ""}
+                id="preferredLocationType"
+                name="preferredLocationType"
+              >
+                <option value="">尚未選擇</option>
+                {LOCATION_TYPE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-ink" htmlFor="preferenceNotes">
+                {fieldLabels.preferenceNotes}（選填）
               </label>
               <textarea
-                className="mt-2 min-h-24 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
-                defaultValue={toListText(profile.teachingFormats)}
-                id="teachingFormats"
-                name="teachingFormats"
-                required
+                className={`${controlClassName} min-h-20`}
+                defaultValue={profile.preferenceNotes ?? ""}
+                id="preferenceNotes"
+                name="preferenceNotes"
               />
             </div>
           </div>
@@ -317,6 +444,28 @@ export default async function TeacherProfilePage({
             <ReadOnlyItem label={fieldLabels.specialties} value={toListDisplay(profile.specialties)} />
             <ReadOnlyItem label={fieldLabels.serviceAreas} value={toListDisplay(profile.serviceAreas)} />
             <ReadOnlyItem label={fieldLabels.teachingFormats} value={toListDisplay(profile.teachingFormats)} />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <ReadOnlyItem
+              label={fieldLabels.preferredSessionLengthMinutes}
+              value={
+                typeof profile.preferredSessionLengthMinutes === "number"
+                  ? `${profile.preferredSessionLengthMinutes} 分鐘`
+                  : "尚未填寫"
+              }
+            />
+            <ReadOnlyItem
+              label={fieldLabels.preferredFrequency}
+              value={profile.preferredFrequency ?? "尚未填寫"}
+            />
+            <ReadOnlyItem
+              label={fieldLabels.preferredLocationType}
+              value={profile.preferredLocationType ?? "尚未填寫"}
+            />
+            <ReadOnlyItem
+              label={fieldLabels.preferenceNotes}
+              value={profile.preferenceNotes ?? "尚未填寫"}
+            />
           </div>
         </section>
       )}
