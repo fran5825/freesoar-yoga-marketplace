@@ -9,6 +9,9 @@ import {
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { getCurrentUser } from "@/lib/auth/session";
 
+import { PublicFooter } from "../../_components/public-footer";
+import { PublicHeader } from "../../_components/public-header";
+
 import { enrollAction } from "./actions";
 
 // teacher-initiated-open-classes 第 8 節（Gate G2/G3）：pending 是三態顯示的第三態，不再是
@@ -74,7 +77,9 @@ export default async function MemberClassSessionPage({
   const hasStarted = hasClassSessionStarted(classSession.startAt);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-5 py-10 sm:px-8">
+    <div className="flex min-h-screen flex-col bg-cream text-ink">
+      <PublicHeader />
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-5 py-10 sm:px-8">
       <header className="border-b border-ink/15 pb-6">
         <p className="text-sm font-medium text-clay">Class</p>
         <h1 className="mt-2 min-w-0 break-words text-2xl font-semibold tracking-tight text-ink">
@@ -207,7 +212,9 @@ export default async function MemberClassSessionPage({
           </form>
         </section>
       )}
-    </main>
+      </main>
+      <PublicFooter />
+    </div>
   );
 }
 
@@ -226,7 +233,9 @@ function VisitorClassSessionView({
   classSessionId: string;
 }) {
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-5 py-10 sm:px-8">
+    <div className="flex min-h-screen flex-col bg-cream text-ink">
+      <PublicHeader />
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-5 py-10 sm:px-8">
       <header className="border-b border-ink/15 pb-6">
         <p className="text-sm font-medium text-clay">Class</p>
         <h1 className="mt-2 min-w-0 break-words text-2xl font-semibold tracking-tight text-ink">
@@ -280,6 +289,8 @@ function VisitorClassSessionView({
           登入後報名
         </Link>
       </section>
-    </main>
+      </main>
+      <PublicFooter />
+    </div>
   );
 }
