@@ -3,6 +3,12 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 
+import { TagCheckbox } from "@/app/_components/tag-checkbox";
+import {
+  SERVICE_AREA_OPTIONS,
+  buildCheckboxGroupValue,
+  parseCheckboxGroupValue,
+} from "@/app/teachers/join/_lib/application-fields";
 import type { DemandRequestFormInput } from "@/domain/demand-request/input";
 import {
   FREQUENCIES,
@@ -95,6 +101,29 @@ const frequencyLabels: Record<string, string> = {
   monthly: "每月",
 };
 
+const areaOptionGroups = [{ title: "", options: SERVICE_AREA_OPTIONS }];
+
+const requiredFieldChecks: {
+  label: string;
+  isFilled: (values: DemandRequestFormValues) => boolean;
+}[] = [
+  { label: "需求標題", isFilled: (v) => v.title.trim().length > 0 },
+  { label: "服務類型", isFilled: (v) => v.serviceType.trim().length > 0 },
+  { label: "需求說明", isFilled: (v) => v.description.trim().length > 0 },
+  { label: "適合對象", isFilled: (v) => v.targetLevel.trim().length > 0 },
+  {
+    label: "預計參與人數",
+    isFilled: (v) => v.expectedParticipants.trim().length > 0,
+  },
+  { label: "期望地區", isFilled: (v) => v.preferredAreas.trim().length > 0 },
+  { label: "期望時段", isFilled: (v) => v.preferredTimeSlots.length > 0 },
+  {
+    label: "單堂課程長度",
+    isFilled: (v) => v.classLengthMinutes.trim().length > 0,
+  },
+  { label: "上課頻率", isFilled: (v) => v.frequency.trim().length > 0 },
+];
+
 function toFormInput(values: DemandRequestFormValues): DemandRequestFormInput {
   return {
     ...values,
@@ -173,6 +202,12 @@ export function DemandRequestForm({
   } | null>(null);
 
   const isLocked = isSubmitted;
+  const missingRequiredFields = requiredFieldChecks.filter(
+    (check) => !check.isFilled(formValues),
+  );
+  const isReadyForSubmit = missingRequiredFields.length === 0;
+  const { selectedValues: selectedAreas, otherText: areaOtherText } =
+    parseCheckboxGroupValue(formValues.preferredAreas, areaOptionGroups);
 
   function updateField<K extends keyof DemandRequestFormValues>(
     field: K,
@@ -180,6 +215,13 @@ export function DemandRequestForm({
   ) {
     setFormValues((current) => ({ ...current, [field]: value }));
     setIsConfirmingSubmit(false);
+  }
+
+  function toggleArea(area: string) {
+    const nextSelected = selectedAreas.includes(area)
+      ? selectedAreas.filter((value) => value !== area)
+      : [...selectedAreas, area];
+    updateField("preferredAreas", buildCheckboxGroupValue(nextSelected, areaOtherText));
   }
 
   function toggleTimeSlot(slot: string) {
@@ -201,6 +243,7 @@ export function DemandRequestForm({
       return;
     }
 
+    setSubmitFeedback(null);
     setIsSavingDraft(true);
     setDraftFeedback(null);
 
@@ -232,10 +275,11 @@ export function DemandRequestForm({
   }
 
   function handleOpenSubmitConfirmation() {
-    if (isSubmitting || isLocked) {
+    if (isSubmitting || isLocked || !isReadyForSubmit) {
       return;
     }
 
+    setDraftFeedback(null);
     setSubmitFeedback(null);
     setIsConfirmingSubmit(true);
   }
@@ -249,10 +293,11 @@ export function DemandRequestForm({
   }
 
   async function handleSubmit() {
-    if (isSubmitting || isLocked) {
+    if (isSubmitting || isLocked || !isReadyForSubmit) {
       return;
     }
 
+    setDraftFeedback(null);
     setIsSubmitting(true);
     setSubmitFeedback(null);
 
@@ -289,8 +334,116 @@ export function DemandRequestForm({
     }
   }
 
+  const statusPill = (
+    <span
+      className={`w-fit rounded-full px-3 py-1 text-xs font-medium ${
+        isLocked ? "bg-pine-tint text-pine" : "bg-sage text-pine"
+      }`}
+    >
+      {isLocked ? "已送出審核" : "草稿"}
+    </span>
+  );
+
+  const statusActionBar = (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-full border border-ink/12 bg-white px-4 py-2.5">
+      {statusPill}
+      {isLocked ? (
+        <p className="text-xs leading-5 text-ink-faint">
+          需求已送出審核，此頁暫時不開放更新或重新送出。
+        </p>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            className="rounded-full border border-pine/40 px-4 py-2 text-sm font-medium text-pine disabled:cursor-not-allowed disabled:border-ink/15 disabled:text-ink-faint"
+            disabled={isSavingDraft || isSubmitting}
+            onClick={handleSaveDraft}
+            type="button"
+          >
+            {isSavingDraft ? "正在儲存..." : "儲存草稿"}
+          </button>
+          <button
+            className="rounded-full bg-pine px-5 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-ink/15 disabled:text-ink-soft"
+            disabled={isSubmitting || !isReadyForSubmit}
+            onClick={handleOpenSubmitConfirmation}
+            type="button"
+          >
+            {isSubmitting ? "正在送出..." : "送出審核"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  const readinessSummary =
+    !isLocked && !isReadyForSubmit ? (
+      <div className="rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep">
+        <span className="font-medium">還有必填欄位尚未完成：</span>
+        {missingRequiredFields.map((check) => check.label).join("、")}
+      </div>
+    ) : null;
+
+  const actionFeedback = (
+    <div aria-live="polite" className="grid gap-3">
+      {draftFeedback ? (
+        <FeedbackBanner
+          kind={draftFeedback.kind}
+          message={draftFeedback.message}
+          validationErrors={draftFeedback.validationErrors}
+        />
+      ) : null}
+      {submitFeedback ? (
+        <FeedbackBanner
+          kind={submitFeedback.kind}
+          message={submitFeedback.message}
+          validationErrors={submitFeedback.validationErrors}
+        />
+      ) : null}
+    </div>
+  );
+
+  const submitConfirmation = isConfirmingSubmit ? (
+    <div className="rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep">
+      <p className="font-medium text-ink">確認送出需求</p>
+      <p className="mt-2">
+        送出後，這筆需求會進入平台審核；審核通過前不會公開給老師。請確認內容已準備好，再送出。
+      </p>
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+        <button
+          className="rounded-full bg-pine px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-ink/15 disabled:text-ink-soft"
+          disabled={isSubmitting}
+          onClick={handleSubmit}
+          type="button"
+        >
+          {isSubmitting ? "正在送出..." : "確認送出"}
+        </button>
+        <button
+          className="rounded-full border border-clay/40 bg-white px-4 py-2 text-sm font-medium text-ink disabled:cursor-not-allowed disabled:text-ink-faint"
+          disabled={isSubmitting}
+          onClick={handleCancelSubmitConfirmation}
+          type="button"
+        >
+          先回來調整
+        </button>
+      </div>
+    </div>
+  ) : null;
+
+  // 確認送出時先把準備狀態跟儲存/送出結果收起來，只留確認框，比照老師申請表單的做法，
+  // 避免畫面同時疊出好幾個提示框。
+  const statusExtras = isConfirmingSubmit ? (
+    submitConfirmation
+  ) : (
+    <>
+      {readinessSummary}
+      {actionFeedback}
+    </>
+  );
+
   return (
     <div className="grid gap-6">
+      {statusActionBar}
+      {statusExtras}
+
       <FieldSet legend="團體與課程需求">
         <TextField
           disabled={isLocked}
@@ -344,34 +497,50 @@ export function DemandRequestForm({
       </FieldSet>
 
       <FieldSet legend="時間與地點">
-        <TextAreaField
-          disabled={isLocked}
-          hint="可用逗號或換行分隔多個地區，最多 10 項，每項最多 50 字。"
-          label="期望地區"
-          onChange={(value) => updateField("preferredAreas", value)}
-          placeholder="例如：台北市信義區、線上團課"
-          value={formValues.preferredAreas}
-        />
+        <div>
+          <span className="text-sm font-medium text-ink">期望地區</span>
+          <p className="mt-1 text-xs leading-5 text-ink-soft">
+            可複選，至少選擇一項；找不到的話可以填在「其他」。
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {SERVICE_AREA_OPTIONS.map((option) => (
+              <TagCheckbox
+                checked={selectedAreas.includes(option.value)}
+                disabled={isLocked}
+                key={option.value}
+                label={option.label}
+                onChange={() => toggleArea(option.value)}
+              />
+            ))}
+          </div>
+          <input
+            className="mt-3 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15 disabled:cursor-not-allowed disabled:bg-cream"
+            disabled={isLocked}
+            onChange={(event) =>
+              updateField(
+                "preferredAreas",
+                buildCheckboxGroupValue(selectedAreas, event.target.value),
+              )
+            }
+            placeholder="其他縣市或線上教學"
+            value={areaOtherText}
+          />
+        </div>
 
         <div>
           <span className="text-sm font-medium text-ink">期望時段</span>
           <p className="mt-1 text-xs leading-5 text-ink-soft">
             可複選，至少選擇一項。
           </p>
-          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <div className="mt-3 flex flex-wrap gap-2">
             {PREFERRED_TIME_SLOTS.map((slot) => (
-              <label
-                className="flex items-center gap-2 rounded-xl border border-ink/15 bg-white px-3 py-2 text-sm text-ink"
+              <TagCheckbox
+                checked={formValues.preferredTimeSlots.includes(slot)}
+                disabled={isLocked}
                 key={slot}
-              >
-                <input
-                  checked={formValues.preferredTimeSlots.includes(slot)}
-                  disabled={isLocked}
-                  onChange={() => toggleTimeSlot(slot)}
-                  type="checkbox"
-                />
-                {slot}
-              </label>
+                label={slot}
+                onChange={() => toggleTimeSlot(slot)}
+              />
             ))}
           </div>
         </div>
@@ -418,79 +587,8 @@ export function DemandRequestForm({
         />
       </FieldSet>
 
-      <div className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-5">
-        <div aria-live="polite">
-          {draftFeedback ? (
-            <FeedbackBanner
-              kind={draftFeedback.kind}
-              message={draftFeedback.message}
-              validationErrors={draftFeedback.validationErrors}
-            />
-          ) : null}
-
-          {submitFeedback ? (
-            <FeedbackBanner
-              kind={submitFeedback.kind}
-              message={submitFeedback.message}
-              validationErrors={submitFeedback.validationErrors}
-            />
-          ) : null}
-        </div>
-
-        {isConfirmingSubmit ? (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950">
-            <p className="font-medium text-ink">確認送出需求</p>
-            <p className="mt-2">
-              送出後，這筆需求會進入平台審核；審核通過前不會公開給老師。請確認內容已準備好，再送出。
-            </p>
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-              <button
-                className="rounded-full bg-pine px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-ink/20"
-                disabled={isSubmitting}
-                onClick={handleSubmit}
-                type="button"
-              >
-                {isSubmitting ? "正在送出..." : "確認送出"}
-              </button>
-              <button
-                className="rounded-full border border-amber-300 bg-white px-4 py-2 text-sm font-medium text-ink disabled:cursor-not-allowed disabled:text-ink-faint"
-                disabled={isSubmitting}
-                onClick={handleCancelSubmitConfirmation}
-                type="button"
-              >
-                先回來調整
-              </button>
-            </div>
-          </div>
-        ) : null}
-
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <button
-            className="w-full rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-ink/20 sm:w-auto"
-            disabled={isSavingDraft || isSubmitting || isLocked}
-            onClick={handleSaveDraft}
-            type="button"
-          >
-            {isLocked
-              ? "已送出審核"
-              : isSavingDraft
-                ? "正在儲存..."
-                : "儲存草稿"}
-          </button>
-          <button
-            className="w-full rounded-full border border-pine bg-pine px-5 py-3 text-center text-sm font-medium text-white disabled:cursor-not-allowed disabled:border-ink/25 disabled:bg-ink/20 sm:w-auto"
-            disabled={isSubmitting || isLocked}
-            onClick={handleOpenSubmitConfirmation}
-            type="button"
-          >
-            {isLocked
-              ? "已送出審核"
-              : isSubmitting
-                ? "正在送出..."
-                : "送出審核"}
-          </button>
-        </div>
-      </div>
+      {statusActionBar}
+      {statusExtras}
     </div>
   );
 }
