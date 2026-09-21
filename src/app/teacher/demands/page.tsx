@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { listPublishedDemandRequestsForTeacher } from "@/domain/demand-response/demand-read-service";
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { getDemandLocationItems } from "@/domain/demand-request/location";
 
 async function getOwnTeacherProfileStatus() {
   const currentUser = await requireUser();
@@ -144,11 +145,11 @@ export default async function TeacherDemandsPage({
                     <dd className="mt-1">{demand.expectedParticipants} 人</dd>
                   </div>
                 ) : null}
-                {demand.preferredAreas.length > 0 ? (
+                {getDemandLocationItems(demand).length > 0 ? (
                   <div className="min-w-0">
-                    <dt className="font-medium text-ink">偏好地區</dt>
+                    <dt className="font-medium text-ink">期望地點</dt>
                     <dd className="mt-1 break-words">
-                      {demand.preferredAreas.join("、")}
+                      {getDemandLocationItems(demand).join("、")}
                     </dd>
                   </div>
                 ) : null}

@@ -16,6 +16,7 @@ export type TeacherFacingDemandListItem = {
   targetLevel: string | null;
   expectedParticipants: number | null;
   preferredAreas: string[];
+  isOnline: boolean;
   preferredTimeSlots: string[];
   classLengthMinutes: number | null;
   frequency: string | null;
@@ -39,6 +40,7 @@ const demandListSelect = {
   targetLevel: true,
   expectedParticipants: true,
   preferredAreas: true,
+  isOnline: true,
   preferredTimeSlots: true,
   classLengthMinutes: true,
   frequency: true,

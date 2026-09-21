@@ -9,6 +9,7 @@ export const blankDemandRequestFormValues: DemandRequestFormValues = {
   targetLevel: "",
   expectedParticipants: "",
   preferredAreas: "",
+  isOnline: false,
   preferredTimeSlots: [],
   classLengthMinutes: "",
   frequency: "",
@@ -28,7 +29,9 @@ export function toDemandRequestFormValues(
       typeof demandRequest.expectedParticipants === "number"
         ? String(demandRequest.expectedParticipants)
         : "",
-    preferredAreas: demandRequest.preferredAreas.join("\n"),
+    // 2026-09-21 以前的草稿可能存了多個縣市，合併成一行讓團主改寫成具體地址。
+    preferredAreas: demandRequest.preferredAreas.join("、"),
+    isOnline: demandRequest.isOnline,
     preferredTimeSlots: demandRequest.preferredTimeSlots,
     classLengthMinutes:
       typeof demandRequest.classLengthMinutes === "number"

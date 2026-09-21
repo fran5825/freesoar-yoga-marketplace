@@ -21,6 +21,7 @@ export type SubmittedDemandRequestForAdmin = {
   targetLevel: string | null;
   expectedParticipants: number | null;
   preferredAreas: string[];
+  isOnline: boolean;
   preferredTimeSlots: string[];
   preferredStartDate: Date | null;
   classLengthMinutes: number | null;
@@ -82,6 +83,7 @@ const submittedDemandRequestSelect = {
   targetLevel: true,
   expectedParticipants: true,
   preferredAreas: true,
+  isOnline: true,
   preferredTimeSlots: true,
   preferredStartDate: true,
   classLengthMinutes: true,

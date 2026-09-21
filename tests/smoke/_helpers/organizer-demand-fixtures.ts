@@ -94,7 +94,7 @@ export function completeDemandRequestData(
 ) {
   return {
     title: "週三晚間員工紓壓瑜伽課",
-    serviceType: "Hatha Yoga",
+    serviceType: "伸展與身體保養",
     description:
       "希望帶領辦公室同仁在下班前放鬆身心，適合久坐族群，希望老師著重呼吸與伸展。",
     targetLevel: "general",

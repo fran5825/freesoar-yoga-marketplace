@@ -39,7 +39,7 @@ test.afterAll(async () => {
 const baseInput = {
   title: "自建課程測試",
   description: "測試用課程說明。",
-  serviceType: "Hatha Yoga",
+  serviceType: "伸展與身體保養",
   location: "台北市信義區測試教室",
   capacity: 20,
   isPublic: true,

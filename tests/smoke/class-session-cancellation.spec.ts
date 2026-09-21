@@ -77,7 +77,7 @@ async function seedClassSession({
   const validation = validateClassSessionCreate({
     title: `Class ${testRunId}`,
     description: null,
-    serviceType: "Hatha Yoga",
+    serviceType: "伸展與身體保養",
     startAt: "2026-09-01T14:00",
     endAt: "2026-09-01T15:00",
     location: "Test Studio",

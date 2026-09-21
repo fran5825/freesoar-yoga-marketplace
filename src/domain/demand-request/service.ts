@@ -28,6 +28,7 @@ export type DemandRequestSnapshot = {
   targetLevel: string | null;
   expectedParticipants: number | null;
   preferredAreas: string[];
+  isOnline: boolean;
   preferredTimeSlots: string[];
   preferredStartDate: Date | null;
   classLengthMinutes: number | null;
@@ -49,6 +50,7 @@ const demandRequestSelect = {
   targetLevel: true,
   expectedParticipants: true,
   preferredAreas: true,
+  isOnline: true,
   preferredTimeSlots: true,
   preferredStartDate: true,
   classLengthMinutes: true,
@@ -383,6 +385,7 @@ function toDemandRequestData(input: DemandRequestApplicationInput) {
     targetLevel: input.targetLevel ?? null,
     expectedParticipants: input.expectedParticipants ?? null,
     preferredAreas: input.preferredAreas ?? [],
+    isOnline: input.isOnline ?? false,
     preferredTimeSlots: input.preferredTimeSlots ?? [],
     preferredStartDate: input.preferredStartDate ?? null,
     classLengthMinutes: input.classLengthMinutes ?? null,

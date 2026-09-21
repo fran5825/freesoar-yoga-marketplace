@@ -83,7 +83,7 @@ test.describe("notification smoke", () => {
     await addAuthSessionCookie(context, teacherSession);
     await page.goto("/teachers/join");
     await expect(page.getByLabel("公開顯示名稱")).toHaveValue(displayName);
-    await page.getByRole("button", { name: "送出審核" }).click();
+    await page.getByRole("button", { name: "送出審核" }).first().click();
     await page.getByRole("button", { name: "確認送出審核" }).click();
     await expect(page.getByText("已送出審核").first()).toBeVisible();
 
@@ -226,11 +226,11 @@ test.describe("notification smoke", () => {
     await addAuthSessionCookie(context, organizerSession);
     await page.goto(`/organizer/demands/${demand.id}/edit`);
     await expect(page.getByLabel("需求標題")).toHaveValue(demandTitle);
-    await page.getByRole("button", { name: "送出審核" }).click();
-    await expect(page.getByText("確認送出需求")).toBeVisible();
-    await page.getByRole("button", { name: "確認送出" }).click();
+    await page.getByRole("button", { name: "送出審核" }).first().click();
+    await expect(page.getByText("確認送出需求").first()).toBeVisible();
+    await page.getByRole("button", { name: "確認送出" }).first().click();
     await expect(
-      page.getByText("需求已收到，待平台審核後才會公開給合適的老師。"),
+      page.getByText("需求已收到，待平台審核後才會公開給合適的老師。").first(),
     ).toBeVisible();
 
     // 見上方 teacher_application_submitted 測試的註解：admin fan-out 是全域的，
@@ -407,7 +407,7 @@ test.describe("notification smoke", () => {
     const validation = validateClassSessionCreate({
       title: `Class ${testRunId}`,
       description: null,
-      serviceType: "Hatha Yoga",
+      serviceType: "伸展與身體保養",
       startAt: toLocalInputValue(startAt),
       endAt: toLocalInputValue(endAt),
       location: "測試教室",
@@ -492,7 +492,7 @@ test.describe("notification smoke", () => {
     const validation = validateClassSessionCreate({
       title: `Class ${testRunId}`,
       description: null,
-      serviceType: "Hatha Yoga",
+      serviceType: "伸展與身體保養",
       startAt: toLocalInputValue(startAt),
       endAt: toLocalInputValue(endAt),
       location: "測試教室",
@@ -643,7 +643,7 @@ test.describe("notification smoke", () => {
     const validation = validateClassSessionCreate({
       title: `Class ${testRunId}`,
       description: null,
-      serviceType: "Hatha Yoga",
+      serviceType: "伸展與身體保養",
       startAt: toLocalInputValue(startAt),
       endAt: toLocalInputValue(endAt),
       location: "測試教室",

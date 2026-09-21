@@ -75,7 +75,7 @@ async function seedClassSession({
       organizerProfileId,
       organizationId,
       title: `Class ${testRunId}`,
-      serviceType: "Hatha Yoga",
+      serviceType: "伸展與身體保養",
       startAt,
       endAt,
       location: "Test Studio",

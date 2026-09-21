@@ -47,7 +47,7 @@ async function seedPublicClassSession({
   testRunId,
   teacherProfileId,
   title,
-  serviceType = "Hatha Yoga",
+  serviceType = "伸展與身體保養",
   startAt = "2026-11-02T14:00",
   endAt = "2026-11-02T15:00",
   isPublic = true,
@@ -209,7 +209,7 @@ test.describe("public classes discovery smoke", () => {
       testRunId: `${testRunId}-hatha`,
       teacherProfileId: teacher.teacherProfileId,
       title: `Hatha Public ${testRunId}`,
-      serviceType: "Hatha Yoga",
+      serviceType: "伸展與身體保養",
       startAt: "2026-11-02T14:00", // 2026-11-02 是星期一
       endAt: "2026-11-02T15:00",
     });
@@ -254,7 +254,9 @@ test.describe("public classes discovery smoke", () => {
     await expect(page.getByText(`Vinyasa Series ${testRunId}`)).toBeVisible();
     await expect(page.getByText(`Private ${testRunId}`)).toBeHidden();
 
-    await page.goto("/classes?serviceType=Hatha+Yoga");
+    await page.goto(
+      `/classes?serviceType=${encodeURIComponent("伸展與身體保養")}`,
+    );
     await expect(page.getByText(`Hatha Public ${testRunId}`)).toBeVisible();
     await expect(page.getByText(`Vinyasa Series ${testRunId}`)).toBeHidden();
 

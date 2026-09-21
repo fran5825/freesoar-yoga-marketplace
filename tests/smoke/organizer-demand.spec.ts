@@ -100,8 +100,8 @@ test.describe("organizer demand smoke", () => {
 
     await page.goto("/organizer/demands/new");
     await page.getByLabel("需求標題").fill(draftTitle);
-    await page.getByRole("button", { name: "儲存草稿" }).click();
-    await expect(page.getByText("草稿已儲存。")).toBeVisible();
+    await page.getByRole("button", { name: "儲存草稿" }).first().click();
+    await expect(page.getByText("草稿已儲存。").first()).toBeVisible();
 
     const draft = await prisma.demandRequest.findFirstOrThrow({
       where: { organizerProfileId, status: "draft" },
@@ -113,25 +113,30 @@ test.describe("organizer demand smoke", () => {
     // 續編：重新開啟既有 draft 應該把先前存的欄位值 hydrate 回表單。
     await expect(page.getByLabel("需求標題")).toHaveValue(draftTitle);
 
-    await page.getByLabel("服務類型").selectOption("Hatha Yoga");
+    // 單選按鈕本身是 sr-only（只給螢幕閱讀器），跟真人一樣點方塊上的文字。
+    await page.getByText("伸展與身體保養", { exact: true }).click();
+    await expect(
+      page.getByRole("radio", { name: /^伸展與身體保養/ }),
+    ).toBeChecked();
     await page
-      .getByLabel("需求說明")
+      // 「特定對象與主題」的說明文字也提到「需求說明」，所以指定文字輸入框。
+      .getByRole("textbox", { name: /^需求說明/ })
       .fill(
         "希望帶領辦公室同仁在下班前放鬆身心，適合久坐族群，希望老師著重呼吸與伸展。",
       );
     await page.getByLabel("適合對象").selectOption("general");
     await page.getByLabel("預計參與人數").fill("15");
-    await page.getByLabel("期望地區").fill("台北市信義區");
-    await page.getByLabel("平日晚上").check();
+    await page.getByLabel("期望地點").fill("台北市信義區");
+    await page.getByText("平日晚上", { exact: true }).click();
     await page.getByLabel("單堂課程長度（分鐘）").fill("60");
     await page.getByLabel("上課頻率").selectOption("weekly");
 
-    await page.getByRole("button", { name: "送出審核" }).click();
-    await expect(page.getByText("確認送出需求")).toBeVisible();
-    await page.getByRole("button", { name: "確認送出" }).click();
+    await page.getByRole("button", { name: "送出審核" }).first().click();
+    await expect(page.getByText("確認送出需求").first()).toBeVisible();
+    await page.getByRole("button", { name: "確認送出" }).first().click();
 
     await expect(
-      page.getByText("需求已收到，待平台審核後才會公開給合適的老師。"),
+      page.getByText("需求已收到，待平台審核後才會公開給合適的老師。").first(),
     ).toBeVisible();
 
     const submitted = await prisma.demandRequest.findUniqueOrThrow({
@@ -154,7 +159,7 @@ test.describe("organizer demand smoke", () => {
     expect(submitted).toEqual({
       status: "submitted",
       title: draftTitle,
-      serviceType: "Hatha Yoga",
+      serviceType: "伸展與身體保養",
       description:
         "希望帶領辦公室同仁在下班前放鬆身心，適合久坐族群，希望老師著重呼吸與伸展。",
       targetLevel: "general",
@@ -198,14 +203,14 @@ test.describe("organizer demand smoke", () => {
     });
 
     await page.goto(`/organizer/demands/${demand.id}/edit`);
-    await page.getByRole("button", { name: "送出審核" }).click();
-    await expect(page.getByText("確認送出需求")).toBeVisible();
-    await page.getByRole("button", { name: "確認送出" }).click();
+    await page.getByRole("button", { name: "送出審核" }).first().click();
+    await expect(page.getByText("確認送出需求").first()).toBeVisible();
+    await page.getByRole("button", { name: "確認送出" }).first().click();
 
     await expect(
       page.getByText(
         "請先至團主資料頁補齊組織聯絡資訊，才能送出需求。",
-      ),
+      ).first(),
     ).toBeVisible();
 
     const stillDraft = await prisma.demandRequest.findUniqueOrThrow({
@@ -236,36 +241,27 @@ test.describe("organizer demand smoke", () => {
       });
     await addAuthSessionCookie(context, sessionToken);
 
+    // 2026-09-21 服務類型改成單選方塊後，選項值寫死在元件裡，無法再從 DOM 注入假選項；
+    // 改成直接在資料庫放一筆帶非法值的草稿，表單載入後原封不動送出。
     const demand = await createDemandRequest({
       organizerProfileId,
       organizationId,
       status: "draft",
       data: completeDemandRequestData({
         title: `合法草稿待注入非法值 ${testRunId}`,
+        serviceType: "Not A Real Service Type",
       }),
     });
 
     await page.goto(`/organizer/demands/${demand.id}/edit`);
 
-    const serviceTypeSelect = page.getByLabel("服務類型");
-    // 先與這個 select 互動一次，確保 React hydration 已完成，
-    // 避免下面手動注入的 <option> 在 hydration reconcile 時被清掉。
-    await serviceTypeSelect.selectOption("Yin Yoga");
-    await serviceTypeSelect.evaluate((select: HTMLSelectElement) => {
-      const bogusOption = document.createElement("option");
-      bogusOption.value = "Not A Real Service Type";
-      bogusOption.textContent = "Not A Real Service Type";
-      select.appendChild(bogusOption);
-    });
-    await serviceTypeSelect.selectOption("Not A Real Service Type");
-
-    await page.getByRole("button", { name: "送出審核" }).click();
-    await expect(page.getByText("確認送出需求")).toBeVisible();
-    await page.getByRole("button", { name: "確認送出" }).click();
+    await page.getByRole("button", { name: "送出審核" }).first().click();
+    await expect(page.getByText("確認送出需求").first()).toBeVisible();
+    await page.getByRole("button", { name: "確認送出" }).first().click();
 
     // 前端選單本身不會提供這個值；此處證明伺服器端獨立驗證受控字串，不只是信任 UI。
     await expect(
-      page.getByText("服務類型不在允許的選項內。"),
+      page.getByText("服務類型不在允許的選項內。").first(),
     ).toBeVisible();
 
     const stillDraft = await prisma.demandRequest.findUniqueOrThrow({
@@ -273,7 +269,66 @@ test.describe("organizer demand smoke", () => {
       select: { status: true, serviceType: true },
     });
     expect(stillDraft.status).toBe("draft");
-    expect(stillDraft.serviceType).toBe("Hatha Yoga");
+    expect(stillDraft.serviceType).toBe("Not A Real Service Type");
+  });
+
+  test("lets an online demand be submitted without a location, but requires one otherwise", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-online-${Date.now()}`,
+    );
+    const email = `online-${testRunId}@${testEmailDomain}`;
+    createdEmails.push(email);
+
+    const { sessionToken, organizerProfileId, organizationId } =
+      await createOrganizerProfileWithOrganization({
+        email,
+        displayName: `Online Organizer ${testRunId}`,
+        organizationName: `Online Org ${testRunId}`,
+        contactName: "聯絡人",
+        contactEmail: `contact-${testRunId}@example.com`,
+        contactPhone: "0900000000",
+      });
+    await addAuthSessionCookie(context, sessionToken);
+
+    const demand = await createDemandRequest({
+      organizerProfileId,
+      organizationId,
+      status: "draft",
+      data: completeDemandRequestData({
+        title: `線上課程不用填地點 ${testRunId}`,
+        preferredAreas: [],
+      }),
+    });
+
+    await page.goto(`/organizer/demands/${demand.id}/edit`);
+
+    // 沒勾線上課程、地點又空著：必填檢查會鎖住送出按鈕。
+    await expect(page.getByText("還有必填欄位尚未完成：期望地點").first()).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "送出審核" }).first(),
+    ).toBeDisabled();
+
+    await page.getByLabel("這是線上課程").check();
+    await expect(page.getByText("期望地點（選填）")).toBeVisible();
+
+    await page.getByRole("button", { name: "送出審核" }).first().click();
+    await page.getByRole("button", { name: "確認送出" }).first().click();
+    await expect(
+      page.getByText("需求已收到，待平台審核後才會公開給合適的老師。").first(),
+    ).toBeVisible();
+
+    const submitted = await prisma.demandRequest.findUniqueOrThrow({
+      where: { id: demand.id },
+      select: { status: true, isOnline: true, preferredAreas: true },
+    });
+    expect(submitted).toEqual({
+      status: "submitted",
+      isOnline: true,
+      preferredAreas: [],
+    });
   });
 
   test("prevents a stale draft-save in another tab from overwriting an already-submitted demand", async ({
@@ -325,11 +380,11 @@ test.describe("organizer demand smoke", () => {
 
     // 分頁 A 送出審核成功。
     await pageA.getByLabel("需求標題").fill(submittedTitle);
-    await pageA.getByRole("button", { name: "送出審核" }).click();
-    await expect(pageA.getByText("確認送出需求")).toBeVisible();
-    await pageA.getByRole("button", { name: "確認送出" }).click();
+    await pageA.getByRole("button", { name: "送出審核" }).first().click();
+    await expect(pageA.getByText("確認送出需求").first()).toBeVisible();
+    await pageA.getByRole("button", { name: "確認送出" }).first().click();
     await expect(
-      pageA.getByText("需求已收到，待平台審核後才會公開給合適的老師。"),
+      pageA.getByText("需求已收到，待平台審核後才會公開給合適的老師。").first(),
     ).toBeVisible();
 
     const afterSubmit = await prisma.demandRequest.findUniqueOrThrow({
@@ -339,11 +394,11 @@ test.describe("organizer demand smoke", () => {
     expect(afterSubmit).toEqual({ status: "submitted", title: submittedTitle });
 
     // 分頁 B 完全不知道分頁 A 已經送出，仍拿著舊表單按「儲存草稿」。
-    await pageB.getByRole("button", { name: "儲存草稿" }).click();
+    await pageB.getByRole("button", { name: "儲存草稿" }).first().click();
     await expect(
       pageB.getByText(
         "找不到這筆需求草稿，或目前狀態不允許編輯。",
-      ),
+      ).first(),
     ).toBeVisible();
 
     const afterStaleSave = await prisma.demandRequest.findUniqueOrThrow({

@@ -4,15 +4,11 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 
 import { TagCheckbox } from "@/app/_components/tag-checkbox";
-import {
-  SERVICE_AREA_OPTIONS,
-  buildCheckboxGroupValue,
-  parseCheckboxGroupValue,
-} from "@/app/teachers/join/_lib/application-fields";
 import type { DemandRequestFormInput } from "@/domain/demand-request/input";
 import {
   FREQUENCIES,
   PREFERRED_TIME_SLOTS,
+  SERVICE_TYPE_DESCRIPTIONS,
   SERVICE_TYPES,
   TARGET_LEVELS,
 } from "@/domain/demand-request/service-types";
@@ -29,6 +25,7 @@ export type DemandRequestFormValues = {
   targetLevel: string;
   expectedParticipants: string;
   preferredAreas: string;
+  isOnline: boolean;
   preferredTimeSlots: string[];
   classLengthMinutes: string;
   frequency: string;
@@ -77,16 +74,6 @@ type DemandRequestFormProps = {
   ) => Promise<SubmitDemandRequestActionResult>;
 };
 
-const serviceTypeLabels: Record<string, string> = {
-  "Hatha Yoga": "哈達瑜伽",
-  "Yin Yoga": "陰瑜伽",
-  "Stretch Yoga": "伸展瑜伽",
-  Breathwork: "呼吸練習",
-  "Corporate Relaxation Yoga": "企業放鬆瑜伽",
-  "Beginner Yoga": "初學瑜伽",
-  "Parent-child Yoga": "親子瑜伽",
-};
-
 const targetLevelLabels: Record<string, string> = {
   beginner: "初學",
   general: "一般",
@@ -101,8 +88,6 @@ const frequencyLabels: Record<string, string> = {
   monthly: "每月",
 };
 
-const areaOptionGroups = [{ title: "", options: SERVICE_AREA_OPTIONS }];
-
 const requiredFieldChecks: {
   label: string;
   isFilled: (values: DemandRequestFormValues) => boolean;
@@ -115,7 +100,10 @@ const requiredFieldChecks: {
     label: "預計參與人數",
     isFilled: (v) => v.expectedParticipants.trim().length > 0,
   },
-  { label: "期望地區", isFilled: (v) => v.preferredAreas.trim().length > 0 },
+  {
+    label: "期望地點",
+    isFilled: (v) => v.isOnline || v.preferredAreas.trim().length > 0,
+  },
   { label: "期望時段", isFilled: (v) => v.preferredTimeSlots.length > 0 },
   {
     label: "單堂課程長度",
@@ -206,8 +194,6 @@ export function DemandRequestForm({
     (check) => !check.isFilled(formValues),
   );
   const isReadyForSubmit = missingRequiredFields.length === 0;
-  const { selectedValues: selectedAreas, otherText: areaOtherText } =
-    parseCheckboxGroupValue(formValues.preferredAreas, areaOptionGroups);
 
   function updateField<K extends keyof DemandRequestFormValues>(
     field: K,
@@ -215,13 +201,6 @@ export function DemandRequestForm({
   ) {
     setFormValues((current) => ({ ...current, [field]: value }));
     setIsConfirmingSubmit(false);
-  }
-
-  function toggleArea(area: string) {
-    const nextSelected = selectedAreas.includes(area)
-      ? selectedAreas.filter((value) => value !== area)
-      : [...selectedAreas, area];
-    updateField("preferredAreas", buildCheckboxGroupValue(nextSelected, areaOtherText));
   }
 
   function toggleTimeSlot(slot: string) {
@@ -330,6 +309,8 @@ export function DemandRequestForm({
         message: "需求暫時無法送出，請稍後再試。",
       });
     } finally {
+      // 失敗時也要收起確認框：確認框開著時 statusExtras 會把錯誤訊息藏起來。
+      setIsConfirmingSubmit(false);
       setIsSubmitting(false);
     }
   }
@@ -454,17 +435,24 @@ export function DemandRequestForm({
           placeholder="例如：週三晚間員工紓壓瑜伽課"
           value={formValues.title}
         />
-        <SelectField
-          disabled={isLocked}
-          hint="請選擇最貼近需求的課程類型。"
-          label="服務類型"
-          onChange={(value) => updateField("serviceType", value)}
-          options={SERVICE_TYPES.map((value) => ({
-            value,
-            label: serviceTypeLabels[value] ?? value,
-          }))}
-          value={formValues.serviceType}
-        />
+        <div>
+          <span className="text-sm font-medium text-ink">服務類型</span>
+          <p className="mt-1 text-xs leading-5 text-ink-soft">
+            選一個最接近你們想要的課；不確定的話，選最後一項讓老師提案。
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {SERVICE_TYPES.map((serviceType) => (
+              <ServiceTypeCard
+                checked={formValues.serviceType === serviceType}
+                description={SERVICE_TYPE_DESCRIPTIONS[serviceType]}
+                disabled={isLocked}
+                key={serviceType}
+                label={serviceType}
+                onChange={() => updateField("serviceType", serviceType)}
+              />
+            ))}
+          </div>
+        </div>
         <TextAreaField
           disabled={isLocked}
           hint="說明上課對象、目的與希望呈現的課程樣貌（20–2000 字）。"
@@ -497,34 +485,30 @@ export function DemandRequestForm({
       </FieldSet>
 
       <FieldSet legend="時間與地點">
-        <div>
-          <span className="text-sm font-medium text-ink">期望地區</span>
-          <p className="mt-1 text-xs leading-5 text-ink-soft">
-            可複選，至少選擇一項；找不到的話可以填在「其他」。
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {SERVICE_AREA_OPTIONS.map((option) => (
-              <TagCheckbox
-                checked={selectedAreas.includes(option.value)}
-                disabled={isLocked}
-                key={option.value}
-                label={option.label}
-                onChange={() => toggleArea(option.value)}
-              />
-            ))}
-          </div>
-          <input
-            className="mt-3 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15 disabled:cursor-not-allowed disabled:bg-cream"
+        <div className="grid gap-3">
+          <TextField
             disabled={isLocked}
-            onChange={(event) =>
-              updateField(
-                "preferredAreas",
-                buildCheckboxGroupValue(selectedAreas, event.target.value),
-              )
+            hint={
+              formValues.isOnline
+                ? "線上課程可以留空；如果有實體集合地點也可以填。"
+                : "填寫具體地址或場地名稱，讓老師知道要去哪裡上課（100 字以內）。"
             }
-            placeholder="其他縣市或線上教學"
-            value={areaOtherText}
+            label={formValues.isOnline ? "期望地點（選填）" : "期望地點"}
+            maxLength={100}
+            onChange={(value) => updateField("preferredAreas", value)}
+            placeholder="例如：台北市大安區安和路一段 10 號、陽光科技公司 4 樓教室"
+            value={formValues.preferredAreas}
           />
+          <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-ink">
+            <input
+              checked={formValues.isOnline}
+              className="size-4 accent-pine disabled:cursor-not-allowed"
+              disabled={isLocked}
+              onChange={(event) => updateField("isOnline", event.target.checked)}
+              type="checkbox"
+            />
+            這是線上課程
+          </label>
         </div>
 
         <div>
@@ -590,6 +574,40 @@ export function DemandRequestForm({
       {statusActionBar}
       {statusExtras}
     </div>
+  );
+}
+
+// 服務類型每一項都有說明文字，下拉選單放不下，所以改用單選方塊；比照 TagCheckbox，
+// 用 has-checked 純 CSS 呈現選取狀態。
+function ServiceTypeCard({
+  label,
+  description,
+  checked,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: () => void;
+  disabled: boolean;
+}) {
+  return (
+    <label className="relative block cursor-pointer rounded-xl border border-ink/20 px-3 py-2.5 transition has-checked:border-pine has-checked:bg-pine-tint has-disabled:cursor-not-allowed has-disabled:opacity-60 has-focus-visible:ring-2 has-focus-visible:ring-pine/25">
+      <input
+        checked={checked}
+        className="sr-only"
+        disabled={disabled}
+        name="serviceType"
+        onChange={onChange}
+        type="radio"
+        value={label}
+      />
+      <span className="block text-sm font-medium text-ink">{label}</span>
+      <span className="mt-0.5 block text-xs leading-5 text-ink-soft">
+        {description}
+      </span>
+    </label>
   );
 }
 

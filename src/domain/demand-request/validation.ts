@@ -12,6 +12,7 @@ export type DemandRequestApplicationInput = {
   targetLevel?: string | null;
   expectedParticipants?: number | null;
   preferredAreas?: string[] | null;
+  isOnline?: boolean | null;
   preferredTimeSlots?: string[] | null;
   preferredStartDate?: Date | null;
   classLengthMinutes?: number | null;
@@ -29,7 +30,8 @@ export const EXPECTED_PARTICIPANTS_MAX = 500;
 export const CLASS_LENGTH_MINUTES_MIN = 30;
 export const CLASS_LENGTH_MINUTES_MAX = 240;
 export const PREFERRED_AREAS_MAX_ITEMS = 10;
-export const PREFERRED_AREA_ITEM_MAX_LENGTH = 50;
+// 2026-09-21 期望地點改為自由輸入的地址／場地名稱，從 50 字放寬到 100 字。
+export const PREFERRED_AREA_ITEM_MAX_LENGTH = 100;
 
 export type DemandRequestValidationErrorCode =
   | "title_required"
@@ -181,17 +183,20 @@ export function validateDemandRequestSubmit(
     });
   }
 
+  // 2026-09-21：勾選「線上課程」時期望地點改為選填；有填的話仍檢查長度。
   if (!hasAtLeastOneValue(input.preferredAreas)) {
-    errors.push({
-      field: "preferredAreas",
-      code: "preferred_areas_required",
-      message: "期望地區至少需要一項。",
-    });
+    if (input.isOnline !== true) {
+      errors.push({
+        field: "preferredAreas",
+        code: "preferred_areas_required",
+        message: "期望地點為送出必填欄位；線上課程請勾選「這是線上課程」。",
+      });
+    }
   } else if (input.preferredAreas!.length > PREFERRED_AREAS_MAX_ITEMS) {
     errors.push({
       field: "preferredAreas",
       code: "preferred_areas_too_many",
-      message: `期望地區最多 ${PREFERRED_AREAS_MAX_ITEMS} 項。`,
+      message: `期望地點最多 ${PREFERRED_AREAS_MAX_ITEMS} 項。`,
     });
   } else if (
     input.preferredAreas!.some(
@@ -201,7 +206,7 @@ export function validateDemandRequestSubmit(
     errors.push({
       field: "preferredAreas",
       code: "preferred_areas_item_too_long",
-      message: `每個期望地區不可超過 ${PREFERRED_AREA_ITEM_MAX_LENGTH} 個字。`,
+      message: `期望地點不可超過 ${PREFERRED_AREA_ITEM_MAX_LENGTH} 個字。`,
     });
   }
 

@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { AdminNav } from "@/app/admin/_components/admin-nav";
 
 import { publishDemandRequestAction, rejectDemandRequestAction } from "./actions";
+import { getDemandLocationItems } from "@/domain/demand-request/location";
 
 type AdminDemandsPageProps = {
   searchParams?: Promise<{
@@ -288,8 +289,8 @@ export default async function AdminDemandsPage({
                   value={demandRequest.budgetRange}
                 />
                 <ReadOnlyList
-                  label="Preferred areas"
-                  values={demandRequest.preferredAreas}
+                  label="期望地點"
+                  values={getDemandLocationItems(demandRequest)}
                 />
                 <ReadOnlyList
                   label="Preferred time slots"

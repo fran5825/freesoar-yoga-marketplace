@@ -8,6 +8,7 @@ import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
 import { submitDemandResponseAction, withdrawDemandResponseAction } from "./actions";
+import { getDemandLocationItems } from "@/domain/demand-request/location";
 
 type TeacherDemandDetailPageProps = {
   params: Promise<{ demandRequestId: string }>;
@@ -275,11 +276,11 @@ export default async function TeacherDemandDetailPage({
           ) : null}
         </dl>
 
-        {demand.preferredAreas.length > 0 ? (
+        {getDemandLocationItems(demand).length > 0 ? (
           <div className="min-w-0">
-            <p className="font-medium text-ink">偏好地區</p>
+            <p className="font-medium text-ink">期望地點</p>
             <p className="mt-1 break-words text-sm leading-6 text-ink-soft">
-              {demand.preferredAreas.join("、")}
+              {getDemandLocationItems(demand).join("、")}
             </p>
           </div>
         ) : null}

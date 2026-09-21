@@ -588,6 +588,8 @@ export function TeacherApplicationForm() {
           "老師申請暫時無法送出，請稍後再試。你目前畫面中的內容仍會保留。",
       });
     } finally {
+      // 失敗時也要收起確認框：確認框開著時 statusExtras 會把錯誤訊息藏起來。
+      setIsConfirmingSubmit(false);
       setIsSubmitting(false);
     }
   }

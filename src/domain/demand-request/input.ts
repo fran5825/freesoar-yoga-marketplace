@@ -7,6 +7,7 @@ export type DemandRequestFormInput = {
   targetLevel: string;
   expectedParticipants: string;
   preferredAreas: string;
+  isOnline: boolean;
   preferredTimeSlots: string;
   classLengthMinutes: string;
   frequency: string;
@@ -23,7 +24,9 @@ export function normalizeDemandRequestInput(
     description: normalizeOptionalString(input.description),
     targetLevel: normalizeOptionalString(input.targetLevel),
     expectedParticipants: normalizeOptionalNumber(input.expectedParticipants),
-    preferredAreas: normalizeStringList(input.preferredAreas),
+    // 2026-09-21 期望地點改為一筆自由輸入的地址／場地名稱，地址裡常有逗號，所以不再拆成多項。
+    preferredAreas: normalizeSingleItemList(input.preferredAreas),
+    isOnline: input.isOnline === true,
     preferredTimeSlots: normalizeStringList(input.preferredTimeSlots),
     classLengthMinutes: normalizeOptionalNumber(input.classLengthMinutes),
     frequency: normalizeOptionalString(input.frequency),
@@ -56,6 +59,12 @@ function normalizeOptionalNumber(value: string): number | null {
   }
 
   return parsedValue;
+}
+
+function normalizeSingleItemList(value: string): string[] {
+  const trimmedValue = value.trim();
+
+  return trimmedValue.length > 0 ? [trimmedValue] : [];
 }
 
 function normalizeStringList(value: string): string[] {

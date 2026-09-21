@@ -45,7 +45,7 @@ async function seedApprovedTeacher(testRunId: string) {
 const baseSeriesInput = {
   title: "常規課程系列測試",
   description: "測試用系列說明。",
-  serviceType: "Hatha Yoga",
+  serviceType: "伸展與身體保養",
   startTime: "10:00",
   endTime: "11:00",
   location: "台北市信義區測試教室",
@@ -127,7 +127,7 @@ test.describe("teacher recurring class series smoke", () => {
 
     const conflictingInput = validateClassSessionCreate({
       title: "既有課程",
-      serviceType: "Hatha Yoga",
+      serviceType: "伸展與身體保養",
       startAt: "2026-10-12T10:00",
       endAt: "2026-10-12T11:00",
       location: "台北市信義區測試教室",

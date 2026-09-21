@@ -171,7 +171,8 @@ model DemandRequest {
   description          String?
   targetLevel          String?
   expectedParticipants Int?
-  preferredAreas       String[]            @default([])
+  preferredAreas       String[]            @default([]) // 2026-09-21 起存一筆自由輸入的地址／場地名稱；舊資料可能是多個縣市
+  isOnline             Boolean             @default(false) // 線上課程：勾選後 preferredAreas 改為選填
   preferredTimeSlots   String[]            @default([])
   preferredStartDate   DateTime?
   classLengthMinutes   Int?

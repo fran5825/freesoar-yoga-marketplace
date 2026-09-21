@@ -34,7 +34,7 @@ test.afterAll(async () => {
 const validInput = {
   title: "測試課程",
   description: "測試用課程說明。",
-  serviceType: "Hatha Yoga",
+  serviceType: "伸展與身體保養",
   startAt: "2026-08-20T14:00",
   endAt: "2026-08-20T15:00",
   location: "台北市信義區測試教室",

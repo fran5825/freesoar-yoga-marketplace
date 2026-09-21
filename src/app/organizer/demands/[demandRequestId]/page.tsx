@@ -20,6 +20,7 @@ import {
   selectDemandResponseAction,
 } from "./actions";
 import { ResponseList } from "./_components/ResponseList";
+import { getDemandLocationItems } from "@/domain/demand-request/location";
 
 type DemandRequestDetailPageProps = {
   params: Promise<{ demandRequestId: string }>;
@@ -150,7 +151,10 @@ export default async function DemandRequestDetailPage({
           }
         />
         <ReadOnlyText label="預算參考" value={demandRequest.budgetRange} />
-        <ReadOnlyList label="期望地區" values={demandRequest.preferredAreas} />
+        <ReadOnlyList
+          label="期望地點"
+          values={getDemandLocationItems(demandRequest)}
+        />
         <ReadOnlyList
           label="期望時段"
           values={demandRequest.preferredTimeSlots}

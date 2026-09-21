@@ -67,7 +67,7 @@ async function seedClassSession({
       organizerProfileId,
       organizationId,
       title: `Class ${testRunId}`,
-      serviceType: "Hatha Yoga",
+      serviceType: "伸展與身體保養",
       startAt: new Date(Date.parse(endAt) - 3600_000),
       endAt: new Date(endAt),
       location: "Test Studio",

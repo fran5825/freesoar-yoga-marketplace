@@ -13,7 +13,7 @@ export function TagCheckbox({
   disabled: boolean;
 }) {
   return (
-    <label className="cursor-pointer">
+    <label className="relative cursor-pointer">
       <input
         checked={checked}
         className="peer sr-only"
