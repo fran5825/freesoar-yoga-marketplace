@@ -84,8 +84,13 @@ test.describe("public trust pages", () => {
   });
 
   test("preserves existing organizer and teacher entry controls", async ({ page }) => {
+    // organizer-flow-redesign 第 2 批：未登入訪客的入口改成帶 callbackUrl 的登入 CTA，
+    // 登入後回到這一頁才會看到「建立團主資料」（見 organizers-request.spec.ts）。
     await page.goto("/organizers/request");
-    await expect(page.getByRole("link", { name: "建立團主資料" })).toHaveAttribute("href", "/organizer/profile");
+    await expect(page.getByRole("link", { name: "登入／建立帳號並開始" })).toHaveAttribute(
+      "href",
+      `/sign-in?callbackUrl=${encodeURIComponent("/organizers/request")}`,
+    );
 
     // teacher-join-gated-application：未登入訪客現在看到的是導覽說明頁，不是可填表單
     // （G1／Definition of Done），入口控制項換成帶 callbackUrl 的登入 CTA。
