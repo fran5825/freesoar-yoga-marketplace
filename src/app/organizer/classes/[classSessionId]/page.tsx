@@ -64,7 +64,7 @@ export default async function OrganizerClassSessionDetailPage({
   const hasEnded = hasClassSessionEnded(classSession.endAt);
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-8 px-5 py-10 sm:px-8 sm:py-14">
+    <div className="flex flex-col gap-8">
       <header className="border-b border-ink/15 pb-6">
         <div className="flex flex-wrap items-center gap-3">
           <span
@@ -277,7 +277,7 @@ export default async function OrganizerClassSessionDetailPage({
           </details>
         </section>
       ) : null}
-    </main>
+    </div>
   );
 }
 

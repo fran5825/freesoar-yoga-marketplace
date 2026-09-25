@@ -37,7 +37,7 @@ export default async function NewClassSessionPage({
   // 查看既有課程，不能開新的——比照既有 demand-response 資格檢查慣例。
   if (!profile || profile.status !== "approved") {
     return (
-      <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-5 py-10 sm:px-8">
+      <div className="flex flex-col gap-8">
         <header className="border-b border-ink/15 pb-6">
           <p className="text-sm font-medium text-clay">Teacher</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
@@ -64,12 +64,12 @@ export default async function NewClassSessionPage({
             </Link>
           </div>
         </section>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-5 py-10 sm:px-8">
+    <div className="flex flex-col gap-8">
       <header className="border-b border-ink/15 pb-6">
         <p className="text-sm font-medium text-clay">Teacher</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
@@ -96,6 +96,6 @@ export default async function NewClassSessionPage({
       <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
         <ClassSessionCreateForm />
       </section>
-    </main>
+    </div>
   );
 }

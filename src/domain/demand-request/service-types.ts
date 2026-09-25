@@ -15,6 +15,10 @@ export const SERVICE_TYPES = [
 
 export type ServiceType = (typeof SERVICE_TYPES)[number];
 
+// 2026-09-25 需求的服務類型改成多選：最多選 3 個；「還不確定」代表交給老師建議，不能跟其他選項並存。
+export const MAX_SERVICE_TYPES = 3;
+export const UNDECIDED_SERVICE_TYPE: ServiceType = "還不確定，請老師建議";
+
 export const SERVICE_TYPE_DESCRIPTIONS: Record<ServiceType, string> = {
   放鬆紓壓: "節奏慢，適合下班後或壓力大的團體",
   伸展與身體保養: "改善久坐、肩頸僵硬，重視動作做對",
@@ -76,4 +80,16 @@ export function isValidFrequency(value: string): value is Frequency {
 
 export function isValidTargetLevel(value: string): value is TargetLevel {
   return (TARGET_LEVELS as readonly string[]).includes(value);
+}
+
+// 顯示用：需求的服務類型清單。舊資料若只有 serviceType（沒有 serviceTypes），退回用它。
+export function getDemandServiceTypes(demand: {
+  serviceType: string | null;
+  serviceTypes: string[];
+}): string[] {
+  if (demand.serviceTypes.length > 0) {
+    return demand.serviceTypes;
+  }
+
+  return demand.serviceType ? [demand.serviceType] : [];
 }

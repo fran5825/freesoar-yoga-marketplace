@@ -81,7 +81,7 @@ export default async function TeacherAvailabilityPage({
       nonApprovedCopy[(overview?.teacherProfileStatus as NonApprovedStatus | undefined) ?? "missing"];
 
     return (
-      <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-5 py-10 sm:px-8">
+      <div className="flex flex-col gap-8">
         <header className="border-b border-ink/15 pb-6">
           <p className="text-sm font-medium text-clay">Teacher availability</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
@@ -100,14 +100,14 @@ export default async function TeacherAvailabilityPage({
             </Link>
           </div>
         </section>
-      </main>
+      </div>
     );
   }
 
   const isApproved = overview.teacherProfileStatus === "approved";
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-5 py-10 sm:px-8">
+    <div className="flex flex-col gap-8">
       <header className="border-b border-ink/15 pb-6">
         <p className="text-sm font-medium text-clay">Teacher availability</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
@@ -559,6 +559,6 @@ export default async function TeacherAvailabilityPage({
           </form>
         ) : null}
       </section>
-    </main>
+    </div>
   );
 }

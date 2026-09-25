@@ -54,7 +54,7 @@ export default async function RecurringClassSeriesPage({
   const hasFutureCancellableOccurrence = series.occurrences.some(isCancellableOccurrence);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-5 py-10 sm:px-8">
+    <div className="flex flex-col gap-8">
       <header className="border-b border-ink/15 pb-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -186,7 +186,7 @@ export default async function RecurringClassSeriesPage({
           </form>
         ) : null}
       </section>
-    </main>
+    </div>
   );
 }
 

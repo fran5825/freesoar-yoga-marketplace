@@ -8,6 +8,9 @@ export type CreateOrganizerProfileFormInput = {
   displayName: string;
   organizationName: string;
   organizationType: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string;
 };
 
 export function normalizeCreateOrganizerProfileInput(
@@ -17,6 +20,9 @@ export function normalizeCreateOrganizerProfileInput(
     displayName: normalizeOptionalString(input.displayName),
     organizationName: normalizeOptionalString(input.organizationName),
     organizationType: normalizeOptionalString(input.organizationType),
+    contactName: normalizeOptionalString(input.contactName),
+    contactEmail: normalizeOptionalString(input.contactEmail),
+    contactPhone: normalizeOptionalString(input.contactPhone),
   };
 }
 

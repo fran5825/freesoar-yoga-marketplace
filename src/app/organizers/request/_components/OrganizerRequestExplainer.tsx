@@ -1,10 +1,11 @@
 import Link from "next/link";
 
 // 2026-09-22 organizer-flow-redesign 第 2 批：還不是團主的人（沒登入／已登入但沒有團主資料）
-// 看到的招募內容。兩種狀態只差主按鈕：沒登入先去登入（登入後帶回這一頁，就會變成
-// 「已登入」狀態），已登入就直接去建立團主資料。比照 teachers/join 的
+// 看到的招募內容。兩種狀態只差主按鈕：沒登入先去登入（登入後直接進入開需求流程），已登入就直接去建立團主資料。比照 teachers/join 的
 // TeacherJoinExplainer，把原本右側卡片的內容併進標題下方的「左側色條＋條列」。
-const signInHref = `/sign-in?callbackUrl=${encodeURIComponent("/organizers/request")}`;
+// 票 02：登入後直接落在新需求表單。新使用者還沒有團主資料，/organizer/demands/new 會自己導向
+// /organizer/profile 建立；已是團主的人則直接看到表單，兩種人都不會再回到這頁多看一次招募內容。
+const signInHref = `/sign-in?callbackUrl=${encodeURIComponent("/organizer/demands/new")}`;
 
 const valuePoints = [
   "平台以審核與需求整理，協助團主與老師建立長期、互相尊重的合作關係。",

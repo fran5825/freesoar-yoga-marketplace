@@ -4,7 +4,7 @@ import type { DemandRequestFormValues } from "./DemandRequestForm";
 
 export const blankDemandRequestFormValues: DemandRequestFormValues = {
   title: "",
-  serviceType: "",
+  serviceTypes: [],
   description: "",
   targetLevel: "",
   expectedParticipants: "",
@@ -22,7 +22,13 @@ export function toDemandRequestFormValues(
 ): DemandRequestFormValues {
   return {
     title: demandRequest.title ?? "",
-    serviceType: demandRequest.serviceType ?? "",
+    // 舊資料若只有 serviceType（還沒被 migration 複製到 serviceTypes），退回用它。
+    serviceTypes:
+      demandRequest.serviceTypes.length > 0
+        ? demandRequest.serviceTypes
+        : demandRequest.serviceType
+          ? [demandRequest.serviceType]
+          : [],
     description: demandRequest.description ?? "",
     targetLevel: demandRequest.targetLevel ?? "",
     expectedParticipants:

@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { getDemandNextStep } from "@/domain/demand-request/next-step";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import {
   getOwnDemandRequestList,
   type DemandRequestSnapshot,
 } from "@/domain/demand-request/service";
+import { isOrganizationContactComplete } from "@/domain/demand-request/validation";
 import { listOwnNotifications } from "@/domain/notification/read-service";
 import { getOwnOrganizerContext } from "@/domain/organizer-profile/service";
 import { requireUser } from "@/lib/auth/session";
@@ -30,7 +32,7 @@ export default async function OrganizerDashboardPage() {
 
   if (!organizerContext) {
     return (
-      <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-8 px-5 py-10 sm:px-8 sm:py-14">
+      <div className="flex flex-col gap-8">
         <header className="border-b border-ink/15 pb-6">
           <h1 className="text-3xl font-semibold tracking-tight text-ink">
             我的總覽
@@ -53,7 +55,7 @@ export default async function OrganizerDashboardPage() {
             </Link>
           </div>
         </section>
-      </main>
+      </div>
     );
   }
 
@@ -61,6 +63,26 @@ export default async function OrganizerDashboardPage() {
     listOwnNotifications(),
     getOwnDemandRequestList(),
   ]);
+
+  const isContactComplete =
+    organizerContext.organization !== null &&
+    isOrganizationContactComplete(organizerContext.organization);
+
+  // 票 09：「待你處理」＝需要團主動手的需求（草稿未送、老師已回應待選、已媒合待建課程、被退回），
+  // 文案與詳情頁共用同一個來源（getDemandNextStep）。
+  const pendingActions = demandRequests
+    .map((demandRequest) => ({
+      demandRequest,
+      nextStep: getDemandNextStep({ status: demandRequest.status }),
+    }))
+    .filter(({ nextStep }) => nextStep.kind === "action");
+  // 草稿可能有好幾筆，而且下方「我的需求」已經逐筆列出，所以這裡只放一行摘要。
+  const draftCount = pendingActions.filter(
+    ({ demandRequest }) => demandRequest.status === "draft",
+  ).length;
+  const pendingNonDraftActions = pendingActions.filter(
+    ({ demandRequest }) => demandRequest.status !== "draft",
+  );
 
   const recentNotifications = notifications.slice(0, RECENT_NOTIFICATIONS_LIMIT);
   const recentDemandRequests = demandRequests.slice(
@@ -77,23 +99,65 @@ export default async function OrganizerDashboardPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-8 px-5 py-10 sm:px-8 sm:py-14">
-      <header className="grid gap-3 border-b border-ink/15 pb-6 md:grid-cols-[1fr_auto] md:items-end">
-        <div className="min-w-0">
-          <h1 className="text-3xl font-semibold tracking-tight text-ink">
-            我的總覽
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
-            這裡彙整你最近的通知與需求狀態。
-          </p>
-        </div>
-        <Link
-          className="inline-flex justify-center rounded-full bg-pine px-4 py-2 text-center text-sm font-medium text-white transition hover:bg-pine-deep"
-          href="/organizer/demands/new"
-        >
-          建立新的需求
-        </Link>
+    <div className="flex flex-col gap-8">
+      <header className="border-b border-ink/15 pb-6">
+        <h1 className="text-3xl font-semibold tracking-tight text-ink">
+          我的總覽
+        </h1>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
+          這裡彙整你最近的通知與需求狀態。
+        </p>
       </header>
+
+      {isContactComplete ? null : (
+        <div className="rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep">
+          送出需求前需要先補齊組織聯絡資訊（聯絡窗口、電話、信箱）。{" "}
+          <Link
+            className="font-medium underline underline-offset-4"
+            href="/organizer/profile"
+          >
+            前往團主資料補齊
+          </Link>
+        </div>
+      )}
+
+      <section className="rounded-2xl border border-ink/15 bg-white p-6">
+        <h2 className="text-lg font-semibold text-ink">待你處理</h2>
+
+        {pendingActions.length === 0 ? (
+          <p className="mt-4 text-sm leading-6 text-ink-soft">
+            目前沒有待處理事項。
+          </p>
+        ) : (
+          <div className="mt-4 grid gap-3">
+            {draftCount > 0 ? (
+              <Link
+                className="grid gap-1 rounded-2xl border border-clay/30 bg-clay-tint p-4 transition hover:bg-sand"
+                href="/organizer/demands?status=draft"
+              >
+                <p className="text-sm font-medium text-ink">
+                  {draftCount} 筆草稿還沒送出
+                </p>
+                <p className="text-sm text-clay-deep">
+                  補齊欄位後送出審核
+                </p>
+              </Link>
+            ) : null}
+            {pendingNonDraftActions.map(({ demandRequest, nextStep }) => (
+              <Link
+                className="grid gap-1 rounded-2xl border border-clay/30 bg-clay-tint p-4 transition hover:bg-sand"
+                href={`/organizer/demands/${demandRequest.id}`}
+                key={demandRequest.id}
+              >
+                <p className="min-w-0 break-words text-sm font-medium text-ink">
+                  {demandRequest.title ?? "尚未命名的需求"}
+                </p>
+                <p className="text-sm text-clay-deep">{nextStep.shortMessage}</p>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="rounded-2xl border border-ink/15 bg-white p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -186,6 +250,6 @@ export default async function OrganizerDashboardPage() {
           </>
         )}
       </section>
-    </main>
+    </div>
   );
 }

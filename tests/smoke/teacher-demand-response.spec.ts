@@ -131,7 +131,7 @@ test.describe("teacher demand response smoke", () => {
     // message 太短（< 10 字），且未勾選任何時段。
     // textarea 的 minLength 只是體驗提升，這裡關閉原生表單驗證以證明伺服器端才是權威。
     await page.getByLabel("給團主的回覆").fill("太短");
-    await page.locator("form").evaluate((form: HTMLFormElement) => {
+    await page.getByRole("main").locator("form").evaluate((form: HTMLFormElement) => {
       form.noValidate = true;
     });
     await page.getByRole("button", { name: "送出回應" }).click();

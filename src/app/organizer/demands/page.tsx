@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { getOwnDemandRequestList } from "@/domain/demand-request/service";
+import { getDemandNextStep } from "@/domain/demand-request/next-step";
+import {
+  getOwnDemandRequestList,
+  type DemandRequestSnapshot,
+} from "@/domain/demand-request/service";
 import { getOwnOrganizerContext } from "@/domain/organizer-profile/service";
 import { requireUser } from "@/lib/auth/session";
 
@@ -11,37 +15,60 @@ import {
   formatDemandRequestDateTime,
 } from "./_components/status-labels";
 
-export default async function OrganizerDemandsPage() {
+type DemandStatus = DemandRequestSnapshot["status"];
+
+// 票 10：狀態篩選。把細分的狀態收成團主看得懂的幾組；「全部」不篩選。
+const filterTabs: { key: string; label: string; statuses: DemandStatus[] | null }[] = [
+  { key: "all", label: "全部", statuses: null },
+  { key: "draft", label: "草稿", statuses: ["draft"] },
+  { key: "reviewing", label: "審核中", statuses: ["submitted", "under_review"] },
+  { key: "published", label: "已公開", statuses: ["published", "teacher_responded"] },
+  {
+    key: "matched",
+    label: "已成案",
+    statuses: ["matched", "converted_to_class", "completed"],
+  },
+  { key: "closed", label: "已結束", statuses: ["cancelled", "expired", "rejected"] },
+];
+
+type OrganizerDemandsPageProps = {
+  searchParams?: Promise<{ status?: string }>;
+};
+
+export default async function OrganizerDemandsPage({
+  searchParams,
+}: OrganizerDemandsPageProps) {
   try {
     await requireUser();
   } catch {
     redirect("/sign-in");
   }
 
-  const [organizerContext, demandRequests] = await Promise.all([
-    getOwnOrganizerContext(),
-    getOwnDemandRequestList(),
-  ]);
+  const [organizerContext, demandRequests, resolvedSearchParams] =
+    await Promise.all([
+      getOwnOrganizerContext(),
+      getOwnDemandRequestList(),
+      searchParams,
+    ]);
+
+  const activeTab =
+    filterTabs.find((tab) => tab.key === resolvedSearchParams?.status) ??
+    filterTabs[0];
+  const visibleDemandRequests = activeTab.statuses
+    ? demandRequests.filter((demandRequest) =>
+        activeTab.statuses?.includes(demandRequest.status),
+      )
+    : demandRequests;
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-8 px-5 py-10 sm:px-8 sm:py-14">
-      <header className="grid gap-3 border-b border-ink/15 pb-6 md:grid-cols-[1fr_auto] md:items-end">
-        <div className="min-w-0">
-          <h1 className="text-3xl font-semibold tracking-tight text-ink">
-            我的需求列表
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
-            這裡列出你提出過的所有團課需求與目前狀態。
-          </p>
-        </div>
-        {organizerContext ? (
-          <Link
-            className="inline-flex justify-center rounded-full bg-pine px-4 py-2 text-center text-sm font-medium text-white transition hover:bg-pine-deep"
-            href="/organizer/demands/new"
-          >
-            建立新的需求
-          </Link>
-        ) : null}
+    <div className="flex flex-col gap-8">
+      <header className="border-b border-ink/15 pb-6">
+        <h1 className="text-3xl font-semibold tracking-tight text-ink">
+          我的需求
+        </h1>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
+          這裡列出你提出過的所有團課需求，點進去可以看進度與下一步。
+        </p>
       </header>
 
       {!organizerContext ? (
@@ -79,45 +106,80 @@ export default async function OrganizerDemandsPage() {
           </div>
         </section>
       ) : (
-        <section className="grid gap-4">
-          {demandRequests.map((demandRequest) => (
-            <article
-              className="grid gap-3 rounded-2xl border border-ink/15 bg-white p-5"
-              key={demandRequest.id}
-            >
-              <div className="flex flex-wrap items-center gap-3">
-                <h2 className="min-w-0 break-words text-lg font-semibold text-ink">
-                  {demandRequest.title ?? "尚未命名的需求"}
-                </h2>
-                <span
-                  className={`w-fit rounded-full px-3 py-1 text-xs font-medium ${demandRequestStatusToneClasses[demandRequest.status]}`}
-                >
-                  {demandRequestStatusLabels[demandRequest.status]}
-                </span>
-              </div>
-              <p className="text-sm text-ink-faint">
-                最後更新：{formatDemandRequestDateTime(demandRequest.updatedAt)}
-              </p>
-              <div className="flex flex-col gap-3 sm:flex-row">
+        <>
+          <nav aria-label="需求狀態篩選" className="flex flex-wrap gap-2">
+            {filterTabs.map((tab) => {
+              const count = tab.statuses
+                ? demandRequests.filter((demandRequest) =>
+                    tab.statuses?.includes(demandRequest.status),
+                  ).length
+                : demandRequests.length;
+              const isActive = tab.key === activeTab.key;
+
+              return (
                 <Link
-                  className="rounded-full border border-ink/25 px-4 py-2 text-center text-sm font-medium text-ink transition hover:bg-cream"
-                  href={`/organizer/demands/${demandRequest.id}`}
+                  aria-current={isActive ? "page" : undefined}
+                  className={`rounded-full border px-4 py-2 text-sm transition ${
+                    isActive
+                      ? "border-pine bg-pine-tint font-medium text-pine"
+                      : "border-ink/20 text-ink-soft hover:border-ink/40"
+                  }`}
+                  href={
+                    tab.key === "all"
+                      ? "/organizer/demands"
+                      : `/organizer/demands?status=${tab.key}`
+                  }
+                  key={tab.key}
                 >
-                  查看詳情
+                  {tab.label}・{count}
                 </Link>
-                {demandRequest.status === "draft" ? (
+              );
+            })}
+          </nav>
+
+          {visibleDemandRequests.length === 0 ? (
+            <p className="rounded-2xl border border-ink/15 bg-white p-6 text-sm leading-6 text-ink-soft">
+              這個分類目前沒有需求。
+            </p>
+          ) : (
+            <section className="grid gap-3">
+              {visibleDemandRequests.map((demandRequest) => {
+                const nextStep = getDemandNextStep({
+                  status: demandRequest.status,
+                });
+
+                return (
                   <Link
-                    className="rounded-full bg-pine px-4 py-2 text-center text-sm font-medium text-white transition hover:bg-pine-deep"
-                    href={`/organizer/demands/${demandRequest.id}/edit`}
+                    className="grid gap-2 rounded-2xl border border-ink/15 bg-white p-5 transition hover:bg-sand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+                    href={`/organizer/demands/${demandRequest.id}`}
+                    key={demandRequest.id}
                   >
-                    繼續編輯草稿
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h2 className="min-w-0 break-words text-lg font-semibold text-ink">
+                        {demandRequest.title ?? "尚未命名的需求"}
+                      </h2>
+                      <span
+                        className={`w-fit rounded-full px-3 py-1 text-xs font-medium ${demandRequestStatusToneClasses[demandRequest.status]}`}
+                      >
+                        {demandRequestStatusLabels[demandRequest.status]}
+                      </span>
+                    </div>
+                    <p
+                      className={`text-sm ${nextStep.kind === "action" ? "font-medium text-clay-deep" : "text-ink-soft"}`}
+                    >
+                      {nextStep.shortMessage}
+                    </p>
+                    <p className="text-xs text-ink-faint">
+                      最後更新：
+                      {formatDemandRequestDateTime(demandRequest.updatedAt)}
+                    </p>
                   </Link>
-                ) : null}
-              </div>
-            </article>
-          ))}
-        </section>
+                );
+              })}
+            </section>
+          )}
+        </>
       )}
-    </main>
+    </div>
   );
 }

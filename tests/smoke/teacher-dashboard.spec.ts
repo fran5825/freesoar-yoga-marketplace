@@ -134,8 +134,8 @@ test.describe("/teacher/dashboard smoke", () => {
       await expect(
         page.getByRole("link", { name: statusCase.actionLabel }),
       ).toHaveAttribute("href", statusCase.actionHref);
-      await expect(page.locator('a[href="/teacher/demands"]')).toHaveCount(0);
-      await expect(page.locator('a[href="/teacher/classes"]')).toHaveCount(0);
+      await expect(page.getByRole("main").locator('a[href="/teacher/demands"]')).toHaveCount(0);
+      await expect(page.getByRole("main").locator('a[href="/teacher/classes"]')).toHaveCount(0);
       if (
         statusCase.status !== "approved" &&
         statusCase.status !== "suspended"
@@ -343,7 +343,7 @@ function toStatusLabel(status: TeacherProfileStatus) {
 }
 
 async function expectNoMarketplaceActions(page: import("@playwright/test").Page) {
-  await expect(page.locator('a[href="/teacher/demands"]')).toHaveCount(0);
-  await expect(page.locator('a[href="/teacher/classes"]')).toHaveCount(0);
-  await expect(page.locator('a[href="/teacher/availability"]')).toHaveCount(0);
+  await expect(page.getByRole("main").locator('a[href="/teacher/demands"]')).toHaveCount(0);
+  await expect(page.getByRole("main").locator('a[href="/teacher/classes"]')).toHaveCount(0);
+  await expect(page.getByRole("main").locator('a[href="/teacher/availability"]')).toHaveCount(0);
 }

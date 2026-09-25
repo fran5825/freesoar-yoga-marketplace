@@ -2,6 +2,8 @@ import { expect, test } from "@playwright/test";
 
 import {
   addAuthSessionCookie,
+  cleanupOrganizerDemandFixtures,
+  createOrganizerProfileWithOrganization,
   createUserSession,
   normalizeForEmail,
   prisma,
@@ -12,18 +14,10 @@ const testEmailDomain = "account-dashboard-navigation-smoke.local";
 const createdEmails: string[] = [];
 
 test.afterAll(async () => {
-  if (createdEmails.length > 0) {
-    await prisma.session.deleteMany({
-      where: { user: { email: { in: createdEmails } } },
-    });
-    await prisma.user.deleteMany({
-      where: { email: { in: createdEmails } },
-    });
-  }
-
-  await prisma.$disconnect();
+  await cleanupOrganizerDemandFixtures(createdEmails);
 });
 
+// organizer-usability 票 03：/account 依身分列出入口，沒有的身分顯示「開始成為…」。
 test.describe("/account dashboard navigation smoke", () => {
   test("redirects unauthenticated users to sign in", async ({ page }) => {
     await page.goto(accountPath, { waitUntil: "commit" });
@@ -31,7 +25,7 @@ test.describe("/account dashboard navigation smoke", () => {
     await expect(page).toHaveURL(/\/sign-in/);
   });
 
-  test("offers signed-in users working links to the member and organizer dashboards", async ({
+  test("a signed-in user with no organizer or teacher identity sees the member entry plus become-organizer and become-teacher entries", async ({
     context,
     page,
   }, testInfo) => {
@@ -46,29 +40,64 @@ test.describe("/account dashboard navigation smoke", () => {
     await page.setViewportSize({ width: 360, height: 800 });
     await page.goto(accountPath);
 
-    const memberDashboardLink = page.getByRole("link", { name: /會員總覽/ });
-    const organizerDashboardLink = page.getByRole("link", { name: /團主總覽/ });
-
     await expect(
       page.getByRole("heading", { name: "我的使用入口" }),
     ).toBeVisible();
-    await expect(memberDashboardLink).toHaveAttribute("href", "/member/dashboard");
-    await expect(organizerDashboardLink).toHaveAttribute(
+    await expect(page.getByRole("link", { name: /會員總覽/ })).toHaveAttribute(
+      "href",
+      "/member/dashboard",
+    );
+    await expect(
+      page.getByRole("link", { name: /開始成為團主/ }),
+    ).toHaveAttribute("href", "/organizers/request");
+    await expect(
+      page.getByRole("link", { name: /開始成為老師/ }),
+    ).toHaveAttribute("href", "/teachers/join");
+    await expect(page.getByRole("link", { name: /^團主 團主總覽/ })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /^老師 老師總覽/ })).toHaveCount(0);
+    await expectNoHorizontalOverflow(page);
+
+    await page.getByRole("link", { name: /會員總覽/ }).click();
+    await expect(page).toHaveURL(/\/member\/dashboard$/);
+    await expect(page.getByRole("heading", { name: "我的總覽" })).toBeVisible();
+  });
+
+  test("a user who is both an organizer and a teacher sees both dashboards and no become-entries", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-both-${Date.now()}`,
+    );
+    const email = `account-both-${testRunId}@${testEmailDomain}`;
+    createdEmails.push(email);
+
+    const { sessionToken } = await createOrganizerProfileWithOrganization({
+      email,
+      displayName: `Both Organizer ${testRunId}`,
+      organizationName: `Both Org ${testRunId}`,
+      contactName: "聯絡人",
+      contactEmail: `contact-${testRunId}@example.com`,
+      contactPhone: "0900000000",
+    });
+    const user = await prisma.user.findUniqueOrThrow({ where: { email } });
+    await prisma.teacherProfile.create({
+      data: { userId: user.id, displayName: `Both Teacher ${testRunId}` },
+    });
+    await addAuthSessionCookie(context, sessionToken);
+
+    await page.goto(accountPath);
+
+    await expect(page.getByRole("link", { name: /團主總覽/ })).toHaveAttribute(
       "href",
       "/organizer/dashboard",
     );
-    await expectNoHorizontalOverflow(page);
-
-    await memberDashboardLink.click();
-    await expect(page).toHaveURL(/\/member\/dashboard$/);
-    await expect(page.getByRole("heading", { name: "我的總覽" })).toBeVisible();
-
-    await page.goto(accountPath);
-    await page.getByRole("link", { name: /團主總覽/ }).click();
-    await expect(page).toHaveURL(/\/organizer\/dashboard$/);
-    await expect(
-      page.getByRole("heading", { name: "請先建立團主資料" }),
-    ).toBeVisible();
+    await expect(page.getByRole("link", { name: /老師總覽/ })).toHaveAttribute(
+      "href",
+      "/teacher/dashboard",
+    );
+    await expect(page.getByRole("link", { name: /開始成為團主/ })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /開始成為老師/ })).toHaveCount(0);
   });
 });
 

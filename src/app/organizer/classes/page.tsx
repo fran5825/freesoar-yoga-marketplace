@@ -20,7 +20,7 @@ export default async function OrganizerClassesPage() {
   const classSessions = await listOwnClassSessionsForOrganizer();
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-8 px-5 py-10 sm:px-8 sm:py-14">
+    <div className="flex flex-col gap-8">
       <header className="border-b border-ink/15 pb-6">
         <h1 className="text-3xl font-semibold tracking-tight text-ink">
           我的課程
@@ -79,6 +79,6 @@ export default async function OrganizerClassesPage() {
           ))}
         </section>
       )}
-    </main>
+    </div>
   );
 }

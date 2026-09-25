@@ -167,7 +167,8 @@ model DemandRequest {
   organizerProfileId   String
   organizationId       String
   title                String?
-  serviceType          String?
+  serviceType          String? // 主要類型＝serviceTypes 的第一個，課程建立時預設帶入；之後確認沒人依賴再移除
+  serviceTypes         String[]            @default([]) // 2026-09-25 起服務類型可多選（最多 3 個）
   description          String?
   targetLevel          String?
   expectedParticipants Int?

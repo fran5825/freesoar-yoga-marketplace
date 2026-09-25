@@ -142,7 +142,7 @@ export default async function TeacherProfilePage({
       nonApprovedCopy[(profile?.status as NonApprovedStatus | undefined) ?? "missing"];
 
     return (
-      <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-5 py-10 sm:px-8">
+      <div className="flex flex-col gap-8">
         <header className="border-b border-ink/15 pb-6">
           <p className="text-sm font-medium text-clay">Teacher profile</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
@@ -161,7 +161,7 @@ export default async function TeacherProfilePage({
             </Link>
           </div>
         </section>
-      </main>
+      </div>
     );
   }
 
@@ -169,7 +169,7 @@ export default async function TeacherProfilePage({
   const ratingSummary = await getOwnTeacherRatingSummary();
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-5 py-10 sm:px-8">
+    <div className="flex flex-col gap-8">
       <header className="border-b border-ink/15 pb-6">
         <p className="text-sm font-medium text-clay">Teacher profile</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
@@ -469,7 +469,7 @@ export default async function TeacherProfilePage({
           </div>
         </section>
       )}
-    </main>
+    </div>
   );
 }
 

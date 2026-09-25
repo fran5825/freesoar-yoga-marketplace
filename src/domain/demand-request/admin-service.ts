@@ -17,6 +17,7 @@ export type SubmittedDemandRequestForAdmin = {
   id: string;
   title: string | null;
   serviceType: string | null;
+  serviceTypes: string[];
   description: string | null;
   targetLevel: string | null;
   expectedParticipants: number | null;
@@ -79,6 +80,7 @@ const submittedDemandRequestSelect = {
   id: true,
   title: true,
   serviceType: true,
+  serviceTypes: true,
   description: true,
   targetLevel: true,
   expectedParticipants: true,

@@ -2,7 +2,7 @@ import type { DemandRequestApplicationInput } from "./validation";
 
 export type DemandRequestFormInput = {
   title: string;
-  serviceType: string;
+  serviceTypes: string[];
   description: string;
   targetLevel: string;
   expectedParticipants: string;
@@ -20,7 +20,7 @@ export function normalizeDemandRequestInput(
 ): DemandRequestApplicationInput {
   return {
     title: normalizeOptionalString(input.title),
-    serviceType: normalizeOptionalString(input.serviceType),
+    serviceTypes: normalizeUniqueList(input.serviceTypes),
     description: normalizeOptionalString(input.description),
     targetLevel: normalizeOptionalString(input.targetLevel),
     expectedParticipants: normalizeOptionalNumber(input.expectedParticipants),
@@ -59,6 +59,14 @@ function normalizeOptionalNumber(value: string): number | null {
   }
 
   return parsedValue;
+}
+
+function normalizeUniqueList(values: string[]): string[] {
+  return Array.from(
+    new Set(
+      values.map((value) => value.trim()).filter((value) => value.length > 0),
+    ),
+  );
 }
 
 function normalizeSingleItemList(value: string): string[] {

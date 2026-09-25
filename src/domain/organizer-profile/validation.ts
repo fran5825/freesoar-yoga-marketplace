@@ -4,16 +4,30 @@ export type CreateOrganizerProfileInput = {
   displayName?: string | null;
   organizationName?: string | null;
   organizationType?: string | null;
+  // 2026-09-25 organizer-usability 票 04：一頁式註冊時一併填聯絡資料（送審前本來就必填）。
+  contactName?: string | null;
+  contactEmail?: string | null;
+  contactPhone?: string | null;
 };
 
 export type CreateOrganizerProfileValidationErrorCode =
   | "display_name_required"
   | "organization_name_required"
   | "organization_type_required"
-  | "organization_type_invalid";
+  | "organization_type_invalid"
+  | "contact_name_required"
+  | "contact_email_required"
+  | "contact_email_invalid"
+  | "contact_phone_required";
 
 export type CreateOrganizerProfileValidationError = {
-  field: "displayName" | "organizationName" | "organizationType";
+  field:
+    | "displayName"
+    | "organizationName"
+    | "organizationType"
+    | "contactName"
+    | "contactEmail"
+    | "contactPhone";
   code: CreateOrganizerProfileValidationErrorCode;
   message: string;
 };
@@ -60,6 +74,36 @@ export function validateCreateOrganizerProfileInput(
       field: "organizationType",
       code: "organization_type_invalid",
       message: "組織類型不在允許的選項內。",
+    });
+  }
+
+  if (isBlank(input.contactName)) {
+    errors.push({
+      field: "contactName",
+      code: "contact_name_required",
+      message: "聯絡窗口姓名為必填欄位。",
+    });
+  }
+
+  if (isBlank(input.contactEmail)) {
+    errors.push({
+      field: "contactEmail",
+      code: "contact_email_required",
+      message: "聯絡信箱為必填欄位。",
+    });
+  } else if (!isValidEmailShape(input.contactEmail as string)) {
+    errors.push({
+      field: "contactEmail",
+      code: "contact_email_invalid",
+      message: "聯絡信箱格式不正確。",
+    });
+  }
+
+  if (isBlank(input.contactPhone)) {
+    errors.push({
+      field: "contactPhone",
+      code: "contact_phone_required",
+      message: "聯絡電話為必填欄位。",
     });
   }
 

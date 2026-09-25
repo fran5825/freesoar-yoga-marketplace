@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
 
+import { isOrganizationContactComplete } from "@/domain/demand-request/validation";
 import { getOwnOrganizerContext } from "@/domain/organizer-profile/service";
 import { requireUser } from "@/lib/auth/session";
 
+import { ContactIncompleteBanner } from "../_components/ContactIncompleteBanner";
 import { blankDemandRequestFormValues } from "../_components/form-values";
 import { DemandRequestForm } from "../_components/DemandRequestForm";
 import { saveNewDemandRequestDraftAction, submitNewDemandRequestAction } from "./actions";
@@ -21,7 +23,7 @@ export default async function NewDemandRequestPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-8 px-5 py-10 sm:px-8 sm:py-14">
+    <div className="flex flex-col gap-8">
       <header className="border-b border-ink/15 pb-6">
         <h1 className="text-3xl font-semibold tracking-tight text-ink">
           建立新的團課需求
@@ -31,12 +33,17 @@ export default async function NewDemandRequestPage() {
         </p>
       </header>
 
+      {organizerContext.organization !== null &&
+      isOrganizationContactComplete(organizerContext.organization) ? null : (
+        <ContactIncompleteBanner returnPath="/organizer/demands/new" />
+      )}
+
       <DemandRequestForm
         initialDemandRequestId={null}
         initialValues={blankDemandRequestFormValues}
         onSaveDraft={saveNewDemandRequestDraftAction}
         onSubmit={submitNewDemandRequestAction}
       />
-    </main>
+    </div>
   );
 }

@@ -1,9 +1,11 @@
 import { notFound, redirect } from "next/navigation";
 
 import { getOwnDemandRequestDetail } from "@/domain/demand-request/service";
+import { isOrganizationContactComplete } from "@/domain/demand-request/validation";
 import { getOwnOrganizerContext } from "@/domain/organizer-profile/service";
 import { requireUser } from "@/lib/auth/session";
 
+import { ContactIncompleteBanner } from "../../_components/ContactIncompleteBanner";
 import { toDemandRequestFormValues } from "../../_components/form-values";
 import { DemandRequestForm } from "../../_components/DemandRequestForm";
 import {
@@ -42,7 +44,7 @@ export default async function EditDemandRequestPage({
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-8 px-5 py-10 sm:px-8 sm:py-14">
+    <div className="flex flex-col gap-8">
       <header className="border-b border-ink/15 pb-6">
         <h1 className="text-3xl font-semibold tracking-tight text-ink">
           繼續編輯需求草稿
@@ -52,12 +54,19 @@ export default async function EditDemandRequestPage({
         </p>
       </header>
 
+      {organizerContext.organization !== null &&
+      isOrganizationContactComplete(organizerContext.organization) ? null : (
+        <ContactIncompleteBanner
+          returnPath={`/organizer/demands/${demandRequestId}/edit`}
+        />
+      )}
+
       <DemandRequestForm
         initialDemandRequestId={demandRequest.id}
         initialValues={toDemandRequestFormValues(demandRequest)}
         onSaveDraft={saveEditDemandRequestDraftAction}
         onSubmit={submitEditDemandRequestAction}
       />
-    </main>
+    </div>
   );
 }

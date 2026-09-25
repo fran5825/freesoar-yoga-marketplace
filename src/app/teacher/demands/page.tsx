@@ -1,3 +1,4 @@
+import { getDemandServiceTypes } from "@/domain/demand-request/service-types";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -73,7 +74,7 @@ export default async function TeacherDemandsPage({
       ];
 
     return (
-      <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-5 py-10 sm:px-8">
+      <div className="flex flex-col gap-8">
         <header className="border-b border-ink/15 pb-6">
           <p className="text-sm font-medium text-clay">Teacher demands</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
@@ -92,7 +93,7 @@ export default async function TeacherDemandsPage({
             </Link>
           </div>
         </section>
-      </main>
+      </div>
     );
   }
 
@@ -101,7 +102,7 @@ export default async function TeacherDemandsPage({
   );
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-5 py-10 sm:px-8">
+    <div className="flex flex-col gap-8">
       <header className="border-b border-ink/15 pb-6">
         <p className="text-sm font-medium text-clay">Teacher demands</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
@@ -133,10 +134,12 @@ export default async function TeacherDemandsPage({
                 {demand.title ?? "團體需求"}
               </h2>
               <dl className="mt-3 grid gap-2 text-sm text-ink-soft sm:grid-cols-2">
-                {demand.serviceType ? (
+                {getDemandServiceTypes(demand).length > 0 ? (
                   <div className="min-w-0">
                     <dt className="font-medium text-ink">課程類型</dt>
-                    <dd className="mt-1 break-words">{demand.serviceType}</dd>
+                    <dd className="mt-1 break-words">
+                      {getDemandServiceTypes(demand).join("、")}
+                    </dd>
                   </div>
                 ) : null}
                 {typeof demand.expectedParticipants === "number" ? (
@@ -177,6 +180,6 @@ export default async function TeacherDemandsPage({
           </Link>
         </div>
       ) : null}
-    </main>
+    </div>
   );
 }

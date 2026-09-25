@@ -23,7 +23,8 @@ export type DemandRequestSnapshot = {
   organizerProfileId: string;
   organizationId: string;
   title: string | null;
-  serviceType: string | null;
+  serviceType: string | null; // 主要類型＝serviceTypes 的第一個
+  serviceTypes: string[];
   description: string | null;
   targetLevel: string | null;
   expectedParticipants: number | null;
@@ -46,6 +47,7 @@ const demandRequestSelect = {
   organizationId: true,
   title: true,
   serviceType: true,
+  serviceTypes: true,
   description: true,
   targetLevel: true,
   expectedParticipants: true,
@@ -380,7 +382,9 @@ export async function submitOwnDemandRequest(
 function toDemandRequestData(input: DemandRequestApplicationInput) {
   return {
     title: input.title ?? null,
-    serviceType: input.serviceType ?? null,
+    // 主要類型固定存第一個選項，課程建立時預設帶入；完整清單存在 serviceTypes。
+    serviceType: input.serviceTypes?.[0] ?? null,
+    serviceTypes: input.serviceTypes ?? [],
     description: input.description ?? null,
     targetLevel: input.targetLevel ?? null,
     expectedParticipants: input.expectedParticipants ?? null,

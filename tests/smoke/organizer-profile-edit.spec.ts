@@ -70,9 +70,9 @@ test.describe("organizer profile edit smoke", () => {
       el.value = "";
       el.form?.setAttribute("novalidate", "true");
     });
-    await page.getByRole("button", { name: "儲存顯示名稱" }).click();
+    await page.getByRole("button", { name: "儲存", exact: true }).click();
 
-    await expect(page.getByText("團主資料格式需要調整後才能儲存。")).toBeVisible();
+    await expect(page.getByText("團主顯示名稱為必填欄位。")).toBeVisible();
     const stillOriginal = await prisma.organizerProfile.findUniqueOrThrow({
       where: { id: organizerA.organizerProfileId },
       select: { displayName: true },
@@ -81,9 +81,9 @@ test.describe("organizer profile edit smoke", () => {
 
     // 成功編輯。
     await page.getByLabel("團主顯示名稱").fill(`Organizer A ${testRunId} Updated`);
-    await page.getByRole("button", { name: "儲存顯示名稱" }).click();
+    await page.getByRole("button", { name: "儲存", exact: true }).click();
 
-    await expect(page.getByText("團主顯示名稱已更新。")).toBeVisible();
+    await expect(page.getByText("團主資料已儲存。")).toBeVisible();
     await expect(
       page.getByRole("heading", { name: `Organizer A ${testRunId} Updated` }),
     ).toBeVisible();
@@ -121,9 +121,9 @@ test.describe("organizer profile edit smoke", () => {
     await page.goto("/organizer/profile");
 
     await page.getByLabel("聯絡窗口姓名").fill("王小明");
-    await page.getByRole("button", { name: "儲存組織資訊" }).click();
+    await page.getByRole("button", { name: "儲存", exact: true }).click();
 
-    await expect(page.getByText("組織資訊已更新。")).toBeVisible();
+    await expect(page.getByText("團主資料已儲存。")).toBeVisible();
 
     const organization = await prisma.organization.findUniqueOrThrow({
       where: { id: organizer.organizationId },
@@ -152,7 +152,7 @@ test.describe("organizer profile edit smoke", () => {
     await page.goto("/organizer/profile");
 
     // 目前仍有 OrganizerProfile：編輯表單存在。
-    await expect(page.getByRole("button", { name: "儲存顯示名稱" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "儲存", exact: true })).toBeVisible();
 
     // 這個 OrganizerProfile 事後被刪除（比照既有「approved 載入表單、背後改成
     // suspended、送出過期表單」的既有測試手法，這裡對應的是「有 profile → 沒有
@@ -160,9 +160,9 @@ test.describe("organizer profile edit smoke", () => {
     // 表單維持刪除前渲染出來的舊狀態。
     await prisma.organizerProfile.delete({ where: { id: organizer.organizerProfileId } });
 
-    await page.getByRole("button", { name: "儲存顯示名稱" }).click();
+    await page.getByRole("button", { name: "儲存", exact: true }).click();
 
-    await expect(page.getByText("請先建立團主資料後再編輯顯示名稱。")).toBeVisible();
+    await expect(page.getByText("請先建立團主資料後再編輯組織資訊。")).toBeVisible();
 
     const profileCount = await prisma.organizerProfile.count({
       where: { user: { email } },

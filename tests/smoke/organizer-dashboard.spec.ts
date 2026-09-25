@@ -71,7 +71,7 @@ test.describe("/organizer dashboard smoke", () => {
       page.getByRole("link", { name: "前往建立團主資料" }),
     ).toHaveAttribute("href", "/organizer/profile");
     await expect(page.getByText("近期通知")).toBeHidden();
-    await expect(page.getByText("我的需求")).toBeHidden();
+    await expect(page.getByRole("main").getByText("我的需求")).toBeHidden();
   });
 
   test("shows empty-state copy and correct outbound links for an organizer with no demand requests", async ({
@@ -102,7 +102,7 @@ test.describe("/organizer dashboard smoke", () => {
       page.getByRole("link", { name: "查看全部需求" }),
     ).toHaveAttribute("href", "/organizer/demands");
     await expect(
-      page.getByRole("link", { name: "建立新的需求" }),
+      page.getByRole("banner").getByRole("link", { name: "發起新需求", includeHidden: true }),
     ).toHaveAttribute("href", "/organizer/demands/new");
   });
 
@@ -176,7 +176,7 @@ test.describe("/organizer dashboard smoke", () => {
       page.getByRole("link", { name: "查看全部需求" }),
     ).toHaveAttribute("href", "/organizer/demands");
     await expect(
-      page.getByRole("link", { name: "建立新的需求" }),
+      page.getByRole("banner").getByRole("link", { name: "發起新需求", includeHidden: true }),
     ).toHaveAttribute("href", "/organizer/demands/new");
     await expectNoHorizontalOverflow(page);
   });

@@ -19,7 +19,7 @@ test.afterAll(async () => {
 });
 
 test.describe("organizer demand smoke", () => {
-  test("lets a signed-in user create an organizer profile and organization, then edit the organization's contact info", async ({
+  test("lets a signed-in user sign up as an organizer on one page and land on the new demand form", async ({
     context,
     page,
   }, testInfo) => {
@@ -36,43 +36,158 @@ test.describe("organizer demand smoke", () => {
     const organizationName = `Bootstrap Org ${testRunId}`;
 
     await page.goto("/organizer/profile");
+
+    // 聯絡信箱預填登入 email；聯絡窗口姓名預設跟著顯示名稱同步。
+    await expect(page.getByLabel("聯絡信箱")).toHaveValue(email);
     await page.getByLabel("團主顯示名稱").fill(displayName);
+    await expect(page.getByLabel("聯絡窗口姓名")).toHaveValue(displayName);
+
     await page.getByLabel("組織名稱").fill(organizationName);
     await page.getByLabel("組織類型").selectOption("company");
-    await page.getByRole("button", { name: "建立團主資料" }).click();
-
-    await expect(
-      page.getByText("團主資料已建立，你可以開始整理需求。"),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: displayName }),
-    ).toBeVisible();
-
-    const createdProfile = await prisma.organizerProfile.findFirstOrThrow({
-      where: { user: { email } },
-      select: { displayName: true, organization: { select: { name: true } } },
-    });
-    expect(createdProfile.displayName).toBe(displayName);
-    expect(createdProfile.organization?.name).toBe(organizationName);
-
-    // 已建立團主資料後，重複再送一次建立表單應被擋（此頁面已改為編輯模式，
-    // 這裡改以編輯組織資訊表單驗證 own-scoped 更新）。
-    await page.getByLabel("聯絡窗口姓名").fill("王小明");
-    await page.getByLabel("聯絡信箱").fill(`contact-${testRunId}@example.com`);
     await page.getByLabel("聯絡電話").fill("0912345678");
-    await page.getByRole("button", { name: "儲存組織資訊" }).click();
+    await page.getByRole("button", { name: "建立團主資料並開始整理需求" }).click();
 
-    await expect(page.getByText("組織資訊已更新。")).toBeVisible();
+    // 送出後直接進新需求表單，而且聯絡資料已齊，不會出現補資料提醒。
+    await expect(page).toHaveURL(/\/organizer\/demands\/new$/);
+    await expect(page.getByRole("heading", { name: "建立新的團課需求" })).toBeVisible();
+    await expect(page.getByText("送出需求審核前，需要先補齊組織聯絡資料")).toHaveCount(0);
 
-    const updatedOrganization = await prisma.organization.findFirstOrThrow({
-      where: { organizerProfiles: { some: { user: { email } } } },
-      select: { contactName: true, contactEmail: true, contactPhone: true },
+    const created = await prisma.organizerProfile.findFirstOrThrow({
+      where: { user: { email } },
+      select: {
+        displayName: true,
+        organization: {
+          select: {
+            name: true,
+            contactName: true,
+            contactEmail: true,
+            contactPhone: true,
+          },
+        },
+      },
     });
-    expect(updatedOrganization).toEqual({
-      contactName: "王小明",
-      contactEmail: `contact-${testRunId}@example.com`,
+    expect(created.displayName).toBe(displayName);
+    expect(created.organization).toEqual({
+      name: organizationName,
+      contactName: displayName,
+      contactEmail: email,
       contactPhone: "0912345678",
     });
+  });
+
+  test("stops syncing the contact name once the user edits it by hand", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-sync-${Date.now()}`,
+    );
+    const email = `sync-${testRunId}@${testEmailDomain}`;
+    createdEmails.push(email);
+
+    const { sessionToken } = await createUserSession({ email });
+    await addAuthSessionCookie(context, sessionToken);
+
+    await page.goto("/organizer/profile");
+    await page.getByLabel("團主顯示名稱").fill("王小明");
+    await page.getByLabel("聯絡窗口姓名").fill("陳窗口");
+    await page.getByLabel("團主顯示名稱").fill("王小明二號");
+
+    await expect(page.getByLabel("聯絡窗口姓名")).toHaveValue("陳窗口");
+  });
+
+  test("rejects a one-page sign-up with missing contact info on the server", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-signup-missing-${Date.now()}`,
+    );
+    const email = `signup-missing-${testRunId}@${testEmailDomain}`;
+    createdEmails.push(email);
+
+    const { sessionToken } = await createUserSession({ email });
+    await addAuthSessionCookie(context, sessionToken);
+
+    await page.goto("/organizer/profile");
+    await page.getByLabel("團主顯示名稱").fill(`Signup Missing ${testRunId}`);
+    await page.getByLabel("組織名稱").fill(`Signup Missing Org ${testRunId}`);
+    await page.getByLabel("組織類型").selectOption("company");
+    // 留空聯絡電話，並關掉瀏覽器原生 required，證明伺服器端才是權威。
+    await page.getByLabel("聯絡電話").evaluate((el: HTMLInputElement) => {
+      el.required = false;
+      el.form?.setAttribute("novalidate", "true");
+    });
+    await page.getByRole("button", { name: "建立團主資料並開始整理需求" }).click();
+
+    await expect(page.getByText("聯絡電話為必填欄位。")).toBeVisible();
+    expect(
+      await prisma.organizerProfile.count({ where: { user: { email } } }),
+    ).toBe(0);
+  });
+
+  test("shows a contact-info banner on the new demand form and returns to it after the profile is completed", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-banner-${Date.now()}`,
+    );
+    const email = `banner-${testRunId}@${testEmailDomain}`;
+    createdEmails.push(email);
+
+    const { sessionToken } = await createOrganizerProfileWithOrganization({
+      email,
+      displayName: `Banner Organizer ${testRunId}`,
+      organizationName: `Banner Org ${testRunId}`,
+      contactName: "聯絡人",
+      contactEmail: null,
+      contactPhone: null,
+    });
+    await addAuthSessionCookie(context, sessionToken);
+
+    await page.goto("/organizer/demands/new");
+    await expect(page.getByText("送出需求審核前，需要先補齊組織聯絡資料")).toBeVisible();
+
+    await page.getByRole("link", { name: "前往補齊聯絡資料" }).click();
+    await expect(page).toHaveURL(/\/organizer\/profile\?next=/);
+    await expect(page.getByText("還缺 2 項聯絡資料")).toBeVisible();
+
+    await page.getByLabel("聯絡信箱").fill(`banner-${testRunId}@example.com`);
+    await page.getByLabel("聯絡電話").fill("0911222333");
+    await page.getByRole("button", { name: "儲存並回到剛剛的頁面" }).click();
+
+    await expect(page).toHaveURL(/\/organizer\/demands\/new$/);
+    await expect(page.getByText("送出需求審核前，需要先補齊組織聯絡資料")).toHaveCount(0);
+  });
+
+  test("ignores an external next parameter on the profile page", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-next-${Date.now()}`,
+    );
+    const email = `next-${testRunId}@${testEmailDomain}`;
+    createdEmails.push(email);
+
+    const { sessionToken } = await createOrganizerProfileWithOrganization({
+      email,
+      displayName: `Next Organizer ${testRunId}`,
+      organizationName: `Next Org ${testRunId}`,
+      contactName: "聯絡人",
+      contactEmail: `next-${testRunId}@example.com`,
+      contactPhone: "0900000000",
+    });
+    await addAuthSessionCookie(context, sessionToken);
+
+    await page.goto(
+      `/organizer/profile?next=${encodeURIComponent("https://example.com/evil")}`,
+    );
+    await page.getByRole("button", { name: "儲存", exact: true }).click();
+
+    await expect(page).toHaveURL(/\/organizer\/profile\?result=success/);
+    await expect(page.getByText("團主資料已儲存。")).toBeVisible();
   });
 
   test("lets an organizer create a draft, reopen it, and submit; submitted content matches exactly what was filled", async ({
@@ -113,10 +228,10 @@ test.describe("organizer demand smoke", () => {
     // 續編：重新開啟既有 draft 應該把先前存的欄位值 hydrate 回表單。
     await expect(page.getByLabel("需求標題")).toHaveValue(draftTitle);
 
-    // 單選按鈕本身是 sr-only（只給螢幕閱讀器），跟真人一樣點方塊上的文字。
+    // 勾選框本身是 sr-only（只給螢幕閱讀器），跟真人一樣點方塊上的文字。
     await page.getByText("伸展與身體保養", { exact: true }).click();
     await expect(
-      page.getByRole("radio", { name: /^伸展與身體保養/ }),
+      page.getByRole("checkbox", { name: /^伸展與身體保養/ }),
     ).toBeChecked();
     await page
       // 「特定對象與主題」的說明文字也提到「需求說明」，所以指定文字輸入框。
@@ -145,6 +260,7 @@ test.describe("organizer demand smoke", () => {
         status: true,
         title: true,
         serviceType: true,
+        serviceTypes: true,
         description: true,
         targetLevel: true,
         expectedParticipants: true,
@@ -160,6 +276,7 @@ test.describe("organizer demand smoke", () => {
       status: "submitted",
       title: draftTitle,
       serviceType: "伸展與身體保養",
+      serviceTypes: ["伸展與身體保養"],
       description:
         "希望帶領辦公室同仁在下班前放鬆身心，適合久坐族群，希望老師著重呼吸與伸展。",
       targetLevel: "general",
@@ -250,6 +367,7 @@ test.describe("organizer demand smoke", () => {
       data: completeDemandRequestData({
         title: `合法草稿待注入非法值 ${testRunId}`,
         serviceType: "Not A Real Service Type",
+        serviceTypes: ["Not A Real Service Type"],
       }),
     });
 
@@ -266,10 +384,10 @@ test.describe("organizer demand smoke", () => {
 
     const stillDraft = await prisma.demandRequest.findUniqueOrThrow({
       where: { id: demand.id },
-      select: { status: true, serviceType: true },
+      select: { status: true, serviceTypes: true },
     });
     expect(stillDraft.status).toBe("draft");
-    expect(stillDraft.serviceType).toBe("Not A Real Service Type");
+    expect(stillDraft.serviceTypes).toEqual(["Not A Real Service Type"]);
   });
 
   test("lets an online demand be submitted without a location, but requires one otherwise", async ({
@@ -306,7 +424,7 @@ test.describe("organizer demand smoke", () => {
     await page.goto(`/organizer/demands/${demand.id}/edit`);
 
     // 沒勾線上課程、地點又空著：必填檢查會鎖住送出按鈕。
-    await expect(page.getByText("還有必填欄位尚未完成：期望地點").first()).toBeVisible();
+    await expect(page.getByText("還缺 1 項才能送審：期望地點").first()).toBeVisible();
     await expect(
       page.getByRole("button", { name: "送出審核" }).first(),
     ).toBeDisabled();

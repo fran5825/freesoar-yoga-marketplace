@@ -53,7 +53,7 @@ export default async function TeacherClassesPage({ searchParams }: TeacherClasse
       : null;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-5 py-10 sm:px-8">
+    <div className="flex flex-col gap-8">
       <header className="border-b border-ink/15 pb-6">
         <p className="text-sm font-medium text-clay">Teacher classes</p>
         <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
@@ -330,6 +330,6 @@ export default async function TeacherClassesPage({ searchParams }: TeacherClasse
           ))}
         </section>
       )}
-    </main>
+    </div>
   );
 }

@@ -8,19 +8,26 @@ import {
   normalizeUpdateOwnOrganizationInput,
   normalizeUpdateOwnOrganizerProfileInput,
 } from "@/domain/organizer-profile/input";
+import { sanitizeOrganizerReturnPath } from "@/domain/organizer-profile/return-path";
 import {
   createOwnOrganizerProfileWithOrganization,
   updateOwnOrganization,
   updateOwnOrganizerProfile,
 } from "@/domain/organizer-profile/service";
 
+// 票 04：一頁式註冊，聯絡資料一起填；成功後直接進新需求表單（或 next 指定的頁面）。
 export async function createOrganizerProfileAction(
   formData: FormData,
 ): Promise<void> {
+  const next = sanitizeOrganizerReturnPath(getStringField(formData, "next"));
+
   const normalizedInput = normalizeCreateOrganizerProfileInput({
     displayName: getStringField(formData, "displayName"),
     organizationName: getStringField(formData, "organizationName"),
     organizationType: getStringField(formData, "organizationType"),
+    contactName: getStringField(formData, "contactName"),
+    contactEmail: getStringField(formData, "contactEmail"),
+    contactPhone: getStringField(formData, "contactPhone"),
   });
 
   const result = await createOwnOrganizerProfileWithOrganization(
@@ -28,34 +35,33 @@ export async function createOrganizerProfileAction(
   );
 
   if (!result.ok) {
-    redirectWithFeedback("error", buildErrorMessage(result.message, result.validationErrors));
+    redirectWithFeedback(
+      "error",
+      buildErrorMessage(result.message, result.validationErrors),
+      next,
+    );
   }
 
   revalidatePath("/organizer/profile");
-  redirectWithFeedback("success", "團主資料已建立，你可以開始整理需求。");
+  redirect(next ?? "/organizer/demands/new");
 }
 
-export async function updateOrganizerProfileAction(
+// 票 05：資料頁單一「儲存」，顯示名稱與組織資訊一次存。
+// 先確認顯示名稱不是空的，再存組織，避免「組織存了、名稱沒存」的一半狀態。
+export async function saveOrganizerProfileAction(
   formData: FormData,
 ): Promise<void> {
-  const normalizedInput = normalizeUpdateOwnOrganizerProfileInput({
+  const next = sanitizeOrganizerReturnPath(getStringField(formData, "next"));
+
+  const profileInput = normalizeUpdateOwnOrganizerProfileInput({
     displayName: getStringField(formData, "displayName"),
   });
 
-  const result = await updateOwnOrganizerProfile(normalizedInput);
-
-  if (!result.ok) {
-    redirectWithFeedback("error", buildErrorMessage(result.message, result.validationErrors));
+  if (!profileInput.displayName) {
+    redirectWithFeedback("error", "團主顯示名稱為必填欄位。", next);
   }
 
-  revalidatePath("/organizer/profile");
-  redirectWithFeedback("success", "團主顯示名稱已更新。");
-}
-
-export async function updateOrganizationAction(
-  formData: FormData,
-): Promise<void> {
-  const normalizedInput = normalizeUpdateOwnOrganizationInput({
+  const organizationInput = normalizeUpdateOwnOrganizationInput({
     name: getStringField(formData, "name"),
     type: getStringField(formData, "type"),
     contactName: getStringField(formData, "contactName"),
@@ -63,14 +69,36 @@ export async function updateOrganizationAction(
     contactPhone: getStringField(formData, "contactPhone"),
   });
 
-  const result = await updateOwnOrganization(normalizedInput);
+  const organizationResult = await updateOwnOrganization(organizationInput);
 
-  if (!result.ok) {
-    redirectWithFeedback("error", buildErrorMessage(result.message, result.validationErrors));
+  if (!organizationResult.ok) {
+    redirectWithFeedback(
+      "error",
+      buildErrorMessage(
+        organizationResult.message,
+        organizationResult.validationErrors,
+      ),
+      next,
+    );
+  }
+
+  const profileResult = await updateOwnOrganizerProfile(profileInput);
+
+  if (!profileResult.ok) {
+    redirectWithFeedback(
+      "error",
+      buildErrorMessage(profileResult.message, profileResult.validationErrors),
+      next,
+    );
   }
 
   revalidatePath("/organizer/profile");
-  redirectWithFeedback("success", "組織資訊已更新。");
+
+  if (next) {
+    redirect(next);
+  }
+
+  redirectWithFeedback("success", "團主資料已儲存。", null);
 }
 
 function getStringField(formData: FormData, name: string): string {
@@ -89,8 +117,14 @@ function buildErrorMessage(
   return [message, ...validationErrors.map((error) => error.message)].join(" ");
 }
 
-function redirectWithFeedback(result: "success" | "error", message: string): never {
+function redirectWithFeedback(
+  result: "success" | "error",
+  message: string,
+  next: string | null,
+): never {
+  const nextParam = next ? `&next=${encodeURIComponent(next)}` : "";
+
   redirect(
-    `/organizer/profile?result=${result}&message=${encodeURIComponent(message)}`,
+    `/organizer/profile?result=${result}&message=${encodeURIComponent(message)}${nextParam}`,
   );
 }

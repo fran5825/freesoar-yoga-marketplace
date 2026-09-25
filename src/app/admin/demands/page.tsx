@@ -1,3 +1,4 @@
+import { getDemandServiceTypes } from "@/domain/demand-request/service-types";
 import { listSubmittedDemandRequestsForAdmin } from "@/domain/demand-request/admin-service";
 import { organizationTypeLabels } from "@/domain/organizer-profile/organization-type-labels";
 import { requireAdmin } from "@/lib/auth/session";
@@ -240,7 +241,7 @@ export default async function AdminDemandsPage({
               <div className="grid gap-4 border-t border-ink/10 pt-4 md:grid-cols-2">
                 <ReadOnlyText
                   label="Service type"
-                  value={demandRequest.serviceType}
+                  value={getDemandServiceTypes(demandRequest).join("、") || null}
                 />
                 <ReadOnlyText
                   label="Target level"

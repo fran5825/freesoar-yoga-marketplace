@@ -77,7 +77,7 @@ export default async function TeacherDashboardPage() {
     : null;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-8 px-6 py-10">
+    <div className="flex flex-col gap-8">
       <header className="grid gap-4 border-b border-ink/15 pb-6">
         <p className="text-sm font-medium text-clay">老師專區</p>
         <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
@@ -212,7 +212,7 @@ export default async function TeacherDashboardPage() {
           </div>
         </section>
       )}
-    </main>
+    </div>
   );
 }
 

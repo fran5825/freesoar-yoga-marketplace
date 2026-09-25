@@ -13,6 +13,7 @@ export type TeacherFacingDemandListItem = {
   id: string;
   title: string | null;
   serviceType: string | null;
+  serviceTypes: string[];
   targetLevel: string | null;
   expectedParticipants: number | null;
   preferredAreas: string[];
@@ -37,6 +38,7 @@ const demandListSelect = {
   id: true,
   title: true,
   serviceType: true,
+  serviceTypes: true,
   targetLevel: true,
   expectedParticipants: true,
   preferredAreas: true,

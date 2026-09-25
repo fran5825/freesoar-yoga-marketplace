@@ -23,6 +23,10 @@ export default async function Home() {
   const organizerHref = organizerContext
     ? "/organizer/dashboard"
     : "/organizers/request";
+  // 票 02：首頁最顯眼的主按鈕，已是團主的人直接發起新需求；總覽留在下方「找到你的起點」卡片。
+  const heroOrganizerHref = organizerContext
+    ? "/organizer/demands/new"
+    : "/organizers/request";
 
   const pathways = [
     {
@@ -70,8 +74,8 @@ export default async function Home() {
               連結真實的團課需求與專業瑜伽老師，與團主、學員共同形成安心而有品質的團課。
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-              <Link className="rounded-full bg-pine px-6 py-3 text-center font-medium text-white transition hover:bg-pine-deep" href={organizerHref}>
-                {organizerContext ? "前往團主總覽" : "我想發起團課 →"}
+              <Link className="rounded-full bg-pine px-6 py-3 text-center font-medium text-white transition hover:bg-pine-deep" href={heroOrganizerHref}>
+                {organizerContext ? "發起新需求" : "我想發起團課 →"}
               </Link>
               <Link className="rounded-full border border-pine/30 bg-white/50 px-6 py-3 text-center font-medium transition hover:border-pine" href="/classes">
                 找一堂適合我的課

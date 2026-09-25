@@ -61,7 +61,7 @@ test.describe("/teacher/demands smoke", () => {
       await page.goto("/teacher/demands");
 
       // 每種非 approved 狀態都應顯示引導文案（連到 dashboard），而非 demand pool 列表。
-      await expect(page.locator('a[href="/teacher/dashboard"]')).toBeVisible();
+      await expect(page.getByRole("main").locator('a[href="/teacher/dashboard"]')).toBeVisible();
     }
   });
 

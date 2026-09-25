@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
-import { SERVICE_TYPES } from "@/domain/demand-request/service-types";
+import {
+  getDemandServiceTypes,
+  SERVICE_TYPES,
+} from "@/domain/demand-request/service-types";
 import { getOwnDemandRequestDetail } from "@/domain/demand-request/service";
 import { listResponsesForOwnDemandRequest } from "@/domain/demand-response/organizer-read-service";
 import { requireUser } from "@/lib/auth/session";
@@ -19,6 +22,7 @@ import {
   createClassSessionAction,
   selectDemandResponseAction,
 } from "./actions";
+import { NextStepCard } from "../_components/NextStepCard";
 import { ResponseList } from "./_components/ResponseList";
 import { getDemandLocationItems } from "@/domain/demand-request/location";
 
@@ -62,7 +66,7 @@ export default async function DemandRequestDetailPage({
   const responses = (await listResponsesForOwnDemandRequest(demandRequestId)) ?? [];
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-8 px-5 py-10 sm:px-8 sm:py-14">
+    <div className="flex flex-col gap-8">
       <header className="border-b border-ink/15 pb-6">
         <div className="flex flex-wrap items-center gap-3">
           <span
@@ -106,67 +110,10 @@ export default async function DemandRequestDetailPage({
         </section>
       ) : null}
 
-      <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6 sm:grid-cols-2">
-        <ReadOnlyText label="服務類型" value={demandRequest.serviceType} />
-        <ReadOnlyText
-          label="適合對象"
-          value={
-            demandRequest.targetLevel
-              ? (demandRequestTargetLevelLabels[demandRequest.targetLevel] ??
-                demandRequest.targetLevel)
-              : null
-          }
-        />
-        <ReadOnlyText
-          label="預計參與人數"
-          value={
-            typeof demandRequest.expectedParticipants === "number"
-              ? `${demandRequest.expectedParticipants} 人`
-              : null
-          }
-        />
-        <ReadOnlyText
-          label="單堂課程長度"
-          value={
-            typeof demandRequest.classLengthMinutes === "number"
-              ? `${demandRequest.classLengthMinutes} 分鐘`
-              : null
-          }
-        />
-        <ReadOnlyText
-          label="上課頻率"
-          value={
-            demandRequest.frequency
-              ? (demandRequestFrequencyLabels[demandRequest.frequency] ??
-                demandRequest.frequency)
-              : null
-          }
-        />
-        <ReadOnlyText
-          label="期望開課日期"
-          value={
-            demandRequest.preferredStartDate
-              ? formatDemandRequestDate(demandRequest.preferredStartDate)
-              : null
-          }
-        />
-        <ReadOnlyText label="預算參考" value={demandRequest.budgetRange} />
-        <ReadOnlyList
-          label="期望地點"
-          values={getDemandLocationItems(demandRequest)}
-        />
-        <ReadOnlyList
-          label="期望時段"
-          values={demandRequest.preferredTimeSlots}
-        />
-        <div className="min-w-0 sm:col-span-2">
-          <ReadOnlyText
-            label="需求說明"
-            multiline
-            value={demandRequest.description}
-          />
-        </div>
-      </section>
+      <NextStepCard
+        demandRequest={demandRequest}
+        responseCount={responses.length}
+      />
 
       <ResponseList
         demandRequestId={demandRequestId}
@@ -325,6 +272,78 @@ export default async function DemandRequestDetailPage({
         </section>
       ) : null}
 
+      <section className="rounded-2xl border border-ink/15 bg-white p-6">
+        <details>
+          <summary className="cursor-pointer list-none text-lg font-medium text-ink marker:hidden">
+            需求內容（點開查看）
+          </summary>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <ReadOnlyList
+              label="服務類型"
+              values={getDemandServiceTypes(demandRequest)}
+            />
+          <ReadOnlyText
+            label="適合對象"
+            value={
+              demandRequest.targetLevel
+                ? (demandRequestTargetLevelLabels[demandRequest.targetLevel] ??
+                  demandRequest.targetLevel)
+                : null
+            }
+          />
+          <ReadOnlyText
+            label="預計參與人數"
+            value={
+              typeof demandRequest.expectedParticipants === "number"
+                ? `${demandRequest.expectedParticipants} 人`
+                : null
+            }
+          />
+          <ReadOnlyText
+            label="單堂課程長度"
+            value={
+              typeof demandRequest.classLengthMinutes === "number"
+                ? `${demandRequest.classLengthMinutes} 分鐘`
+                : null
+            }
+          />
+          <ReadOnlyText
+            label="上課頻率"
+            value={
+              demandRequest.frequency
+                ? (demandRequestFrequencyLabels[demandRequest.frequency] ??
+                  demandRequest.frequency)
+                : null
+            }
+          />
+          <ReadOnlyText
+            label="期望開課日期"
+            value={
+              demandRequest.preferredStartDate
+                ? formatDemandRequestDate(demandRequest.preferredStartDate)
+                : null
+            }
+          />
+          <ReadOnlyText label="預算參考" value={demandRequest.budgetRange} />
+          <ReadOnlyList
+            label="期望地點"
+            values={getDemandLocationItems(demandRequest)}
+          />
+          <ReadOnlyList
+            label="期望時段"
+            values={demandRequest.preferredTimeSlots}
+          />
+          <div className="min-w-0 sm:col-span-2">
+            <ReadOnlyText
+              label="需求說明"
+              multiline
+              value={demandRequest.description}
+            />
+          </div>
+        </div>
+        </details>
+      </section>
+
       {["draft", "submitted", "published", "matched"].includes(demandRequest.status) ? (
         <section className="rounded-2xl border border-rose-200 bg-white p-6">
           <details className="grid gap-4">
@@ -366,16 +385,8 @@ export default async function DemandRequestDetailPage({
         >
           回到需求列表
         </Link>
-        {demandRequest.status === "draft" ? (
-          <Link
-            className="rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-pine-deep"
-            href={`/organizer/demands/${demandRequest.id}/edit`}
-          >
-            繼續編輯草稿
-          </Link>
-        ) : null}
       </div>
-    </main>
+    </div>
   );
 }
 

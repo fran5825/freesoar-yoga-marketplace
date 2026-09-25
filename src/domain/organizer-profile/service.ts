@@ -142,6 +142,9 @@ export async function createOwnOrganizerProfileWithOrganization(
           data: {
             name: input.organizationName as string,
             type: input.organizationType as OrganizationType,
+            contactName: input.contactName as string,
+            contactEmail: input.contactEmail as string,
+            contactPhone: input.contactPhone as string,
           },
           select: organizationSelect,
         });

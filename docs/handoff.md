@@ -2,6 +2,12 @@
 
 給接手的 Claude：先讀這份，再讀 `AGENTS.md`、`docs/backlog.md`，然後跑 `git log --oneline -10` 跟 `git status` 看最近的改動跟有沒有還沒 commit 的東西。以 git 紀錄為準，這份只是導讀。這份取代 2026-09-19 那個版本。
 
+## 2026-09-25 更新（先看這段）
+
+- 團主流程與排版整理已依 `docs/organizer-usability-plan.md` 一次做完（票券在 `docs/superpowers/plans/organizer-usability/tickets/`），**全部尚未 commit**，等使用者看過畫面。含：團主專用導覽列與統一頁寬、入口路徑（已是團主按「發起團課」直接進新需求）、`/account` 入口中心、一頁式團主註冊、資料頁單一儲存、需求表單頂端聯絡提醒、詳情頁下一步、總覽待你處理、需求列表篩選、通知連結。
+- **跑 Playwright 請用 `PORT=3100 npx playwright test ...`**（先 `npm run build`），直接跑會連到使用者的開發伺服器造成假失敗，見 `docs/backlog.md` 小提醒。
+- 這份下面的內容是 2026-09-21 的舊版，「團主開團流程重新設計」相關段落已被上面取代。
+
 ## 使用者與合作方式
 
 - 使用者（Franz）沒有寫程式背景，希望邊做邊學技術詞彙。用繁體中文回覆，技術名詞保留英文並附一句白話解釋；每個動作講「做了什麼、為什麼」；小步前進，做一步回報一步。

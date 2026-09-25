@@ -1,3 +1,4 @@
+import { getDemandServiceTypes } from "@/domain/demand-request/service-types";
 import { notFound, redirect } from "next/navigation";
 
 import { requireApprovedTeacher } from "@/domain/teacher-profile/capability";
@@ -85,7 +86,7 @@ export default async function TeacherDemandDetailPage({
         : responseStatusCopy[ownResponse.status];
 
     return (
-      <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-5 py-10 sm:px-8">
+      <div className="flex flex-col gap-8">
         <header className="border-b border-ink/15 pb-6">
           <p className="text-sm font-medium text-clay">Teacher demands</p>
           <h1 className="mt-2 break-words text-2xl font-semibold tracking-tight text-ink">
@@ -177,7 +178,7 @@ export default async function TeacherDemandDetailPage({
             </details>
           ) : null}
         </section>
-      </main>
+      </div>
     );
   }
 
@@ -191,7 +192,7 @@ export default async function TeacherDemandDetailPage({
 
   if (capabilityError) {
     return (
-      <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-5 py-10 sm:px-8">
+      <div className="flex flex-col gap-8">
         <header className="border-b border-ink/15 pb-6">
           <p className="text-sm font-medium text-clay">Teacher demands</p>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight text-ink">
@@ -203,7 +204,7 @@ export default async function TeacherDemandDetailPage({
             你的老師資格審核完成後，就可以在這裡查看並回應需求
           </h2>
         </section>
-      </main>
+      </div>
     );
   }
 
@@ -214,7 +215,7 @@ export default async function TeacherDemandDetailPage({
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-5 py-10 sm:px-8">
+    <div className="flex flex-col gap-8">
       <header className="border-b border-ink/15 pb-6">
         <p className="text-sm font-medium text-clay">Teacher demands</p>
         <h1 className="mt-2 break-words text-2xl font-semibold tracking-tight text-ink">
@@ -244,10 +245,12 @@ export default async function TeacherDemandDetailPage({
               <dd className="mt-1 break-words">{demand.organization.name}</dd>
             </div>
           ) : null}
-          {demand.serviceType ? (
+          {getDemandServiceTypes(demand).length > 0 ? (
             <div className="min-w-0">
               <dt className="font-medium text-ink">課程類型</dt>
-              <dd className="mt-1 break-words">{demand.serviceType}</dd>
+              <dd className="mt-1 break-words">
+                {getDemandServiceTypes(demand).join("、")}
+              </dd>
             </div>
           ) : null}
           {demand.targetLevel ? (
@@ -384,6 +387,6 @@ export default async function TeacherDemandDetailPage({
           </button>
         </form>
       </section>
-    </main>
+    </div>
   );
 }

@@ -187,7 +187,8 @@ Fields:
 - organizerProfileId
 - organizationId
 - title
-- serviceType
+- serviceType（主要類型，＝serviceTypes 的第一個；過渡欄位，見下）
+- serviceTypes（多選，`String[]`，最多 3 個）
 - description
 - targetLevel
 - expectedParticipants
@@ -220,7 +221,8 @@ Phase 1 schema notes（`organizer-demand-request-foundation` D5–D11 已確認�
 
 - `serviceTypeId` 更名為 `serviceType`：因 `ServiceType` 在 V1 不落地為獨立 model（見上），此欄位改為受控字串 `String?`，值須落在 `service-types.ts` 的 7 項定案清單內。
 - `organizerProfileId` / `organizationId` 一律由 server 端從登入使用者的 organizer capability 解析帶入，**不接受 client 傳入值決定 own 資源**（IDOR 防護）。
-- `title` / `serviceType` / `description` / `targetLevel` / `expectedParticipants` / `preferredAreas`（至少一項）/ `preferredTimeSlots`（至少一項）/ `classLengthMinutes` / `frequency` 是 submit 的必填欄位；`preferredStartDate` / `budgetRange` 為建議欄位，可留空。
+- **2026-09-25 服務類型改多選**：新增 `serviceTypes String[]`（migration `20260925120000_demand_service_types_multi`，舊資料由 `serviceType` 複製而來）。每個值須落在 `service-types.ts` 的清單內；最多 3 個；「還不確定，請老師建議」不能與其他選項並存。`serviceType` 保留為「主要類型」（固定存第一個選項），課程建立時預設帶入；`ClassSession.serviceType` 仍是單一值。待確認沒有其他地方依賴 `DemandRequest.serviceType` 後，另開 migration 移除（見 `docs/backlog.md`）。
+- `title` / `serviceTypes`（至少一項）/ `description` / `targetLevel` / `expectedParticipants` / `preferredAreas`（至少一項）/ `preferredTimeSlots`（至少一項）/ `classLengthMinutes` / `frequency` 是 submit 的必填欄位；`preferredStartDate` / `budgetRange` 為建議欄位，可留空。
 - `preferredAreas`、`preferredTimeSlots` 在 schema 中以 `String[] @default([])` 表示（對齊 `TeacherProfile.specialties` 等既有慣例），不建立正規化 relation 或 Json。`preferredTimeSlots` 值須落在受控清單內；`preferredAreas` 為自由輸入 + trim，上限 10 項、單項 ≤50 字。
 - `targetLevel`、`frequency` 為應用層受控字串（`String?`），`frequency` 固定 4 值（`single`/`weekly`/`biweekly`/`monthly`，不含 `other`）。
 - **V1 已接線的狀態轉換為** `draft → submitted → published | rejected`（Organizer 建立/送出、Admin publish/reject）、`published → matched`（Organizer select，見 `demand-response-selection-and-matching`）、`matched → converted_to_class`（Organizer 建立 ClassSession，見 `class-session-creation`）、`draft`／`submitted`／`published`／`matched` → `cancelled`（Organizer own-scoped 取消，明確排除 `converted_to_class`，見 `demand-request-cancellation`）。`under_review`、`teacher_responded`、`completed`、`expired` 這些 enum 值**保留但仍未接線**，避免未來相關 slice 需要再次 enum migration；細節與各狀態的觸發者/前置/後置見 `state-transition-details.md`。

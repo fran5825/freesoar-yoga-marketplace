@@ -1,4 +1,6 @@
 import {
+  MAX_SERVICE_TYPES,
+  UNDECIDED_SERVICE_TYPE,
   isValidFrequency,
   isValidPreferredTimeSlot,
   isValidServiceType,
@@ -7,7 +9,7 @@ import {
 
 export type DemandRequestApplicationInput = {
   title?: string | null;
-  serviceType?: string | null;
+  serviceTypes?: string[] | null;
   description?: string | null;
   targetLevel?: string | null;
   expectedParticipants?: number | null;
@@ -39,6 +41,8 @@ export type DemandRequestValidationErrorCode =
   | "title_too_long"
   | "service_type_required"
   | "service_type_invalid"
+  | "service_types_too_many"
+  | "service_types_undecided_exclusive"
   | "description_required"
   | "description_too_short"
   | "description_too_long"
@@ -60,7 +64,7 @@ export type DemandRequestValidationErrorCode =
 export type DemandRequestValidationError = {
   field:
     | "title"
-    | "serviceType"
+    | "serviceTypes"
     | "description"
     | "targetLevel"
     | "expectedParticipants"
@@ -118,17 +122,34 @@ export function validateDemandRequestSubmit(
     });
   }
 
-  if (isBlank(input.serviceType)) {
+  const serviceTypes = input.serviceTypes ?? [];
+
+  if (serviceTypes.length === 0) {
     errors.push({
-      field: "serviceType",
+      field: "serviceTypes",
       code: "service_type_required",
       message: "服務類型為送出必填欄位。",
     });
-  } else if (!isValidServiceType(input.serviceType as string)) {
+  } else if (!serviceTypes.every((value) => isValidServiceType(value))) {
     errors.push({
-      field: "serviceType",
+      field: "serviceTypes",
       code: "service_type_invalid",
       message: "服務類型不在允許的選項內。",
+    });
+  } else if (serviceTypes.length > MAX_SERVICE_TYPES) {
+    errors.push({
+      field: "serviceTypes",
+      code: "service_types_too_many",
+      message: `服務類型最多選 ${MAX_SERVICE_TYPES} 個。`,
+    });
+  } else if (
+    serviceTypes.length > 1 &&
+    serviceTypes.includes(UNDECIDED_SERVICE_TYPE)
+  ) {
+    errors.push({
+      field: "serviceTypes",
+      code: "service_types_undecided_exclusive",
+      message: "「還不確定」不能跟其他服務類型一起選。",
     });
   }
 
