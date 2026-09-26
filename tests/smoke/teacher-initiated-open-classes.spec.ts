@@ -18,6 +18,9 @@ import {
   createDemandResponse,
   createTeacherProfileWithSession,
 } from "./_helpers/demand-response-fixtures";
+import { futureDateString, futureDateTime } from "./_helpers/future-dates";
+import { pickServiceType } from "./_helpers/class-form";
+import { selectFormTime } from "./_helpers/time-select";
 
 const testEmailDomain = "teacher-initiated-open-classes-smoke.local";
 const createdEmails: string[] = [];
@@ -104,16 +107,21 @@ test.describe("teacher-initiated open classes smoke", () => {
     await expect(page.getByRole("heading", { name: "建立課程" })).toBeVisible();
 
     await page.getByLabel("課程名稱").fill(baseInput.title);
-    await page.getByLabel("課程類型").selectOption(baseInput.serviceType);
-    await page.getByLabel("開始時間").fill("2026-09-10T14:00");
-    await page.getByLabel("結束時間").fill("2026-09-10T15:00");
+    await pickServiceType(page, baseInput.serviceType);
+    await page.locator("#single-date").fill(futureDateString(30));
+    await selectFormTime(page, "single-", "start", "14:00");
+    await selectFormTime(page, "single-", "end", "15:00");
     await page.getByLabel("地點").fill(baseInput.location);
     await page.getByLabel("名額上限").fill(String(baseInput.capacity));
     await page.getByRole("checkbox", { name: "公開這堂課", exact: false }).check();
+    // 瑜伽類型必填：勾選一個標籤，再用「其他」補兩個自訂項目（頓號分隔）。
+    await page.getByText("陰瑜珈", { exact: true }).click();
+    await page.locator("#yoga-styles-other").fill("亞歷山大技巧、脈輪流動");
     await page.getByRole("checkbox", { name: /我確認以上資訊無誤/ }).check();
     await page.getByRole("button", { name: "建立課程" }).click();
 
     await expect(page.getByText("課程已建立。")).toBeVisible();
+    await expect(page.getByText("陰瑜珈、亞歷山大技巧、脈輪流動")).toBeVisible();
     await expect(page.getByText(baseInput.title)).toBeVisible();
     await expect(page.getByText("自己開的課", { exact: true })).toBeVisible();
     // 老師自建課程沒有團體，顯示中性 fallback，不是空白區塊。
@@ -121,8 +129,15 @@ test.describe("teacher-initiated open classes smoke", () => {
 
     const created = await prisma.classSession.findFirstOrThrow({
       where: { teacherProfileId: teacher.teacherProfileId, title: baseInput.title },
-      select: { id: true, origin: true, organizerProfileId: true, organizationId: true },
+      select: {
+        id: true,
+        origin: true,
+        organizerProfileId: true,
+        organizationId: true,
+        yogaStyles: true,
+      },
     });
+    expect(created.yogaStyles).toEqual(["陰瑜珈", "亞歷山大技巧", "脈輪流動"]);
     expect(created.origin).toBe("teacher_initiated");
     expect(created.organizerProfileId).toBeNull();
     expect(created.organizationId).toBeNull();
@@ -185,7 +200,7 @@ test.describe("teacher-initiated open classes smoke", () => {
 
     // 方向一：老師已有一堂 Organizer 媒合課程，自建重疊時段被擋。
     const matched = await seedMatchedOrganizerContext(`${testRunId}-a`);
-    const organizerInput = normalizedInput("2026-09-15T10:00", "2026-09-15T11:00");
+    const organizerInput = normalizedInput(futureDateTime(35, "10:00"), futureDateTime(35, "11:00"));
     const createdOrganizerClass = await createClassSessionForOrganizer(
       matched.organizerProfileId,
       matched.demand.id,
@@ -195,13 +210,13 @@ test.describe("teacher-initiated open classes smoke", () => {
 
     const overlappingTeacherAttempt = await createClassSessionForTeacher(
       matched.teacher.teacherProfileId,
-      normalizedInput("2026-09-15T10:30", "2026-09-15T11:30"),
+      normalizedInput(futureDateTime(35, "10:30"), futureDateTime(35, "11:30")),
     );
     expect(overlappingTeacherAttempt).toEqual({ ok: false, code: "teacher_schedule_conflict" });
 
     const nonOverlappingTeacherAttempt = await createClassSessionForTeacher(
       matched.teacher.teacherProfileId,
-      normalizedInput("2026-09-15T12:00", "2026-09-15T13:00"),
+      normalizedInput(futureDateTime(35, "12:00"), futureDateTime(35, "13:00")),
     );
     expect(nonOverlappingTeacherAttempt.ok).toBe(true);
 
@@ -209,7 +224,7 @@ test.describe("teacher-initiated open classes smoke", () => {
     const teacherB = await seedApprovedTeacher(`${testRunId}-b`);
     const teacherInitiated = await createClassSessionForTeacher(
       teacherB.teacherProfileId,
-      normalizedInput("2026-09-16T10:00", "2026-09-16T11:00"),
+      normalizedInput(futureDateTime(36, "10:00"), futureDateTime(36, "11:00")),
     );
     expect(teacherInitiated.ok).toBe(true);
 
@@ -236,14 +251,14 @@ test.describe("teacher-initiated open classes smoke", () => {
     const overlappingOrganizerAttempt = await createClassSessionForOrganizer(
       organizerBProfileId,
       demandB.id,
-      normalizedInput("2026-09-16T10:30", "2026-09-16T11:30"),
+      normalizedInput(futureDateTime(36, "10:30"), futureDateTime(36, "11:30")),
     );
     expect(overlappingOrganizerAttempt).toEqual({ ok: false, code: "teacher_schedule_conflict" });
 
     const nonOverlappingOrganizerAttempt = await createClassSessionForOrganizer(
       organizerBProfileId,
       demandB.id,
-      normalizedInput("2026-09-16T12:00", "2026-09-16T13:00"),
+      normalizedInput(futureDateTime(36, "12:00"), futureDateTime(36, "13:00")),
     );
     expect(nonOverlappingOrganizerAttempt.ok).toBe(true);
   });
@@ -256,7 +271,7 @@ test.describe("teacher-initiated open classes smoke", () => {
       `${testInfo.project.name}-${testInfo.workerIndex}-race-${Date.now()}`,
     );
     const teacher = await seedApprovedTeacher(testRunId);
-    const input = normalizedInput("2026-09-20T10:00", "2026-09-20T11:00");
+    const input = normalizedInput(futureDateTime(40, "10:00"), futureDateTime(40, "11:00"));
 
     const releaseFirst = createDeferred<void>();
     let firstAcquired = false;
@@ -306,7 +321,7 @@ test.describe("teacher-initiated open classes smoke", () => {
     const teacher = await seedApprovedTeacher(testRunId);
     const created = await createClassSessionForTeacher(
       teacher.teacherProfileId,
-      normalizedInput("2026-09-25T10:00", "2026-09-25T11:00"),
+      normalizedInput(futureDateTime(45, "10:00"), futureDateTime(45, "11:00")),
     );
     if (!created.ok) throw new Error("unexpected create failure in test fixture");
 
@@ -350,7 +365,7 @@ test.describe("teacher-initiated open classes smoke", () => {
     expect(completionNotif).not.toBeNull();
   });
 
-  test("cancel/open-for-enrollment/complete action buttons only appear for teacher-initiated class sessions on /teacher/classes, not organizer-matched ones", async ({
+  test("cancel/open-for-enrollment/complete action buttons only appear for teacher-initiated class sessions on their detail page, not organizer-matched ones", async ({
     context,
     page,
   }, testInfo) => {
@@ -361,25 +376,36 @@ test.describe("teacher-initiated open classes smoke", () => {
     const organizerClass = await createClassSessionForOrganizer(
       matched.organizerProfileId,
       matched.demand.id,
-      normalizedInput("2026-09-28T10:00", "2026-09-28T11:00"),
+      normalizedInput(futureDateTime(48, "10:00"), futureDateTime(48, "11:00")),
     );
     if (!organizerClass.ok) throw new Error("unexpected create failure in test fixture");
 
     const teacherClass = await createClassSessionForTeacher(
       matched.teacher.teacherProfileId,
-      normalizedInput("2026-09-29T10:00", "2026-09-29T11:00"),
+      normalizedInput(futureDateTime(49, "10:00"), futureDateTime(49, "11:00")),
     );
     if (!teacherClass.ok) throw new Error("unexpected create failure in test fixture");
 
     await addAuthSessionCookie(context, matched.teacher.sessionToken);
     await page.goto("/teacher/classes");
 
-    const organizerCard = page.locator("article").filter({ hasText: "團主媒合" });
-    await expect(organizerCard.getByRole("button", { name: "取消課程" })).toBeHidden();
-    await expect(organizerCard.getByRole("button", { name: "開放報名" })).toBeHidden();
+    // 列表上不再有任何操作按鈕，每張卡片都連到該課的詳情頁（teacher-usability 第 06 票）。
+    await expect(page.getByRole("button", { name: "取消課程" })).toHaveCount(0);
+    await expect(
+      page.locator(`a[href="/teacher/classes/${organizerClass.classSessionId}"]`),
+    ).toBeVisible();
+    await expect(
+      page.locator(`a[href="/teacher/classes/${teacherClass.classSessionId}"]`),
+    ).toBeVisible();
 
-    const teacherCard = page.locator("article").filter({ hasText: "自己開的課" });
-    await expect(teacherCard.getByRole("button", { name: "取消課程" })).toBeVisible();
+    await page.goto(`/teacher/classes/${organizerClass.classSessionId}`);
+    await expect(page.getByText("團主媒合", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "取消課程" })).toBeHidden();
+    await expect(page.getByRole("button", { name: "開放報名" })).toBeHidden();
+
+    await page.goto(`/teacher/classes/${teacherClass.classSessionId}`);
+    await expect(page.getByText("自己開的課", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "取消課程" })).toBeVisible();
   });
 
   test("null-safety: a teacher-initiated class session renders without throwing on admin list/detail and member/classes pages, showing neutral fallback text instead of a blank organization field", async ({
@@ -392,7 +418,7 @@ test.describe("teacher-initiated open classes smoke", () => {
     const teacher = await seedApprovedTeacher(testRunId);
     const created = await createClassSessionForTeacher(
       teacher.teacherProfileId,
-      normalizedInput("2026-09-30T10:00", "2026-09-30T11:00"),
+      normalizedInput(futureDateTime(50, "10:00"), futureDateTime(50, "11:00")),
     );
     if (!created.ok) throw new Error("unexpected create failure in test fixture");
 

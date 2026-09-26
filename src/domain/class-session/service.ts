@@ -14,7 +14,10 @@ import {
   generateOccurrencesForSeries,
   type OccurrenceSkip,
 } from "./__internal__/generate-recurring-occurrences-core";
-import { computeNextWeeklyOccurrenceDates } from "./recurring-series-dates";
+import {
+  computeNextWeeklyOccurrenceDates,
+  weeklyAfterDateForStartDate,
+} from "./recurring-series-dates";
 import {
   WEEKLY_GENERATE_COUNT_MAX,
   WEEKLY_GENERATE_COUNT_MIN,
@@ -522,7 +525,8 @@ export async function createOwnClassSessionForTeacher(
     requiresApproval?: boolean;
   },
 ): Promise<CreateOwnClassSessionForTeacherResult> {
-  const validation = validateClassSessionCreate(input);
+  // 老師自己建課一律要說明瑜伽風格（團主媒合建課不需要）。
+  const validation = validateClassSessionCreate(input, { requireYogaStyles: true });
 
   if (!validation.valid) {
     return {
@@ -933,6 +937,8 @@ export async function createOwnRecurringClassSeriesForTeacher(
       title: validation.normalized.title,
       description: validation.normalized.description,
       serviceType: validation.normalized.serviceType,
+      serviceTypes: validation.normalized.serviceTypes,
+      yogaStyles: validation.normalized.yogaStyles,
       dayOfWeek: validation.schedule.mode === "weekly" ? validation.schedule.dayOfWeek : null,
       startTime: validation.normalized.startTime,
       endTime: validation.normalized.endTime,
@@ -948,6 +954,9 @@ export async function createOwnRecurringClassSeriesForTeacher(
       ? computeNextWeeklyOccurrenceDates(
           validation.schedule.dayOfWeek,
           validation.schedule.generateCount,
+          validation.schedule.startDate
+            ? weeklyAfterDateForStartDate(validation.schedule.startDate)
+            : undefined,
         )
       : validation.schedule.dates;
 

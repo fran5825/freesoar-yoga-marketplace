@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { futureDateTime } from "./_helpers/future-dates";
 
 import { createClassSessionForOrganizer } from "../../src/domain/class-session/__internal__/create-class-session-core";
 import {
@@ -35,8 +36,8 @@ const validInput = {
   title: "測試課程",
   description: "測試用課程說明。",
   serviceType: "伸展與身體保養",
-  startAt: "2026-08-20T14:00",
-  endAt: "2026-08-20T15:00",
+  startAt: futureDateTime(42, "14:00"),
+  endAt: futureDateTime(42, "15:00"),
   location: "台北市信義區測試教室",
   capacity: 20,
   isPublic: false,
@@ -190,7 +191,7 @@ test.describe("class session creation smoke", () => {
       ["capacity 501", { capacity: 501 }],
       ["startAt in the past", { startAt: "2020-01-01T10:00" }],
       ["endAt equal to startAt", { endAt: validInput.startAt }],
-      ["endAt before startAt", { endAt: "2026-08-20T13:00" }],
+      ["endAt before startAt", { endAt: futureDateTime(42, "13:00") }],
       ["empty location", { location: "" }],
       ["invalid serviceType", { serviceType: "Not A Real Type" }],
       ["empty title", { title: "" }],

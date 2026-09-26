@@ -3,6 +3,11 @@ import type { ClassSessionOrigin, ClassSessionStatus, EnrollmentStatus } from "@
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
+import {
+  getClassSessionDetailForTeacherUser,
+  teacherFacingClassSessionSelect,
+} from "./__internal__/class-session-detail-core-for-teacher";
+
 // D14：targetLevel 不新增欄位，透過既有 demandRequestId 關聯衍生。
 export type OrganizerFacingClassSession = {
   id: string;
@@ -92,6 +97,8 @@ export type TeacherFacingClassSession = {
   title: string;
   description: string | null;
   serviceType: string | null;
+  serviceTypes: string[];
+  yogaStyles: string[];
   startAt: Date;
   endAt: Date;
   location: string;
@@ -146,45 +153,46 @@ export async function listOwnClassSessionsForTeacher(): Promise<
 
   return prisma.classSession.findMany({
     where: { teacherProfileId: teacherProfile.id },
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      serviceType: true,
-      startAt: true,
-      endAt: true,
-      location: true,
-      capacity: true,
-      isPublic: true,
-      status: true,
-      createdAt: true,
-      origin: true,
-      recurringClassSeriesId: true,
-      requiresApproval: true,
-      demandRequest: { select: { targetLevel: true } },
-      organization: { select: { name: true } },
-      recurringClassSeries: { select: { title: true } },
-      enrollments: {
-        where: { status: { in: ["confirmed", "pending"] } },
-        select: {
-          id: true,
-          status: true,
-          notes: true,
-          user: { select: { name: true, email: true } },
-        },
-      },
-      reviews: {
-        select: {
-          id: true,
-          rating: true,
-          comment: true,
-          createdAt: true,
-          reviewer: { select: { name: true, email: true } },
-        },
-        orderBy: { createdAt: "asc" },
-      },
-    },
+    select: teacherFacingClassSessionSelect,
     orderBy: { startAt: "asc" },
+  });
+}
+
+// teacher-usability 第 05 票：單堂課詳情。權限規則與列表相同（只看得到自己的課，suspended 老師仍可
+// 查看），別人的課或不存在都回傳 null；未登入時 requireUser() 會丟出錯誤。
+export async function getOwnClassSessionDetailForTeacher(
+  classSessionId: string,
+): Promise<TeacherFacingClassSession | null> {
+  const currentUser = await requireUser();
+
+  return getClassSessionDetailForTeacherUser(currentUser.id, classSessionId);
+}
+
+// teacher-usability 第 07 票：建課表單的預設值，帶入老師「最近一次自己建立的課」的
+// 地點、名額與是否需要確認報名。只讀自己的資料（teacherProfileId 寫在 WHERE），
+// 沒有建過課就回傳 null，不新增任何資料欄位。
+export type TeacherClassFormDefaults = {
+  location: string;
+  capacity: number;
+  requiresApproval: boolean;
+};
+
+export async function getOwnLatestClassFormDefaultsForTeacher(): Promise<TeacherClassFormDefaults | null> {
+  const currentUser = await requireUser();
+
+  const teacherProfile = await prisma.teacherProfile.findUnique({
+    where: { userId: currentUser.id },
+    select: { id: true },
+  });
+
+  if (!teacherProfile) {
+    return null;
+  }
+
+  return prisma.classSession.findFirst({
+    where: { teacherProfileId: teacherProfile.id, origin: "teacher_initiated" },
+    orderBy: { createdAt: "desc" },
+    select: { location: true, capacity: true, requiresApproval: true },
   });
 }
 
@@ -201,6 +209,8 @@ export type RecurringClassSeriesDetail = {
   title: string;
   description: string | null;
   serviceType: string | null;
+  serviceTypes: string[];
+  yogaStyles: string[];
   dayOfWeek: number | null;
   startTime: string;
   endTime: string;
@@ -240,6 +250,8 @@ export async function getOwnRecurringClassSeriesDetailForTeacher(
       location: true,
       capacity: true,
       requiresApproval: true,
+      serviceTypes: true,
+      yogaStyles: true,
       classSessions: {
         select: { id: true, startAt: true, endAt: true, status: true },
         orderBy: { startAt: "asc" },

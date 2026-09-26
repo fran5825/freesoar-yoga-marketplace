@@ -75,6 +75,8 @@ Can:
 - **Create own class sessions directly（已落地，`teacher-initiated-open-classes` 已確認）**：approved 老師不需要等團主媒合，可以自己開單堂、常規（每週固定星期）或固定期課程；own-scoped 取消/開放報名/標記完成，走平行於既有 Organizer 版本的核心，不共用擁有權過濾邏輯。任何建課路徑（自建或團主媒合）都會檢查是否跟自己其他課程時段衝突。
 - **Optionally require approval for new enrollments on own-created classes（已落地，Gate G2/G3）**：可在建課時選擇「需要我確認才算報名成功」，對應的 `pending` 報名需要老師在 `/teacher/classes` 明確確認或拒絕，受 `startAt` 時間邊界限制。
 - View own class sessions（含團主媒合與自建兩種來源，統一列表顯示來源徽章）
+- **Read own data for dashboard/form defaults（`teacher-usability` 第 07、09 票，2026-09-26）**：建課表單帶入自己最近一堂自建課的地點、名額、是否需確認報名；總覽列出自己「已被選定、等待團主建課」的回應（只有需求 id 與標題）。兩者都是 own-scoped 讀取（`teacherProfileId` 寫在 WHERE），沒有新增能力或可讀的他人資料。
+- **View own single class session detail（`teacher-usability` 第 05 票，產品主人 2026-09-25 放行）**：老師只能讀自己的單堂課詳情（範圍與上方列表完全相同，未新增可讀欄位：只含 confirmed／pending 報名的學員姓名、email、備註，評價者姓名與 email，Organization 只有名稱、無團主聯絡資料，無學員電話與頭像）；別人的課、不存在、沒有老師資料一律回傳找不到；suspended 老師仍可查看自己既有的課。own-scope 寫在查詢 WHERE，不是事後比對。
 - View own calendar
 - Enroll in class sessions only through the same User's Member capability
 

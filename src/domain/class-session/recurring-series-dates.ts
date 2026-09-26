@@ -33,6 +33,11 @@ function taipeiDateString(date: Date): string {
   return TAIPEI_DATE_FORMATTER.format(date);
 }
 
+// 今天在台灣是哪一天（YYYY-MM-DD），給驗證「起始日期要晚於今天」用。
+export function taipeiTodayString(): string {
+  return taipeiDateString(new Date());
+}
+
 // 匯出給 public-read-service.ts（Slice D）用來從單堂 ClassSession 的 startAt 推算星期幾，
 // 用於公開列表的星期幾篩選——這是同一份「台灣當地星期幾」邏輯的唯一實作，不要另外複製一份。
 export function taipeiDayOfWeek(date: Date): number {
@@ -45,6 +50,12 @@ const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 // 從 afterDate 隔天開始找，保證回傳的每個日期都嚴格晚於 afterDate 所在的台灣日曆日——
 // 用於首次生成（afterDate = now）與「生成更多」（afterDate = 該系列目前最晚一場的
 // startAt）都適用，兩者不會生成出重複的日期。
+// 常規課程指定「起始日期」時的第一場：從該日（含）起算的第一個符合星期幾的日子。
+// 用台灣當天中午當基準，避免日期在午夜前後被算成前一天或後一天。
+export function weeklyAfterDateForStartDate(startDate: string): Date {
+  return new Date(new Date(`${startDate}T12:00:00+08:00`).getTime() - ONE_DAY_MS);
+}
+
 export function computeNextWeeklyOccurrenceDates(
   dayOfWeek: number,
   count: number,

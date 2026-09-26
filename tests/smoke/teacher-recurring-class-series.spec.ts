@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
 
+import { addFixedDate, pickServiceType } from "./_helpers/class-form";
+import { futureWeekdayDateString } from "./_helpers/future-dates";
+import { selectFormTime } from "./_helpers/time-select";
 import { createClassSessionForTeacher } from "../../src/domain/class-session/__internal__/create-teacher-class-session-core";
 import { cancelClassSessionForTeacher } from "../../src/domain/class-session/__internal__/cancel-class-session-core-for-teacher";
 import { generateOccurrencesForSeries } from "../../src/domain/class-session/__internal__/generate-recurring-occurrences-core";
@@ -66,14 +69,19 @@ test.describe("teacher recurring class series smoke", () => {
     await page.goto("/teacher/classes/new");
     await page.getByRole("button", { name: "常規（每週固定星期）" }).click();
 
+    // 起始日期必須是選定的星期幾（這裡是週一）。
+    const weeklyStartDate = futureWeekdayDateString(60, 1);
     await page.locator("#weekly-title").fill(baseSeriesInput.title);
-    await page.locator("#weekly-serviceType").selectOption(baseSeriesInput.serviceType);
+    await pickServiceType(page, baseSeriesInput.serviceType);
     await page.locator("#weekly-dayOfWeek").selectOption("1");
-    await page.locator("#weekly-startTime").fill(baseSeriesInput.startTime);
-    await page.locator("#weekly-endTime").fill(baseSeriesInput.endTime);
+    await selectFormTime(page, "weekly-", "start", baseSeriesInput.startTime);
+    await selectFormTime(page, "weekly-", "end", baseSeriesInput.endTime);
     await page.locator("#weekly-location").fill(baseSeriesInput.location);
     await page.locator("#weekly-capacity").fill(String(baseSeriesInput.capacity));
     await page.locator("#weekly-generateCount").fill("3");
+    await page.getByText("哈達瑜伽", { exact: true }).click();
+    // 選填的起始日期：第一場是這一天（含）起的第一個週一。
+    await page.locator("#weekly-startDate").fill(weeklyStartDate);
     await page.locator("#weekly-confirmCreate").check();
     await page.getByRole("button", { name: "建立課程系列" }).click();
 
@@ -89,6 +97,18 @@ test.describe("teacher recurring class series smoke", () => {
     });
     expect(series.dayOfWeek).toBe(1);
     expect(series.classSessions).toHaveLength(3);
+    const firstDate = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Taipei",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(series.classSessions[0].startAt);
+    expect(firstDate).toBe(weeklyStartDate);
+    // 瑜伽類型存在系列上，並且複製到每一場。
+    expect(series.yogaStyles).toEqual(["哈達瑜伽"]);
+    for (const classSession of series.classSessions) {
+      expect(classSession.yogaStyles).toEqual(["哈達瑜伽"]);
+    }
 
     for (const classSession of series.classSessions) {
       expect(classSession.origin).toBe("teacher_initiated");
@@ -111,9 +131,101 @@ test.describe("teacher recurring class series smoke", () => {
 
     // Slice E：/teacher/classes 統一列表要能看到「這一場屬於哪個系列」，且能點回系列管理頁。
     await page.goto("/teacher/classes");
-    const seriesLink = page.getByRole("link", { name: `系列：${baseSeriesInput.title}` }).first();
+    await expect(page.getByText(`系列：${baseSeriesInput.title}`).first()).toBeVisible();
+    // 系列管理頁的連結在單堂課詳情頁（列表卡片整張已經是連結，不能再包一個連結）。
+    await page.goto(`/teacher/classes/${series.classSessions[0].id}`);
+    const seriesLink = page.getByRole("link", { name: `系列：${baseSeriesInput.title}` });
     await expect(seriesLink).toBeVisible();
     await expect(seriesLink).toHaveAttribute("href", `/teacher/classes/series/${series.id}`);
+  });
+
+  test("weekly start date must match the chosen weekday: picking a start date first fills in the weekday, and a mismatch shows an error and blocks submit", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-weekday-${Date.now()}`,
+    );
+    const teacher = await seedApprovedTeacher(testRunId);
+
+    await addAuthSessionCookie(context, teacher.sessionToken);
+    await page.goto("/teacher/classes/new");
+    await page.getByRole("button", { name: "常規（每週固定星期）" }).click();
+
+    // 還沒選星期幾：選起始日期（一個週四）會自動帶入週四。
+    const thursday = futureWeekdayDateString(30, 4);
+    await page.locator("#weekly-startDate").fill(thursday);
+    await expect(page.locator("#weekly-dayOfWeek")).toHaveValue("4");
+    await expect(page.getByRole("alert").filter({ hasText: "起始日期" })).toHaveCount(0);
+
+    // 改成週一：起始日期（週四）不符，顯示錯誤，送出會被擋下。
+    await page.locator("#weekly-dayOfWeek").selectOption("1");
+    await expect(page.getByText(`起始日期 ${thursday} 是週四，跟上面選的週一不同`)).toBeVisible();
+
+    await page.locator("#weekly-title").fill(`星期檢查 ${testRunId}`);
+    await pickServiceType(page, baseSeriesInput.serviceType);
+    await page.getByText("哈達瑜伽", { exact: true }).click();
+    await selectFormTime(page, "weekly-", "start", "10:00");
+    await selectFormTime(page, "weekly-", "end", "11:00");
+    await page.locator("#weekly-location").fill(baseSeriesInput.location);
+    await page.locator("#weekly-capacity").fill("10");
+    await page.locator("#weekly-confirmCreate").check();
+    await page.getByRole("button", { name: "建立課程系列" }).click();
+    await expect(page).toHaveURL(/\/teacher\/classes\/new$/);
+    expect(
+      await prisma.recurringClassSeries.count({
+        where: { teacherProfileId: teacher.teacherProfileId },
+      }),
+    ).toBe(0);
+  });
+
+  test("keeps filled-in fields when switching between single, weekly and fixed-dates modes, and uses a 24-hour time picker", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-keep-${Date.now()}`,
+    );
+    const teacher = await seedApprovedTeacher(testRunId);
+
+    await addAuthSessionCookie(context, teacher.sessionToken);
+    await page.goto("/teacher/classes/new");
+
+    await page.locator("#title").fill("切換保留測試");
+    await pickServiceType(page, baseSeriesInput.serviceType);
+    await selectFormTime(page, "single-", "start", "12:00");
+    await selectFormTime(page, "single-", "end", "13:30");
+    await page.locator("#location").fill("台北市測試教室");
+    await page.locator("#capacity").fill("15");
+    await page.locator("#description").fill("說明內容");
+
+    // 24 小時制：小時選項是 00–23，沒有上午／下午。
+    await expect(page.locator("#single-startTime-hour option")).toHaveCount(25); // 24 個小時 + 占位「時」
+    await expect(page.locator("#single-startTime-hour")).toHaveValue("12");
+    await expect(page.getByText("12:00 是中午")).toBeVisible();
+
+    await page.getByRole("button", { name: "常規（每週固定星期）" }).click();
+    await expect(page.locator("#weekly-title")).toHaveValue("切換保留測試");
+    await expect(page.getByRole("checkbox", { name: baseSeriesInput.serviceType })).toBeChecked();
+    await expect(page.locator("#weekly-startTime-hour")).toHaveValue("12");
+    await expect(page.locator("#weekly-endTime-minute")).toHaveValue("30");
+    await expect(page.locator("#weekly-location")).toHaveValue("台北市測試教室");
+    await expect(page.locator("#weekly-capacity")).toHaveValue("15");
+    await expect(page.locator("#weekly-description")).toHaveValue("說明內容");
+    await page.locator("#weekly-dayOfWeek").selectOption("3");
+
+    await page.getByRole("button", { name: "固定期（明確日期清單）" }).click();
+    await expect(page.locator("#fixed-title")).toHaveValue("切換保留測試");
+    await expect(page.locator("#fixed-startTime-hour")).toHaveValue("12");
+
+    // 回到常規模式：模式專屬欄位（星期幾）也還在。
+    await page.getByRole("button", { name: "常規（每週固定星期）" }).click();
+    await expect(page.locator("#weekly-dayOfWeek")).toHaveValue("3");
+
+    // 回到單堂：內容還在。
+    await page.getByRole("button", { name: "單堂" }).click();
+    await expect(page.locator("#title")).toHaveValue("切換保留測試");
+    await expect(page.locator("#single-endTime-hour")).toHaveValue("13");
   });
 
   test("creates a fixed-dates series through the UI, one ClassSession per date; a date colliding with an existing class is skipped and clearly listed, without failing the rest of the batch; the series page never offers 「生成更多」 for a fixed-dates series", async ({
@@ -146,12 +258,25 @@ test.describe("teacher recurring class series smoke", () => {
     await page.getByRole("button", { name: "固定期（明確日期清單）" }).click();
 
     await page.locator("#fixed-title").fill(baseSeriesInput.title);
-    await page.locator("#fixed-serviceType").selectOption(baseSeriesInput.serviceType);
-    await page.locator("#fixed-startTime").fill(baseSeriesInput.startTime);
-    await page.locator("#fixed-endTime").fill(baseSeriesInput.endTime);
+    await pickServiceType(page, baseSeriesInput.serviceType);
+    await selectFormTime(page, "fixed-", "start", baseSeriesInput.startTime);
+    await selectFormTime(page, "fixed-", "end", baseSeriesInput.endTime);
     await page.locator("#fixed-location").fill(baseSeriesInput.location);
     await page.locator("#fixed-capacity").fill(String(baseSeriesInput.capacity));
-    await page.locator("#fixed-dates").fill("2026-10-05\n2026-10-12\n2026-10-19");
+    await addFixedDate(page, "2026-10-19");
+    await addFixedDate(page, "2026-10-05");
+    await addFixedDate(page, "2026-10-12");
+    // 日期清單會自動由早到晚排序；再點一次月曆上的日子會取消。
+    await expect(page.getByRole("list", { name: "已加入的上課日期" }).getByRole("listitem")).toHaveText([
+      /2026-10-05/,
+      /2026-10-12/,
+      /2026-10-19/,
+    ]);
+    await addFixedDate(page, "2026-10-26");
+    await expect(page.getByText("已選 4 / 26")).toBeVisible();
+    await addFixedDate(page, "2026-10-26");
+    await expect(page.getByText("已選 3 / 26")).toBeVisible();
+    await page.getByText("哈達瑜伽", { exact: true }).click();
     await page.locator("#fixed-confirmCreate").check();
     await page.getByRole("button", { name: "建立課程系列" }).click();
 

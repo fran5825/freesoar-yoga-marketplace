@@ -231,7 +231,9 @@ model RecurringClassSeries {
   teacherProfileId String
   title            String
   description      String?
-  serviceType      String?
+  serviceType      String? // 主要課程風格＝serviceTypes 的第一個（公開篩選與舊資料相容用）
+  serviceTypes     String[] @default([]) // 2026-09-26 課程風格可多選（最多 3 個），沿用需求 serviceTypes 的做法
+  yogaStyles       String[] @default([]) // 2026-09-26 瑜伽風格（老師建課必填，可多選＋自訂），來源同老師「擅長類型」標籤
   dayOfWeek        Int? // 0（週日）–6，對齊既有 TeacherAvailability 慣例；固定期課程可為 null
   startTime        String // "HH:mm"
   endTime          String // "HH:mm"
@@ -258,7 +260,9 @@ model ClassSession {
   requiresApproval       Boolean            @default(false)
   title                  String
   description            String?
-  serviceType            String?
+  serviceType            String? // 主要課程風格＝serviceTypes 的第一個
+  serviceTypes           String[]           @default([]) // 2026-09-26 課程風格可多選（最多 3 個）
+  yogaStyles             String[]           @default([]) // 2026-09-26 瑜伽風格；老師建立的課必填，團主媒合的課為空
   startAt                DateTime
   endAt                  DateTime
   location               String

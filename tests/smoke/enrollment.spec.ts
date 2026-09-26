@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import { createEnrollmentForUser } from "../../src/domain/enrollment/__internal__/create-enrollment-core";
 import { createClassSessionForOrganizer } from "../../src/domain/class-session/__internal__/create-class-session-core";
 import { validateClassSessionCreate } from "../../src/domain/class-session/validation";
+import { futureDateTime } from "./_helpers/future-dates";
 import {
   addAuthSessionCookie,
   completeDemandRequestData,
@@ -74,8 +75,8 @@ async function seedClassSession({
     title: `Class ${testRunId}`,
     description: null,
     serviceType: "伸展與身體保養",
-    startAt: "2026-09-01T14:00",
-    endAt: "2026-09-01T15:00",
+    startAt: futureDateTime(30, "14:00"),
+    endAt: futureDateTime(30, "15:00"),
     location: "Test Studio",
     capacity,
     isPublic: false,
@@ -172,7 +173,7 @@ test.describe("enrollment smoke", () => {
     });
     await notesField.fill("a".repeat(501));
     await page.getByRole("checkbox", { name: /我了解此課程非醫療行為/ }).check();
-    await page.locator("form").evaluate((form: HTMLFormElement) => {
+    await page.locator("form", { hasText: "確認報名" }).evaluate((form: HTMLFormElement) => {
       form.noValidate = true;
     });
     await page.getByRole("button", { name: "確認報名" }).click();
@@ -185,7 +186,7 @@ test.describe("enrollment smoke", () => {
     // 未勾選 basicConsent 也要被伺服器端擋下（同一頁重新整理，繞過前端 required）。
     await page.goto(`/classes/${classSessionId}`);
     await page.getByLabel("備註（選填）").fill("正常長度的備註");
-    await page.locator("form").evaluate((form: HTMLFormElement) => {
+    await page.locator("form", { hasText: "確認報名" }).evaluate((form: HTMLFormElement) => {
       form.noValidate = true;
     });
     await page.getByRole("button", { name: "確認報名" }).click();

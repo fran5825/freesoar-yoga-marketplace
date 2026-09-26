@@ -24,13 +24,13 @@ export async function openOwnClassSessionForEnrollmentAction(formData: FormData)
 
   const result = await openOwnClassSessionForEnrollmentForTeacher(classSessionId);
 
-  revalidatePath("/teacher/classes");
+  revalidateTeacherClassPages(formData);
 
   if (!result.ok) {
-    redirectWithFeedback("error", result.message);
+    redirectWithFeedback(formData, "error", result.message);
   }
 
-  redirectWithFeedback("success", "已開放報名。");
+  redirectWithFeedback(formData, "success", "已開放報名。");
 }
 
 export async function cancelOwnClassSessionAction(formData: FormData): Promise<void> {
@@ -38,13 +38,13 @@ export async function cancelOwnClassSessionAction(formData: FormData): Promise<v
 
   const result = await cancelOwnClassSessionForTeacher(classSessionId);
 
-  revalidatePath("/teacher/classes");
+  revalidateTeacherClassPages(formData);
 
   if (!result.ok) {
-    redirectWithFeedback("error", result.message);
+    redirectWithFeedback(formData, "error", result.message);
   }
 
-  redirectWithFeedback("success", "課程已取消。");
+  redirectWithFeedback(formData, "success", "課程已取消。");
 }
 
 export async function completeOwnClassSessionAction(formData: FormData): Promise<void> {
@@ -52,13 +52,13 @@ export async function completeOwnClassSessionAction(formData: FormData): Promise
 
   const result = await completeOwnClassSessionForTeacher(classSessionId);
 
-  revalidatePath("/teacher/classes");
+  revalidateTeacherClassPages(formData);
 
   if (!result.ok) {
-    redirectWithFeedback("error", result.message);
+    redirectWithFeedback(formData, "error", result.message);
   }
 
-  redirectWithFeedback("success", "課程已標記完成。");
+  redirectWithFeedback(formData, "success", "課程已標記完成。");
 }
 
 // 第 8 節（Gate G2/G3）：requiresApproval=true 課程收到的 pending 報名，老師確認/拒絕。
@@ -70,13 +70,13 @@ export async function confirmPendingEnrollmentAction(formData: FormData): Promis
 
   const result = await confirmPendingEnrollmentForTeacher(enrollmentId);
 
-  revalidatePath("/teacher/classes");
+  revalidateTeacherClassPages(formData);
 
   if (!result.ok) {
-    redirectWithFeedback("error", result.message);
+    redirectWithFeedback(formData, "error", result.message);
   }
 
-  redirectWithFeedback("success", "已確認這筆報名。");
+  redirectWithFeedback(formData, "success", "已確認這筆報名。");
 }
 
 export async function declinePendingEnrollmentAction(formData: FormData): Promise<void> {
@@ -84,13 +84,13 @@ export async function declinePendingEnrollmentAction(formData: FormData): Promis
 
   const result = await declinePendingEnrollmentForTeacher(enrollmentId);
 
-  revalidatePath("/teacher/classes");
+  revalidateTeacherClassPages(formData);
 
   if (!result.ok) {
-    redirectWithFeedback("error", result.message);
+    redirectWithFeedback(formData, "error", result.message);
   }
 
-  redirectWithFeedback("success", "已拒絕這筆報名。");
+  redirectWithFeedback(formData, "success", "已拒絕這筆報名。");
 }
 
 function readFormString(formData: FormData, name: string): string {
@@ -99,6 +99,34 @@ function readFormString(formData: FormData, name: string): string {
   return typeof value === "string" ? value : "";
 }
 
-function redirectWithFeedback(result: "success" | "error", message: string): never {
-  redirect(`/teacher/classes?result=${result}&message=${encodeURIComponent(message)}`);
+// teacher-usability 第 06 票：操作都在課程詳情頁上，做完回到同一堂課的詳情頁。
+// 表單會帶 classSessionId；只接受 id 形式的字串（英數、底線、連字號）組成站內路徑，
+// 不接受任何外部網址。沒有帶或格式不符時退回課程列表。
+function getReturnPath(formData: FormData): string {
+  const classSessionId = readFormString(formData, "classSessionId");
+
+  return /^[A-Za-z0-9_-]{1,64}$/.test(classSessionId)
+    ? `/teacher/classes/${classSessionId}`
+    : "/teacher/classes";
+}
+
+function revalidateTeacherClassPages(formData: FormData) {
+  revalidatePath("/teacher/classes");
+  revalidatePath("/teacher/dashboard");
+
+  const returnPath = getReturnPath(formData);
+
+  if (returnPath !== "/teacher/classes") {
+    revalidatePath(returnPath);
+  }
+}
+
+function redirectWithFeedback(
+  formData: FormData,
+  result: "success" | "error",
+  message: string,
+): never {
+  redirect(
+    `${getReturnPath(formData)}?result=${result}&message=${encodeURIComponent(message)}`,
+  );
 }

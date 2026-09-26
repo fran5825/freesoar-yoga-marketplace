@@ -3,45 +3,121 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { buildCheckboxGroupValue } from "@/app/teachers/join/_lib/application-fields";
-import { normalizeTeacherProfileDraftInput } from "@/domain/teacher-profile/input";
-import { updateOwnTeacherProfile } from "@/domain/teacher-profile/service";
+import {
+  createOwnAvailabilityException,
+  createOwnTeacherAvailability,
+  deleteOwnAvailabilityException,
+  deleteOwnTeacherAvailability,
+  updateOwnAvailabilityException,
+  updateOwnTeacherAvailability,
+} from "@/domain/teacher-availability/service";
 
-export async function updateTeacherProfileAction(formData: FormData): Promise<void> {
-  const input = normalizeTeacherProfileDraftInput({
-    displayName: readFormString(formData, "displayName"),
-    bio: readFormString(formData, "bio"),
-    teachingStyle: readFormString(formData, "teachingStyle"),
-    experienceYears: readFormString(formData, "experienceYears"),
-    certifications: readFormString(formData, "certifications"),
-    specialties: readCheckboxGroupValue(formData, "specialties", "specialtiesOther"),
-    serviceAreas: readCheckboxGroupValue(formData, "serviceAreas", "serviceAreasOther"),
-    teachingFormats: readCheckboxGroupValue(
-      formData,
-      "teachingFormats",
-      "teachingFormatsOther",
-    ),
-    priceRange: readFormString(formData, "priceRange"),
-    profilePhotoUrl: readFormString(formData, "profilePhotoUrl"),
-    preferredSessionLengthMinutes: readFormString(
-      formData,
-      "preferredSessionLengthMinutes",
-    ),
-    preferredFrequency: readFormString(formData, "preferredFrequency"),
-    preferredLocationType: readFormString(formData, "preferredLocationType"),
-    preferenceNotes: readFormString(formData, "preferenceNotes"),
+export async function createTeacherAvailabilityAction(formData: FormData): Promise<void> {
+  const dayOfWeekValue = readFormString(formData, "dayOfWeek");
+
+  const result = await createOwnTeacherAvailability({
+    dayOfWeek: dayOfWeekValue.length > 0 ? Number(dayOfWeekValue) : null,
+    startTime: readFormString(formData, "startTime"),
+    endTime: readFormString(formData, "endTime"),
+    locationArea: readOptionalFormString(formData, "locationArea"),
   });
 
-  const result = await updateOwnTeacherProfile(input);
-
   revalidatePath("/teacher/profile");
-  revalidatePath("/admin/teachers");
 
   if (!result.ok) {
     redirectWithFeedback("error", result.message);
   }
 
-  redirectWithFeedback("success", "老師資料已儲存。");
+  redirectWithFeedback("success", "已新增固定可授課時段。");
+}
+
+export async function updateTeacherAvailabilityAction(formData: FormData): Promise<void> {
+  const availabilityId = readFormString(formData, "availabilityId");
+  const dayOfWeekValue = readFormString(formData, "dayOfWeek");
+
+  const result = await updateOwnTeacherAvailability(availabilityId, {
+    dayOfWeek: dayOfWeekValue.length > 0 ? Number(dayOfWeekValue) : null,
+    startTime: readFormString(formData, "startTime"),
+    endTime: readFormString(formData, "endTime"),
+    locationArea: readOptionalFormString(formData, "locationArea"),
+  });
+
+  revalidatePath("/teacher/profile");
+
+  if (!result.ok) {
+    redirectWithFeedback("error", result.message);
+  }
+
+  redirectWithFeedback("success", "已更新固定可授課時段。");
+}
+
+export async function deleteTeacherAvailabilityAction(formData: FormData): Promise<void> {
+  const availabilityId = readFormString(formData, "availabilityId");
+
+  const result = await deleteOwnTeacherAvailability(availabilityId);
+
+  revalidatePath("/teacher/profile");
+
+  if (!result.ok) {
+    redirectWithFeedback("error", result.message);
+  }
+
+  redirectWithFeedback("success", "已刪除固定可授課時段。");
+}
+
+export async function createAvailabilityExceptionAction(formData: FormData): Promise<void> {
+  const typeValue = readFormString(formData, "type");
+
+  const result = await createOwnAvailabilityException({
+    date: readFormString(formData, "date"),
+    type: typeValue.length > 0 ? typeValue : null,
+    startTime: readOptionalFormString(formData, "startTime"),
+    endTime: readOptionalFormString(formData, "endTime"),
+    reason: readOptionalFormString(formData, "reason"),
+  });
+
+  revalidatePath("/teacher/profile");
+
+  if (!result.ok) {
+    redirectWithFeedback("error", result.message);
+  }
+
+  redirectWithFeedback("success", "已新增日期例外。");
+}
+
+export async function updateAvailabilityExceptionAction(formData: FormData): Promise<void> {
+  const exceptionId = readFormString(formData, "exceptionId");
+  const typeValue = readFormString(formData, "type");
+
+  const result = await updateOwnAvailabilityException(exceptionId, {
+    date: readFormString(formData, "date"),
+    type: typeValue.length > 0 ? typeValue : null,
+    startTime: readOptionalFormString(formData, "startTime"),
+    endTime: readOptionalFormString(formData, "endTime"),
+    reason: readOptionalFormString(formData, "reason"),
+  });
+
+  revalidatePath("/teacher/profile");
+
+  if (!result.ok) {
+    redirectWithFeedback("error", result.message);
+  }
+
+  redirectWithFeedback("success", "已更新日期例外。");
+}
+
+export async function deleteAvailabilityExceptionAction(formData: FormData): Promise<void> {
+  const exceptionId = readFormString(formData, "exceptionId");
+
+  const result = await deleteOwnAvailabilityException(exceptionId);
+
+  revalidatePath("/teacher/profile");
+
+  if (!result.ok) {
+    redirectWithFeedback("error", result.message);
+  }
+
+  redirectWithFeedback("success", "已刪除日期例外。");
 }
 
 function readFormString(formData: FormData, name: string): string {
@@ -50,16 +126,10 @@ function readFormString(formData: FormData, name: string): string {
   return typeof value === "string" ? value : "";
 }
 
-function readCheckboxGroupValue(
-  formData: FormData,
-  name: string,
-  otherName: string,
-): string {
-  const selectedValues = formData
-    .getAll(name)
-    .filter((value): value is string => typeof value === "string");
+function readOptionalFormString(formData: FormData, name: string): string | null {
+  const value = formData.get(name);
 
-  return buildCheckboxGroupValue(selectedValues, readFormString(formData, otherName));
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
 }
 
 function redirectWithFeedback(result: "success" | "error", message: string): never {

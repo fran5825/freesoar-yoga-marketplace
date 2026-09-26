@@ -6,11 +6,7 @@ import { listOwnEnrollmentsForMember } from "@/domain/enrollment/read-service";
 import { listOwnNotifications } from "@/domain/notification/read-service";
 import { requireUser } from "@/lib/auth/session";
 
-const enrollmentStatusLabels: Record<string, string> = {
-  pending: "處理中",
-  confirmed: "已報名",
-  cancelled: "已取消",
-};
+import { enrollmentStatusLabels } from "../_components/EnrollmentStatusBadge";
 
 const RECENT_NOTIFICATIONS_LIMIT = 5;
 const UPCOMING_ENROLLMENTS_LIMIT = 5;
@@ -44,10 +40,9 @@ export default async function MemberDashboardPage() {
     .slice(0, UPCOMING_ENROLLMENTS_LIMIT);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-5 py-10 sm:px-8">
+    <div className="flex flex-col gap-8">
       <header className="border-b border-ink/15 pb-6">
-        <p className="text-sm font-medium text-clay">Member</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
+        <h1 className="text-3xl font-semibold tracking-tight text-ink">
           我的總覽
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
@@ -152,6 +147,6 @@ export default async function MemberDashboardPage() {
           </>
         )}
       </section>
-    </main>
+    </div>
   );
 }

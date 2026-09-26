@@ -1,3 +1,4 @@
+import { fillTime24 } from "./_helpers/time-select";
 import type { TeacherProfileStatus } from "@prisma/client";
 import { expect, test } from "@playwright/test";
 
@@ -193,7 +194,7 @@ test.describe("teacher availability smoke", () => {
       }
 
       await addAuthSessionCookie(context, sessionToken);
-      await page.goto("/teacher/availability");
+      await page.goto("/teacher/profile");
 
       await expect(page.getByRole("heading", { name: expectedTitle })).toBeVisible();
       await expect(page.getByRole("heading", { name: "固定可授課時段" })).toBeHidden();
@@ -237,7 +238,7 @@ test.describe("teacher availability smoke", () => {
     });
 
     await addAuthSessionCookie(context, sessionToken);
-    await page.goto("/teacher/availability");
+    await page.goto("/teacher/profile");
 
     // 目前仍是 approved：新增表單存在，先把它填好但不送出。
     // teacher-availability-edit 這輪之後，既有記錄會多一個「編輯…」表單，欄位標籤文字
@@ -249,8 +250,8 @@ test.describe("teacher availability smoke", () => {
     });
     await expect(page.getByRole("button", { name: "新增固定時段" })).toBeVisible();
     await createSlotForm.getByLabel("星期幾").selectOption("3");
-    await createSlotForm.getByLabel("開始時間", { exact: true }).fill("14:00");
-    await createSlotForm.getByLabel("結束時間", { exact: true }).fill("15:00");
+    await fillTime24(createSlotForm, "開始時間", "14:00");
+    await fillTime24(createSlotForm, "結束時間", "15:00");
 
     // Teacher 事後被 suspend，瀏覽器分頁不重新整理，表單維持 suspend 前渲染出來的舊狀態。
     await prisma.teacherProfile.update({
@@ -270,7 +271,7 @@ test.describe("teacher availability smoke", () => {
     expect(countAfterStaleSubmit).toBe(1); // 仍只有既有那一筆，沒有新增成功。
 
     // 重新整理（此時真的是 suspended）：唯讀顯示既有資料，沒有新增表單、沒有刪除按鈕。
-    await page.goto("/teacher/availability");
+    await page.goto("/teacher/profile");
 
     await expect(
       page.getByText(
@@ -302,12 +303,12 @@ test.describe("teacher availability smoke", () => {
     });
 
     await addAuthSessionCookie(context, sessionToken);
-    await page.goto("/teacher/availability");
+    await page.goto("/teacher/profile");
 
     // 時間順序錯誤（結束時間不晚於開始時間）——伺服器端擋下，不是瀏覽器端。
     await page.getByLabel("星期幾").selectOption("6");
-    await page.getByLabel("開始時間", { exact: true }).fill("10:00");
-    await page.getByLabel("結束時間", { exact: true }).fill("09:00");
+    await fillTime24(page, "開始時間", "10:00");
+    await fillTime24(page, "結束時間", "09:00");
     await page.getByRole("button", { name: "新增固定時段" }).click();
 
     await expect(page.getByText("新增前，請先確認以上資訊。")).toBeVisible();
@@ -319,10 +320,10 @@ test.describe("teacher availability smoke", () => {
     // Server Action 送出後是 client-side 導頁重新整理（不是硬重新整理），uncontrolled
     // 表單欄位不保證回到宣告的預設值，這裡用 page.goto() 強制真正的重新整理，確保接下來
     // 每一次嘗試都是從乾淨狀態開始填寫。
-    await page.goto("/teacher/availability");
+    await page.goto("/teacher/profile");
     await page.getByLabel("星期幾").selectOption("6");
-    await page.getByLabel("開始時間", { exact: true }).fill("10:00");
-    await page.getByLabel("結束時間", { exact: true }).fill("11:00");
+    await fillTime24(page, "開始時間", "10:00");
+    await fillTime24(page, "結束時間", "11:00");
     const locationInput = page.getByLabel("地區（選填）");
     await locationInput.evaluate((el) => el.removeAttribute("maxlength"));
     await locationInput.fill("台".repeat(101));
@@ -334,10 +335,10 @@ test.describe("teacher availability smoke", () => {
     ).toBe(0);
 
     // 成功新增（邊界案例：週六 23:00–23:59，跨到當天最後一分鐘的合法區間）。
-    await page.goto("/teacher/availability");
+    await page.goto("/teacher/profile");
     await page.getByLabel("星期幾").selectOption("6");
-    await page.getByLabel("開始時間", { exact: true }).fill("23:00");
-    await page.getByLabel("結束時間", { exact: true }).fill("23:59");
+    await fillTime24(page, "開始時間", "23:00");
+    await fillTime24(page, "結束時間", "23:59");
     await page.getByLabel("地區（選填）").fill("台北市信義區");
     await page.getByRole("button", { name: "新增固定時段" }).click();
 
@@ -377,12 +378,12 @@ test.describe("teacher availability smoke", () => {
     });
 
     await addAuthSessionCookie(context, sessionToken);
-    await page.goto("/teacher/availability");
+    await page.goto("/teacher/profile");
 
     // 只填開始時間、沒填結束時間（必須同時提供或同時不提供，見 D4）——伺服器端擋下。
     await page.getByLabel("日期").fill("2026-09-01");
     await page.getByRole("radio", { name: "封鎖（這天無法授課）" }).check();
-    await page.getByLabel("開始時間（選填，留空代表整天）").fill("09:00");
+    await fillTime24(page, "開始時間（選填，留空代表整天）", "09:00");
     await page.getByRole("button", { name: "新增例外" }).click();
 
     await expect(page.getByText("新增前，請先確認以上資訊。")).toBeVisible();
@@ -394,7 +395,7 @@ test.describe("teacher availability smoke", () => {
     // Server Action 送出後是 client-side 導頁重新整理（不是硬重新整理），uncontrolled
     // 表單欄位不保證回到宣告的預設值，這裡用 page.goto() 強制真正的重新整理，確保接下來
     // 每一次嘗試都是從乾淨狀態開始填寫。
-    await page.goto("/teacher/availability");
+    await page.goto("/teacher/profile");
     await page.getByLabel("日期").fill("2026-09-01");
     await page.getByRole("radio", { name: "封鎖（這天無法授課）" }).check();
     const reasonInput = page.getByLabel("原因（選填）");
@@ -408,7 +409,7 @@ test.describe("teacher availability smoke", () => {
     ).toBe(0);
 
     // 成功新增：整天封鎖，日期用 date-format 的邊界日期驗證顯示不位移。
-    await page.goto("/teacher/availability");
+    await page.goto("/teacher/profile");
     await page.getByLabel("日期").fill("2026-02-28");
     await page.getByRole("radio", { name: "封鎖（這天無法授課）" }).check();
     await page.getByLabel("原因（選填）").fill("請假一天");
@@ -421,7 +422,7 @@ test.describe("teacher availability smoke", () => {
     // 成功新增：部分時段額外開放。此時上一步的整天封鎖例外已經存在，它的「編輯…」表單
     // 也在 DOM 裡（收合不代表不存在），欄位標籤文字跟新增表單重複——用新增例外表單自己
     // 的送出按鈕把範圍鎖定在新增表單本身，不能再依賴「這個 label 全頁只有一個」的假設。
-    await page.goto("/teacher/availability");
+    await page.goto("/teacher/profile");
     const createExceptionForm = page.locator("form").filter({
       has: page.getByRole("button", { name: "新增例外" }),
     });
@@ -429,8 +430,8 @@ test.describe("teacher availability smoke", () => {
     await createExceptionForm
       .getByRole("radio", { name: "額外開放（原本沒有排班，但這天可以授課）" })
       .check();
-    await createExceptionForm.getByLabel("開始時間（選填，留空代表整天）").fill("09:00");
-    await createExceptionForm.getByLabel("結束時間（選填）").fill("10:00");
+    await fillTime24(createExceptionForm, "開始時間（選填，留空代表整天）", "09:00");
+    await fillTime24(createExceptionForm, "結束時間（選填）", "10:00");
     await createExceptionForm.getByRole("button", { name: "新增例外" }).click();
 
     await expect(page.getByText("已新增日期例外。")).toBeVisible();
@@ -452,7 +453,7 @@ test.describe("teacher availability smoke", () => {
       .click();
     await expect(page.getByText("已刪除日期例外。")).toBeVisible();
 
-    await page.goto("/teacher/availability");
+    await page.goto("/teacher/profile");
     await page
       .locator("li", { hasText: "2026-09-15" })
       .getByRole("button", { name: "刪除" })
@@ -511,7 +512,7 @@ test.describe("teacher availability smoke", () => {
     });
 
     await addAuthSessionCookie(context, teacherB.sessionToken);
-    await page.goto("/teacher/availability");
+    await page.goto("/teacher/profile");
 
     // teacher-availability-edit 這輪之後，每筆記錄除了刪除表單，還多了一個編輯表單，
     // 兩者的 hidden input 都叫 `availabilityId`／`exceptionId`（值也相同）——不能再假設
@@ -538,7 +539,7 @@ test.describe("teacher availability smoke", () => {
     expect(untouchedSlot?.teacherProfileId).toBe(teacherA.teacherProfileId);
 
     // 同樣手法測「刪除例外」。
-    await page.goto("/teacher/availability");
+    await page.goto("/teacher/profile");
     const exceptionDeleteForm = page
       .locator("form")
       .filter({ has: page.locator('input[name="exceptionId"]') })
@@ -584,7 +585,7 @@ test.describe("teacher availability smoke", () => {
     });
 
     await addAuthSessionCookie(context, sessionToken);
-    await page.goto("/teacher/availability");
+    await page.goto("/teacher/profile");
 
     // 必填欄位留空——繞過瀏覽器原生 required，證明伺服器端才是權威。用 li 的既有顯示文字
     // 鎖定這筆記錄的編輯表單，不依賴頁面上「這個 label 只有一個」的假設。
@@ -593,9 +594,11 @@ test.describe("teacher availability smoke", () => {
     const editForm = slotItem
       .locator("form")
       .filter({ has: page.getByRole("button", { name: "儲存變更" }) });
+    // 繞過瀏覽器原生 required：把「時」清成空白（React 的 onChange 會一併清掉分鐘），再關掉表單驗證。
     await editForm.getByLabel("開始時間", { exact: true }).evaluate((el) => {
-      (el as HTMLInputElement).value = "";
-      (el as HTMLInputElement).form?.setAttribute("novalidate", "true");
+      (el as HTMLSelectElement).value = "";
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+      (el as HTMLSelectElement).form?.setAttribute("novalidate", "true");
     });
     await editForm.getByRole("button", { name: "儲存變更" }).click();
 
@@ -607,13 +610,13 @@ test.describe("teacher availability smoke", () => {
     expect(stillOriginal.locationArea).toBe("台北市大安區");
 
     // 成功編輯：修改結束時間、把選填的 locationArea 清空成 null（整筆覆寫語意，見 D1）。
-    await page.goto("/teacher/availability");
+    await page.goto("/teacher/profile");
     const slotItemAgain = page.locator("li", { hasText: "週一・09:00–10:00・台北市大安區" });
     await slotItemAgain.getByText("編輯…").click();
     const editForm2 = slotItemAgain
       .locator("form")
       .filter({ has: page.getByRole("button", { name: "儲存變更" }) });
-    await editForm2.getByLabel("結束時間", { exact: true }).fill("11:00");
+    await fillTime24(editForm2, "結束時間", "11:00");
     await editForm2.getByLabel("地區（選填）").fill("");
     await editForm2.getByRole("button", { name: "儲存變更" }).click();
 
@@ -656,7 +659,7 @@ test.describe("teacher availability smoke", () => {
     });
 
     await addAuthSessionCookie(context, sessionToken);
-    await page.goto("/teacher/availability");
+    await page.goto("/teacher/profile");
 
     const exceptionItem = page.locator("li", { hasText: "2026-09-01" });
     await exceptionItem.getByText("編輯…").click();
@@ -680,7 +683,7 @@ test.describe("teacher availability smoke", () => {
 
     // 成功編輯：type 從 blocked 改成 extra_available，並把時間範圍與 reason 都清空成 null
     // （整天、無原因，整筆覆寫語意，見 D1）。
-    await page.goto("/teacher/availability");
+    await page.goto("/teacher/profile");
     const exceptionItemAgain = page.locator("li", { hasText: "2026-09-01" });
     await exceptionItemAgain.getByText("編輯…").click();
     const editForm2 = exceptionItemAgain
@@ -689,8 +692,8 @@ test.describe("teacher availability smoke", () => {
     await editForm2
       .getByRole("radio", { name: "額外開放（原本沒有排班，但這天可以授課）" })
       .check();
-    await editForm2.getByLabel("開始時間（選填，留空代表整天）").fill("");
-    await editForm2.getByLabel("結束時間（選填）").fill("");
+    await editForm2.getByLabel("開始時間（選填，留空代表整天）").selectOption(""); // 選「時」的空白選項，分鐘會一起清空
+    await editForm2.getByLabel("結束時間（選填）").selectOption("");
     await editForm2.getByLabel("原因（選填）").fill("");
     await editForm2.getByRole("button", { name: "儲存變更" }).click();
 
@@ -738,7 +741,7 @@ test.describe("teacher availability smoke", () => {
     });
 
     await addAuthSessionCookie(context, sessionToken);
-    await page.goto("/teacher/availability");
+    await page.goto("/teacher/profile");
 
     // 目前仍是 approved：展開兩筆記錄的編輯表單。
     const slotItem = page.locator("li", { hasText: "週一・09:00–10:00" });
@@ -769,7 +772,7 @@ test.describe("teacher availability smoke", () => {
       where: { id: teacherProfileId },
       data: { status: "approved" },
     });
-    await page.goto("/teacher/availability");
+    await page.goto("/teacher/profile");
     const exceptionItem = page.locator("li", { hasText: "2026-09-01" });
     await exceptionItem.getByText("編輯…").click();
     const exceptionEditForm = exceptionItem
@@ -847,7 +850,7 @@ test.describe("teacher availability smoke", () => {
     });
 
     await addAuthSessionCookie(context, teacherB.sessionToken);
-    await page.goto("/teacher/availability");
+    await page.goto("/teacher/profile");
 
     // `<details>` 收合時，裡面的內容不會出現在 accessibility tree 裡（Chromium 對 collapsed
     // `<details>` 採用 content-visibility 語意），`getByRole()` 找不到收合表單裡的按鈕——
@@ -866,7 +869,7 @@ test.describe("teacher availability smoke", () => {
     await slotEditForm.locator('input[name="availabilityId"]').evaluate((el, victimId) => {
       (el as HTMLInputElement).value = victimId;
     }, victimSlot.id);
-    await slotEditForm.getByLabel("開始時間", { exact: true }).fill("07:00");
+    await fillTime24(slotEditForm, "開始時間", "07:00");
     await slotEditForm.getByRole("button", { name: "儲存變更" }).click();
 
     await expect(
@@ -881,7 +884,7 @@ test.describe("teacher availability smoke", () => {
     expect(untouchedSlot?.startTime).toBe("08:00");
 
     // 同樣手法測「編輯例外」。重新整理後同樣先點開「編輯…」（理由同上）。
-    await page.goto("/teacher/availability");
+    await page.goto("/teacher/profile");
     await page.getByText("編輯…").last().click();
     const exceptionEditForm = page
       .locator("form")

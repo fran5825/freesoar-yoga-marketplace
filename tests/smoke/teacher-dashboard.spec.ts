@@ -36,13 +36,13 @@ const statusCases: Array<{
     status: "approved",
     title: "你的老師資料已通過審核",
     actionLabel: "編輯我的資料",
-    actionHref: "/teacher/profile",
+    actionHref: "/teacher/profile/info",
   },
   {
     status: "suspended",
     title: "你的老師狀態目前暫停中",
     actionLabel: "查看目前資料",
-    actionHref: "/teacher/profile",
+    actionHref: "/teacher/profile/info",
   },
 ];
 
@@ -135,7 +135,6 @@ test.describe("/teacher/dashboard smoke", () => {
         page.getByRole("link", { name: statusCase.actionLabel }),
       ).toHaveAttribute("href", statusCase.actionHref);
       await expect(page.getByRole("main").locator('a[href="/teacher/demands"]')).toHaveCount(0);
-      await expect(page.getByRole("main").locator('a[href="/teacher/classes"]')).toHaveCount(0);
       if (
         statusCase.status !== "approved" &&
         statusCase.status !== "suspended"
@@ -143,6 +142,17 @@ test.describe("/teacher/dashboard smoke", () => {
         await expect(
           page.getByRole("link", { name: "管理可授課時間" }),
         ).toHaveCount(0);
+        // 還沒通過審核：沒有「待你處理」，也沒有課程入口。
+        await expect(page.getByRole("heading", { name: "待你處理" })).toHaveCount(0);
+        await expect(page.getByRole("main").locator('a[href="/teacher/classes"]')).toHaveCount(0);
+      } else {
+        // teacher-usability 第 08 票：通過審核（或暫停中）才有「待你處理」與「看全部課程」。
+        await expect(page.getByRole("heading", { name: "待你處理" })).toBeVisible();
+        await expect(page.getByText("目前沒有待處理事項。")).toBeVisible();
+        await expect(page.getByRole("link", { name: "看全部課程 →" })).toHaveAttribute(
+          "href",
+          "/teacher/classes",
+        );
       }
 
       if (statusCase.status === "approved") {
@@ -155,7 +165,7 @@ test.describe("/teacher/dashboard smoke", () => {
         ).toBeVisible();
         await expect(
           page.getByRole("link", { name: "管理可授課時間" }),
-        ).toHaveAttribute("href", "/teacher/availability");
+        ).toHaveAttribute("href", "/teacher/profile");
         // 「編輯我的資料」連結的 href 已經由上方的通用斷言（statusCase.actionHref）涵蓋。
       }
     });
@@ -345,5 +355,5 @@ function toStatusLabel(status: TeacherProfileStatus) {
 async function expectNoMarketplaceActions(page: import("@playwright/test").Page) {
   await expect(page.getByRole("main").locator('a[href="/teacher/demands"]')).toHaveCount(0);
   await expect(page.getByRole("main").locator('a[href="/teacher/classes"]')).toHaveCount(0);
-  await expect(page.getByRole("main").locator('a[href="/teacher/availability"]')).toHaveCount(0);
+  await expect(page.getByRole("main").locator('a[href="/teacher/profile"]')).toHaveCount(0);
 }

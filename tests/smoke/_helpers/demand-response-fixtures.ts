@@ -6,10 +6,12 @@ export async function createTeacherProfileWithSession({
   email,
   displayName,
   status,
+  serviceAreas = ["Taipei"],
 }: {
   email: string;
   displayName: string;
   status: TeacherProfileStatus;
+  serviceAreas?: string[];
 }) {
   const { userId, sessionToken } = await createUserSession({ email });
 
@@ -21,7 +23,7 @@ export async function createTeacherProfileWithSession({
       teachingStyle: "Clear and steady group-class guidance.",
       experienceYears: 5,
       specialties: ["Hatha Yoga"],
-      serviceAreas: ["Taipei"],
+      serviceAreas,
       teachingFormats: ["Group class"],
       status,
     },

@@ -88,8 +88,7 @@ export default async function TeacherDemandDetailPage({
     return (
       <div className="flex flex-col gap-8">
         <header className="border-b border-ink/15 pb-6">
-          <p className="text-sm font-medium text-clay">Teacher demands</p>
-          <h1 className="mt-2 break-words text-2xl font-semibold tracking-tight text-ink">
+          <h1 className="break-words text-3xl font-semibold tracking-tight text-ink">
             {demand?.title ?? "團體需求"}
           </h1>
         </header>
@@ -194,8 +193,7 @@ export default async function TeacherDemandDetailPage({
     return (
       <div className="flex flex-col gap-8">
         <header className="border-b border-ink/15 pb-6">
-          <p className="text-sm font-medium text-clay">Teacher demands</p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-ink">
+          <h1 className="text-3xl font-semibold tracking-tight text-ink">
             團體需求
           </h1>
         </header>
@@ -217,8 +215,7 @@ export default async function TeacherDemandDetailPage({
   return (
     <div className="flex flex-col gap-8">
       <header className="border-b border-ink/15 pb-6">
-        <p className="text-sm font-medium text-clay">Teacher demands</p>
-        <h1 className="mt-2 break-words text-2xl font-semibold tracking-tight text-ink">
+        <h1 className="break-words text-3xl font-semibold tracking-tight text-ink">
           {demand.title ?? "團體需求"}
         </h1>
       </header>

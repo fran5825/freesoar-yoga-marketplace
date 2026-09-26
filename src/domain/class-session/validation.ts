@@ -2,14 +2,25 @@ import {
   EXPECTED_PARTICIPANTS_MAX,
   EXPECTED_PARTICIPANTS_MIN,
 } from "@/domain/demand-request/validation";
-import { isValidServiceType } from "@/domain/demand-request/service-types";
+import { isValidServiceType, MAX_SERVICE_TYPES } from "@/domain/demand-request/service-types";
 
 import { parseTaipeiDatetimeLocal } from "./timezone";
+import {
+  checkYogaStyles,
+  normalizeYogaStyles,
+  YOGA_STYLES_ISSUE_MESSAGES,
+  type YogaStylesIssue,
+} from "./yoga-styles";
 
 export type ClassSessionCreateInput = {
   title?: string | null;
   description?: string | null;
   serviceType?: string | null;
+  // 課程風格（可多選，最多 3 個）；沒帶時退回單一 serviceType（團主媒合建課仍是單選）。
+  serviceTypes?: string[] | null;
+  // 瑜伽類型：老師建課必填（見 validateClassSessionCreate 的 requireYogaStyles），
+  // 團主媒合建課不需要，維持原有流程。
+  yogaStyles?: string[] | null;
   startAt?: string | null;
   endAt?: string | null;
   location?: string | null;
@@ -32,6 +43,8 @@ export type ClassSessionValidationErrorCode =
   | "description_too_long"
   | "service_type_required"
   | "service_type_invalid"
+  | "service_type_too_many"
+  | YogaStylesIssue
   | "location_required"
   | "location_too_long"
   | "capacity_required"
@@ -46,6 +59,7 @@ export type ClassSessionValidationError = {
     | "title"
     | "description"
     | "serviceType"
+    | "yogaStyles"
     | "location"
     | "capacity"
     | "startAt"
@@ -61,6 +75,8 @@ export type ClassSessionValidationResult =
         title: string;
         description: string | null;
         serviceType: string;
+        serviceTypes: string[];
+        yogaStyles: string[];
         startAt: Date;
         endAt: Date;
         location: string;
@@ -76,6 +92,7 @@ export type ClassSessionValidationResult =
 // D3/D4/D5/D6/D7/D13：建立當下一次到位驗證，沒有草稿階段可以放寬。
 export function validateClassSessionCreate(
   input: ClassSessionCreateInput,
+  options: { requireYogaStyles?: boolean } = {},
 ): ClassSessionValidationResult {
   const errors: ClassSessionValidationError[] = [];
 
@@ -84,8 +101,14 @@ export function validateClassSessionCreate(
     typeof input.description === "string" && input.description.trim().length > 0
       ? input.description.trim()
       : null;
-  const normalizedServiceType =
-    typeof input.serviceType === "string" ? input.serviceType.trim() : "";
+  const normalizedServiceTypes = normalizeYogaStyles(
+    input.serviceTypes && input.serviceTypes.length > 0
+      ? input.serviceTypes
+      : input.serviceType
+        ? [input.serviceType]
+        : [],
+  );
+  const normalizedServiceType = normalizedServiceTypes[0] ?? "";
   const normalizedLocation =
     typeof input.location === "string" ? input.location.trim() : "";
   const isPublic = input.isPublic === true;
@@ -109,17 +132,37 @@ export function validateClassSessionCreate(
   }
 
   // D4：serviceType 必填，即使是從 demand pre-fill 帶入，Organizer 也可能清空。
-  if (normalizedServiceType.length === 0) {
+  // 2026-09-26：老師建課的課程風格可多選（1–3 個），第一個當作主要風格寫入 serviceType。
+  if (normalizedServiceTypes.length === 0) {
     errors.push({
       field: "serviceType",
       code: "service_type_required",
-      message: "課程類型為必填。",
+      message: "課程風格為必填。",
     });
-  } else if (!isValidServiceType(normalizedServiceType)) {
+  } else if (!normalizedServiceTypes.every((value) => isValidServiceType(value))) {
     errors.push({
       field: "serviceType",
       code: "service_type_invalid",
-      message: "課程類型須從受控清單中選擇。",
+      message: "課程風格須從受控清單中選擇。",
+    });
+  } else if (normalizedServiceTypes.length > MAX_SERVICE_TYPES) {
+    errors.push({
+      field: "serviceType",
+      code: "service_type_too_many",
+      message: `課程風格最多選 ${MAX_SERVICE_TYPES} 項。`,
+    });
+  }
+
+  const normalizedYogaStyles = normalizeYogaStyles(input.yogaStyles);
+  const yogaStylesIssue = checkYogaStyles(normalizedYogaStyles, {
+    required: options.requireYogaStyles === true,
+  });
+
+  if (yogaStylesIssue) {
+    errors.push({
+      field: "yogaStyles",
+      code: yogaStylesIssue,
+      message: YOGA_STYLES_ISSUE_MESSAGES[yogaStylesIssue],
     });
   }
 
@@ -189,6 +232,8 @@ export function validateClassSessionCreate(
       title: normalizedTitle,
       description: normalizedDescription,
       serviceType: normalizedServiceType,
+      serviceTypes: normalizedServiceTypes,
+      yogaStyles: normalizedYogaStyles,
       startAt: startAt as Date,
       endAt: endAt as Date,
       location: normalizedLocation,

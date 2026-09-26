@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getClassServiceTypes } from "@/domain/class-session/service-types-display";
 import { notFound, redirect } from "next/navigation";
 
 import {
@@ -58,8 +59,8 @@ export default async function RecurringClassSeriesPage({
       <header className="border-b border-ink/15 pb-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-sm font-medium text-clay">Teacher classes / 系列管理</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
+            <p className="text-sm font-medium text-clay">系列管理</p>
+            <h1 className="text-3xl font-semibold tracking-tight text-ink">
               {series.title}
             </h1>
           </div>
@@ -105,10 +106,18 @@ export default async function RecurringClassSeriesPage({
             <dt className="font-medium text-ink">名額上限</dt>
             <dd className="mt-1">{series.capacity} 人</dd>
           </div>
-          {series.serviceType ? (
+          {getClassServiceTypes(series).length > 0 ? (
             <div>
-              <dt className="font-medium text-ink">課程類型</dt>
-              <dd className="mt-1">{series.serviceType}</dd>
+              <dt className="font-medium text-ink">課程風格</dt>
+              <dd className="mt-1 break-words">
+                {getClassServiceTypes(series).join("、")}
+              </dd>
+            </div>
+          ) : null}
+          {series.yogaStyles.length > 0 ? (
+            <div>
+              <dt className="font-medium text-ink">瑜伽類型</dt>
+              <dd className="mt-1 break-words">{series.yogaStyles.join("、")}</dd>
             </div>
           ) : null}
         </dl>

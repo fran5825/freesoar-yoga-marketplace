@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { getOwnLatestClassFormDefaultsForTeacher } from "@/domain/class-session/read-service";
 import { getOwnTeacherProfileApplicationSnapshot } from "@/domain/teacher-profile/service";
 import { requireUser } from "@/lib/auth/session";
 
@@ -19,9 +20,10 @@ export default async function NewClassSessionPage({
     redirect("/sign-in");
   }
 
-  const [profile, resolvedSearchParams] = await Promise.all([
+  const [profile, resolvedSearchParams, formDefaults] = await Promise.all([
     getOwnTeacherProfileApplicationSnapshot(),
     searchParams,
+    getOwnLatestClassFormDefaultsForTeacher(),
   ]);
 
   const feedback =
@@ -39,8 +41,7 @@ export default async function NewClassSessionPage({
     return (
       <div className="flex flex-col gap-8">
         <header className="border-b border-ink/15 pb-6">
-          <p className="text-sm font-medium text-clay">Teacher</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
+          <h1 className="text-3xl font-semibold tracking-tight text-ink">
             建立課程
           </h1>
         </header>
@@ -71,12 +72,11 @@ export default async function NewClassSessionPage({
   return (
     <div className="flex flex-col gap-8">
       <header className="border-b border-ink/15 pb-6">
-        <p className="text-sm font-medium text-clay">Teacher</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
+        <h1 className="text-3xl font-semibold tracking-tight text-ink">
           建立課程
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
-          不需要團主媒合，直接開一堂自己的課。建立後會出現在「我的課程」，可以自行取消或標記完成。
+          不需要團主媒合，直接開一堂自己的課。建立後會直接帶你到這堂課的頁面，確認後按「開放報名」。
         </p>
       </header>
 
@@ -94,7 +94,7 @@ export default async function NewClassSessionPage({
       ) : null}
 
       <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
-        <ClassSessionCreateForm />
+        <ClassSessionCreateForm defaults={formDefaults} />
       </section>
     </div>
   );

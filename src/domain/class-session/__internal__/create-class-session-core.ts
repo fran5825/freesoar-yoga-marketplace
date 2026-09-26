@@ -18,6 +18,7 @@ export type CreateClassSessionInput = {
   title: string;
   description: string | null;
   serviceType: string;
+  serviceTypes?: string[];
   startAt: Date;
   endAt: Date;
   location: string;
@@ -153,6 +154,7 @@ export async function createClassSessionForOrganizer(
           title: input.title,
           description: input.description,
           serviceType: input.serviceType,
+          serviceTypes: input.serviceTypes ?? [input.serviceType],
           startAt: input.startAt,
           endAt: input.endAt,
           location: input.location,

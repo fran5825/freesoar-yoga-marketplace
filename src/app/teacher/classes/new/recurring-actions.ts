@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { createOwnRecurringClassSeriesForTeacher } from "@/domain/class-session/service";
 import type { RecurringSeriesInput } from "@/domain/class-session/recurring-series-validation";
 
+import { readServiceTypesFromForm, readYogaStylesFromForm } from "./read-yoga-styles";
+
 // teacher-initiated-open-classes Slice B：常規（每週固定星期）／固定期（明確日期清單）
 // 課程系列建立，mode 由前端的兩個獨立表單各自帶入固定值。
 export async function createOwnRecurringClassSeriesAction(formData: FormData): Promise<void> {
@@ -13,7 +15,8 @@ export async function createOwnRecurringClassSeriesAction(formData: FormData): P
   const input: RecurringSeriesInput = {
     title: readFormString(formData, "title"),
     description: readFormString(formData, "description"),
-    serviceType: readFormString(formData, "serviceType"),
+    serviceTypes: readServiceTypesFromForm(formData),
+    yogaStyles: readYogaStylesFromForm(formData),
     startTime: readFormString(formData, "startTime"),
     endTime: readFormString(formData, "endTime"),
     location: readFormString(formData, "location"),
@@ -22,6 +25,7 @@ export async function createOwnRecurringClassSeriesAction(formData: FormData): P
     mode,
     dayOfWeek: mode === "weekly" ? readFormNumber(formData, "dayOfWeek") : undefined,
     generateCount: mode === "weekly" ? readFormNumber(formData, "generateCount") : undefined,
+    startDate: mode === "weekly" ? readFormString(formData, "startDate") : undefined,
     dates:
       mode === "fixed_dates"
         ? readFormString(formData, "dates")

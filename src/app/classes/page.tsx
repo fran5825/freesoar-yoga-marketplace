@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getClassServiceTypes } from "@/domain/class-session/service-types-display";
 
 import { SERVICE_TYPES } from "@/domain/demand-request/service-types";
 import { getPublicClassSessionListItems } from "@/domain/class-session/public-read-service";
@@ -46,7 +47,7 @@ export default async function PublicClassesPage({ searchParams }: PublicClassesP
         <form className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-5 sm:grid-cols-3" method="get">
           <div>
             <label className="text-sm font-medium text-ink" htmlFor="serviceType">
-              課程類型
+              課程風格
             </label>
             <select
               className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
@@ -54,7 +55,7 @@ export default async function PublicClassesPage({ searchParams }: PublicClassesP
               id="serviceType"
               name="serviceType"
             >
-              <option value="">不限類型</option>
+              <option value="">不限風格</option>
               {SERVICE_TYPES.map((type) => (
                 <option key={type} value={type}>
                   {type}
@@ -110,8 +111,15 @@ export default async function PublicClassesPage({ searchParams }: PublicClassesP
                 </h2>
                 <p className="text-sm text-ink-soft">
                   {classSession.teacherProfile.displayName ?? "老師"}
-                  {classSession.serviceType ? ` ・ ${classSession.serviceType}` : ""}
+                  {getClassServiceTypes(classSession).length > 0
+                    ? ` ・ ${getClassServiceTypes(classSession).join("、")}`
+                    : ""}
                 </p>
+                {classSession.yogaStyles.length > 0 ? (
+                  <p className="text-sm text-ink-soft">
+                    瑜伽類型：{classSession.yogaStyles.join("、")}
+                  </p>
+                ) : null}
                 <p className="text-sm text-ink-soft">
                   {formatTaipeiDatetime(classSession.startAt)} 開始 ・ {classSession.location}
                 </p>

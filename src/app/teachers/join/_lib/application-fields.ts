@@ -38,6 +38,8 @@ export type TextInputField = BaseField & {
 export type TextareaField = BaseField & {
   kind: "textarea";
   placeholder: string;
+  // 參考寫法：顯示在欄位上方，降低「不知道寫什麼」的卡關感；不會自動填入欄位。
+  example?: string;
 };
 
 export type SelectField = BaseField & {
@@ -48,7 +50,9 @@ export type SelectField = BaseField & {
 export type CheckboxGroupField = BaseField & {
   kind: "checkboxGroup";
   groups: OptionGroup[];
-  otherPlaceholder: string;
+  // 有「其他」自由輸入框時才需要提示文字；allowOther 為 false 表示只能從選項中勾選。
+  otherPlaceholder?: string;
+  allowOther?: boolean;
 };
 
 export type TextField =
@@ -284,7 +288,7 @@ export const applicationSections: {
         name: "profilePhotoUrl",
         label: fieldLabels.profilePhotoUrl,
         requirement: "optionalRecommended",
-        helper: "建議欄位，可稍後補上。此 slice 先以圖片連結表示，尚未實作上傳。",
+        helper: "通過後再補也可以。目前請貼上圖片連結（尚未提供上傳）。",
         kind: "text",
         placeholder: "例如：https://example.com/profile.jpg",
         inputMode: "url",
@@ -302,8 +306,9 @@ export const applicationSections: {
         requirement: "submitRequired",
         helper: "正式送審時必填。可以簡短說明你的練習背景、服務對象與教學關懷。",
         kind: "textarea",
-        placeholder:
-          "例如：我長期陪伴初學者與企業團體練習，重視呼吸、身體覺察與安全調整。",
+        placeholder: "用幾句話介紹你自己，不需要寫得很長。",
+        example:
+          "我從事瑜伽教學 6 年，主要陪伴上班族與初學者練習，曾在企業與社區帶領團體課。我重視呼吸、身體覺察與安全調整，希望大家練完能感覺更放鬆。",
       },
       {
         name: "teachingStyle",
@@ -311,13 +316,15 @@ export const applicationSections: {
         requirement: "submitRequired",
         helper: "正式送審時必填。請描述你的帶領方式、節奏與課堂氛圍。",
         kind: "textarea",
-        placeholder: "例如：穩定、細緻，重視呼吸與身體覺察。",
+        placeholder: "描述你的帶領方式與課堂氛圍。",
+        example:
+          "節奏穩定、口令清楚，會先讓大家熟悉呼吸再進入動作，並提供不同程度的調整選項。課堂氣氛溫和，不追求動作完美，重視每個人的感受。",
       },
       {
         name: "certifications",
         label: fieldLabels.certifications,
         requirement: "optionalRecommended",
-        helper: "建議欄位，可留空。可用逗號或換行分隔不同訓練。",
+        helper: "通過後再補也可以。可用逗號或換行分隔不同訓練。",
         kind: "textarea",
         placeholder: "例如：RYT 200、陰瑜伽培訓、孕產瑜伽進修",
       },
@@ -341,10 +348,10 @@ export const applicationSections: {
         name: "serviceAreas",
         label: fieldLabels.serviceAreas,
         requirement: "submitRequired",
-        helper: "正式送審時至少一項。勾選你可服務的縣市。",
+        helper: "正式送審時至少一項。勾選你可服務的縣市；線上授課請在「授課形式」勾選。",
         kind: "checkboxGroup",
         groups: [{ title: "", options: SERVICE_AREA_OPTIONS }],
-        otherPlaceholder: "例如：其他縣市或線上教學",
+        allowOther: false,
       },
       {
         name: "teachingFormats",
@@ -359,7 +366,7 @@ export const applicationSections: {
         name: "priceRange",
         label: fieldLabels.priceRange,
         requirement: "optionalRecommended",
-        helper: "建議欄位，可留空。此資訊只作為合作溝通參考，不作低價競標或排序。",
+        helper: "通過後再補也可以。此資訊只作為合作溝通參考，不作低價競標或排序。",
         kind: "text",
         placeholder: "例如：依課程長度與地點討論，團課每堂 NT$3,000 起",
       },
@@ -368,13 +375,13 @@ export const applicationSections: {
   {
     title: "教學偏好",
     description:
-      "讓團主更快理解你習慣的合作方式；這些都是建議欄位，可以先留空，之後再補上。",
+      "讓團主更快理解你習慣的合作方式；這些都是選填，通過後再補也可以。",
     fields: [
       {
         name: "preferredSessionLengthMinutes",
         label: fieldLabels.preferredSessionLengthMinutes,
         requirement: "optionalRecommended",
-        helper: "建議欄位，可留空。",
+        helper: "通過後再補也可以。",
         kind: "select",
         options: SESSION_LENGTH_OPTIONS,
       },
@@ -382,7 +389,7 @@ export const applicationSections: {
         name: "preferredFrequency",
         label: fieldLabels.preferredFrequency,
         requirement: "optionalRecommended",
-        helper: "建議欄位，可留空。",
+        helper: "通過後再補也可以。",
         kind: "select",
         options: FREQUENCY_OPTIONS,
       },
@@ -390,7 +397,7 @@ export const applicationSections: {
         name: "preferredLocationType",
         label: fieldLabels.preferredLocationType,
         requirement: "optionalRecommended",
-        helper: "建議欄位，可留空。",
+        helper: "通過後再補也可以。",
         kind: "select",
         options: LOCATION_TYPE_OPTIONS,
       },
@@ -398,7 +405,7 @@ export const applicationSections: {
         name: "preferenceNotes",
         label: fieldLabels.preferenceNotes,
         requirement: "optionalRecommended",
-        helper: "建議欄位，可留空。還有什麼想讓團主知道的教學偏好，都可以寫在這裡。",
+        helper: "通過後再補也可以。還有什麼想讓團主知道的教學偏好，都可以寫在這裡。",
         kind: "textarea",
         placeholder: "例如：需要提前 30 分鐘到場準備場地。",
       },

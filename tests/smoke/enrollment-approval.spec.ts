@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { futureDateTime } from "./_helpers/future-dates";
 
 import { createEnrollmentForUser } from "../../src/domain/enrollment/__internal__/create-enrollment-core";
 import { createClassSessionForTeacher } from "../../src/domain/class-session/__internal__/create-teacher-class-session-core";
@@ -57,8 +58,8 @@ async function seedTeacherClassSession({
     title: `Class ${testRunId}`,
     description: null,
     serviceType: "伸展與身體保養",
-    startAt: "2026-09-01T14:00",
-    endAt: "2026-09-01T15:00",
+    startAt: futureDateTime(41, "14:00"),
+    endAt: futureDateTime(41, "15:00"),
     location: "Test Studio",
     capacity,
     isPublic: false,
@@ -175,7 +176,8 @@ test.describe("enrollment approval (requiresApproval) smoke", () => {
     }
 
     await addAuthSessionCookie(context, seeded.teacherSessionToken);
-    await page.goto("/teacher/classes");
+    // teacher-usability 第 06 票：報名確認／婉拒在單堂課詳情頁上操作。
+    await page.goto(`/teacher/classes/${seeded.classSessionId}`);
 
     await expect(page.getByText("待確認報名（2 人）")).toBeVisible();
 
@@ -224,7 +226,7 @@ test.describe("enrollment approval (requiresApproval) smoke", () => {
       data: { startAt: new Date(Date.now() - 3600_000) },
     });
 
-    await page.goto("/teacher/classes");
+    await page.goto(`/teacher/classes/${seeded.classSessionId}`);
     const pendingCardC = page.locator("li").filter({ hasText: `note-from-${memberC.userId}` });
     await pendingCardC.getByRole("button", { name: "確認報名" }).click();
     await expect(page.getByText("這堂課程已經開始，無法確認報名。")).toBeVisible();

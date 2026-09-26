@@ -5,11 +5,14 @@ import { redirect } from "next/navigation";
 
 import { createOwnClassSessionForTeacher } from "@/domain/class-session/service";
 
+import { readServiceTypesFromForm, readYogaStylesFromForm } from "./read-yoga-styles";
+
 export async function createOwnClassSessionAction(formData: FormData): Promise<void> {
   const result = await createOwnClassSessionForTeacher({
     title: readFormString(formData, "title"),
     description: readFormString(formData, "description"),
-    serviceType: readFormString(formData, "serviceType"),
+    serviceTypes: readServiceTypesFromForm(formData),
+    yogaStyles: readYogaStylesFromForm(formData),
     startAt: readFormString(formData, "startAt"),
     endAt: readFormString(formData, "endAt"),
     location: readFormString(formData, "location"),
@@ -23,8 +26,12 @@ export async function createOwnClassSessionAction(formData: FormData): Promise<v
   }
 
   revalidatePath("/teacher/classes");
+  revalidatePath("/teacher/dashboard");
+  // teacher-usability 第 07 票：建好直接進這堂課的詳情頁，下一步（開放報名）就在眼前。
   redirect(
-    `/teacher/classes?result=success&message=${encodeURIComponent("課程已建立。")}`,
+    `/teacher/classes/${result.classSessionId}?result=success&message=${encodeURIComponent(
+      "課程已建立。下一步：確認內容後按「開放報名」。",
+    )}`,
   );
 }
 

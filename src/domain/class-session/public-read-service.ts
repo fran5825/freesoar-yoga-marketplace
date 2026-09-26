@@ -14,6 +14,8 @@ export type PublicClassSessionListItem = {
   id: string;
   title: string;
   serviceType: string | null;
+  serviceTypes: string[];
+  yogaStyles: string[];
   startAt: Date;
   endAt: Date;
   location: string;
@@ -31,6 +33,8 @@ export type PublicClassSessionDetail = {
   title: string;
   description: string | null;
   serviceType: string | null;
+  serviceTypes: string[];
+  yogaStyles: string[];
   startAt: Date;
   endAt: Date;
   location: string;
@@ -52,12 +56,22 @@ export async function getPublicClassSessionListItems(
       isPublic: true,
       status: { in: PUBLIC_STATUS_FILTER },
       teacherProfile: { status: "approved" },
-      ...(filters.serviceType ? { serviceType: filters.serviceType } : {}),
+      // 課程風格可多選：新資料看 serviceTypes，舊資料與團主媒合的課只有單一 serviceType，兩邊都要比對。
+      ...(filters.serviceType
+        ? {
+            OR: [
+              { serviceTypes: { has: filters.serviceType } },
+              { serviceType: filters.serviceType },
+            ],
+          }
+        : {}),
     },
     select: {
       id: true,
       title: true,
       serviceType: true,
+      serviceTypes: true,
+      yogaStyles: true,
       startAt: true,
       endAt: true,
       location: true,
@@ -81,6 +95,8 @@ export async function getPublicClassSessionListItems(
     id: row.id,
     title: row.title,
     serviceType: row.serviceType,
+    serviceTypes: row.serviceTypes,
+    yogaStyles: row.yogaStyles,
     startAt: row.startAt,
     endAt: row.endAt,
     location: row.location,
@@ -105,6 +121,8 @@ export async function getPublicClassSessionDetail(
       title: true,
       description: true,
       serviceType: true,
+      serviceTypes: true,
+      yogaStyles: true,
       startAt: true,
       endAt: true,
       location: true,

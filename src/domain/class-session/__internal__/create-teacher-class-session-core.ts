@@ -18,6 +18,9 @@ export type CreateTeacherClassSessionInput = {
   title: string;
   description: string | null;
   serviceType: string;
+  serviceTypes?: string[];
+  // 瑜伽類型：選填，沒帶就是空清單（與既有呼叫端相容）；老師建課的必填檢查在 validation 層。
+  yogaStyles?: string[];
   startAt: Date;
   endAt: Date;
   location: string;
@@ -120,6 +123,8 @@ export async function createClassSessionForTeacher(
           title: input.title,
           description: input.description,
           serviceType: input.serviceType,
+          serviceTypes: input.serviceTypes ?? [input.serviceType],
+          yogaStyles: input.yogaStyles ?? [],
           startAt: input.startAt,
           endAt: input.endAt,
           location: input.location,

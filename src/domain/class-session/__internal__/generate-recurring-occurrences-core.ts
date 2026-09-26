@@ -63,6 +63,8 @@ export async function generateOccurrencesForSeries(
       // validateRecurringSeriesInput 把它列為必填，建立 series 時一律會寫入非 null 值，
       // 這裡讀回來只是型別上允許 null，實際上不會發生。
       serviceType: series.serviceType as string,
+      serviceTypes: series.serviceTypes,
+      yogaStyles: series.yogaStyles,
       startAt,
       endAt,
       location: series.location,

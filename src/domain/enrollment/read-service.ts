@@ -57,6 +57,8 @@ export type MemberFacingClassSession = {
   title: string;
   description: string | null;
   serviceType: string | null;
+  serviceTypes: string[];
+  yogaStyles: string[];
   startAt: Date;
   endAt: Date;
   location: string;
@@ -89,6 +91,8 @@ export async function getClassSessionForMember(
       title: true,
       description: true,
       serviceType: true,
+      serviceTypes: true,
+      yogaStyles: true,
       startAt: true,
       endAt: true,
       location: true,

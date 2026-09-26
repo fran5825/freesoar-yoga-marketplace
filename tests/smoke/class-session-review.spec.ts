@@ -400,7 +400,8 @@ test.describe("class session review smoke", () => {
 
     await context.clearCookies();
     await addAuthSessionCookie(context, teacherSessionToken);
-    await page.goto("/teacher/classes");
+    // 評價在單堂課詳情頁（teacher-usability 第 06 票）。
+    await page.goto(`/teacher/classes/${classSessionId}`);
     await expect(page.getByText("學員評價（1 則）")).toBeVisible();
     await expect(page.getByText(`Member ${testRunId}・★★★★`)).toBeVisible();
     await expect(page.getByText("整體體驗很棒，會再來上課。")).toBeVisible();

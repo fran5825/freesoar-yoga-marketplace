@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { futureDateTime } from "./_helpers/future-dates";
 
 import { cancelClassSessionForOrganizer } from "../../src/domain/class-session/__internal__/cancel-class-session-core";
 import { createClassSessionForOrganizer } from "../../src/domain/class-session/__internal__/create-class-session-core";
@@ -78,8 +79,8 @@ async function seedClassSession({
     title: `Class ${testRunId}`,
     description: null,
     serviceType: "伸展與身體保養",
-    startAt: "2026-09-01T14:00",
-    endAt: "2026-09-01T15:00",
+    startAt: futureDateTime(40, "14:00"),
+    endAt: futureDateTime(40, "15:00"),
     location: "Test Studio",
     capacity: 5,
     isPublic: false,

@@ -271,7 +271,9 @@ Fields:
 - requiresApproval（新欄位，`Boolean @default(false)`；`true` 時新報名先落在 `Enrollment.status = "pending"`，需要老師確認才轉為 `confirmed`，見下方 `Enrollment` 說明與 Gate G2/G3）
 - title
 - description
-- serviceType
+- serviceType（主要課程風格，＝serviceTypes 的第一個）
+- serviceTypes（2026-09-26 新增，`String[] @default([])`：課程風格，可多選最多 3 個，值須落在 `service-types.ts` 清單內）
+- yogaStyles（2026-09-26 新增，`String[] @default([])`：瑜伽類型，老師建課必填，標籤來源同老師「擅長類型」，可加自訂項目；團主媒合的課為空）
 - startAt
 - endAt
 - location
@@ -280,6 +282,14 @@ Fields:
 - status
 - createdAt
 - updatedAt
+
+2026-09-26 課程風格與瑜伽類型（產品主人決定，見 `docs/teacher-usability-plan.md` 決策 13–14）：
+
+- 畫面用語：`serviceType(s)` 顯示為「課程風格」（原「課程類型」），`yogaStyles` 顯示為「瑜伽類型」。
+- migration `20260925161846_class_yoga_styles` 新增兩個 model 的 `yogaStyles`；`20260925164331_class_service_types_multi` 新增 `serviceTypes`，並把既有 `serviceType` 複製進去（expand 階段，比照 `DemandRequest.serviceTypes` 的做法）。
+- `serviceType` 保留為主要課程風格（寫入第一個選項），公開課程篩選同時比對 `serviceTypes` 與 `serviceType`；團主媒合建課仍是單選，由核心自動寫入 `serviceTypes = [serviceType]`。畫面讀取一律用 `getClassServiceTypes()`（沒有 `serviceTypes` 時退回單一值）。
+- `yogaStyles` 不限定只能是清單內的值（要能存自訂項目），只驗證 1–10 項、每項最長 50 字（`src/domain/class-session/yoga-styles.ts`）。
+- 系列課的 `serviceTypes`／`yogaStyles` 存在 `RecurringClassSeries`，生成每一場時複製到該 `ClassSession`。
 
 `ClassSessionOrigin`（新 enum）：
 
@@ -302,7 +312,9 @@ Fields:
 - teacherProfileId
 - title
 - description（選填）
-- serviceType（選填）
+- serviceType（選填；主要課程風格）
+- serviceTypes（2026-09-26 新增，課程風格可多選，見上方 ClassSession 說明）
+- yogaStyles（2026-09-26 新增，瑜伽類型，建立系列時必填）
 - dayOfWeek（0–6，比照 `TeacherAvailability` 慣例；**只在「每週固定」模式使用**，固定期課程此欄位為 `null`）
 - startTime（`HH:mm`）
 - endTime（`HH:mm`）
@@ -314,6 +326,7 @@ Fields:
 
 Phase 2 schema notes：
 
+- 2026-09-26：每週固定模式可選填「起始日期」（不存欄位，只影響首次生成）：起始日期須晚於今天，且必須剛好是選定的 `dayOfWeek`（前後端都檢查，錯誤碼 `start_date_weekday_mismatch`），第一場就是這一天；不填則沿用原本「從明天起最近的一個」。固定期模式改用三個月月曆直接點選多天（最多 26 天，今天與過去不能選），送出格式不變。
 - 固定期課程（例如連續 4 週的特定日期組合）不在這個 model 記錄每一個具體日期——生成時由呼叫端直接提供明確日期清單，逐筆寫入對應 `ClassSession.startAt`/`endAt`，系列本身只保留 `startTime`/`endTime` 這組共用的時鐘時間。
 - 沒有 `status`／`isPublic` 欄位：「取消系列」等同於「取消它底下所有還來得及取消的場次」，series 這一列本身仍會保留，之後仍可用「生成更多」再生成新的未來場次（僅限每週固定模式）；`isPublic` 只存在於每一筆獨立 `ClassSession`，系列生成的每一場目前一律預設 `isPublic = false`（V1 的刻意簡化，系列本身沒有能設定公開性的欄位/UI，且 `ClassSession` 建立後無法事後修改可見性）。
 - `onDelete: Cascade` 從 `TeacherProfile` 指向這個 model；`onDelete: SetNull` 從這個 model 指向底下生成的 `ClassSession`（見上方 `ClassSession.recurringClassSeriesId`）。

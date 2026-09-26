@@ -2,8 +2,15 @@
 // description／serviceType／location／capacity 這五個欄位的規則與上限，刻意直接沿用
 // validation.ts（單堂建課）已經驗證過的常數與規則，不重新發明一份可能漂移的第二版規則。
 // startTime／endTime 的 HH:mm 格式檢查比照 teacher-availability/validation.ts 的既有慣例。
+import {
+  checkYogaStyles,
+  normalizeYogaStyles,
+  YOGA_STYLES_ISSUE_MESSAGES,
+  type YogaStylesIssue,
+} from "./yoga-styles";
+import { taipeiTodayString } from "./recurring-series-dates";
 
-import { isValidServiceType } from "@/domain/demand-request/service-types";
+import { isValidServiceType, MAX_SERVICE_TYPES } from "@/domain/demand-request/service-types";
 import {
   CAPACITY_MAX,
   CAPACITY_MIN,
@@ -26,6 +33,8 @@ export type RecurringSeriesInput = {
   title?: string | null;
   description?: string | null;
   serviceType?: string | null;
+  serviceTypes?: string[] | null;
+  yogaStyles?: string[] | null;
   startTime?: string | null;
   endTime?: string | null;
   location?: string | null;
@@ -37,6 +46,8 @@ export type RecurringSeriesInput = {
   // mode === "weekly"
   dayOfWeek?: number | null;
   generateCount?: number | null;
+  // 選填：從這一天（含）起算的第一個符合星期幾的日子開始生成；不填就從最近的下一個開始。
+  startDate?: string | null;
   // mode === "fixed_dates"
   dates?: string[] | null;
 };
@@ -47,6 +58,8 @@ export type RecurringSeriesValidationErrorCode =
   | "description_too_long"
   | "service_type_required"
   | "service_type_invalid"
+  | "service_type_too_many"
+  | YogaStylesIssue
   | "location_required"
   | "location_too_long"
   | "capacity_required"
@@ -57,6 +70,9 @@ export type RecurringSeriesValidationErrorCode =
   | "mode_invalid"
   | "day_of_week_invalid"
   | "generate_count_invalid"
+  | "start_date_invalid"
+  | "start_date_not_future"
+  | "start_date_weekday_mismatch"
   | "dates_invalid"
   | "dates_empty";
 
@@ -65,6 +81,7 @@ export type RecurringSeriesValidationError = {
     | "title"
     | "description"
     | "serviceType"
+    | "yogaStyles"
     | "location"
     | "capacity"
     | "startTime"
@@ -72,6 +89,7 @@ export type RecurringSeriesValidationError = {
     | "mode"
     | "dayOfWeek"
     | "generateCount"
+    | "startDate"
     | "dates";
   code: RecurringSeriesValidationErrorCode;
   message: string;
@@ -81,6 +99,8 @@ type NormalizedBaseFields = {
   title: string;
   description: string | null;
   serviceType: string;
+  serviceTypes: string[];
+  yogaStyles: string[];
   startTime: string;
   endTime: string;
   location: string;
@@ -89,7 +109,7 @@ type NormalizedBaseFields = {
 };
 
 export type RecurringSeriesSchedule =
-  | { mode: "weekly"; dayOfWeek: number; generateCount: number }
+  | { mode: "weekly"; dayOfWeek: number; generateCount: number; startDate: string | null }
   | { mode: "fixed_dates"; dates: string[] };
 
 export type RecurringSeriesValidationResult =
@@ -110,8 +130,14 @@ export function validateRecurringSeriesInput(
     typeof input.description === "string" && input.description.trim().length > 0
       ? input.description.trim()
       : null;
-  const normalizedServiceType =
-    typeof input.serviceType === "string" ? input.serviceType.trim() : "";
+  const normalizedServiceTypes = normalizeYogaStyles(
+    input.serviceTypes && input.serviceTypes.length > 0
+      ? input.serviceTypes
+      : input.serviceType
+        ? [input.serviceType]
+        : [],
+  );
+  const normalizedServiceType = normalizedServiceTypes[0] ?? "";
   const normalizedLocation = typeof input.location === "string" ? input.location.trim() : "";
   const startTime = typeof input.startTime === "string" ? input.startTime.trim() : "";
   const endTime = typeof input.endTime === "string" ? input.endTime.trim() : "";
@@ -134,17 +160,35 @@ export function validateRecurringSeriesInput(
     });
   }
 
-  if (normalizedServiceType.length === 0) {
+  if (normalizedServiceTypes.length === 0) {
     errors.push({
       field: "serviceType",
       code: "service_type_required",
-      message: "課程類型為必填。",
+      message: "課程風格為必填。",
     });
-  } else if (!isValidServiceType(normalizedServiceType)) {
+  } else if (!normalizedServiceTypes.every((value) => isValidServiceType(value))) {
     errors.push({
       field: "serviceType",
       code: "service_type_invalid",
-      message: "課程類型須從受控清單中選擇。",
+      message: "課程風格須從受控清單中選擇。",
+    });
+  } else if (normalizedServiceTypes.length > MAX_SERVICE_TYPES) {
+    errors.push({
+      field: "serviceType",
+      code: "service_type_too_many",
+      message: `課程風格最多選 ${MAX_SERVICE_TYPES} 項。`,
+    });
+  }
+
+  // 課程系列只有老師會建立，瑜伽風格一律必填。
+  const normalizedYogaStyles = normalizeYogaStyles(input.yogaStyles);
+  const yogaStylesIssue = checkYogaStyles(normalizedYogaStyles, { required: true });
+
+  if (yogaStylesIssue) {
+    errors.push({
+      field: "yogaStyles",
+      code: yogaStylesIssue,
+      message: YOGA_STYLES_ISSUE_MESSAGES[yogaStylesIssue],
     });
   }
 
@@ -217,7 +261,37 @@ export function validateRecurringSeriesInput(
       });
     }
 
-    schedule = { mode: "weekly", dayOfWeek, generateCount };
+    const rawStartDate = typeof input.startDate === "string" ? input.startDate.trim() : "";
+    let startDate: string | null = null;
+
+    if (rawStartDate.length > 0) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(rawStartDate) || !isValidCalendarDate(rawStartDate)) {
+        errors.push({
+          field: "startDate",
+          code: "start_date_invalid",
+          message: "起始日期格式不正確。",
+        });
+      } else if (rawStartDate <= taipeiTodayString()) {
+        errors.push({
+          field: "startDate",
+          code: "start_date_not_future",
+          message: "起始日期需晚於今天。",
+        });
+      } else if (
+        Number.isInteger(dayOfWeek) &&
+        new Date(`${rawStartDate}T00:00:00Z`).getUTCDay() !== dayOfWeek
+      ) {
+        errors.push({
+          field: "startDate",
+          code: "start_date_weekday_mismatch",
+          message: "起始日期必須是選定的星期幾。",
+        });
+      } else {
+        startDate = rawStartDate;
+      }
+    }
+
+    schedule = { mode: "weekly", dayOfWeek, generateCount, startDate };
   } else if (input.mode === "fixed_dates") {
     const rawDates = Array.isArray(input.dates) ? input.dates : [];
     const trimmedDates = rawDates.map((date) => (typeof date === "string" ? date.trim() : ""));
@@ -241,7 +315,7 @@ export function validateRecurringSeriesInput(
     schedule = { mode: "fixed_dates", dates: nonEmptyDates };
   } else {
     errors.push({ field: "mode", code: "mode_invalid", message: "請選擇課程排程模式。" });
-    schedule = { mode: "weekly", dayOfWeek: 0, generateCount: 0 };
+    schedule = { mode: "weekly", dayOfWeek: 0, generateCount: 0, startDate: null };
   }
 
   if (errors.length > 0) {
@@ -254,6 +328,8 @@ export function validateRecurringSeriesInput(
       title: normalizedTitle,
       description: normalizedDescription,
       serviceType: normalizedServiceType,
+      serviceTypes: normalizedServiceTypes,
+      yogaStyles: normalizedYogaStyles,
       startTime,
       endTime,
       location: normalizedLocation,

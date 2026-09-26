@@ -261,3 +261,41 @@ function withdrawTransitionBlockedMessage(
 function isAuthenticationRequiredError(error: unknown): boolean {
   return error instanceof Error && error.message === "Authentication required";
 }
+
+// teacher-usability 第 09 票：老師總覽用——自己的回應已被團主選定（selected），但團主還沒把需求
+// 建立成課程（DemandRequest.status 仍是 matched）。建課是團主的動作，對老師來說是「等待中」。
+// 只讀自己的回應（teacherProfileId 寫在 WHERE），比照 D12 不檢查 TeacherProfile.status。
+export type OwnSelectedResponseAwaitingClass = {
+  demandRequestId: string;
+  demandTitle: string;
+};
+
+export async function listOwnSelectedResponsesAwaitingClass(): Promise<
+  OwnSelectedResponseAwaitingClass[]
+> {
+  const currentUser = await requireUser();
+
+  const teacherProfile = await prisma.teacherProfile.findUnique({
+    where: { userId: currentUser.id },
+    select: { id: true },
+  });
+
+  if (!teacherProfile) {
+    return [];
+  }
+
+  const responses = await prisma.demandResponse.findMany({
+    where: {
+      teacherProfileId: teacherProfile.id,
+      status: "selected",
+      demandRequest: { status: "matched" },
+    },
+    select: { demandRequestId: true, demandRequest: { select: { title: true } } },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  return responses.map((response) => ({
+    demandRequestId: response.demandRequestId,
+    demandTitle: response.demandRequest.title ?? "團體需求",
+  }));
+}

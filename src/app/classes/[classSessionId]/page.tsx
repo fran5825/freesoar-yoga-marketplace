@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getClassServiceTypes } from "@/domain/class-session/service-types-display";
 import { notFound } from "next/navigation";
 
 import { getClassSessionForMember } from "@/domain/enrollment/read-service";
@@ -9,19 +10,14 @@ import {
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { getCurrentUser } from "@/lib/auth/session";
 
+import { EnrollmentStatusBadge } from "../../member/_components/EnrollmentStatusBadge";
 import { PublicFooter } from "../../_components/public-footer";
 import { PublicHeader } from "../../_components/public-header";
 
 import { enrollAction } from "./actions";
 
 // teacher-initiated-open-classes 第 8 節（Gate G2/G3）：pending 是三態顯示的第三態，不再是
-// 「非 confirmed 就當作已取消」的二元判斷——沿用 member/enrollments/page.tsx 既有的
-// enrollmentStatusLabels 文案，保持兩處用語一致。
-const ownEnrollmentStatusLabels: Record<string, string> = {
-  confirmed: "已報名",
-  pending: "處理中",
-  cancelled: "已取消",
-};
+// 「非 confirmed 就當作已取消」的二元判斷；狀態標籤與 /member/* 共用 EnrollmentStatusBadge。
 
 type MemberClassSessionPageProps = {
   params: Promise<{ classSessionId: string }>;
@@ -112,10 +108,18 @@ export default async function MemberClassSessionPage({
               {classSession.teacherProfile.displayName ?? "老師"}
             </dd>
           </div>
-          {classSession.serviceType ? (
+          {getClassServiceTypes(classSession).length > 0 ? (
             <div className="min-w-0">
-              <dt className="font-medium text-ink">課程類型</dt>
-              <dd className="mt-1 break-words">{classSession.serviceType}</dd>
+              <dt className="font-medium text-ink">課程風格</dt>
+              <dd className="mt-1 break-words">
+                {getClassServiceTypes(classSession).join("、")}
+              </dd>
+            </div>
+          ) : null}
+          {classSession.yogaStyles.length > 0 ? (
+            <div className="min-w-0">
+              <dt className="font-medium text-ink">瑜伽類型</dt>
+              <dd className="mt-1 break-words">{classSession.yogaStyles.join("、")}</dd>
             </div>
           ) : null}
           <div className="min-w-0">
@@ -143,10 +147,7 @@ export default async function MemberClassSessionPage({
 
       {classSession.ownEnrollment ? (
         <section className="grid gap-3 rounded-2xl border border-ink/15 bg-white p-6">
-          <span className="w-fit rounded-full bg-pine-tint px-3 py-1 text-xs font-medium text-pine">
-            {ownEnrollmentStatusLabels[classSession.ownEnrollment.status] ??
-              classSession.ownEnrollment.status}
-          </span>
+          <EnrollmentStatusBadge status={classSession.ownEnrollment.status} />
           {classSession.ownEnrollment.status === "pending" ? (
             <p className="text-sm leading-6 text-ink-soft">
               你的報名已經送出，等待老師確認後才算成立。
@@ -251,10 +252,18 @@ function VisitorClassSessionView({
               {classSession.teacherProfile.displayName ?? "老師"}
             </dd>
           </div>
-          {classSession.serviceType ? (
+          {getClassServiceTypes(classSession).length > 0 ? (
             <div className="min-w-0">
-              <dt className="font-medium text-ink">課程類型</dt>
-              <dd className="mt-1 break-words">{classSession.serviceType}</dd>
+              <dt className="font-medium text-ink">課程風格</dt>
+              <dd className="mt-1 break-words">
+                {getClassServiceTypes(classSession).join("、")}
+              </dd>
+            </div>
+          ) : null}
+          {classSession.yogaStyles.length > 0 ? (
+            <div className="min-w-0">
+              <dt className="font-medium text-ink">瑜伽類型</dt>
+              <dd className="mt-1 break-words">{classSession.yogaStyles.join("、")}</dd>
             </div>
           ) : null}
           <div className="min-w-0">

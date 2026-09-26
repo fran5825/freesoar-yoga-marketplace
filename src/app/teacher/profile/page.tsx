@@ -1,27 +1,22 @@
 import { redirect } from "next/navigation";
+import { ProfileTabs } from "./_components/ProfileTabs";
+import { TimeField24 } from "@/app/_components/time-field-24";
 import Link from "next/link";
 
-import {
-  EXPERIENCE_YEARS_OPTIONS,
-  FREQUENCY_OPTIONS,
-  LOCATION_TYPE_OPTIONS,
-  matchExperienceYearsOptionValue,
-  parseCheckboxGroupValue,
-  SERVICE_AREA_OPTIONS,
-  SESSION_LENGTH_OPTIONS,
-  SPECIALTY_GROUPS,
-  TEACHING_FORMAT_GROUPS,
-  fieldLabels,
-  type OptionGroup,
-} from "@/app/teachers/join/_lib/application-fields";
-import { formatTeacherRatingSummary } from "@/domain/review/rating-summary";
-import { getOwnTeacherRatingSummary } from "@/domain/review/read-service";
-import { getOwnTeacherProfileApplicationSnapshot } from "@/domain/teacher-profile/service";
+import { formatAvailabilityExceptionDate } from "@/domain/teacher-availability/date-format";
+import { getOwnAvailabilityOverview } from "@/domain/teacher-availability/read-service";
 import { requireUser } from "@/lib/auth/session";
 
-import { updateTeacherProfileAction } from "./actions";
+import {
+  createAvailabilityExceptionAction,
+  createTeacherAvailabilityAction,
+  deleteAvailabilityExceptionAction,
+  deleteTeacherAvailabilityAction,
+  updateAvailabilityExceptionAction,
+  updateTeacherAvailabilityAction,
+} from "./actions";
 
-type TeacherProfilePageProps = {
+type TeacherAvailabilityPageProps = {
   searchParams?: Promise<{ result?: string; message?: string }>;
 };
 
@@ -33,98 +28,44 @@ const nonApprovedCopy: Record<
 > = {
   missing: {
     title: "尚未建立老師申請",
-    body: "完成老師資格審核後，就可以在這裡編輯你的個人資料。",
+    body: "完成老師資格審核後，就可以在這裡管理你的可授課時間。",
     actionLabel: "前往建立老師申請",
   },
   draft: {
     title: "老師申請還在準備中",
-    body: "完成並送出申請、通過審核後，就可以在這裡編輯你的個人資料。",
+    body: "完成並送出申請、通過審核後，就可以在這裡管理你的可授課時間。",
     actionLabel: "繼續整理申請",
   },
   submitted: {
     title: "老師申請審核中",
-    body: "審核期間請耐心等候。通過審核後，就可以在這裡編輯你的個人資料。",
+    body: "審核期間請耐心等候。通過審核後，就可以在這裡管理你的可授課時間。",
     actionLabel: "查看申請狀態",
   },
   rejected: {
     title: "老師申請可修正後重新送出",
-    body: "請前往加入表單依修正方向調整並重新送審。",
-    actionLabel: "前往修正申請",
+    body: "依平台提供的修正方向調整並重新送審後，就可以在這裡管理你的可授課時間。",
+    actionLabel: "查看退回說明",
   },
 };
 
-function toListText(values: string[]) {
-  return values.join("\n");
-}
+const dayOfWeekLabels = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
 
-function toListDisplay(values: string[]) {
-  return values.length > 0 ? values.join("、") : "尚未填寫";
-}
+const exceptionTypeLabels: Record<string, string> = {
+  blocked: "封鎖",
+  extra_available: "額外開放",
+};
 
-const controlClassName =
-  "mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15";
-
-// 這頁是純 Server Component（用 <form action> 送出，沒有 client-side state），所以
-// 每個複選群組的「其他」欄位維持一直顯示，不做勾選後才展開的互動——不需要為此多開一個
-// client island。
-function CheckboxGroupFields({
-  groups,
-  name,
-  otherName,
-  values,
-  otherPlaceholder,
-}: {
-  groups: OptionGroup[];
-  name: string;
-  otherName: string;
-  values: string[];
-  otherPlaceholder: string;
-}) {
-  const { selectedValues, otherText } = parseCheckboxGroupValue(
-    values.join("\n"),
-    groups,
-  );
-  const flatOptions = groups.flatMap((group) => group.options);
-
-  return (
-    <div className="mt-2 grid gap-3">
-      <div className="flex flex-wrap gap-2">
-        {flatOptions.map((option) => (
-          <label className="cursor-pointer" key={option.value}>
-            <input
-              className="peer sr-only"
-              defaultChecked={selectedValues.includes(option.value)}
-              name={name}
-              type="checkbox"
-              value={option.value}
-            />
-            <span className="inline-flex rounded-full border border-ink/20 px-3 py-1.5 text-sm text-ink-soft transition peer-checked:border-pine peer-checked:bg-pine peer-checked:text-white">
-              {option.label}
-            </span>
-          </label>
-        ))}
-      </div>
-      <input
-        className={controlClassName}
-        defaultValue={otherText}
-        name={otherName}
-        placeholder={otherPlaceholder}
-      />
-    </div>
-  );
-}
-
-export default async function TeacherProfilePage({
+export default async function TeacherAvailabilityPage({
   searchParams,
-}: TeacherProfilePageProps) {
+}: TeacherAvailabilityPageProps) {
   try {
     await requireUser();
   } catch {
     redirect("/sign-in");
   }
 
-  const [profile, resolvedSearchParams] = await Promise.all([
-    getOwnTeacherProfileApplicationSnapshot(),
+  const [overview, resolvedSearchParams] = await Promise.all([
+    getOwnAvailabilityOverview(),
     searchParams,
   ]);
 
@@ -137,17 +78,17 @@ export default async function TeacherProfilePage({
         }
       : null;
 
-  if (!profile || (profile.status !== "approved" && profile.status !== "suspended")) {
+  if (!overview || (overview.teacherProfileStatus !== "approved" && overview.teacherProfileStatus !== "suspended")) {
     const copy =
-      nonApprovedCopy[(profile?.status as NonApprovedStatus | undefined) ?? "missing"];
+      nonApprovedCopy[(overview?.teacherProfileStatus as NonApprovedStatus | undefined) ?? "missing"];
 
     return (
       <div className="flex flex-col gap-8">
-        <header className="border-b border-ink/15 pb-6">
-          <p className="text-sm font-medium text-clay">Teacher profile</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
-            個人資料
+        <header>
+          <h1 className="text-3xl font-semibold tracking-tight text-ink">
+            老師資料
           </h1>
+          <ProfileTabs active="availability" />
         </header>
         <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
           <h2 className="text-xl font-medium text-ink">{copy.title}</h2>
@@ -155,7 +96,7 @@ export default async function TeacherProfilePage({
           <div>
             <Link
               className="inline-flex rounded-full bg-pine px-5 py-3 text-sm font-medium text-white transition hover:bg-pine-deep"
-              href="/teachers/join"
+              href="/teacher/dashboard"
             >
               {copy.actionLabel}
             </Link>
@@ -165,18 +106,17 @@ export default async function TeacherProfilePage({
     );
   }
 
-  const isApproved = profile.status === "approved";
-  const ratingSummary = await getOwnTeacherRatingSummary();
+  const isApproved = overview.teacherProfileStatus === "approved";
 
   return (
     <div className="flex flex-col gap-8">
-      <header className="border-b border-ink/15 pb-6">
-        <p className="text-sm font-medium text-clay">Teacher profile</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
-          個人資料
+      <header>
+        <h1 className="text-3xl font-semibold tracking-tight text-ink">
+          老師資料
         </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
-          管理團主與平台看到的老師個人資料。
+        <ProfileTabs active="availability" />
+        <p className="mt-4 max-w-2xl text-sm leading-6 text-ink-soft">
+          管理你每週固定的可授課時段，以及特定日期的封鎖或額外開放。
         </p>
       </header>
 
@@ -193,291 +133,386 @@ export default async function TeacherProfilePage({
         </section>
       ) : null}
 
-      <section className="rounded-xl border border-ink/15 bg-white px-4 py-3 text-sm">
-        <p className="font-medium text-ink">平均評分</p>
-        <p className="mt-1 text-ink-soft">
-          {ratingSummary ? formatTeacherRatingSummary(ratingSummary) : "尚無評價"}
-        </p>
-      </section>
-
       {!isApproved ? (
         <section
           aria-live="polite"
           className="rounded-xl border border-ink/15 bg-cream px-4 py-3 text-sm leading-6 text-ink-soft"
         >
-          帳號目前暫停中，暫時無法編輯個人資料，但你仍然可以查看既有資料。
+          帳號目前暫停中，暫時無法新增、編輯或刪除可授課時間，但你仍然可以查看既有資料。
         </section>
       ) : null}
 
-      {isApproved ? (
-        <form
-          action={updateTeacherProfileAction}
-          className="grid gap-6 rounded-2xl border border-ink/15 bg-white p-6"
-        >
-          <div className="grid gap-4 sm:grid-cols-2">
+      <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
+        <h2 className="text-lg font-medium text-ink">固定可授課時段</h2>
+        {overview.availability.length === 0 ? (
+          <p className="text-sm leading-6 text-ink-soft">目前還沒有任何固定時段。</p>
+        ) : (
+          <ul className="grid gap-2">
+            {overview.availability.map((entry) => (
+              <li
+                className="min-w-0 rounded-2xl border border-ink/10 bg-cream p-3 text-sm"
+                key={entry.id}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="min-w-0 break-words font-medium text-ink">
+                    {dayOfWeekLabels[entry.dayOfWeek]}・{entry.startTime}–{entry.endTime}
+                    {entry.locationArea ? `・${entry.locationArea}` : ""}
+                  </p>
+                  {isApproved ? (
+                    <div className="flex shrink-0 items-center gap-2">
+                      <details>
+                        <summary className="cursor-pointer list-none rounded-full border border-ink/25 px-3 py-1 text-xs font-medium text-ink marker:hidden hover:bg-sand">
+                          編輯…
+                        </summary>
+                        <form
+                          action={updateTeacherAvailabilityAction}
+                          className="mt-3 grid gap-3 rounded-2xl border border-ink/15 bg-white p-3"
+                        >
+                          <input name="availabilityId" type="hidden" value={entry.id} />
+                          <div>
+                            <label
+                              className="text-sm font-medium text-ink"
+                              htmlFor={`edit-dayOfWeek-${entry.id}`}
+                            >
+                              星期幾
+                            </label>
+                            <select
+                              className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
+                              defaultValue={entry.dayOfWeek}
+                              id={`edit-dayOfWeek-${entry.id}`}
+                              name="dayOfWeek"
+                              required
+                            >
+                              {dayOfWeekLabels.map((label, index) => (
+                                <option key={label} value={index}>
+                                  {label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div>
+                              <label
+                                className="text-sm font-medium text-ink"
+                                htmlFor={`edit-startTime-${entry.id}`}
+                              >
+                                開始時間
+                              </label>
+                              <TimeField24 ariaLabel="開始時間" defaultValue={entry.startTime} id={`edit-startTime-${entry.id}`} name="startTime" required />
+                            </div>
+                            <div>
+                              <label
+                                className="text-sm font-medium text-ink"
+                                htmlFor={`edit-endTime-${entry.id}`}
+                              >
+                                結束時間
+                              </label>
+                              <TimeField24 ariaLabel="結束時間" defaultValue={entry.endTime} id={`edit-endTime-${entry.id}`} name="endTime" required />
+                            </div>
+                          </div>
+                          <div>
+                            <label
+                              className="text-sm font-medium text-ink"
+                              htmlFor={`edit-locationArea-${entry.id}`}
+                            >
+                              地區（選填）
+                            </label>
+                            <input
+                              className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
+                              defaultValue={entry.locationArea ?? ""}
+                              id={`edit-locationArea-${entry.id}`}
+                              maxLength={100}
+                              name="locationArea"
+                            />
+                          </div>
+                          <button
+                            className="w-full rounded-full bg-pine px-4 py-2 text-sm font-medium text-white transition hover:bg-pine-deep sm:w-auto"
+                            type="submit"
+                          >
+                            儲存變更
+                          </button>
+                        </form>
+                      </details>
+                      <form action={deleteTeacherAvailabilityAction}>
+                        <input name="availabilityId" type="hidden" value={entry.id} />
+                        <button
+                          className="rounded-full border border-rose-200 px-3 py-1 text-xs font-medium text-rose-800 transition hover:bg-rose-50"
+                          type="submit"
+                        >
+                          刪除
+                        </button>
+                      </form>
+                    </div>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {isApproved ? (
+          <form
+            action={createTeacherAvailabilityAction}
+            className="grid gap-3 border-t border-ink/10 pt-4"
+          >
             <div>
-              <label className="text-sm font-medium text-ink" htmlFor="displayName">
-                {fieldLabels.displayName}
-              </label>
-              <input
-                className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
-                defaultValue={profile.displayName ?? ""}
-                id="displayName"
-                name="displayName"
-                required
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-ink" htmlFor="experienceYears">
-                {fieldLabels.experienceYears}
+              <label className="text-sm font-medium text-ink" htmlFor="dayOfWeek">
+                星期幾
               </label>
               <select
-                className={controlClassName}
-                defaultValue={matchExperienceYearsOptionValue(profile.experienceYears)}
-                id="experienceYears"
-                name="experienceYears"
+                className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
+                defaultValue=""
+                id="dayOfWeek"
+                name="dayOfWeek"
                 required
               >
                 <option disabled value="">
-                  請選擇
+                  請選擇星期幾
                 </option>
-                {EXPERIENCE_YEARS_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
+                {dayOfWeekLabels.map((label, index) => (
+                  <option key={label} value={index}>
+                    {label}
                   </option>
                 ))}
               </select>
             </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="text-sm font-medium text-ink" htmlFor="startTime">
+                  開始時間
+                </label>
+                <TimeField24 ariaLabel="開始時間" id="startTime" name="startTime" required />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-ink" htmlFor="endTime">
+                  結束時間
+                </label>
+                <TimeField24 ariaLabel="結束時間" id="endTime" name="endTime" required />
+              </div>
+            </div>
             <div>
-              <label className="text-sm font-medium text-ink" htmlFor="profilePhotoUrl">
-                {fieldLabels.profilePhotoUrl}（選填）
+              <label className="text-sm font-medium text-ink" htmlFor="locationArea">
+                地區（選填）
               </label>
               <input
                 className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
-                defaultValue={profile.profilePhotoUrl ?? ""}
-                id="profilePhotoUrl"
-                name="profilePhotoUrl"
-                type="url"
+                id="locationArea"
+                maxLength={100}
+                name="locationArea"
+                placeholder="例如：台北市信義區"
               />
             </div>
-            <div>
-              <label className="text-sm font-medium text-ink" htmlFor="priceRange">
-                {fieldLabels.priceRange}（選填）
-              </label>
-              <input
-                className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
-                defaultValue={profile.priceRange ?? ""}
-                id="priceRange"
-                name="priceRange"
-              />
-            </div>
-          </div>
+            <button
+              className="w-full rounded-full bg-pine px-4 py-2 text-sm font-medium text-white transition hover:bg-pine-deep sm:w-auto"
+              type="submit"
+            >
+              新增固定時段
+            </button>
+          </form>
+        ) : null}
+      </section>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="text-sm font-medium text-ink" htmlFor="bio">
-                {fieldLabels.bio}
-              </label>
-              <textarea
-                className="mt-2 min-h-28 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
-                defaultValue={profile.bio ?? ""}
-                id="bio"
-                name="bio"
-                required
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-ink" htmlFor="teachingStyle">
-                {fieldLabels.teachingStyle}
-              </label>
-              <textarea
-                className="mt-2 min-h-28 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
-                defaultValue={profile.teachingStyle ?? ""}
-                id="teachingStyle"
-                name="teachingStyle"
-                required
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-ink" htmlFor="certifications">
-                {fieldLabels.certifications}（選填，可用逗號或換行分隔）
-              </label>
-              <textarea
-                className="mt-2 min-h-28 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
-                defaultValue={toListText(profile.certifications)}
-                id="certifications"
-                name="certifications"
-              />
-            </div>
-          </div>
+      <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
+        <h2 className="text-lg font-medium text-ink">特殊日期例外</h2>
+        {overview.exceptions.length === 0 ? (
+          <p className="text-sm leading-6 text-ink-soft">目前還沒有任何日期例外。</p>
+        ) : (
+          <ul className="grid gap-2">
+            {overview.exceptions.map((entry) => (
+              <li
+                className="min-w-0 rounded-2xl border border-ink/10 bg-cream p-3 text-sm"
+                key={entry.id}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="flex flex-wrap items-center gap-2 font-medium text-ink">
+                      {formatAvailabilityExceptionDate(entry.date)}
+                      <span className="w-fit rounded-full bg-ink/10 px-2 py-0.5 text-xs font-medium text-ink-soft">
+                        {exceptionTypeLabels[entry.type] ?? entry.type}
+                      </span>
+                    </p>
+                    <p className="mt-1 text-ink-soft">
+                      {entry.startTime && entry.endTime
+                        ? `${entry.startTime}–${entry.endTime}`
+                        : "整天"}
+                    </p>
+                    {entry.reason ? (
+                      <p className="mt-1 whitespace-pre-wrap break-words text-ink-soft">
+                        {entry.reason}
+                      </p>
+                    ) : null}
+                  </div>
+                  {isApproved ? (
+                    <div className="flex shrink-0 items-center gap-2">
+                      <details>
+                        <summary className="cursor-pointer list-none rounded-full border border-ink/25 px-3 py-1 text-xs font-medium text-ink marker:hidden hover:bg-sand">
+                          編輯…
+                        </summary>
+                        <form
+                          action={updateAvailabilityExceptionAction}
+                          className="mt-3 grid gap-3 rounded-2xl border border-ink/15 bg-white p-3"
+                        >
+                          <input name="exceptionId" type="hidden" value={entry.id} />
+                          <div>
+                            <label
+                              className="text-sm font-medium text-ink"
+                              htmlFor={`edit-date-${entry.id}`}
+                            >
+                              日期
+                            </label>
+                            <input
+                              className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
+                              defaultValue={formatAvailabilityExceptionDate(entry.date)}
+                              id={`edit-date-${entry.id}`}
+                              name="date"
+                              required
+                              type="date"
+                            />
+                          </div>
+                          <fieldset className="grid gap-2">
+                            <legend className="text-sm font-medium text-ink">類型</legend>
+                            <label className="flex items-center gap-2 text-sm text-ink-soft">
+                              <input
+                                defaultChecked={entry.type === "blocked"}
+                                name="type"
+                                type="radio"
+                                value="blocked"
+                              />
+                              封鎖（這天無法授課）
+                            </label>
+                            <label className="flex items-center gap-2 text-sm text-ink-soft">
+                              <input
+                                defaultChecked={entry.type === "extra_available"}
+                                name="type"
+                                type="radio"
+                                value="extra_available"
+                              />
+                              額外開放（原本沒有排班，但這天可以授課）
+                            </label>
+                          </fieldset>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div>
+                              <label
+                                className="text-sm font-medium text-ink"
+                                htmlFor={`edit-startTime-${entry.id}`}
+                              >
+                                開始時間（選填，留空代表整天）
+                              </label>
+                              <TimeField24 ariaLabel="開始時間" defaultValue={entry.startTime ?? ""} id={`edit-startTime-${entry.id}`} name="startTime" />
+                            </div>
+                            <div>
+                              <label
+                                className="text-sm font-medium text-ink"
+                                htmlFor={`edit-endTime-${entry.id}`}
+                              >
+                                結束時間（選填）
+                              </label>
+                              <TimeField24 ariaLabel="結束時間" defaultValue={entry.endTime ?? ""} id={`edit-endTime-${entry.id}`} name="endTime" />
+                            </div>
+                          </div>
+                          <div>
+                            <label
+                              className="text-sm font-medium text-ink"
+                              htmlFor={`edit-reason-${entry.id}`}
+                            >
+                              原因（選填）
+                            </label>
+                            <textarea
+                              className="mt-2 min-h-20 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
+                              defaultValue={entry.reason ?? ""}
+                              id={`edit-reason-${entry.id}`}
+                              maxLength={500}
+                              name="reason"
+                            />
+                          </div>
+                          <button
+                            className="w-full rounded-full bg-pine px-4 py-2 text-sm font-medium text-white transition hover:bg-pine-deep sm:w-auto"
+                            type="submit"
+                          >
+                            儲存變更
+                          </button>
+                        </form>
+                      </details>
+                      <form action={deleteAvailabilityExceptionAction}>
+                        <input name="exceptionId" type="hidden" value={entry.id} />
+                        <button
+                          className="rounded-full border border-rose-200 px-3 py-1 text-xs font-medium text-rose-800 transition hover:bg-rose-50"
+                          type="submit"
+                        >
+                          刪除
+                        </button>
+                      </form>
+                    </div>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
 
-          <div className="grid gap-6 sm:grid-cols-3">
-            <div>
-              <p className="text-sm font-medium text-ink">{fieldLabels.specialties}</p>
-              <CheckboxGroupFields
-                groups={SPECIALTY_GROUPS}
-                name="specialties"
-                otherName="specialtiesOther"
-                otherPlaceholder="其他你擅長但沒列出的風格"
-                values={profile.specialties}
-              />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-ink">{fieldLabels.serviceAreas}</p>
-              <CheckboxGroupFields
-                groups={[{ title: "", options: SERVICE_AREA_OPTIONS }]}
-                name="serviceAreas"
-                otherName="serviceAreasOther"
-                otherPlaceholder="其他縣市或線上教學"
-                values={profile.serviceAreas}
-              />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-ink">{fieldLabels.teachingFormats}</p>
-              <CheckboxGroupFields
-                groups={TEACHING_FORMAT_GROUPS}
-                name="teachingFormats"
-                otherName="teachingFormatsOther"
-                otherPlaceholder="其他你提供的授課形式"
-                values={profile.teachingFormats}
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label
-                className="text-sm font-medium text-ink"
-                htmlFor="preferredSessionLengthMinutes"
-              >
-                {fieldLabels.preferredSessionLengthMinutes}（選填）
-              </label>
-              <select
-                className={controlClassName}
-                defaultValue={
-                  typeof profile.preferredSessionLengthMinutes === "number"
-                    ? String(profile.preferredSessionLengthMinutes)
-                    : ""
-                }
-                id="preferredSessionLengthMinutes"
-                name="preferredSessionLengthMinutes"
-              >
-                <option value="">尚未選擇</option>
-                {SESSION_LENGTH_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-ink" htmlFor="preferredFrequency">
-                {fieldLabels.preferredFrequency}（選填）
-              </label>
-              <select
-                className={controlClassName}
-                defaultValue={profile.preferredFrequency ?? ""}
-                id="preferredFrequency"
-                name="preferredFrequency"
-              >
-                <option value="">尚未選擇</option>
-                {FREQUENCY_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-ink" htmlFor="preferredLocationType">
-                {fieldLabels.preferredLocationType}（選填）
-              </label>
-              <select
-                className={controlClassName}
-                defaultValue={profile.preferredLocationType ?? ""}
-                id="preferredLocationType"
-                name="preferredLocationType"
-              >
-                <option value="">尚未選擇</option>
-                {LOCATION_TYPE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-ink" htmlFor="preferenceNotes">
-                {fieldLabels.preferenceNotes}（選填）
-              </label>
-              <textarea
-                className={`${controlClassName} min-h-20`}
-                defaultValue={profile.preferenceNotes ?? ""}
-                id="preferenceNotes"
-                name="preferenceNotes"
-              />
-            </div>
-          </div>
-
-          <button
-            className="w-full rounded-full bg-pine px-4 py-2 text-sm font-medium text-white transition hover:bg-pine-deep sm:w-auto"
-            type="submit"
+        {isApproved ? (
+          <form
+            action={createAvailabilityExceptionAction}
+            className="grid gap-3 border-t border-ink/10 pt-4"
           >
-            儲存變更
-          </button>
-        </form>
-      ) : (
-        <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6 text-sm leading-6">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <ReadOnlyItem label={fieldLabels.displayName} value={profile.displayName ?? "尚未填寫"} />
-            <ReadOnlyItem
-              label={fieldLabels.experienceYears}
-              value={typeof profile.experienceYears === "number" ? `${profile.experienceYears} 年` : "尚未填寫"}
-            />
-            <ReadOnlyItem label={fieldLabels.profilePhotoUrl} value={profile.profilePhotoUrl ?? "尚未填寫"} />
-            <ReadOnlyItem label={fieldLabels.priceRange} value={profile.priceRange ?? "尚未填寫"} />
-          </div>
-          <ReadOnlyItem label={fieldLabels.bio} value={profile.bio ?? "尚未填寫"} />
-          <ReadOnlyItem label={fieldLabels.teachingStyle} value={profile.teachingStyle ?? "尚未填寫"} />
-          <ReadOnlyItem label={fieldLabels.certifications} value={toListDisplay(profile.certifications)} />
-          <div className="grid gap-4 sm:grid-cols-3">
-            <ReadOnlyItem label={fieldLabels.specialties} value={toListDisplay(profile.specialties)} />
-            <ReadOnlyItem label={fieldLabels.serviceAreas} value={toListDisplay(profile.serviceAreas)} />
-            <ReadOnlyItem label={fieldLabels.teachingFormats} value={toListDisplay(profile.teachingFormats)} />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <ReadOnlyItem
-              label={fieldLabels.preferredSessionLengthMinutes}
-              value={
-                typeof profile.preferredSessionLengthMinutes === "number"
-                  ? `${profile.preferredSessionLengthMinutes} 分鐘`
-                  : "尚未填寫"
-              }
-            />
-            <ReadOnlyItem
-              label={fieldLabels.preferredFrequency}
-              value={profile.preferredFrequency ?? "尚未填寫"}
-            />
-            <ReadOnlyItem
-              label={fieldLabels.preferredLocationType}
-              value={profile.preferredLocationType ?? "尚未填寫"}
-            />
-            <ReadOnlyItem
-              label={fieldLabels.preferenceNotes}
-              value={profile.preferenceNotes ?? "尚未填寫"}
-            />
-          </div>
-        </section>
-      )}
-    </div>
-  );
-}
-
-function ReadOnlyItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0">
-      <p className="font-medium text-ink">{label}</p>
-      <p className="mt-1 whitespace-pre-wrap break-words text-ink-soft">{value}</p>
+            <div>
+              <label className="text-sm font-medium text-ink" htmlFor="date">
+                日期
+              </label>
+              <input
+                className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
+                id="date"
+                name="date"
+                required
+                type="date"
+              />
+            </div>
+            <fieldset className="grid gap-2">
+              <legend className="text-sm font-medium text-ink">類型</legend>
+              <label className="flex items-center gap-2 text-sm text-ink-soft">
+                <input defaultChecked name="type" type="radio" value="blocked" />
+                封鎖（這天無法授課）
+              </label>
+              <label className="flex items-center gap-2 text-sm text-ink-soft">
+                <input name="type" type="radio" value="extra_available" />
+                額外開放（原本沒有排班，但這天可以授課）
+              </label>
+            </fieldset>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="text-sm font-medium text-ink" htmlFor="exceptionStartTime">
+                  開始時間（選填，留空代表整天）
+                </label>
+                <TimeField24 ariaLabel="開始時間" id="exceptionStartTime" name="startTime" />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-ink" htmlFor="exceptionEndTime">
+                  結束時間（選填）
+                </label>
+                <TimeField24 ariaLabel="結束時間" id="exceptionEndTime" name="endTime" />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-ink" htmlFor="reason">
+                原因（選填）
+              </label>
+              <textarea
+                className="mt-2 min-h-20 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
+                id="reason"
+                maxLength={500}
+                name="reason"
+                placeholder="例如：請假、臨時加開"
+              />
+            </div>
+            <button
+              className="w-full rounded-full bg-pine px-4 py-2 text-sm font-medium text-white transition hover:bg-pine-deep sm:w-auto"
+              type="submit"
+            >
+              新增例外
+            </button>
+          </form>
+        ) : null}
+      </section>
     </div>
   );
 }

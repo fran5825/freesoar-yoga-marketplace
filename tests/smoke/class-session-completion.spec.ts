@@ -217,7 +217,9 @@ test.describe("class session completion smoke", () => {
     await context.clearCookies();
     await addAuthSessionCookie(context, teacherSessionToken);
     await page.goto("/teacher/classes");
-    await expect(page.getByText("已完成", { exact: true })).toBeVisible();
+    await expect(page.getByText("已完成", { exact: true }).first()).toBeVisible();
+    // 報名名單在單堂課詳情頁（teacher-usability 第 06 票）。
+    await page.goto(`/teacher/classes/${classSessionId}`);
     await expect(page.getByText("已報名會員（1 人）")).toBeVisible();
 
     await context.clearCookies();

@@ -4,16 +4,14 @@ import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { listOwnEnrollmentsForMember } from "@/domain/enrollment/read-service";
 import { requireUser } from "@/lib/auth/session";
 
+import {
+  EnrollmentStatusBadge,
+} from "../_components/EnrollmentStatusBadge";
+
 import { cancelEnrollmentAction, submitReviewAction } from "./actions";
 
 type MemberEnrollmentsPageProps = {
   searchParams?: Promise<{ result?: string; message?: string }>;
-};
-
-const enrollmentStatusLabels: Record<string, string> = {
-  pending: "處理中",
-  confirmed: "已報名",
-  cancelled: "已取消",
 };
 
 export default async function MemberEnrollmentsPage({
@@ -42,10 +40,9 @@ export default async function MemberEnrollmentsPage({
       : null;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-5 py-10 sm:px-8">
+    <div className="flex flex-col gap-8">
       <header className="border-b border-ink/15 pb-6">
-        <p className="text-sm font-medium text-clay">Member</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
+        <h1 className="text-3xl font-semibold tracking-tight text-ink">
           我的報名
         </h1>
       </header>
@@ -81,9 +78,7 @@ export default async function MemberEnrollmentsPage({
                 <h2 className="min-w-0 break-words text-lg font-medium text-ink">
                   {enrollment.classSession.title}
                 </h2>
-                <span className="w-fit rounded-full bg-pine-tint px-3 py-1 text-xs font-medium text-pine">
-                  {enrollmentStatusLabels[enrollment.status] ?? enrollment.status}
-                </span>
+                <EnrollmentStatusBadge status={enrollment.status} />
               </div>
               <p className="text-sm text-ink-soft">
                 {formatTaipeiDatetime(enrollment.classSession.startAt)} 開始・
@@ -200,6 +195,6 @@ export default async function MemberEnrollmentsPage({
           ))}
         </section>
       )}
-    </main>
+    </div>
   );
 }
