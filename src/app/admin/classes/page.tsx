@@ -89,7 +89,7 @@ export default async function AdminClassesPage({ searchParams }: AdminClassesPag
                   key={classSession.id}
                   lines={[
                     `${classSession.teacherDisplayName ?? "老師尚未填寫"}・${
-                      classSession.organizationName ?? "老師自建課程"
+                      classSession.organizationName ?? "（老師自建課程）"
                     }`,
                     `${formatTaipeiDatetime(classSession.startAt)}・已報名 ${classSession.confirmedEnrollmentCount} 人`,
                   ]}

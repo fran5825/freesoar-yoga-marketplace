@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import { cancelDemandRequestForOrganizer } from "../../src/domain/demand-request/__internal__/cancel-demand-request-core";
 import { createClassSessionForOrganizer } from "../../src/domain/class-session/__internal__/create-class-session-core";
 import { validateClassSessionCreate } from "../../src/domain/class-session/validation";
+import { futureDateTime } from "./_helpers/future-dates";
 import {
   selectDemandResponseForOrganizer,
   submitDemandResponseForTeacher,
@@ -39,8 +40,8 @@ const validClassSessionInput = {
   title: "測試課程",
   description: null,
   serviceType: "伸展與身體保養",
-  startAt: "2026-09-01T14:00",
-  endAt: "2026-09-01T15:00",
+  startAt: futureDateTime(30, "14:00"),
+  endAt: futureDateTime(30, "15:00"),
   location: "台北市信義區測試教室",
   capacity: 20,
   isPublic: false,

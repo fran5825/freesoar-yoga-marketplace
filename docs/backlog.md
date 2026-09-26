@@ -22,7 +22,7 @@
 - 2026-09-25 更正：盤點時有部分失敗是連到開發伺服器造成的假失敗（見「小提醒」），重新用 `PORT=3100` 跑後，團主需求 14 支與需求送出的通知測試都通過；真正仍失敗的只剩下面 1c 列的項目。
 - 2026-09-22 盤點：完整測試（電腦版）49 支失敗，其中 36 支是這個日期問題（錯誤訊息「unexpected invalid class session input」或「課程已建立。」找不到）。
 
-- 2026-09-26 進度：`teacher-initiated-open-classes`、`class-session-cancellation`、`class-session-creation`、`enrollment-approval` 已改用 `tests/smoke/_helpers/future-dates.ts`（今天起算 N 天後）。其他 spec 若還有寫死日期，照同樣方式改。
+- 2026-09-26 進度：`teacher-initiated-open-classes`、`class-session-cancellation`、`class-session-creation`、`enrollment-approval`、`demand-request-cancellation` 已改用 `tests/smoke/_helpers/future-dates.ts`（今天起算 N 天後）。其他 spec 若還有寫死日期，照同樣方式改。
 
 ### 1c. 修正沒跟上最近改版的舊測試（2026-09-22 盤點）
 
