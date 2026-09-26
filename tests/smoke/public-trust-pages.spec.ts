@@ -4,27 +4,27 @@ const publicRoutes = [
   {
     path: "/",
     heading: "連結好老師與你的瑜伽團課平台",
-    title: "Free Soar Yoga｜瑜伽團課共創平台",
+    title: "飛索・瑜伽團課共創平台",
   },
   {
     path: "/about",
     heading: "讓自由與覺察，長成有品質的共同練習",
-    title: "關於我們｜Free Soar Yoga",
+    title: "關於我們｜飛索",
   },
   {
     path: "/faq",
     heading: "開始以前，先把重要的事說清楚",
-    title: "常見問題｜Free Soar Yoga",
+    title: "常見問題｜飛索",
   },
   {
     path: "/teachers/join",
-    heading: "與我們一起建立更清楚、更安心的瑜伽團課合作",
-    title: "Free Soar Yoga｜瑜伽團課共創平台",
+    heading: "一起建立清楚、安心的瑜伽團課合作",
+    title: "飛索・瑜伽團課共創平台",
   },
   {
     path: "/organizers/request",
     heading: "為公司社團與社區，找到適合的瑜伽老師",
-    title: "Free Soar Yoga｜瑜伽團課共創平台",
+    title: "飛索・瑜伽團課共創平台",
   },
 ] as const;
 

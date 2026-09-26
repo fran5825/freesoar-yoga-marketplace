@@ -28,7 +28,7 @@ test.describe("public brand foundation", () => {
   test("home exposes the approved public entry points and metadata", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page).toHaveTitle("Free Soar Yoga｜瑜伽團課共創平台");
+    await expect(page).toHaveTitle("飛索・瑜伽團課共創平台");
     await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /品牌導向的瑜伽團課 marketplace/);
     await expect(page.getByRole("link", { name: "了解老師加入" })).toHaveAttribute("href", "/teachers/join");
     await expect(page.getByRole("link", { name: "我想發起團課 →" })).toHaveAttribute("href", "/organizers/request");

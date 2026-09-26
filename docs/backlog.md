@@ -27,7 +27,7 @@
 ### 1c. 修正沒跟上最近改版的舊測試（2026-09-22 盤點）
 
 跟 1b 不同，這些是畫面改了、測試沒跟著改：
-- 網頁標題（`public-trust-pages`、`public-brand-pages`，6 支）：測試還在比對「Free Soar Yoga｜…」，但 2026-09-21 已改自稱「飛索」。
+- 網頁標題（`public-trust-pages`、`public-brand-pages`）：**已修（2026-09-26）**，測試改比對「飛索」標題與 `/teachers/join` 新標題，共 28 支通過。（原本：測試還在比對「Free Soar Yoga｜…」，但 2026-09-21 已改自稱「飛索」。）
 - 老師申請表單改版（`teacher-join` 3 支、`teacher-profile-edit`、`teacher-profile-suspension`、`admin-teachers`、`notification` 的老師送審那段）：測試還在找舊的欄位名稱（例如「擅長類型（可用逗號或換行分隔）」）、舊的標題文字，以及狀態列改成上下兩個之後會出現兩次的按鈕（要加 `.first()`）。
 - 團主需求表單那一組已在 2026-09-22 修好，可以參考它的改法。
 
