@@ -2,6 +2,21 @@
 
 給接手的 Claude：先讀這份，再讀 `AGENTS.md`、`docs/backlog.md`，然後跑 `git log --oneline -10` 跟 `git status` 看最近的改動跟有沒有還沒 commit 的東西。以 git 紀錄為準，這份只是導讀。這份取代 2026-09-19 那個版本。
 
+## 2026-09-26 更新：管理員後台流程整理（最新，先看這段）
+
+- 依 `docs/admin-usability-plan.md` 做完票 01–10（票券在 `docs/superpowers/plans/admin-usability/tickets/`），**全部尚未 commit**，等使用者看過畫面。含：後台共用外框（中文導覽列、`max-w-4xl`）、導覽列「目前身分」角色切換（四個專區共用）、總覽「待你處理」、老師與需求審核改成「列表（篩選列＋卡片）→ 詳情頁」、暫停老師／取消課程／取消報名的確認視窗、退回原因範本、課程詳情頁顯示團主／老師／團體的聯絡方式。
+- **`/account` 頁面已移除**（產品主人決定）：登入後預設導向 `/member/dashboard`；公開網站頂端「我的帳戶」改為「我的專區」；新使用者靠導覽列選單底部的「＋ 成為團主／老師」進入申請。老師端「＋ 建立課程」、團主端「＋ 發起新需求」改放各自列表最底下。
+- 新增的管理員讀取：`getTeacherProfileForAdmin`、`getDemandRequestForAdmin`、`listDemandRequestsForAdmin`、`listAdminPendingItems`，都有 `requireAdmin()`；草稿一律不可見。**沒有動資料庫結構、狀態機、權限規則。**
+- 待辦：退回原因範本文字待 Franz 確認；測試資料污染開發資料庫等後續事項見 `docs/backlog.md` 第 13a–13d。
+- 跑測試仍用 `PORT=3100`。`public-trust-pages` 有 10 支因網頁標題還在比對舊名稱而失敗（backlog 1c 既有問題，與這次無關）。
+
+## 2026-09-26 更新：老師流程整理（先看這段）
+
+- 老師流程依 `docs/teacher-usability-plan.md` 做完票 01–10（票券在 `docs/superpowers/plans/teacher-usability/tickets/`），**全部尚未 commit**，等使用者看過畫面。含：老師頁版面統一、申請表單缺項提示與參考寫法、審核中唯讀摘要、被退回說明置頂、已通過老師按「老師合作」直接進總覽、單堂課詳情頁與列表整張可點、建課後導向詳情頁並帶入上次設定、總覽「待你處理」。
+- 過程中產品主人追加（見計畫文件決策 12–14）：服務地區只能勾選；建課切換分頁保留資料；時間改 24 小時制（含可授課時間頁）；課程類型改名「課程風格」可多選；新增必填「瑜伽類型」；常規課程可選起始日期；固定期改用日期選擇器。**有兩個 migration**（`class_yoga_styles`、`class_service_types_multi`），已套用在本機開發資料庫，`docs/domain/data-model.md` 已更新。
+- 導覽列（團主、老師共用）改成兩列，避免中文連結被擠成一字一行。
+- 下一個工作：管理員後台流程整理（`docs/backlog.md` 第 13 項），需先用 grill 方式討論再動工。
+
 ## 2026-09-25 更新（先看這段）
 
 - 團主流程與排版整理已依 `docs/organizer-usability-plan.md` 一次做完（票券在 `docs/superpowers/plans/organizer-usability/tickets/`），**全部尚未 commit**，等使用者看過畫面。含：團主專用導覽列與統一頁寬、入口路徑（已是團主按「發起團課」直接進新需求）、`/account` 入口中心、一頁式團主註冊、資料頁單一儲存、需求表單頂端聯絡提醒、詳情頁下一步、總覽待你處理、需求列表篩選、通知連結。

@@ -313,53 +313,50 @@ test.describe("teacher profile suspension smoke", () => {
     const teacher = await seedTeacher(testRunId, "a", "approved");
 
     await addAuthSessionCookie(context, adminSessionToken);
-    await page.goto("/admin/teachers");
+    await page.goto(`/admin/teachers/${teacher.teacherProfileId}`);
+    await expect(
+      page.getByRole("heading", { level: 1, name: `Teacher a ${testRunId}` }),
+    ).toBeVisible();
 
-    const approvedCard = page.getByRole("article").filter({
-      has: page.getByRole("heading", { name: `Teacher a ${testRunId}` }),
-    });
-    await expect(approvedCard).toBeVisible();
-    // teacher-profile-edit 一輪在同一張卡片上新增了「View profile details」這個
-    // 第二個 <summary>，這裡要精準點「Suspend…」，不能再用泛用的 summary 選擇器。
-    await approvedCard.getByText("Suspend…").click();
-
-    // D1: reason required — native required blocks empty submit, card stays in Approved.
-    await approvedCard.getByRole("button", { name: "確認暫停" }).click();
-    await expect(approvedCard).toBeVisible();
+    // D1: reason required — native required blocks the dialog from opening, page stays put.
+    await page.getByRole("button", { name: "暫停這位老師" }).click();
+    const dialog = page.getByRole("dialog", { name: `確定要暫停 Teacher a ${testRunId} 嗎？` });
+    await expect(dialog).toBeHidden();
 
     const reason = "近期收到多筆課程品質相關反映，需要先暫停接受新需求。";
-    await approvedCard.getByLabel("暫停原因").fill(reason);
-    await approvedCard.getByRole("checkbox", { name: /我確認要暫停這位老師/ }).check();
-    await approvedCard.getByRole("button", { name: "確認暫停" }).click();
+    await page.getByLabel("暫停原因").fill(reason);
+    await page.getByRole("button", { name: "暫停這位老師" }).click();
+    // 確認視窗：先按「返回」不會暫停，再按一次並確認才送出。
+    await dialog.getByRole("button", { name: "返回" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByText("這位老師已經暫停。")).toBeHidden();
+    await page.getByRole("button", { name: "暫停這位老師" }).click();
+    await dialog.getByRole("button", { name: "確認暫停" }).click();
 
     await expect(page.getByText("這位老師已經暫停。")).toBeVisible();
 
-    const suspendedCard = page.getByRole("article").filter({
-      has: page.getByRole("heading", { name: `Teacher a ${testRunId}` }),
-    });
-    await expect(suspendedCard.getByText(reason)).toBeVisible();
+    // 暫停後，詳情頁顯示暫停原因與「恢復」，不再有暫停按鈕。
+    await page.goto(`/admin/teachers/${teacher.teacherProfileId}`);
+    await expect(page.getByText(reason)).toBeVisible();
+    await expect(page.getByRole("button", { name: "暫停這位老師" })).toHaveCount(0);
 
     await context.clearCookies();
     await addAuthSessionCookie(context, teacher.sessionToken);
     await page.goto("/teacher/dashboard");
-    await expect(page.getByText("Suspended", { exact: true })).toBeVisible();
+    await expect(page.getByText("已暫停", { exact: true }).first()).toBeVisible();
     await expect(page.getByText(reason)).toBeVisible();
 
     await context.clearCookies();
     await addAuthSessionCookie(context, adminSessionToken);
-    await page.goto("/admin/teachers");
-    const suspendedCardAgain = page.getByRole("article").filter({
-      has: page.getByRole("heading", { name: `Teacher a ${testRunId}` }),
-    });
-    await suspendedCardAgain.getByRole("checkbox", { name: "我確認要恢復這位老師。" }).check();
-    await suspendedCardAgain.getByRole("button", { name: "Restore" }).click();
+    await page.goto(`/admin/teachers/${teacher.teacherProfileId}`);
+    await page.getByRole("button", { name: "恢復這位老師" }).click();
 
     await expect(page.getByText("這位老師已經恢復。")).toBeVisible();
 
     await context.clearCookies();
     await addAuthSessionCookie(context, teacher.sessionToken);
     await page.goto("/teacher/dashboard");
-    await expect(page.getByText("Approved", { exact: true })).toBeVisible();
+    await expect(page.getByText("已核准", { exact: true }).first()).toBeVisible();
     await expect(page.getByText(reason)).toBeHidden();
   });
 

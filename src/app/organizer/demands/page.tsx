@@ -178,6 +178,13 @@ export default async function OrganizerDemandsPage({
               })}
             </section>
           )}
+
+          <Link
+            className="rounded-2xl border border-dashed border-pine/40 p-5 text-center text-sm font-medium text-pine transition hover:bg-pine-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+            href="/organizer/demands/new"
+          >
+            ＋ 發起新需求
+          </Link>
         </>
       )}
     </div>

@@ -264,6 +264,77 @@ test.describe("admin class session management smoke", () => {
   // D6/D7: full UI E2E flow — admin sees the list, cancels a single enrollment, then
   // cancels the whole class session, and both notifications land with neutral-voice copy
   // (D4.1: not falsely claiming "you cancelled this" when Admin did it).
+  test("filters the class list by status with the shared filter bar, and cards link to the detail page", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-filter-${Date.now()}`,
+    );
+    const openRunId = `${testRunId}-open`;
+    const cancelledRunId = `${testRunId}-cancelled`;
+    const openSession = await seedClassSession({
+      testRunId: openRunId,
+      status: "open_for_enrollment",
+      startAtOffsetMs: 3600_000,
+    });
+    await seedClassSession({
+      testRunId: cancelledRunId,
+      status: "cancelled",
+      startAtOffsetMs: 7200_000,
+    });
+
+    const adminEmail = `admin-${testRunId}@${testEmailDomain}`;
+    createdEmails.push(adminEmail);
+    const { sessionToken } = await createUserSession({ email: adminEmail, isAdmin: true });
+    await addAuthSessionCookie(context, sessionToken);
+
+    // 預設「全部」：兩筆都在。
+    await page.goto("/admin/classes");
+    await expect(page.getByText(`Class ${openRunId}`)).toBeVisible();
+    await expect(page.getByText(`Class ${cancelledRunId}`)).toBeVisible();
+
+    await page.goto("/admin/classes?status=cancelled");
+    await expect(
+      page.getByRole("link", { name: /已取消・\d+/ }),
+    ).toHaveAttribute("aria-current", "page");
+    await expect(page.getByText(`Class ${cancelledRunId}`)).toBeVisible();
+    await expect(page.getByText(`Class ${openRunId}`)).toHaveCount(0);
+
+    // 網址亂填時退回「全部」。
+    await page.goto("/admin/classes?status=nonsense");
+    await expect(page.getByRole("link", { name: /全部・\d+/ })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+
+    // 整張卡片可點，進到詳情頁。
+    await page.goto("/admin/classes?status=open");
+    await page.getByRole("link", { name: new RegExp(`Class ${openRunId}`) }).click();
+    await expect(page).toHaveURL(new RegExp(`/admin/classes/${openSession.classSessionId}$`));
+    await expect(page.getByRole("link", { name: "← 回課程列表" })).toHaveAttribute(
+      "href",
+      "/admin/classes",
+    );
+  });
+
+  test("shows the shared result banner on the class list when redirected with a message", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-flash-${Date.now()}`,
+    );
+    const adminEmail = `admin-${testRunId}@${testEmailDomain}`;
+    createdEmails.push(adminEmail);
+    const { sessionToken } = await createUserSession({ email: adminEmail, isAdmin: true });
+    await addAuthSessionCookie(context, sessionToken);
+
+    await page.goto(`/admin/classes?result=success&message=${encodeURIComponent("課程已取消。")}`);
+
+    await expect(page.getByText("課程已取消。")).toBeVisible();
+  });
+
   test("lets an admin cancel a single enrollment, then cancel the whole class session, through the UI", async ({
     context,
     page,
@@ -293,24 +364,37 @@ test.describe("admin class session management smoke", () => {
     await page.goto(`/admin/classes/${seeded.classSessionId}`);
     await expect(page.getByText("報名名單（2 人）")).toBeVisible();
 
-    await page
-      .locator("li", { hasText: `member-e2e-a-${testRunId}` })
-      .getByText("取消這筆報名…")
-      .click();
-    await page
-      .locator("li", { hasText: `member-e2e-a-${testRunId}` })
-      .getByRole("checkbox")
-      .check();
-    await page
-      .locator("li", { hasText: `member-e2e-a-${testRunId}` })
-      .getByRole("button", { name: "確認取消" })
-      .click();
+    // 團主、老師、團體要看得出「是誰」：名稱之外還有聯絡方式。
+    await expect(page.getByText(`organizer-${testRunId}@${testEmailDomain}`)).toBeVisible();
+    await expect(page.getByText(`teacher-${testRunId}@${testEmailDomain}`)).toBeVisible();
+    await expect(page.getByText("公司", { exact: true })).toBeVisible();
+
+    const rowA = page.locator("li", { hasText: `member-e2e-a-${testRunId}` });
+
+    // 確認視窗：按「返回」或 Esc 都不會取消；按「確認」才會送出。
+    await rowA.getByRole("button", { name: "取消這筆報名" }).click();
+    const dialog = page.getByRole("dialog", { name: "確定要取消這筆報名嗎？" });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "返回" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByText("報名名單（2 人）")).toBeVisible();
+
+    await rowA.getByRole("button", { name: "取消這筆報名" }).click();
+    await expect(dialog).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(page.getByText("報名名單（2 人）")).toBeVisible();
+
+    await rowA.getByRole("button", { name: "取消這筆報名" }).click();
+    await dialog.getByRole("button", { name: "確認取消報名" }).click();
 
     await expect(page.getByText("報名已取消。")).toBeVisible();
 
-    await page.getByText("取消課程…").click();
-    await page.getByRole("checkbox", { name: /我確認要取消這堂課程/ }).check();
-    await page.getByRole("button", { name: "確認取消課程" }).click();
+    await page.getByRole("button", { name: "取消課程", exact: true }).click();
+    await page
+      .getByRole("dialog", { name: "確定要取消這堂課程嗎？" })
+      .getByRole("button", { name: "確認取消課程" })
+      .click();
 
     await expect(page.getByText("課程已取消。")).toBeVisible();
     await expect(page.getByText("已取消", { exact: true }).first()).toBeVisible();

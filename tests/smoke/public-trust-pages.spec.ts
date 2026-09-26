@@ -55,7 +55,7 @@ test.describe("public trust pages", () => {
       await expect(page.locator("header").getByRole("link", { name: "老師合作" })).toHaveAttribute("href", "/teachers/join");
       await expect(page.locator("header").getByRole("link", { name: "關於飛索" })).toHaveAttribute("href", "/about");
       await expect(page.locator("header").getByRole("link", { name: "登入" })).toHaveAttribute("href", "/sign-in");
-      await expect(page.locator("header").getByRole("link", { name: "我的帳戶" })).toHaveAttribute("href", "/account");
+      await expect(page.locator("header").getByRole("link", { name: "我的專區" })).toHaveAttribute("href", "/member/dashboard");
       await expect(page.locator("footer").getByRole("link", { name: "關於我們" })).toHaveAttribute("href", "/about");
       await expect(page.locator("footer").getByRole("link", { name: "常見問題" })).toHaveAttribute("href", "/faq");
       await expect(page.locator("footer").getByRole("link", { name: "登入" })).toHaveAttribute("href", "/sign-in");

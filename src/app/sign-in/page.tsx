@@ -12,7 +12,7 @@ type SignInPageProps = {
 
 export default async function SignInPage({ searchParams }: SignInPageProps) {
   const [session, resolvedSearchParams] = await Promise.all([auth(), searchParams]);
-  const callbackUrl = sanitizeCallbackUrl(resolvedSearchParams?.callbackUrl) ?? "/account";
+  const callbackUrl = sanitizeCallbackUrl(resolvedSearchParams?.callbackUrl) ?? "/member/dashboard";
 
   return (
     <div className="flex min-h-screen flex-col bg-cream text-ink">
@@ -33,9 +33,9 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <Link
                 className="rounded-full bg-pine px-6 py-3 text-center font-medium text-white transition hover:bg-pine-deep"
-                href="/account"
+                href="/member/dashboard"
               >
-                前往我的帳戶
+                前往我的總覽
               </Link>
 
               <form

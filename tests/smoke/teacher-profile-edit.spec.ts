@@ -1,6 +1,7 @@
 import type { TeacherProfileStatus } from "@prisma/client";
 import { expect, test } from "@playwright/test";
 
+import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { validateTeacherProfileSubmit } from "@/domain/teacher-profile/validation";
 
 import {
@@ -49,7 +50,7 @@ test.describe("teacher profile edit domain validation (direct, no UI)", () => {
 
 test.describe("teacher profile edit smoke", () => {
   test("redirects unauthenticated users to sign in", async ({ page }) => {
-    await page.goto("/teacher/profile", { waitUntil: "commit" });
+    await page.goto("/teacher/profile/info", { waitUntil: "commit" });
 
     await expect(page).toHaveURL(/\/sign-in/);
   });
@@ -94,7 +95,7 @@ test.describe("teacher profile edit smoke", () => {
       }
 
       await addAuthSessionCookie(context, sessionToken);
-      await page.goto("/teacher/profile");
+      await page.goto("/teacher/profile/info");
 
       await expect(page.getByRole("heading", { name: expectedTitle })).toBeVisible();
       await expect(
@@ -118,10 +119,11 @@ test.describe("teacher profile edit smoke", () => {
       email,
       displayName: `Teacher ${testRunId}`,
       status: "approved",
+      serviceAreas: ["台北市"],
     });
 
     await addAuthSessionCookie(context, sessionToken);
-    await page.goto("/teacher/profile");
+    await page.goto("/teacher/profile/info");
 
     // 目前仍是 approved：編輯表單存在。
     await expect(page.getByRole("button", { name: "儲存變更" })).toBeVisible();
@@ -145,7 +147,7 @@ test.describe("teacher profile edit smoke", () => {
     expect(stillOriginal.bio).toBe(`Teacher ${testRunId} bio`); // createTeacherProfileWithSession 的既有預設值，沒有被改動。
 
     // 重新整理（此時真的是 suspended）：唯讀顯示既有資料，沒有表單。
-    await page.goto("/teacher/profile");
+    await page.goto("/teacher/profile/info");
 
     await expect(
       page.getByText("帳號目前暫停中，暫時無法編輯個人資料，但你仍然可以查看既有資料。"),
@@ -168,12 +170,13 @@ test.describe("teacher profile edit smoke", () => {
       email,
       displayName: `Teacher ${testRunId}`,
       status: "approved",
+      serviceAreas: ["台北市"],
     });
 
     const notificationCountBefore = await prisma.notification.count({ where: { userId } });
 
     await addAuthSessionCookie(context, sessionToken);
-    await page.goto("/teacher/profile");
+    await page.goto("/teacher/profile/info");
 
     // 必填欄位留空——繞過瀏覽器原生 required，證明伺服器端才是權威。
     const displayNameInput = page.getByLabel("公開顯示名稱");
@@ -193,7 +196,9 @@ test.describe("teacher profile edit smoke", () => {
     // 成功編輯：修改多個欄位。
     await page.getByLabel("公開顯示名稱").fill(`Teacher ${testRunId} Updated`);
     await page.getByLabel("老師簡介").fill("Updated bio content.");
-    await page.getByLabel("擅長類型（可用逗號或換行分隔）").fill("Yin Yoga\nStretch Yoga");
+    // 擅長類型改成標籤選擇：點選一個既有選項，再用「其他」欄位補一個自訂的。
+    await page.getByText("陰瑜珈", { exact: true }).click();
+    await page.locator('input[name="specialtiesOther"]').fill("Stretch Yoga");
     await page.getByLabel("證照或訓練背景（選填，可用逗號或換行分隔）").fill("RYT 500");
     await page.getByRole("button", { name: "儲存變更" }).click();
 
@@ -204,12 +209,40 @@ test.describe("teacher profile edit smoke", () => {
     });
     expect(updated.displayName).toBe(`Teacher ${testRunId} Updated`);
     expect(updated.bio).toBe("Updated bio content.");
-    expect(updated.specialties).toEqual(["Yin Yoga", "Stretch Yoga"]);
+    expect(updated.specialties).toEqual(["陰瑜珈", "Stretch Yoga"]);
     expect(updated.certifications).toEqual(["RYT 500"]);
     expect(updated.status).toBe("approved"); // D3：編輯不改變 status。
 
     const notificationCountAfter = await prisma.notification.count({ where: { userId } });
     expect(notificationCountAfter).toBe(notificationCountBefore); // D7：不觸發任何 notification。
+  });
+
+  test("service areas are choose-only on the profile page; a free-text legacy value is flagged, not kept", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-legacy-area-${Date.now()}`,
+    );
+    const email = `teacher-${testRunId}@${testEmailDomain}`;
+    createdEmails.push(email);
+
+    const { sessionToken } = await createTeacherProfileWithSession({
+      email,
+      displayName: `Teacher ${testRunId}`,
+      status: "approved",
+      serviceAreas: ["ddde"],
+    });
+
+    await addAuthSessionCookie(context, sessionToken);
+    await page.goto("/teacher/profile/info");
+
+    await expect(page.locator('input[name="serviceAreasOther"]')).toHaveCount(0);
+    // 擅長類型仍保留「其他」輸入框。
+    await expect(page.locator('input[name="specialtiesOther"]')).toHaveCount(1);
+    await expect(
+      page.getByText("你先前填寫的「ddde」不在選項內，儲存後不會保留"),
+    ).toBeVisible();
   });
 
   test("shows updatedAt and full profile content on /admin/teachers for approved teachers, reflecting the latest edit", async ({
@@ -242,21 +275,10 @@ test.describe("teacher profile edit smoke", () => {
     });
 
     await addAuthSessionCookie(context, adminSessionToken);
-    await page.goto("/admin/teachers");
+    // 票 06：老師完整資料與最後更新時間都在詳情頁。
+    await page.goto(`/admin/teachers/${teacherProfileId}`);
 
-    const teacherCard = page.locator("article", { hasText: `Teacher ${testRunId}` });
-    await expect(teacherCard.getByText("Edited bio for admin visibility check.")).toBeHidden();
-
-    await teacherCard.getByText("View profile details").click();
-
-    await expect(
-      teacherCard.getByText("Edited bio for admin visibility check."),
-    ).toBeVisible();
-
-    const expectedTimestampFragment = new Intl.DateTimeFormat("zh-TW", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(updated.updatedAt);
-    await expect(teacherCard.getByText(`Last updated: ${expectedTimestampFragment}`)).toBeVisible();
+    await expect(page.getByText("Edited bio for admin visibility check.")).toBeVisible();
+    await expect(page.getByText(`（${formatTaipeiDatetime(updated.updatedAt)}）`)).toBeVisible();
   });
 });

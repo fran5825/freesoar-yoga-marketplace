@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { listOwnClassSessionsForTeacher } from "@/domain/class-session/read-service";
+import {
+  buildTeacherTodoItems,
+  type TeacherTodoItem,
+} from "@/domain/class-session/teacher-next-step";
+import { listOwnSelectedResponsesAwaitingClass } from "@/domain/demand-response/service";
 import { getOwnTeacherProfileApplicationSnapshot } from "@/domain/teacher-profile/service";
 import type { TeacherProfileStatus } from "@/domain/teacher-profile/state";
 import { requireUser } from "@/lib/auth/session";
@@ -44,7 +50,7 @@ const statusCopy: Record<TeacherProfileStatus, DashboardStatusCopy> = {
     title: "你的老師資料已通過審核",
     body: "你已經可以在平台上瀏覽並回應團體需求、查看已建立的課程、管理你的可授課時間，並編輯你的老師個人資料。",
     actionLabel: "編輯我的資料",
-    actionHref: "/teacher/profile",
+    actionHref: "/teacher/profile/info",
     tone: "emerald",
   },
   suspended: {
@@ -52,7 +58,7 @@ const statusCopy: Record<TeacherProfileStatus, DashboardStatusCopy> = {
     title: "你的老師狀態目前暫停中",
     body: "此狀態下不會公開顯示，也不能回應新的團課需求。若需要協助，請聯絡平台管理者。",
     actionLabel: "查看目前資料",
-    actionHref: "/teacher/profile",
+    actionHref: "/teacher/profile/info",
     tone: "gray",
   },
 };
@@ -76,27 +82,76 @@ export default async function TeacherDashboardPage() {
     ? { profile, copy: statusCopy[profile.status] }
     : null;
 
+  // teacher-usability 第 08、09 票：通過審核（或暫停中，仍可查看自己既有的課）才有課程可處理；
+  // 還沒通過審核時只顯示申請狀態，不顯示「待你處理」。
+  const hasClassCapability =
+    profile?.status === "approved" || profile?.status === "suspended";
+  const todoItems: TeacherTodoItem[] = hasClassCapability
+    ? buildTeacherTodoItems({
+        classSessions: await listOwnClassSessionsForTeacher(),
+        selectedResponsesAwaitingClass: await listOwnSelectedResponsesAwaitingClass(),
+      })
+    : [];
+
   return (
     <div className="flex flex-col gap-8">
       <header className="grid gap-4 border-b border-ink/15 pb-6">
-        <p className="text-sm font-medium text-clay">老師專區</p>
-        <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+        <div className="grid gap-3">
           <div className="min-w-0">
             <h1 className="text-3xl font-semibold tracking-tight text-ink">
               老師總覽
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
-              這裡顯示你的老師申請目前狀態與下一步。
+              {hasClassCapability
+                ? "最上方是需要你處理的事，下面是你的老師資料狀態。"
+                : "這裡顯示你的老師申請目前狀態與下一步。"}
             </p>
           </div>
-          <Link
-            className="rounded-full border border-ink/25 px-4 py-2 text-center text-sm font-medium text-ink transition hover:bg-cream"
-            href="/account"
-          >
-            我的帳戶
-          </Link>
         </div>
       </header>
+
+      {hasClassCapability ? (
+        <section
+          aria-labelledby="todo-title"
+          className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6"
+        >
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-lg font-medium text-ink" id="todo-title">
+              待你處理
+            </h2>
+            <Link className="text-sm font-medium text-clay hover:underline" href="/teacher/classes">
+              看全部課程 →
+            </Link>
+          </div>
+          {todoItems.length === 0 ? (
+            <p className="text-sm leading-6 text-ink-soft">目前沒有待處理事項。</p>
+          ) : (
+            <ul className="grid gap-3">
+              {todoItems.map((item) => (
+                <li key={`${item.href}-${item.label}`}>
+                  <Link
+                    className={`grid gap-1 rounded-2xl border p-4 transition hover:bg-sand ${
+                      item.kind === "action"
+                        ? "border-clay/30 bg-clay-tint"
+                        : "border-amber-200 bg-amber-50"
+                    }`}
+                    href={item.href}
+                  >
+                    <span
+                      className={`text-sm font-medium ${
+                        item.kind === "action" ? "text-clay-deep" : "text-amber-900"
+                      }`}
+                    >
+                      {item.label}
+                    </span>
+                    <span className="text-sm leading-6 text-ink-soft">{item.message}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : null}
 
       {profileStatus ? (
         <section className="grid gap-6 rounded-2xl border border-ink/15 bg-white p-6">
@@ -182,7 +237,7 @@ export default async function TeacherDashboardPage() {
             profileStatus.profile.status === "suspended" ? (
               <Link
                 className="rounded-full border border-ink/25 px-5 py-3 text-center text-sm font-medium text-ink transition hover:bg-cream"
-                href="/teacher/availability"
+                href="/teacher/profile"
               >
                 管理可授課時間
               </Link>

@@ -22,6 +22,8 @@
 - 2026-09-25 更正：盤點時有部分失敗是連到開發伺服器造成的假失敗（見「小提醒」），重新用 `PORT=3100` 跑後，團主需求 14 支與需求送出的通知測試都通過；真正仍失敗的只剩下面 1c 列的項目。
 - 2026-09-22 盤點：完整測試（電腦版）49 支失敗，其中 36 支是這個日期問題（錯誤訊息「unexpected invalid class session input」或「課程已建立。」找不到）。
 
+- 2026-09-26 進度：`teacher-initiated-open-classes`、`class-session-cancellation`、`class-session-creation`、`enrollment-approval` 已改用 `tests/smoke/_helpers/future-dates.ts`（今天起算 N 天後）。其他 spec 若還有寫死日期，照同樣方式改。
+
 ### 1c. 修正沒跟上最近改版的舊測試（2026-09-22 盤點）
 
 跟 1b 不同，這些是畫面改了、測試沒跟著改：
@@ -71,7 +73,7 @@
 - 做法方向（沿用 `docs/organizer-flow-redesign-plan.md` 決策一）：`Organization` 新增 `organizerProfileId`、`OrganizerProfile` 移除 `organizationId`；開需求第一格改成「選組織／＋新增組織」；新組織不用審核。
 - 需要先取得明確確認（動 Prisma schema、需更新 `docs/domain/data-model.md`）；前一次整理時，畫面要預留之後加「組織切換」的位置，避免重做。
 
-### 9. 老師端的身分狀態路徑（2026-09-25）
+### 9. 老師端的身分狀態路徑（2026-09-25，已併入 `docs/teacher-usability-plan.md` 決策 11／第 10 票）
 
 - 現況：已有老師身分的人按 header「老師合作」，看到的仍是申請表單（`/teachers/join`），沒有導向 `/teacher/dashboard`。
 - 做法方向：比照團主，已有老師身分 → redirect 到老師總覽；沒有則維持申請流程。連同老師申請中／審核中／被退回等狀態該走哪，需另外規劃。
@@ -96,6 +98,28 @@
 
 - 背景：需求的服務類型已改多選（`serviceTypes`），舊的單一 `serviceType` 暫時保留為「主要類型」（存第一個選項），供課程建立表單預設帶入。
 - 做法：確認沒有程式再讀 `DemandRequest.serviceType` 後（課程建立預設值改讀 `serviceTypes[0]`），另開 migration 移除欄位。會動 Prisma schema，需先取得確認。
+
+### 13. 管理員後台流程整理（已完成 2026-09-26，待 Franz 看畫面）
+
+- 依 `docs/admin-usability-plan.md` 做完票 01–10（票券在 `docs/superpowers/plans/admin-usability/tickets/`）：共用後台外框與中文導覽列、角色切換、總覽「待你處理」、老師與需求審核改成「列表 → 詳情」、危險操作確認視窗、退回原因範本、課程／團體頁統一。
+- **順帶決定：** `/account`（我的帳戶）頁面已移除，身分切換與「＋ 成為團主／老師」改放在導覽列的「目前身分」選單；老師端「＋ 建立課程」、團主端「＋ 發起新需求」改放各自列表最底下。
+- 管理員入口太隱密的問題已解決：管理員本人在角色切換選單看得到「管理後台」，其他人看不到。
+
+#### 13a. 退回原因範本文字待確認
+
+- 6 句範本草稿在 `src/app/admin/_components/reason-templates.ts`（老師、需求各 3 句），等 Franz 確認或修改。
+
+#### 13b. 測試資料污染開發資料庫
+
+- 自動測試建立的假資料（例如「Organizer chromium-mobile-6-cascade-…」）留在你看畫面的同一個資料庫，管理員頁會看到。做法方向：測試改用獨立資料庫，或補上每支測試的清理；先確認哪些測試沒清乾淨。
+
+#### 13c. 提示訊息用網址帶入（低風險）
+
+- 各 admin 頁的成功／失敗提示是用網址參數 `?result=&message=` 帶入（既有做法）。React 會跳脫文字，不會執行內容，但別人可以做出帶假訊息的連結。做法方向：改成一次性的提示（cookie 或 server 端暫存）。
+
+#### 13d. 管理員看不到「已退回的老師申請」與草稿
+
+- 老師列表只涵蓋待審、已通過、已暫停；已退回的申請只能用網址進詳情頁。需要時可加「已退回」分頁（只是讀取，不動資料結構）。
 
 ### 4. 新增 LINE 與 Facebook 登入
 

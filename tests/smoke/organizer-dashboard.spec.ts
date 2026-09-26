@@ -101,9 +101,6 @@ test.describe("/organizer dashboard smoke", () => {
     await expect(
       page.getByRole("link", { name: "查看全部需求" }),
     ).toHaveAttribute("href", "/organizer/demands");
-    await expect(
-      page.getByRole("banner").getByRole("link", { name: "發起新需求", includeHidden: true }),
-    ).toHaveAttribute("href", "/organizer/demands/new");
   });
 
   test("shows non-zero status counts and the most recently updated 5 demand requests, each linking to its detail page", async ({
@@ -175,9 +172,6 @@ test.describe("/organizer dashboard smoke", () => {
     await expect(
       page.getByRole("link", { name: "查看全部需求" }),
     ).toHaveAttribute("href", "/organizer/demands");
-    await expect(
-      page.getByRole("banner").getByRole("link", { name: "發起新需求", includeHidden: true }),
-    ).toHaveAttribute("href", "/organizer/demands/new");
     await expectNoHorizontalOverflow(page);
   });
 

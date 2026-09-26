@@ -8,64 +8,58 @@ import { requireAdmin } from "@/lib/auth/session";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-export async function publishDemandRequestAction(
-  formData: FormData,
-): Promise<void> {
+// admin-usability 票 07：審核完成後回到需求列表（預設停在「待審」），列表頂端顯示成功提示；
+// 失敗則留在這筆需求的詳情頁顯示原因，管理員不用重找。
+function redirectToList(result: "success" | "error", message: string): never {
+  redirect(`/admin/demands?result=${result}&message=${encodeURIComponent(message)}`);
+}
+
+function redirectToDetail(demandRequestId: string, message: string): never {
+  redirect(
+    `/admin/demands/${encodeURIComponent(demandRequestId)}?result=error&message=${encodeURIComponent(message)}`,
+  );
+}
+
+async function readDemandRequestId(formData: FormData): Promise<string> {
   try {
     await requireAdmin();
   } catch {
-    redirect(
-      "/admin/demands?result=error&message=Admin%20permission%20is%20required.",
-    );
+    redirectToList("error", "需要管理員權限才能執行這個操作。");
   }
 
   const demandRequestId = formData.get("demandRequestId");
 
   if (typeof demandRequestId !== "string" || demandRequestId.length === 0) {
-    redirect(
-      "/admin/demands?result=error&message=Demand%20request%20is%20missing.",
-    );
+    redirectToList("error", "找不到這筆需求。");
   }
+
+  return demandRequestId;
+}
+
+export async function publishDemandRequestAction(
+  formData: FormData,
+): Promise<void> {
+  const demandRequestId = await readDemandRequestId(formData);
 
   const result = await publishSubmittedDemandRequest(demandRequestId);
 
   revalidatePath("/admin/demands");
 
   if (!result.ok) {
-    redirect(
-      `/admin/demands?result=error&message=${encodeURIComponent(result.message)}`,
-    );
+    redirectToDetail(demandRequestId, result.message);
   }
 
-  redirect(
-    `/admin/demands?result=success&message=${encodeURIComponent("需求已公開。")}`,
-  );
+  redirectToList("success", "需求已公開。");
 }
 
 export async function rejectDemandRequestAction(
   formData: FormData,
 ): Promise<void> {
-  try {
-    await requireAdmin();
-  } catch {
-    redirect(
-      "/admin/demands?result=error&message=Admin%20permission%20is%20required.",
-    );
-  }
+  const demandRequestId = await readDemandRequestId(formData);
 
-  const demandRequestId = formData.get("demandRequestId");
-
-  if (typeof demandRequestId !== "string" || demandRequestId.length === 0) {
-    redirect(
-      "/admin/demands?result=error&message=Demand%20request%20is%20missing.",
-    );
-  }
-
-  // 二次確認：沒有勾選確認就不執行 negative action（前端 required 已擋，後端再守一次）。
+  // 後端再守一次確認欄位：表單以隱藏欄位帶入，代表管理員已在畫面上明確按下「退回需求」。
   if (formData.get("confirmReject") !== "yes") {
-    redirect(
-      `/admin/demands?result=error&message=${encodeURIComponent("請先勾選確認，才能退回這筆需求。")}`,
-    );
+    redirectToDetail(demandRequestId, "請確認要退回這筆需求。");
   }
 
   const rejectionReasonValue = formData.get("rejectionReason");
@@ -80,12 +74,8 @@ export async function rejectDemandRequestAction(
   revalidatePath("/admin/demands");
 
   if (!result.ok) {
-    redirect(
-      `/admin/demands?result=error&message=${encodeURIComponent(result.message)}`,
-    );
+    redirectToDetail(demandRequestId, result.message);
   }
 
-  redirect(
-    `/admin/demands?result=success&message=${encodeURIComponent("需求已退回。")}`,
-  );
+  redirectToList("success", "需求已退回，退回原因會顯示給團主。");
 }

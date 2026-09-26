@@ -1,595 +1,121 @@
-import { formatTeacherRatingSummary } from "@/domain/review/rating-summary";
+import { notFound } from "next/navigation";
+
 import {
   listApprovedAndSuspendedTeacherProfilesForAdmin,
   listSubmittedTeacherProfileApplicationsForAdmin,
 } from "@/domain/teacher-profile/service";
+import { formatRelativeTime } from "@/lib/format-relative-time";
 import { requireAdmin } from "@/lib/auth/session";
-import { notFound } from "next/navigation";
 
-import { AdminNav } from "@/app/admin/_components/admin-nav";
-
+import { AdminFilterBar, resolveActiveTab } from "../_components/AdminFilterBar";
+import { AdminFlash, type AdminFlashParams } from "../_components/AdminFlash";
+import { AdminListCard } from "../_components/AdminListCard";
 import {
-  approveTeacherProfileApplicationAction,
-  rejectTeacherProfileApplicationAction,
-  restoreTeacherProfileAction,
-  suspendTeacherProfileAction,
-} from "./actions";
+  adminTeacherStatusLabels,
+  adminTeacherStatusToneClasses,
+} from "./status-labels";
 
-type AdminTeachersPageProps = {
-  searchParams?: Promise<{
-    result?: string;
-    message?: string;
-  }>;
+type TeacherStatus = keyof typeof adminTeacherStatusLabels;
+
+// 票 06：預設停在「待審」，因為老師審核是管理員每天最常做的事；列表只放名稱、狀態、多久前、
+// 服務地區，完整資料與審核按鈕都在詳情頁。列表只涵蓋 submitted／approved／suspended
+// （草稿是老師私人資料、退回的申請不再需要處理，這兩種本來就不在列表裡）。
+const statusTabs: { key: string; label: string; statuses: TeacherStatus[] | null }[] = [
+  { key: "pending", label: "待審", statuses: ["submitted"] },
+  { key: "approved", label: "已通過", statuses: ["approved"] },
+  { key: "suspended", label: "已暫停", statuses: ["suspended"] },
+  { key: "all", label: "全部", statuses: null },
+];
+
+const emptyMessages: Record<string, string> = {
+  pending: "目前沒有待審核的老師申請。",
+  approved: "目前沒有已通過的老師。",
+  suspended: "目前沒有暫停中的老師。",
+  all: "目前沒有任何老師。",
 };
 
-export default async function AdminTeachersPage({
-  searchParams,
-}: AdminTeachersPageProps) {
+type AdminTeachersPageProps = {
+  searchParams?: Promise<AdminFlashParams & { status?: string }>;
+};
+
+export default async function AdminTeachersPage({ searchParams }: AdminTeachersPageProps) {
   try {
     await requireAdmin();
   } catch {
     notFound();
   }
 
-  const [applications, approvedAndSuspended, resolvedSearchParams] =
-    await Promise.all([
-      listSubmittedTeacherProfileApplicationsForAdmin(),
-      listApprovedAndSuspendedTeacherProfilesForAdmin(),
-      searchParams,
-    ]);
-  const approvedTeachers = approvedAndSuspended.filter(
-    (teacher) => teacher.status === "approved",
-  );
-  const suspendedTeachers = approvedAndSuspended.filter(
-    (teacher) => teacher.status === "suspended",
-  );
-  const feedback =
-    resolvedSearchParams?.result && resolvedSearchParams.message
-      ? {
-          kind:
-            resolvedSearchParams.result === "success" ? "success" : "error",
-          message: resolvedSearchParams.message,
-        }
-      : null;
+  const [submitted, approvedAndSuspended, resolvedSearchParams] = await Promise.all([
+    listSubmittedTeacherProfileApplicationsForAdmin(),
+    listApprovedAndSuspendedTeacherProfilesForAdmin(),
+    searchParams,
+  ]);
+
+  const teachers = [...submitted, ...approvedAndSuspended];
+  const now = new Date();
+
+  const tabs = statusTabs.map((tab) => ({
+    ...tab,
+    count: tab.statuses
+      ? teachers.filter((teacher) => tab.statuses?.includes(teacher.status)).length
+      : teachers.length,
+  }));
+  const activeTab = resolveActiveTab(tabs, resolvedSearchParams?.status);
+  // 待審的排最久的在前（先處理等最久的）；其他狀態最近更新的在前。
+  const visibleTeachers = (
+    activeTab.statuses
+      ? teachers.filter((teacher) => activeTab.statuses?.includes(teacher.status))
+      : teachers
+  ).sort((a, b) => {
+    if (activeTab.key === "pending") {
+      return a.updatedAt.getTime() - b.updatedAt.getTime();
+    }
+    return b.updatedAt.getTime() - a.updatedAt.getTime();
+  });
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-8 px-6 py-10">
-      <header className="grid gap-3 border-b border-ink/15 pb-6 md:grid-cols-[1fr_auto] md:items-end">
-        <div>
-          <p className="text-sm font-medium text-clay">Admin review</p>
-          <AdminNav />
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
-            Teacher applications
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
-            Review submitted TeacherProfile applications and approve teachers
-            for the next marketplace capability stage.
-          </p>
-        </div>
-        <div className="rounded-xl border border-ink/15 bg-white px-4 py-3 text-sm">
-          <p className="font-medium text-ink">Submitted</p>
-          <p className="mt-1 text-2xl font-semibold text-ink">
-            {applications.length}
-          </p>
-        </div>
+    <div className="flex flex-col gap-8">
+      <header className="border-b border-ink/15 pb-6">
+        <h1 className="text-3xl font-semibold tracking-tight text-ink">老師審核</h1>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
+          審核老師申請，並管理已通過老師的狀態。點進老師可以看完整資料並操作。
+        </p>
       </header>
 
-      {feedback ? (
-        <section
-          aria-live="polite"
-          className={
-            feedback.kind === "success"
-              ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
-              : "rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
-          }
-        >
-          {feedback.message}
-        </section>
-      ) : null}
+      <AdminFlash message={resolvedSearchParams?.message} result={resolvedSearchParams?.result} />
 
-      {applications.length === 0 ? (
+      <AdminFilterBar
+        activeKey={activeTab.key}
+        ariaLabel="老師狀態篩選"
+        basePath="/admin/teachers"
+        tabs={tabs}
+      />
+
+      {visibleTeachers.length === 0 ? (
         <section className="rounded-2xl border border-ink/15 bg-white p-6">
-          <h2 className="text-lg font-medium text-ink">
-            No submitted applications
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-ink-soft">
-            Approved, draft, rejected, and suspended profiles are not shown in
-            this minimal review queue.
-          </p>
+          <h2 className="text-lg font-medium text-ink">{emptyMessages[activeTab.key]}</h2>
         </section>
       ) : (
-        <section className="grid gap-4">
-          {applications.map((application) => (
-            <article
-              className="grid gap-5 rounded-2xl border border-ink/15 bg-white p-5"
-              key={application.id}
-            >
-              <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-start">
-                <div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h2 className="text-xl font-semibold text-ink">
-                      {application.displayName ?? "Unnamed teacher"}
-                    </h2>
-                    <span className="rounded-full bg-pine-tint px-3 py-1 text-xs font-medium text-pine">
-                      {application.status}
-                    </span>
-                  </div>
-                  <dl className="mt-4 grid gap-3 text-sm text-ink-soft sm:grid-cols-2">
-                    <div>
-                      <dt className="font-medium text-ink">Email</dt>
-                      <dd className="mt-1">
-                        {application.user.email ?? "Not provided"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="font-medium text-ink">Phone</dt>
-                      <dd className="mt-1">
-                        {application.user.phone ?? "Not provided"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="font-medium text-ink">
-                        Experience
-                      </dt>
-                      <dd className="mt-1">
-                        {typeof application.experienceYears === "number"
-                          ? `${application.experienceYears} years`
-                          : "Not provided"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="font-medium text-ink">Submitted</dt>
-                      <dd className="mt-1">
-                        {formatDateTime(application.updatedAt)}
-                      </dd>
-                    </div>
-                  </dl>
-                </div>
-
-                <div className="flex w-full flex-col gap-3 md:w-72">
-                  <form action={approveTeacherProfileApplicationAction}>
-                    <input
-                      name="teacherProfileId"
-                      type="hidden"
-                      value={application.id}
-                    />
-                    <button
-                      className="w-full rounded-full bg-pine px-4 py-2 text-sm font-medium text-white transition hover:bg-pine-deep"
-                      type="submit"
-                    >
-                      Approve
-                    </button>
-                  </form>
-
-                  <details className="rounded-xl border border-rose-200 bg-rose-50/60">
-                    <summary className="cursor-pointer list-none rounded-full px-4 py-2 text-sm font-medium text-rose-800 marker:hidden">
-                      Reject…
-                    </summary>
-                    <form
-                      action={rejectTeacherProfileApplicationAction}
-                      className="grid gap-3 border-t border-rose-100 p-4"
-                    >
-                      <input
-                        name="teacherProfileId"
-                        type="hidden"
-                        value={application.id}
-                      />
-                      <div>
-                        <label
-                          className="text-sm font-medium text-ink"
-                          htmlFor={`reject-reason-${application.id}`}
-                        >
-                          退回原因
-                        </label>
-                        <p className="mt-1 text-xs leading-5 text-ink-soft">
-                          此說明會顯示給老師，請具體、溫和地寫出需要修正的方向（10–1000 字）。
-                        </p>
-                        <textarea
-                          className="mt-2 min-h-24 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
-                          id={`reject-reason-${application.id}`}
-                          maxLength={1000}
-                          minLength={10}
-                          name="rejectionReason"
-                          placeholder="例如：教學經歷需要更具體，請補充帶領團課的實際經驗與時數。"
-                          required
-                        />
-                      </div>
-                      <label className="flex items-start gap-2 text-sm leading-6 text-ink-soft">
-                        <input
-                          className="mt-1 shrink-0"
-                          name="confirmReject"
-                          required
-                          type="checkbox"
-                          value="yes"
-                        />
-                        我確認要退回這位老師，且以上原因會顯示給老師。
-                      </label>
-                      <button
-                        className="w-full rounded-full bg-rose-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-800"
-                        type="submit"
-                      >
-                        確認退回
-                      </button>
-                    </form>
-                  </details>
-                </div>
-              </div>
-
-              <div className="grid gap-4 border-t border-ink/10 pt-4 md:grid-cols-2">
-                <ReadOnlyText label="Bio" value={application.bio} />
-                <ReadOnlyText
-                  label="Teaching style"
-                  value={application.teachingStyle}
-                />
-                <ReadOnlyList
-                  label="Specialties"
-                  values={application.specialties}
-                />
-                <ReadOnlyList
-                  label="Service areas"
-                  values={application.serviceAreas}
-                />
-                <ReadOnlyList
-                  label="Teaching formats"
-                  values={application.teachingFormats}
-                />
-                <ReadOnlyList
-                  label="Certifications"
-                  values={application.certifications}
-                />
-                <ReadOnlyText
-                  label="Price range"
-                  value={application.priceRange}
-                />
-                <ReadOnlyText
-                  label="Profile photo URL"
-                  value={application.profilePhotoUrl}
-                />
-                <ReadOnlyText
-                  label="Preferred session length"
-                  value={
-                    typeof application.preferredSessionLengthMinutes === "number"
-                      ? `${application.preferredSessionLengthMinutes} minutes`
-                      : null
-                  }
-                />
-                <ReadOnlyText
-                  label="Preferred frequency"
-                  value={application.preferredFrequency}
-                />
-                <ReadOnlyText
-                  label="Preferred location"
-                  value={application.preferredLocationType}
-                />
-                <ReadOnlyText
-                  label="Preference notes"
-                  value={application.preferenceNotes}
-                />
-              </div>
-            </article>
+        <section className="grid gap-3">
+          {visibleTeachers.map((teacher) => (
+            <AdminListCard
+              href={`/admin/teachers/${teacher.id}`}
+              key={teacher.id}
+              lines={[
+                `${teacher.serviceAreas.length > 0 ? teacher.serviceAreas.join("、") : "尚未填服務地區"}${
+                  typeof teacher.experienceYears === "number"
+                    ? `・教學 ${teacher.experienceYears} 年`
+                    : ""
+                }`,
+                `${teacher.status === "submitted" ? "送審於" : "最後更新"} ${formatRelativeTime(teacher.updatedAt, now)}`,
+              ]}
+              statusLabel={adminTeacherStatusLabels[teacher.status]}
+              statusToneClass={adminTeacherStatusToneClasses[teacher.status]}
+              title={teacher.displayName ?? "未填顯示名稱"}
+            />
           ))}
         </section>
       )}
-
-      <section className="grid gap-4">
-        <h2 className="text-xl font-semibold text-ink">
-          Approved teachers ({approvedTeachers.length})
-        </h2>
-        {approvedTeachers.length === 0 ? (
-          <p className="text-sm leading-6 text-ink-soft">
-            目前沒有已通過審核的老師。
-          </p>
-        ) : (
-          approvedTeachers.map((teacher) => (
-            <article
-              className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-5 sm:grid-cols-[1fr_auto] sm:items-start"
-              key={teacher.id}
-            >
-              <div className="min-w-0">
-                <h3 className="text-lg font-semibold text-ink">
-                  {teacher.displayName ?? "Unnamed teacher"}
-                </h3>
-                <p className="mt-1 break-words text-sm text-ink-soft">
-                  {teacher.user.email ?? "Not provided"}
-                </p>
-                <p className="mt-1 text-xs text-ink-faint">
-                  Last updated: {formatDateTime(teacher.updatedAt)}
-                </p>
-                <p className="mt-1 text-xs text-ink-faint">
-                  {formatTeacherRatingSummary({
-                    averageRating: teacher.averageRating,
-                    reviewCount: teacher.reviewCount,
-                  })}
-                </p>
-                <details className="mt-3 rounded-xl border border-ink/15 bg-cream">
-                  <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-ink-soft marker:hidden">
-                    View profile details
-                  </summary>
-                  <div className="grid gap-3 border-t border-ink/10 p-3 text-sm">
-                    <ReadOnlyText label="Bio" value={teacher.bio} />
-                    <ReadOnlyText
-                      label="Teaching style"
-                      value={teacher.teachingStyle}
-                    />
-                    <ReadOnlyText
-                      label="Experience"
-                      value={
-                        typeof teacher.experienceYears === "number"
-                          ? `${teacher.experienceYears} years`
-                          : null
-                      }
-                    />
-                    <ReadOnlyList
-                      label="Specialties"
-                      values={teacher.specialties}
-                    />
-                    <ReadOnlyList
-                      label="Service areas"
-                      values={teacher.serviceAreas}
-                    />
-                    <ReadOnlyList
-                      label="Teaching formats"
-                      values={teacher.teachingFormats}
-                    />
-                    <ReadOnlyList
-                      label="Certifications"
-                      values={teacher.certifications}
-                    />
-                    <ReadOnlyText label="Price range" value={teacher.priceRange} />
-                    <ReadOnlyText
-                      label="Profile photo URL"
-                      value={teacher.profilePhotoUrl}
-                    />
-                    <ReadOnlyText
-                      label="Preferred session length"
-                      value={
-                        typeof teacher.preferredSessionLengthMinutes === "number"
-                          ? `${teacher.preferredSessionLengthMinutes} minutes`
-                          : null
-                      }
-                    />
-                    <ReadOnlyText
-                      label="Preferred frequency"
-                      value={teacher.preferredFrequency}
-                    />
-                    <ReadOnlyText
-                      label="Preferred location"
-                      value={teacher.preferredLocationType}
-                    />
-                    <ReadOnlyText
-                      label="Preference notes"
-                      value={teacher.preferenceNotes}
-                    />
-                  </div>
-                </details>
-              </div>
-              <details className="rounded-xl border border-rose-200 bg-rose-50/60 sm:w-72">
-                <summary className="cursor-pointer list-none rounded-full px-4 py-2 text-sm font-medium text-rose-800 marker:hidden">
-                  Suspend…
-                </summary>
-                <form
-                  action={suspendTeacherProfileAction}
-                  className="grid gap-3 border-t border-rose-100 p-4"
-                >
-                  <input name="teacherProfileId" type="hidden" value={teacher.id} />
-                  <div>
-                    <label
-                      className="text-sm font-medium text-ink"
-                      htmlFor={`suspend-reason-${teacher.id}`}
-                    >
-                      暫停原因
-                    </label>
-                    <p className="mt-1 text-xs leading-5 text-ink-soft">
-                      此說明會顯示給老師，請具體、溫和地寫出暫停的原因（10–1000 字）。
-                    </p>
-                    <textarea
-                      className="mt-2 min-h-24 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
-                      id={`suspend-reason-${teacher.id}`}
-                      maxLength={1000}
-                      minLength={10}
-                      name="suspensionReason"
-                      placeholder="例如：近期收到多筆課程品質相關反映，需要先暫停接受新需求。"
-                      required
-                    />
-                  </div>
-                  <label className="flex items-start gap-2 text-sm leading-6 text-ink-soft">
-                    <input
-                      className="mt-1 shrink-0"
-                      name="confirmSuspend"
-                      required
-                      type="checkbox"
-                      value="yes"
-                    />
-                    我確認要暫停這位老師，且以上原因會顯示給老師。
-                  </label>
-                  <button
-                    className="w-full rounded-full bg-rose-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-800"
-                    type="submit"
-                  >
-                    確認暫停
-                  </button>
-                </form>
-              </details>
-            </article>
-          ))
-        )}
-      </section>
-
-      <section className="grid gap-4">
-        <h2 className="text-xl font-semibold text-ink">
-          Suspended teachers ({suspendedTeachers.length})
-        </h2>
-        {suspendedTeachers.length === 0 ? (
-          <p className="text-sm leading-6 text-ink-soft">
-            目前沒有暫停中的老師。
-          </p>
-        ) : (
-          suspendedTeachers.map((teacher) => (
-            <article
-              className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-5 sm:grid-cols-[1fr_auto] sm:items-start"
-              key={teacher.id}
-            >
-              <div className="min-w-0">
-                <h3 className="text-lg font-semibold text-ink">
-                  {teacher.displayName ?? "Unnamed teacher"}
-                </h3>
-                <p className="mt-1 break-words text-sm text-ink-soft">
-                  {teacher.user.email ?? "Not provided"}
-                </p>
-                {teacher.suspensionReason ? (
-                  <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-ink-soft">
-                    暫停原因：{teacher.suspensionReason}
-                  </p>
-                ) : null}
-                <p className="mt-1 text-xs text-ink-faint">
-                  Last updated: {formatDateTime(teacher.updatedAt)}
-                </p>
-                <p className="mt-1 text-xs text-ink-faint">
-                  {formatTeacherRatingSummary({
-                    averageRating: teacher.averageRating,
-                    reviewCount: teacher.reviewCount,
-                  })}
-                </p>
-                <details className="mt-3 rounded-xl border border-ink/15 bg-cream">
-                  <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-ink-soft marker:hidden">
-                    View profile details
-                  </summary>
-                  <div className="grid gap-3 border-t border-ink/10 p-3 text-sm">
-                    <ReadOnlyText label="Bio" value={teacher.bio} />
-                    <ReadOnlyText
-                      label="Teaching style"
-                      value={teacher.teachingStyle}
-                    />
-                    <ReadOnlyText
-                      label="Experience"
-                      value={
-                        typeof teacher.experienceYears === "number"
-                          ? `${teacher.experienceYears} years`
-                          : null
-                      }
-                    />
-                    <ReadOnlyList
-                      label="Specialties"
-                      values={teacher.specialties}
-                    />
-                    <ReadOnlyList
-                      label="Service areas"
-                      values={teacher.serviceAreas}
-                    />
-                    <ReadOnlyList
-                      label="Teaching formats"
-                      values={teacher.teachingFormats}
-                    />
-                    <ReadOnlyList
-                      label="Certifications"
-                      values={teacher.certifications}
-                    />
-                    <ReadOnlyText label="Price range" value={teacher.priceRange} />
-                    <ReadOnlyText
-                      label="Profile photo URL"
-                      value={teacher.profilePhotoUrl}
-                    />
-                    <ReadOnlyText
-                      label="Preferred session length"
-                      value={
-                        typeof teacher.preferredSessionLengthMinutes === "number"
-                          ? `${teacher.preferredSessionLengthMinutes} minutes`
-                          : null
-                      }
-                    />
-                    <ReadOnlyText
-                      label="Preferred frequency"
-                      value={teacher.preferredFrequency}
-                    />
-                    <ReadOnlyText
-                      label="Preferred location"
-                      value={teacher.preferredLocationType}
-                    />
-                    <ReadOnlyText
-                      label="Preference notes"
-                      value={teacher.preferenceNotes}
-                    />
-                  </div>
-                </details>
-              </div>
-              <form
-                action={restoreTeacherProfileAction}
-                className="grid gap-2 sm:w-56"
-              >
-                <input name="teacherProfileId" type="hidden" value={teacher.id} />
-                <label className="flex items-start gap-2 text-xs leading-5 text-ink-soft">
-                  <input
-                    className="mt-1 shrink-0"
-                    name="confirmRestore"
-                    required
-                    type="checkbox"
-                    value="yes"
-                  />
-                  我確認要恢復這位老師。
-                </label>
-                <button
-                  className="w-full rounded-full bg-pine px-4 py-2 text-sm font-medium text-white transition hover:bg-pine-deep"
-                  type="submit"
-                >
-                  Restore
-                </button>
-              </form>
-            </article>
-          ))
-        )}
-      </section>
-    </main>
-  );
-}
-
-function ReadOnlyText({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | null;
-}) {
-  return (
-    <div className="text-sm">
-      <h3 className="font-medium text-ink">{label}</h3>
-      <p className="mt-2 leading-6 text-ink-soft">{value ?? "Not provided"}</p>
     </div>
   );
-}
-
-function ReadOnlyList({
-  label,
-  values,
-}: {
-  label: string;
-  values: string[];
-}) {
-  const visibleValues = values.filter((value) => value.trim().length > 0);
-
-  return (
-    <div className="text-sm">
-      <h3 className="font-medium text-ink">{label}</h3>
-      {visibleValues.length > 0 ? (
-        <ul className="mt-2 flex flex-wrap gap-2">
-          {visibleValues.map((value) => (
-            <li
-              className="rounded-full border border-ink/15 px-3 py-1 text-ink-soft"
-              key={value}
-            >
-              {value}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="mt-2 leading-6 text-ink-soft">Not provided</p>
-      )}
-    </div>
-  );
-}
-
-function formatDateTime(value: Date) {
-  return new Intl.DateTimeFormat("zh-TW", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(value);
 }

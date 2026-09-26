@@ -1,5 +1,7 @@
 # Auth Entry Strategy
 
+> **2026-09-26 更新：`/account` 頁面已移除**（見 `docs/admin-usability-plan.md` 決策 6、7 與其後續調整）。身分切換改由各專區導覽列右側的「目前身分」選單負責，沒有的身分顯示「＋ 成為團主／老師」；登入後預設導向 `/member/dashboard`。下方提到 `/account` 的段落是歷史紀錄，不代表現況。
+
 ## 1. 目的
 
 本文件記錄目前 Auth entry 與 authenticated smoke pages 的工程定位與邊界。

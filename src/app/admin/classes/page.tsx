@@ -1,11 +1,9 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import {
   classSessionStatusLabels,
   classSessionStatusToneClasses,
 } from "@/app/organizer/classes/_components/status-labels";
-import { AdminNav } from "@/app/admin/_components/admin-nav";
 import {
   listAllClassSessionsForAdmin,
   type AdminClassSessionSummary,
@@ -13,104 +11,97 @@ import {
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { requireAdmin } from "@/lib/auth/session";
 
+import { AdminFilterBar, resolveActiveTab } from "../_components/AdminFilterBar";
+import { AdminFlash, type AdminFlashParams } from "../_components/AdminFlash";
+import { AdminListCard } from "../_components/AdminListCard";
+
+type ClassStatus = AdminClassSessionSummary["status"];
+
 // D6（admin-class-enrollment-management）：ClassSession 從來不需要 Admin 核准才能推進
-// 狀態，沒有天然的「待處理」子集，一次查詢回傳所有狀態，頁面依狀態分組顯示。
-const statusGroups: { status: AdminClassSessionSummary["status"]; heading: string }[] = [
-  { status: "open_for_enrollment", heading: "開放中" },
-  { status: "completed", heading: "已完成" },
-  { status: "cancelled", heading: "已取消" },
-  { status: "draft", heading: "草稿" },
+// 狀態，沒有天然的「待處理」子集，所以預設顯示「全部」；票 04 起用共用篩選列取代原本的分組長頁。
+const statusTabs: { key: string; label: string; statuses: ClassStatus[] | null }[] = [
+  { key: "all", label: "全部", statuses: null },
+  { key: "open", label: "開放中", statuses: ["open_for_enrollment"] },
+  { key: "completed", label: "已完成", statuses: ["completed"] },
+  { key: "cancelled", label: "已取消", statuses: ["cancelled"] },
+  { key: "draft", label: "草稿", statuses: ["draft"] },
 ];
 
-export default async function AdminClassesPage() {
+type AdminClassesPageProps = {
+  searchParams?: Promise<AdminFlashParams & { status?: string }>;
+};
+
+export default async function AdminClassesPage({ searchParams }: AdminClassesPageProps) {
   try {
     await requireAdmin();
   } catch {
     notFound();
   }
 
-  const classSessions = await listAllClassSessionsForAdmin();
+  const [classSessions, resolvedSearchParams] = await Promise.all([
+    listAllClassSessionsForAdmin(),
+    searchParams,
+  ]);
+
+  const countOf = (statuses: ClassStatus[] | null) =>
+    statuses
+      ? classSessions.filter((classSession) => statuses.includes(classSession.status)).length
+      : classSessions.length;
+  const tabs = statusTabs.map((tab) => ({ ...tab, count: countOf(tab.statuses) }));
+  const activeTab = resolveActiveTab(tabs, resolvedSearchParams?.status);
+  const visibleClassSessions = activeTab.statuses
+    ? classSessions.filter((classSession) => activeTab.statuses?.includes(classSession.status))
+    : classSessions;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-8 px-6 py-10">
+    <div className="flex flex-col gap-8">
       <header className="border-b border-ink/15 pb-6">
-        <p className="text-sm font-medium text-clay">Admin</p>
-        <AdminNav />
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
-          Class sessions
-        </h1>
+        <h1 className="text-3xl font-semibold tracking-tight text-ink">課程管理</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
           查看全平台所有課程場次，並在必要時介入取消。
         </p>
       </header>
+
+      <AdminFlash message={resolvedSearchParams?.message} result={resolvedSearchParams?.result} />
 
       {classSessions.length === 0 ? (
         <section className="rounded-2xl border border-ink/15 bg-white p-6">
           <h2 className="text-lg font-medium text-ink">目前沒有任何課程</h2>
         </section>
       ) : (
-        statusGroups.map(({ status, heading }) => {
-          const group = classSessions.filter((classSession) => classSession.status === status);
+        <>
+          <AdminFilterBar
+            activeKey={activeTab.key}
+            ariaLabel="課程狀態篩選"
+            basePath="/admin/classes"
+            tabs={tabs}
+          />
 
-          return (
-            <section className="grid gap-4" key={status}>
-              <h2 className="text-xl font-semibold text-ink">
-                {heading}（{group.length}）
-              </h2>
-              {group.length === 0 ? (
-                <p className="text-sm leading-6 text-ink-soft">目前沒有這個狀態的課程。</p>
-              ) : (
-                group.map((classSession) => (
-                  <Link
-                    className="grid gap-3 rounded-2xl border border-ink/15 bg-white p-5 transition hover:border-pine/40"
-                    href={`/admin/classes/${classSession.id}`}
-                    key={classSession.id}
-                  >
-                    <div className="flex flex-wrap items-center gap-3">
-                      <h3 className="min-w-0 break-words text-lg font-medium text-ink">
-                        {classSession.title}
-                      </h3>
-                      <span
-                        className={`w-fit rounded-full px-3 py-1 text-xs font-medium ${classSessionStatusToneClasses[classSession.status]}`}
-                      >
-                        {classSessionStatusLabels[classSession.status]}
-                      </span>
-                    </div>
-                    <dl className="grid gap-2 text-sm text-ink-soft sm:grid-cols-2">
-                      <div className="min-w-0">
-                        <dt className="font-medium text-ink">團主</dt>
-                        <dd className="mt-1 break-words">
-                          {classSession.organizerDisplayName ?? "（老師自建課程）"}
-                        </dd>
-                      </div>
-                      <div className="min-w-0">
-                        <dt className="font-medium text-ink">授課老師</dt>
-                        <dd className="mt-1 break-words">
-                          {classSession.teacherDisplayName ?? "尚未填寫"}
-                        </dd>
-                      </div>
-                      <div className="min-w-0">
-                        <dt className="font-medium text-ink">團體</dt>
-                        <dd className="mt-1 break-words">
-                          {classSession.organizationName ?? "（老師自建課程）"}
-                        </dd>
-                      </div>
-                      <div className="min-w-0">
-                        <dt className="font-medium text-ink">開始時間</dt>
-                        <dd className="mt-1">{formatTaipeiDatetime(classSession.startAt)}</dd>
-                      </div>
-                      <div className="min-w-0">
-                        <dt className="font-medium text-ink">已報名（confirmed）</dt>
-                        <dd className="mt-1">{classSession.confirmedEnrollmentCount} 人</dd>
-                      </div>
-                    </dl>
-                  </Link>
-                ))
-              )}
+          {visibleClassSessions.length === 0 ? (
+            <p className="rounded-2xl border border-ink/15 bg-white p-6 text-sm leading-6 text-ink-soft">
+              這個分類目前沒有課程。
+            </p>
+          ) : (
+            <section className="grid gap-3">
+              {visibleClassSessions.map((classSession) => (
+                <AdminListCard
+                  href={`/admin/classes/${classSession.id}`}
+                  key={classSession.id}
+                  lines={[
+                    `${classSession.teacherDisplayName ?? "老師尚未填寫"}・${
+                      classSession.organizationName ?? "老師自建課程"
+                    }`,
+                    `${formatTaipeiDatetime(classSession.startAt)}・已報名 ${classSession.confirmedEnrollmentCount} 人`,
+                  ]}
+                  statusLabel={classSessionStatusLabels[classSession.status]}
+                  statusToneClass={classSessionStatusToneClasses[classSession.status]}
+                  title={classSession.title}
+                />
+              ))}
             </section>
-          );
-        })
+          )}
+        </>
       )}
-    </main>
+    </div>
   );
 }

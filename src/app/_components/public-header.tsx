@@ -10,7 +10,7 @@ const publicLinks = [
 ];
 
 // public-header-shows-signed-in-state：這個 header 原本不管有沒有登入都同時顯示
-// 「登入」跟「我的帳戶」，完全不反映實際登入狀態（使用者手動測試時發現，登入後也看不出
+// 「登入」跟「我的專區」，完全不反映實際登入狀態（使用者手動測試時發現，登入後也看不出
 // 自己是哪個帳號）。改成用 auth()（比照 src/app/sign-in/page.tsx 既有寫法，讀 session
 // 就好，不需要像 getCurrentUser() 多一趟資料庫查詢）判斷，登入後把「登入」換成
 // email／名字＋登出，未登入維持原樣不變。
@@ -71,9 +71,9 @@ export async function PublicHeader() {
           )}
           <Link
             className="rounded-full bg-pine px-5 py-2 font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
-            href="/account"
+            href="/member/dashboard"
           >
-            我的帳戶
+            我的專區
           </Link>
         </div>
       </div>

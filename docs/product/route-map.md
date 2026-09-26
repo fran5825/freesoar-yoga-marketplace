@@ -22,18 +22,18 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 
 | Route | 目的 | 主要角色 |
 |---|---|---|
-| `/sign-in` | 登入。**已擴充**（`teacher-initiated-open-classes` Slice D 已確認）：支援 `?callbackUrl=` 查詢參數，登入完成後導回原頁面（例如未登入 Visitor 從 `/classes/[id]` 點「登入後報名」）；只接受站內相對路徑，拒絕外部網址，避免 open redirect；未帶或不合法時維持既有預設行為（導向 `/account`） | All |
+| `/sign-in` | 登入。**已擴充**（`teacher-initiated-open-classes` Slice D 已確認）：支援 `?callbackUrl=` 查詢參數，登入完成後導回原頁面（例如未登入 Visitor 從 `/classes/[id]` 點「登入後報名」）；只接受站內相對路徑，拒絕外部網址，避免 open redirect；未帶或不合法時導向 `/member/dashboard`（2026-09-26 起，原本是 `/account`） | All |
 | `/sign-up` | 註冊 | Visitor |
-| `/account` | 個人帳號基本資料與最小 authenticated entry；提供 `/member/dashboard`、`/organizer/dashboard` 入口，但不在此載入 profile relations 或執行完整角色 launcher（`account-dashboard-navigation` 已確認） | Member, Organizer, Teacher, Admin |
-| `/notifications` | 查看自己收到的站內通知（own-scoped，唯讀）；`/account` 提供入口連結（`notification` 已確認） | Member, Organizer, Teacher, Admin |
+| `/notifications` | 查看自己收到的站內通知（own-scoped，唯讀）；由各角色導覽列的「通知」連結進入（`notification` 已確認） | Member, Organizer, Teacher, Admin |
 
 ## Teacher Routes
 
 | Route | 目的 |
 |---|---|
 | `/teacher/dashboard` | 老師 onboarding / status dashboard；已登入使用者可查看自己的 TeacherProfile status，尚未建立 TeacherProfile 時可前往建立申請。 |
-| `/teacher/profile` | **已落地**（`teacher-profile-edit` 已確認）：approved 老師編輯自己的個人資料，suspended 唯讀查看，其餘狀態導向 `/teachers/join` |
-| `/teacher/availability` | **已落地**（`teacher-availability` 已確認）：管理固定 availability 與 exception |
+| `/teacher/profile` | **2026-09-26 起是「老師資料」的第一個分頁：可授課時間**（原 `/teacher/availability` 的內容）；個人資料編輯搬到 `/teacher/profile/info`。 |
+| `/teacher/profile/info` | 「老師資料」第二個分頁：個人資料（原 `/teacher/profile` 的說明如下）：**已落地**（`teacher-profile-edit` 已確認）：approved 老師編輯自己的個人資料，suspended 唯讀查看，其餘狀態導向 `/teachers/join` |
+| `/teacher/availability` | **2026-09-26 起轉址到 `/teacher/profile`**（可授課時間併入老師資料的第一個分頁）。以下為原說明：**已落地**（`teacher-availability` 已確認）：管理固定 availability 與 exception |
 | `/teacher/demands` | 查看 eligible demand requests |
 | `/teacher/demands/[demandRequestId]` | 查看需求詳情並提交 response |
 | `/teacher/classes` | 查看自己的 class sessions（含團主媒合與自建兩種來源，**已擴充**——`teacher-initiated-open-classes` 已確認：顯示來源徽章與所屬常規/固定期課程系列名稱連結；`origin = teacher_initiated` 的課程顯示取消/開放報名/標記完成按鈕；有 `pending` 報名的課程顯示確認/拒絕按鈕） |
@@ -64,13 +64,14 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 
 | Route | 目的 |
 |---|---|
-| `/admin/dashboard` | **已落地**（`admin-dashboard` 已確認）：Admin dashboard 與 basic KPIs |
-| `/admin/teachers` | 審核、查看、暫停 teacher profiles |
-| `/admin/demands` | review、publish、reject demand requests |
-| `/admin/demands/[demandRequestId]` | admin demand detail（可選）；若 Admin review UI 採「detail route」而非「展開卡片」呈現完整 demand + organization + organizer 內容，才會落地此路由（`organizer-demand-request-foundation` Slice 7 決定採用哪一種呈現方式時據此對齊） |
-| `/admin/classes` | **已落地**（`admin-class-enrollment-management` 已確認）：查看全平台所有 class session（依狀態分組），連到 detail 頁 |
+| `/admin/dashboard` | **已落地**（`admin-dashboard` 已確認）：Admin dashboard；2026-09-26 起最上方為「待你處理」（待審老師、待審需求各最多 5 筆，直接連到詳情頁），下方為數字概況 |
+| `/admin/teachers` | 老師審核列表：狀態篩選（待審／已通過／已暫停／全部，預設待審）＋卡片，點進詳情頁（`admin-usability` 票 06，2026-09-26） |
+| `/admin/teachers/[teacherProfileId]` | **已落地**（2026-09-26）：老師審核詳情；通過、退回（附原因範本）、暫停（確認視窗＋必填原因）、恢復；草稿老師不可見（404） |
+| `/admin/demands` | 需求審核列表：狀態篩選（待審／已公開／已退回／全部，預設待審）＋卡片，點進詳情頁（`admin-usability` 票 07，2026-09-26） |
+| `/admin/demands/[demandRequestId]` | **已落地**（2026-09-26）：需求審核詳情，公開、退回（附原因範本）；草稿需求不可見（404）。原規劃註記：若 Admin review UI 採「detail route」而非「展開卡片」呈現完整 demand + organization + organizer 內容，才會落地此路由（`organizer-demand-request-foundation` Slice 7 決定採用哪一種呈現方式時據此對齊） |
+| `/admin/classes` | **已落地**（`admin-class-enrollment-management` 已確認）：查看全平台所有 class session（2026-09-26 起改為狀態篩選列＋卡片），連到 detail 頁 |
 | `/admin/classes/[classSessionId]` | **已落地**（`admin-class-enrollment-management` 已確認）：單一 class session 完整詳情、完整 roster（含所有狀態）、取消課程／取消單筆報名 |
-| `/admin/organizations` | **已落地（唯讀）**（`admin-organizations` 已確認）；`管理`維持完整未來設計，V1 未開放編輯或代管 |
+| `/admin/organizations` | **已落地（唯讀）**（`admin-organizations` 已確認；2026-09-26 起「團體」頁全中文、共用後台外框）；`管理`維持完整未來設計，V1 未開放編輯或代管 |
 
 **修正（`admin-class-enrollment-management` 已確認）：原本規劃的 `/admin/enrollments` 獨立路由不建**——Enrollment 沒有任何狀態需要 Admin 核准才能推進，一個扁平、無篩選的全站報名列表沒有天然的用途；roster 與取消單筆報名的能力改為併入 `/admin/classes/[classSessionId]`（比照 Organizer／Teacher 既有頁面把 roster 顯示在 class session 詳情頁的既有資訊架構），理由與範圍見該輪 plan 的 D2。
 

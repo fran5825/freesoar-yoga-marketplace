@@ -84,7 +84,7 @@ test.describe("notification smoke", () => {
     await page.goto("/teachers/join");
     await expect(page.getByLabel("公開顯示名稱")).toHaveValue(displayName);
     await page.getByRole("button", { name: "送出審核" }).first().click();
-    await page.getByRole("button", { name: "確認送出審核" }).click();
+    await page.getByRole("button", { name: "確認送出審核" }).first().click();
     await expect(page.getByText("已送出審核").first()).toBeVisible();
 
     // 注意：listAdminUserIds() 是全域查詢（見 D5），在平行執行的其他測試檔案裡，
@@ -121,12 +121,9 @@ test.describe("notification smoke", () => {
     await context.clearCookies();
     await addAuthSessionCookie(context, adminSession);
     await page.goto("/admin/teachers");
-
-    const card = page.getByRole("article").filter({
-      has: page.getByRole("heading", { name: displayName }),
-    });
-    await card.getByRole("button", { name: "Approve" }).click();
-    await expect(page.getByText("TeacherProfile application approved.")).toBeVisible();
+    await page.getByRole("link").filter({ hasText: displayName }).first().click();
+    await page.getByRole("button", { name: "通過申請" }).click();
+    await expect(page.getByText("已通過這位老師的申請。")).toBeVisible();
 
     const approvedNotif = await prisma.notification.findFirst({
       where: { type: "teacher_application_approved", userId: teacherUserId },
@@ -171,15 +168,10 @@ test.describe("notification smoke", () => {
     });
     await addAuthSessionCookie(context, adminSession);
     await page.goto("/admin/teachers");
-
-    const card = page.getByRole("article").filter({
-      has: page.getByRole("heading", { name: displayName }),
-    });
-    await card.locator("summary").click();
-    const reasonField = card.getByLabel("退回原因");
+    await page.getByRole("link").filter({ hasText: displayName }).first().click();
+    const reasonField = page.getByLabel("退回原因");
     await reasonField.fill("資料尚不完整，請補充教學經歷細節。");
-    await card.getByRole("checkbox").check();
-    await card.getByRole("button", { name: "確認退回" }).click();
+    await page.getByRole("button", { name: "退回申請" }).click();
     await expect(page).toHaveURL(/result=/);
 
     const rejectedNotif = await prisma.notification.findFirst({
@@ -257,11 +249,8 @@ test.describe("notification smoke", () => {
     await context.clearCookies();
     await addAuthSessionCookie(context, publisherSession);
     await page.goto("/admin/demands");
-
-    const card = page.getByRole("article").filter({
-      has: page.getByRole("heading", { name: demandTitle }),
-    });
-    await card.getByRole("button", { name: "Publish" }).click();
+    await page.getByRole("link").filter({ hasText: demandTitle }).first().click();
+    await page.getByRole("button", { name: "公開需求" }).click();
     await expect(page.getByText("需求已公開。")).toBeVisible();
 
     const publishedNotif = await prisma.notification.findFirst({
@@ -303,14 +292,9 @@ test.describe("notification smoke", () => {
     });
     await addAuthSessionCookie(context, adminSession);
     await page.goto("/admin/demands");
-
-    const card = page.getByRole("article").filter({
-      has: page.getByRole("heading", { name: demandTitle }),
-    });
-    await card.locator("summary").click();
-    await card.getByLabel("退回原因").fill("地點資訊需要再確認，請補充細節。");
-    await card.getByRole("checkbox").check();
-    await card.getByRole("button", { name: "確認退回" }).click();
+    await page.getByRole("link").filter({ hasText: demandTitle }).first().click();
+    await page.getByLabel("退回原因").fill("地點資訊需要再確認，請補充細節。");
+    await page.getByRole("button", { name: "退回需求" }).click();
     await expect(page).toHaveURL(/result=/);
 
     const rejectedNotif = await prisma.notification.findFirst({

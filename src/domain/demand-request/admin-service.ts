@@ -1,4 +1,4 @@
-import type { OrganizationType } from "@prisma/client";
+import type { DemandRequestStatus, OrganizationType } from "@prisma/client";
 
 import { notifyUsers } from "@/domain/notification/create";
 import { requireAdmin } from "@/lib/auth/session";
@@ -119,6 +119,49 @@ export async function listSubmittedDemandRequestsForAdmin(): Promise<
     orderBy: { updatedAt: "asc" },
     select: submittedDemandRequestSelect,
   });
+}
+
+export type DemandRequestDetailForAdmin = SubmittedDemandRequestForAdmin & {
+  status: DemandRequestStatus;
+  rejectionReason: string | null;
+};
+
+const demandRequestDetailSelect = {
+  ...submittedDemandRequestSelect,
+  status: true,
+  rejectionReason: true,
+} as const;
+
+// admin-usability 票 07：需求審核列表。除了待審（submitted），也列出已公開、已退回等，讓篩選列
+// 各分頁有資料可看；草稿是團主私人資料、還沒送審，管理員看不到，所以不列。requireAdmin() 把關。
+export async function listDemandRequestsForAdmin(): Promise<
+  DemandRequestDetailForAdmin[]
+> {
+  await requireAdmin();
+
+  return prisma.demandRequest.findMany({
+    where: { status: { not: "draft" } },
+    orderBy: { updatedAt: "asc" },
+    select: demandRequestDetailSelect,
+  });
+}
+
+// 詳情頁的單筆讀取。草稿一律回 null（同上）；查無資料回傳 null（not-found 語意）。
+export async function getDemandRequestForAdmin(
+  demandRequestId: string,
+): Promise<DemandRequestDetailForAdmin | null> {
+  await requireAdmin();
+
+  const demandRequest = await prisma.demandRequest.findUnique({
+    where: { id: demandRequestId },
+    select: demandRequestDetailSelect,
+  });
+
+  if (!demandRequest || demandRequest.status === "draft") {
+    return null;
+  }
+
+  return demandRequest;
 }
 
 export async function publishSubmittedDemandRequest(

@@ -2,8 +2,11 @@ import { Prisma } from "@prisma/client";
 import { expect, test } from "@playwright/test";
 
 import { getAdminDashboardKpisCore } from "../../src/domain/admin/__internal__/dashboard-kpis-core";
+import { formatRelativeTime } from "../../src/lib/format-relative-time";
 import {
   addAuthSessionCookie,
+  completeDemandRequestData,
+  createDemandRequest,
   createOrganizerProfileWithOrganization,
   createUserSession,
   normalizeForEmail,
@@ -172,7 +175,7 @@ test.describe("admin dashboard smoke", () => {
   // 驗證）。這裡建立 1 筆新資料後斷言頁面顯示的數字 >= 1（不跟 before 比較），這個絕對值
   // 下限斷言在任何併發情境下都成立——這個專案所有既有 fixture 清理函式都只刪除自己建立的
   // 資料，這筆新建立的資料在測試自己的 afterAll 執行之前，保證不會被任何其他平行測試刪除。
-  test("shows the teacher-applications-pending count reflecting real data, and the pending-review links resolve correctly", async ({
+  test("lists pending teacher applications and demand requests under 待你處理, each linking to its review page", async ({
     context,
     page,
   }, testInfo) => {
@@ -187,6 +190,20 @@ test.describe("admin dashboard smoke", () => {
       status: "submitted",
     });
 
+    const organizerEmail = `organizer-wiring-${testRunId}@${testEmailDomain}`;
+    createdEmails.push(organizerEmail);
+    const organizer = await createOrganizerProfileWithOrganization({
+      email: organizerEmail,
+      displayName: `Organizer ${testRunId}`,
+      organizationName: `Org ${testRunId}`,
+    });
+    await createDemandRequest({
+      organizerProfileId: organizer.organizerProfileId,
+      organizationId: organizer.organizationId,
+      status: "submitted",
+      data: completeDemandRequestData({ title: `Demand ${testRunId}` }),
+    });
+
     const adminEmail = `admin-${testRunId}@${testEmailDomain}`;
     createdEmails.push(adminEmail);
     const { sessionToken: adminSessionToken } = await createUserSession({
@@ -197,18 +214,38 @@ test.describe("admin dashboard smoke", () => {
 
     await page.goto("/admin/dashboard");
 
-    const teacherPendingCard = page.getByRole("link", { name: /Teacher applications pending/ });
-    await expect(teacherPendingCard).toBeVisible();
-    const cardText = await teacherPendingCard.textContent();
-    const observedCount = Number(cardText?.match(/(\d+)/)?.[1] ?? "0");
-    expect(observedCount).toBeGreaterThanOrEqual(1);
+    const pending = page.getByRole("region", { name: "待你處理" });
+    await expect(pending).toBeVisible();
+    // 共用資料庫裡可能還有別的待審資料，只確認分組標題的數字至少包含這次建立的 1 筆。
+    for (const groupTitle of ["老師申請待審", "需求待審"]) {
+      const heading = pending.getByRole("heading", { name: groupTitle });
+      await expect(heading).toBeVisible();
+      const count = Number((await heading.textContent())?.match(/・(\d+)/)?.[1] ?? "0");
+      expect(count).toBeGreaterThanOrEqual(1);
+    }
+    await expect(page.getByRole("heading", { name: "數字概況" })).toBeVisible();
 
-    await teacherPendingCard.click();
+    // 每一列直接連到該筆的審核詳情頁（共用資料庫，只確認有這種連結，不指定哪一筆）。
+    await expect(pending.locator('a[href^="/admin/teachers/"]').first()).toBeVisible();
+    await expect(pending.locator('a[href^="/admin/demands/"]').first()).toBeVisible();
+
+    await pending.getByRole("link", { name: /老師申請待審|看全部.*筆|前往審核/ }).first().click();
     await expect(page).toHaveURL(/\/admin\/teachers$/);
+  });
 
-    await page.goto("/admin/dashboard");
-    await page.getByRole("link", { name: /Demand requests pending review/ }).click();
-    await expect(page).toHaveURL(/\/admin\/demands$/);
+  test("formats how long ago a pending item was updated in plain Chinese", () => {
+    const now = new Date("2026-09-26T12:00:00Z");
+    const ago = (ms: number) => new Date(now.getTime() - ms);
+    const minute = 60_000;
+    const hour = 60 * minute;
+    const day = 24 * hour;
+
+    expect(formatRelativeTime(ago(10_000), now)).toBe("剛剛");
+    expect(formatRelativeTime(ago(5 * minute), now)).toBe("5 分鐘前");
+    expect(formatRelativeTime(ago(3 * hour), now)).toBe("3 小時前");
+    expect(formatRelativeTime(ago(3 * day), now)).toBe("3 天前");
+    expect(formatRelativeTime(ago(-minute), now)).toBe("剛剛");
+    expect(formatRelativeTime(ago(90 * day), now)).toMatch(/2026/);
   });
 
   test("the shared admin nav links to all five admin pages, and works from each of them", async ({
@@ -230,23 +267,25 @@ test.describe("admin dashboard smoke", () => {
       "/admin/organizations",
     ]) {
       await page.goto(startPath);
-      await expect(page.getByRole("navigation").getByRole("link", { name: "Dashboard" })).toHaveAttribute(
+      const menuButton = page.getByRole("button", { name: "選單" });
+      if (await menuButton.isVisible()) await menuButton.click();
+      await expect(page.getByRole("navigation").getByRole("link", { name: "總覽", exact: true })).toHaveAttribute(
         "href",
         "/admin/dashboard",
       );
-      await expect(page.getByRole("navigation").getByRole("link", { name: "Teachers" })).toHaveAttribute(
+      await expect(page.getByRole("navigation").getByRole("link", { name: "老師", exact: true })).toHaveAttribute(
         "href",
         "/admin/teachers",
       );
-      await expect(page.getByRole("navigation").getByRole("link", { name: "Demands" })).toHaveAttribute(
+      await expect(page.getByRole("navigation").getByRole("link", { name: "需求", exact: true })).toHaveAttribute(
         "href",
         "/admin/demands",
       );
-      await expect(page.getByRole("navigation").getByRole("link", { name: "Classes" })).toHaveAttribute(
+      await expect(page.getByRole("navigation").getByRole("link", { name: "課程", exact: true })).toHaveAttribute(
         "href",
         "/admin/classes",
       );
-      await expect(page.getByRole("navigation").getByRole("link", { name: "Organizations" })).toHaveAttribute(
+      await expect(page.getByRole("navigation").getByRole("link", { name: "團體", exact: true })).toHaveAttribute(
         "href",
         "/admin/organizations",
       );

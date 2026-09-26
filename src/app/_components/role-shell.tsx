@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { auth, signOut } from "@/auth";
 
 import { RoleNav, type RoleNavLink } from "./role-nav";
+import { getRoleSwitchOptions } from "./role-switch-options";
 
 // 登入後角色專區的共同外框（導覽列＋統一頁寬 max-w-4xl）。各專區的 layout 只需要傳自己的連結。
 // /notifications 不在任何專區底下，所以由該頁自己依身分包這個外框，導覽列才不會消失。
@@ -23,6 +24,8 @@ export async function RoleShell({
     ? (session.user.email ?? session.user.name ?? "已登入")
     : null;
 
+  const roleOptions = session?.user ? await getRoleSwitchOptions() : [];
+
   return (
     <div className="flex min-h-screen flex-col bg-cream text-ink">
       {signedInLabel ? (
@@ -30,6 +33,7 @@ export async function RoleShell({
           areaLabel={areaLabel}
           links={links}
           primaryAction={primaryAction}
+          roleOptions={roleOptions}
           signOutAction={async () => {
             "use server";
             await signOut({ redirectTo: "/" });

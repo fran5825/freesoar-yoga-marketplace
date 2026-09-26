@@ -1,4 +1,8 @@
-import type { ClassSessionStatus, EnrollmentStatus } from "@prisma/client";
+import type {
+  ClassSessionStatus,
+  EnrollmentStatus,
+  OrganizationType,
+} from "@prisma/client";
 
 import { requireAdmin } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
@@ -90,9 +94,16 @@ export type AdminClassSessionDetail = {
   // teacher-initiated-open-classes：老師自建課程沒有 demandRequest／organizerProfile／
   // organization，三者皆改為 nullable；消費頁面需自行提供中性 fallback 文案。
   demandRequest: { targetLevel: string | null } | null;
-  organizerProfile: { displayName: string } | null;
-  teacherProfile: { displayName: string | null };
-  organization: { name: string } | null;
+  // 管理員需要能分辨「是誰」，所以除了名稱還帶聯絡方式（帳號 email、團體聯絡窗口）。
+  organizerProfile: { displayName: string; user: { email: string | null } } | null;
+  teacherProfile: { displayName: string | null; user: { email: string | null } };
+  organization: {
+    name: string;
+    type: OrganizationType;
+    contactName: string | null;
+    contactEmail: string | null;
+    contactPhone: string | null;
+  } | null;
   roster: AdminClassSessionRosterEntry[];
 };
 
@@ -117,9 +128,21 @@ export async function getClassSessionDetailForAdmin(
       status: true,
       createdAt: true,
       demandRequest: { select: { targetLevel: true } },
-      organizerProfile: { select: { displayName: true } },
-      teacherProfile: { select: { displayName: true } },
-      organization: { select: { name: true } },
+      organizerProfile: {
+        select: { displayName: true, user: { select: { email: true } } },
+      },
+      teacherProfile: {
+        select: { displayName: true, user: { select: { email: true } } },
+      },
+      organization: {
+        select: {
+          name: true,
+          type: true,
+          contactName: true,
+          contactEmail: true,
+          contactPhone: true,
+        },
+      },
       enrollments: {
         select: {
           id: true,

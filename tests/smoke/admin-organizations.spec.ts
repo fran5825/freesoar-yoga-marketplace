@@ -97,6 +97,8 @@ test.describe("admin organizations smoke", () => {
     const zebraCard = page.locator("article").filter({ hasText: zebraOrgName });
 
     await expect(alphaCard).toContainText("Contact Alpha");
+    await expect(alphaCard).toContainText("聯絡人");
+    await expect(alphaCard).toContainText("團主");
     await expect(alphaCard).toContainText("contact-alpha@example.com");
     await expect(alphaCard).toContainText("0900-000-000");
     await expect(alphaCard).toContainText(`Alpha Organizer ${runId}`);
@@ -202,20 +204,23 @@ test.describe("admin organizations smoke", () => {
 
     await page.goto("/admin/organizations");
 
+    const menuButton = page.getByRole("button", { name: "選單" });
+    if (await menuButton.isVisible()) await menuButton.click();
+
     const nav = page.getByRole("navigation");
-    await expect(nav.getByRole("link", { name: "Dashboard" })).toHaveAttribute(
+    await expect(nav.getByRole("link", { name: "總覽", exact: true })).toHaveAttribute(
       "href",
       "/admin/dashboard",
     );
-    await expect(nav.getByRole("link", { name: "Teachers" })).toHaveAttribute(
+    await expect(nav.getByRole("link", { name: "老師", exact: true })).toHaveAttribute(
       "href",
       "/admin/teachers",
     );
-    await expect(nav.getByRole("link", { name: "Demands" })).toHaveAttribute(
+    await expect(nav.getByRole("link", { name: "需求", exact: true })).toHaveAttribute(
       "href",
       "/admin/demands",
     );
-    await expect(nav.getByRole("link", { name: "Classes" })).toHaveAttribute(
+    await expect(nav.getByRole("link", { name: "課程", exact: true })).toHaveAttribute(
       "href",
       "/admin/classes",
     );

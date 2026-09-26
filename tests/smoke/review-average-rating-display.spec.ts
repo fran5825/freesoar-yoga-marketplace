@@ -204,7 +204,7 @@ test.describe("review average rating display smoke", () => {
     await submitReview({ userId: memberB1.userId, classSessionId: teacherB.classSessionId, rating: 1 });
 
     await addAuthSessionCookie(context, teacherA.teacherSessionToken);
-    await page.goto("/teacher/profile");
+    await page.goto("/teacher/profile/info");
     await expect(page.getByText("4.0 分（2 則評價）")).toBeVisible();
     await expect(page.getByText("1.0 分（1 則評價）")).toBeHidden();
   });
@@ -225,7 +225,7 @@ test.describe("review average rating display smoke", () => {
     });
 
     await addAuthSessionCookie(context, teacher.sessionToken);
-    await page.goto("/teacher/profile");
+    await page.goto("/teacher/profile/info");
     await expect(page.getByText("尚無評價")).toBeVisible();
   });
 
@@ -246,7 +246,7 @@ test.describe("review average rating display smoke", () => {
     await suspendTeacher(teacher.teacherProfileId);
 
     await addAuthSessionCookie(context, teacher.teacherSessionToken);
-    await page.goto("/teacher/profile");
+    await page.goto("/teacher/profile/info");
     await expect(page.getByText("2.0 分（1 則評價）")).toBeVisible();
   });
 
@@ -282,15 +282,11 @@ test.describe("review average rating display smoke", () => {
     const { sessionToken: adminSessionToken } = await createUserSession({ email: adminEmail, isAdmin: true });
     await addAuthSessionCookie(context, adminSessionToken);
 
-    await page.goto("/admin/teachers");
-    // /admin/teachers 列出全平台所有老師，平行 worker 共用同一個 DB，其他同時執行的測試
-    // 可能剛好也建立出一樣的評分文字（例如另一個 project 同時跑同一個測試），所以斷言必須
-    // 先用老師自己的顯示名稱鎖定卡片範圍，不能對整頁做全域文字比對
-    // （比照這一輪 admin-organizations.spec.ts 的既有先例）。
-    const cardA = page.locator("article").filter({ hasText: `Teacher adminA ${testRunId}` });
-    const cardB = page.locator("article").filter({ hasText: `Teacher adminB ${testRunId}` });
-    await expect(cardA.getByText("5.0 分（2 則評價）")).toBeVisible();
-    await expect(cardB.getByText("2.0 分（1 則評價）")).toBeVisible();
+    // 票 06：評分摘要在老師詳情頁（已通過與暫停中的老師都會顯示）。只驗證各自老師自己的平均值沒有被別人污染。
+    await page.goto(`/admin/teachers/${teacherA.teacherProfileId}`);
+    await expect(page.getByText("5.0 分（2 則評價）").first()).toBeVisible();
+    await page.goto(`/admin/teachers/${teacherB.teacherProfileId}`);
+    await expect(page.getByText("2.0 分（1 則評價）").first()).toBeVisible();
   });
 
   test("keeps /teacher/profile usable at mobile width (no horizontal overflow) with the new rating block", async ({
@@ -310,7 +306,7 @@ test.describe("review average rating display smoke", () => {
 
     await addAuthSessionCookie(context, teacher.teacherSessionToken);
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto("/teacher/profile");
+    await page.goto("/teacher/profile/info");
     await expect(page.getByText("4.0 分（1 則評價）")).toBeVisible();
 
     const hasOverflow = await page.evaluate(

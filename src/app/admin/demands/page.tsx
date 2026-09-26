@@ -1,38 +1,38 @@
-import { getDemandServiceTypes } from "@/domain/demand-request/service-types";
-import { listSubmittedDemandRequestsForAdmin } from "@/domain/demand-request/admin-service";
-import { organizationTypeLabels } from "@/domain/organizer-profile/organization-type-labels";
-import { requireAdmin } from "@/lib/auth/session";
 import { notFound } from "next/navigation";
 
-import { AdminNav } from "@/app/admin/_components/admin-nav";
+import { listDemandRequestsForAdmin } from "@/domain/demand-request/admin-service";
+import { getDemandServiceTypes } from "@/domain/demand-request/service-types";
+import { formatRelativeTime } from "@/lib/format-relative-time";
+import { requireAdmin } from "@/lib/auth/session";
 
-import { publishDemandRequestAction, rejectDemandRequestAction } from "./actions";
-import { getDemandLocationItems } from "@/domain/demand-request/location";
+import { AdminFilterBar, resolveActiveTab } from "../_components/AdminFilterBar";
+import { AdminFlash, type AdminFlashParams } from "../_components/AdminFlash";
+import { AdminListCard } from "../_components/AdminListCard";
+import { adminDemandStatusLabel, adminDemandStatusToneClass } from "./status-labels";
+
+type DemandStatus = Awaited<ReturnType<typeof listDemandRequestsForAdmin>>[number]["status"];
+
+// 票 07：預設停在「待審」。列表只放需求標題、狀態、團體、服務類型與多久前，完整內容與審核按鈕在
+// 詳情頁。草稿是團主私人資料，管理員看不到，所以不在任何分頁。
+const statusTabs: { key: string; label: string; statuses: DemandStatus[] | null }[] = [
+  { key: "pending", label: "待審", statuses: ["submitted"] },
+  { key: "published", label: "已公開", statuses: ["published", "teacher_responded"] },
+  { key: "rejected", label: "已退回", statuses: ["rejected"] },
+  { key: "all", label: "全部", statuses: null },
+];
+
+const emptyMessages: Record<string, string> = {
+  pending: "目前沒有待審核的需求。",
+  published: "目前沒有已公開的需求。",
+  rejected: "目前沒有已退回的需求。",
+  all: "目前沒有任何需求。",
+};
 
 type AdminDemandsPageProps = {
-  searchParams?: Promise<{
-    result?: string;
-    message?: string;
-  }>;
+  searchParams?: Promise<AdminFlashParams & { status?: string }>;
 };
 
-const targetLevelLabels: Record<string, string> = {
-  beginner: "初學",
-  general: "一般",
-  advanced: "進階",
-  mixed: "混合程度",
-};
-
-const frequencyLabels: Record<string, string> = {
-  single: "單堂",
-  weekly: "每週",
-  biweekly: "雙週",
-  monthly: "每月",
-};
-
-export default async function AdminDemandsPage({
-  searchParams,
-}: AdminDemandsPageProps) {
+export default async function AdminDemandsPage({ searchParams }: AdminDemandsPageProps) {
   try {
     await requireAdmin();
   } catch {
@@ -40,339 +40,68 @@ export default async function AdminDemandsPage({
   }
 
   const [demandRequests, resolvedSearchParams] = await Promise.all([
-    listSubmittedDemandRequestsForAdmin(),
+    listDemandRequestsForAdmin(),
     searchParams,
   ]);
+  const now = new Date();
 
-  const feedback =
-    resolvedSearchParams?.result && resolvedSearchParams.message
-      ? {
-          kind:
-            resolvedSearchParams.result === "success"
-              ? ("success" as const)
-              : ("error" as const),
-          message: resolvedSearchParams.message,
-        }
-      : null;
+  const tabs = statusTabs.map((tab) => ({
+    ...tab,
+    count: tab.statuses
+      ? demandRequests.filter((demand) => tab.statuses?.includes(demand.status)).length
+      : demandRequests.length,
+  }));
+  const activeTab = resolveActiveTab(tabs, resolvedSearchParams?.status);
+  // 待審的排最久的在前（先處理等最久的）；其他狀態最近更新的在前。
+  const visibleDemandRequests = (
+    activeTab.statuses
+      ? demandRequests.filter((demand) => activeTab.statuses?.includes(demand.status))
+      : [...demandRequests]
+  ).sort((a, b) =>
+    activeTab.key === "pending"
+      ? a.updatedAt.getTime() - b.updatedAt.getTime()
+      : b.updatedAt.getTime() - a.updatedAt.getTime(),
+  );
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-8 px-6 py-10">
-      <header className="grid gap-3 border-b border-ink/15 pb-6 md:grid-cols-[1fr_auto] md:items-end">
-        <div>
-          <p className="text-sm font-medium text-clay">Admin review</p>
-          <AdminNav />
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
-            Demand requests
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
-            檢視已送出審核的團課需求，公開合適的需求，或退回並說明原因。
-          </p>
-        </div>
-        <div className="rounded-xl border border-ink/15 bg-white px-4 py-3 text-sm">
-          <p className="font-medium text-ink">Submitted</p>
-          <p className="mt-1 text-2xl font-semibold text-ink">
-            {demandRequests.length}
-          </p>
-        </div>
+    <div className="flex flex-col gap-8">
+      <header className="border-b border-ink/15 pb-6">
+        <h1 className="text-3xl font-semibold tracking-tight text-ink">需求審核</h1>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
+          檢視團主送出的團課需求，公開合適的需求，或退回並說明原因。點進需求可以看完整內容並操作。
+        </p>
       </header>
 
-      {feedback ? (
-        <section
-          aria-live="polite"
-          className={
-            feedback.kind === "success"
-              ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
-              : "rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
-          }
-        >
-          {feedback.message}
-        </section>
-      ) : null}
+      <AdminFlash message={resolvedSearchParams?.message} result={resolvedSearchParams?.result} />
 
-      {demandRequests.length === 0 ? (
+      <AdminFilterBar
+        activeKey={activeTab.key}
+        ariaLabel="需求狀態篩選"
+        basePath="/admin/demands"
+        tabs={tabs}
+      />
+
+      {visibleDemandRequests.length === 0 ? (
         <section className="rounded-2xl border border-ink/15 bg-white p-6">
-          <h2 className="text-lg font-medium text-ink">
-            No submitted demand requests
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-ink-soft">
-            Draft、published、rejected 的需求不會顯示在此審核佇列中。
-          </p>
+          <h2 className="text-lg font-medium text-ink">{emptyMessages[activeTab.key]}</h2>
         </section>
       ) : (
-        <section className="grid gap-4">
-          {demandRequests.map((demandRequest) => (
-            <article
-              className="grid gap-5 rounded-2xl border border-ink/15 bg-white p-5"
-              key={demandRequest.id}
-            >
-              <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-start">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h2 className="min-w-0 break-words text-xl font-semibold text-ink">
-                      {demandRequest.title ?? "尚未命名的需求"}
-                    </h2>
-                    <span className="rounded-full bg-pine-tint px-3 py-1 text-xs font-medium text-pine">
-                      submitted
-                    </span>
-                  </div>
-                  <dl className="mt-4 grid gap-3 text-sm text-ink-soft sm:grid-cols-2">
-                    <div className="min-w-0">
-                      <dt className="font-medium text-ink">Organizer</dt>
-                      <dd className="mt-1 break-words">
-                        {demandRequest.organizerProfile.displayName}
-                      </dd>
-                    </div>
-                    <div className="min-w-0">
-                      <dt className="font-medium text-ink">
-                        Organization
-                      </dt>
-                      <dd className="mt-1 break-words">
-                        {demandRequest.organization.name}（
-                        {organizationTypeLabels[demandRequest.organization.type] ??
-                          demandRequest.organization.type}
-                        ）
-                      </dd>
-                    </div>
-                    <div className="min-w-0">
-                      <dt className="font-medium text-ink">
-                        Contact name
-                      </dt>
-                      <dd className="mt-1 break-words">
-                        {demandRequest.organization.contactName ??
-                          "Not provided"}
-                      </dd>
-                    </div>
-                    <div className="min-w-0">
-                      <dt className="font-medium text-ink">
-                        Contact email
-                      </dt>
-                      <dd className="mt-1 break-words">
-                        {demandRequest.organization.contactEmail ??
-                          "Not provided"}
-                      </dd>
-                    </div>
-                    <div className="min-w-0">
-                      <dt className="font-medium text-ink">
-                        Contact phone
-                      </dt>
-                      <dd className="mt-1 break-words">
-                        {demandRequest.organization.contactPhone ??
-                          "Not provided"}
-                      </dd>
-                    </div>
-                    <div className="min-w-0">
-                      <dt className="font-medium text-ink">Submitted</dt>
-                      <dd className="mt-1">
-                        {formatDateTime(demandRequest.updatedAt)}
-                      </dd>
-                    </div>
-                  </dl>
-                </div>
-
-                <div className="flex w-full flex-col gap-3 md:w-72">
-                  <form action={publishDemandRequestAction}>
-                    <input
-                      name="demandRequestId"
-                      type="hidden"
-                      value={demandRequest.id}
-                    />
-                    <button
-                      className="w-full rounded-full bg-pine px-4 py-2 text-sm font-medium text-white transition hover:bg-pine-deep"
-                      type="submit"
-                    >
-                      Publish
-                    </button>
-                  </form>
-
-                  <details className="rounded-xl border border-rose-200 bg-rose-50/60">
-                    <summary className="cursor-pointer list-none rounded-full px-4 py-2 text-sm font-medium text-rose-800 marker:hidden">
-                      Reject…
-                    </summary>
-                    <form
-                      action={rejectDemandRequestAction}
-                      className="grid gap-3 border-t border-rose-100 p-4"
-                    >
-                      <input
-                        name="demandRequestId"
-                        type="hidden"
-                        value={demandRequest.id}
-                      />
-                      <div>
-                        <label
-                          className="text-sm font-medium text-ink"
-                          htmlFor={`reject-reason-${demandRequest.id}`}
-                        >
-                          退回原因
-                        </label>
-                        <p className="mt-1 text-xs leading-5 text-ink-soft">
-                          此說明會顯示給團主，請具體、溫和地寫出需要修正的方向（10–1000 字）。
-                        </p>
-                        <textarea
-                          className="mt-2 min-h-24 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
-                          id={`reject-reason-${demandRequest.id}`}
-                          maxLength={1000}
-                          minLength={10}
-                          name="rejectionReason"
-                          placeholder="例如：需求說明過於簡略，請補充上課對象與希望呈現的課程樣貌。"
-                          required
-                        />
-                      </div>
-                      <label className="flex items-start gap-2 text-sm leading-6 text-ink-soft">
-                        <input
-                          className="mt-1 shrink-0"
-                          name="confirmReject"
-                          required
-                          type="checkbox"
-                          value="yes"
-                        />
-                        我確認要退回這筆需求，且以上原因會顯示給團主。
-                      </label>
-                      <button
-                        className="w-full rounded-full bg-rose-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-800"
-                        type="submit"
-                      >
-                        確認退回
-                      </button>
-                    </form>
-                  </details>
-                </div>
-              </div>
-
-              <div className="grid gap-4 border-t border-ink/10 pt-4 md:grid-cols-2">
-                <ReadOnlyText
-                  label="Service type"
-                  value={getDemandServiceTypes(demandRequest).join("、") || null}
-                />
-                <ReadOnlyText
-                  label="Target level"
-                  value={
-                    demandRequest.targetLevel
-                      ? (targetLevelLabels[demandRequest.targetLevel] ??
-                        demandRequest.targetLevel)
-                      : null
-                  }
-                />
-                <ReadOnlyText
-                  label="Expected participants"
-                  value={
-                    typeof demandRequest.expectedParticipants === "number"
-                      ? `${demandRequest.expectedParticipants} 人`
-                      : null
-                  }
-                />
-                <ReadOnlyText
-                  label="Class length"
-                  value={
-                    typeof demandRequest.classLengthMinutes === "number"
-                      ? `${demandRequest.classLengthMinutes} 分鐘`
-                      : null
-                  }
-                />
-                <ReadOnlyText
-                  label="Frequency"
-                  value={
-                    demandRequest.frequency
-                      ? (frequencyLabels[demandRequest.frequency] ??
-                        demandRequest.frequency)
-                      : null
-                  }
-                />
-                <ReadOnlyText
-                  label="Preferred start date"
-                  value={
-                    demandRequest.preferredStartDate
-                      ? formatDate(demandRequest.preferredStartDate)
-                      : null
-                  }
-                />
-                <ReadOnlyText
-                  label="Budget range"
-                  value={demandRequest.budgetRange}
-                />
-                <ReadOnlyList
-                  label="期望地點"
-                  values={getDemandLocationItems(demandRequest)}
-                />
-                <ReadOnlyList
-                  label="Preferred time slots"
-                  values={demandRequest.preferredTimeSlots}
-                />
-                <div className="min-w-0 md:col-span-2">
-                  <ReadOnlyText
-                    label="Description"
-                    multiline
-                    value={demandRequest.description}
-                  />
-                </div>
-              </div>
-            </article>
+        <section className="grid gap-3">
+          {visibleDemandRequests.map((demand) => (
+            <AdminListCard
+              href={`/admin/demands/${demand.id}`}
+              key={demand.id}
+              lines={[
+                `${demand.organization.name}・${getDemandServiceTypes(demand).join("、") || "尚未選服務類型"}`,
+                `${demand.status === "submitted" ? "送審於" : "最後更新"} ${formatRelativeTime(demand.updatedAt, now)}`,
+              ]}
+              statusLabel={adminDemandStatusLabel(demand.status)}
+              statusToneClass={adminDemandStatusToneClass(demand.status)}
+              title={demand.title ?? "尚未命名的需求"}
+            />
           ))}
         </section>
       )}
-    </main>
-  );
-}
-
-function ReadOnlyText({
-  label,
-  value,
-  multiline,
-}: {
-  label: string;
-  value: string | null;
-  multiline?: boolean;
-}) {
-  return (
-    <div className="min-w-0 text-sm">
-      <h3 className="font-medium text-ink">{label}</h3>
-      <p
-        className={`mt-2 break-words leading-6 text-ink-soft ${multiline ? "whitespace-pre-wrap" : ""}`}
-      >
-        {value && value.trim().length > 0 ? value : "Not provided"}
-      </p>
     </div>
-  );
-}
-
-function ReadOnlyList({
-  label,
-  values,
-}: {
-  label: string;
-  values: string[];
-}) {
-  const visibleValues = values.filter((value) => value.trim().length > 0);
-
-  return (
-    <div className="min-w-0 text-sm">
-      <h3 className="font-medium text-ink">{label}</h3>
-      {visibleValues.length > 0 ? (
-        <ul className="mt-2 flex flex-wrap gap-2">
-          {visibleValues.map((value) => (
-            <li
-              className="rounded-full border border-ink/15 px-3 py-1 text-ink-soft"
-              key={value}
-            >
-              {value}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="mt-2 leading-6 text-ink-soft">Not provided</p>
-      )}
-    </div>
-  );
-}
-
-function formatDateTime(value: Date) {
-  return new Intl.DateTimeFormat("zh-TW", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(value);
-}
-
-function formatDate(value: Date) {
-  return new Intl.DateTimeFormat("zh-TW", { dateStyle: "medium" }).format(
-    value,
   );
 }

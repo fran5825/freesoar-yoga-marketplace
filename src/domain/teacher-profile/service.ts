@@ -905,6 +905,41 @@ export async function listApprovedAndSuspendedTeacherProfilesForAdmin(): Promise
   }));
 }
 
+export type TeacherProfileDetailForAdmin = SubmittedTeacherProfileApplication & {
+  averageRating: number | null;
+  reviewCount: number;
+};
+
+// admin-usability 票 06：管理員審核詳情頁用的單筆讀取。requireAdmin() 把關；草稿是老師自己的私人
+// 資料、還沒送審，管理員看不到，所以 draft 一律回 null（與列表頁只看得到 submitted／approved／
+// suspended 一致）。查無資料回傳 null（not-found 語意）。
+export async function getTeacherProfileForAdmin(
+  teacherProfileId: string,
+): Promise<TeacherProfileDetailForAdmin | null> {
+  await requireAdmin();
+
+  const profile = await prisma.teacherProfile.findUnique({
+    where: { id: teacherProfileId },
+    select: submittedTeacherProfileApplicationSelect,
+  });
+
+  if (!profile || profile.status === "draft") {
+    return null;
+  }
+
+  const rating = await prisma.review.aggregate({
+    where: { classSession: { teacherProfileId } },
+    _avg: { rating: true },
+    _count: { rating: true },
+  });
+
+  return {
+    ...profile,
+    averageRating: rating._avg.rating,
+    reviewCount: rating._count.rating,
+  };
+}
+
 function toTeacherProfileDraftData(input: TeacherProfileApplicationInput) {
   return {
     displayName: input.displayName ?? null,

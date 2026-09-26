@@ -62,7 +62,7 @@ type SubmitFeedback = {
 };
 
 // teacher-join-gated-application Slice 3（G3）：帶上 callbackUrl，讓登入完成後導回
-// 這一頁，而不是掉回 /sign-in 沒帶 callbackUrl 時的既有預設值 /account。
+// 這一頁，而不是掉回 /sign-in 沒帶 callbackUrl 時的既有預設值（學員總覽）。
 const signInHref = `/sign-in?callbackUrl=${encodeURIComponent("/teachers/join")}`;
 
 const collaborationPrinciples = [
@@ -100,7 +100,7 @@ const mutationBlockedStatusLabels: Record<
 > = {
   submitted: {
     notice:
-      "已送出審核，接下來會等待平台確認。審核期間暫時不需要再儲存草稿或重複送出。",
+      "已送出審核，接下來會等待平台確認。審核完成後會在站內通知你，審核期間不需要再儲存草稿或重複送出。",
     saveButton: "已送出審核",
     submitButton: "已送出審核",
   },
@@ -131,14 +131,69 @@ function hasExperienceYears(value: string) {
   return Number.isFinite(parsedValue) && parsedValue >= 0;
 }
 
+const allApplicationFields = applicationSections.flatMap(
+  (section) => section.fields,
+);
+
+// 只能從選項清單勾選的欄位（例如服務地區）：舊資料若是自由輸入的文字，不在清單內就不算數。
+function getChoiceOnlyField(fieldName: FormFieldName) {
+  const field = allApplicationFields.find((item) => item.name === fieldName);
+
+  return field?.kind === "checkboxGroup" && field.allowOther === false
+    ? field
+    : null;
+}
+
 function getMissingRequiredFields(formState: TeacherApplicationFormState) {
   return requiredFields.filter((fieldName) => {
     if (fieldName === "experienceYears") {
       return !hasExperienceYears(formState.experienceYears);
     }
 
+    const choiceOnlyField = getChoiceOnlyField(fieldName);
+
+    if (choiceOnlyField) {
+      return (
+        parseCheckboxGroupValue(formState[fieldName], choiceOnlyField.groups)
+          .selectedValues.length === 0
+      );
+    }
+
     return isBlank(formState[fieldName]);
   });
+}
+
+// 只能勾選的欄位，把不在選項清單內的舊資料挑出來（可編輯時會從表單移除，並提醒老師改選）。
+function splitLegacyChoiceValues(
+  state: TeacherApplicationFormState,
+): {
+  cleanedState: TeacherApplicationFormState;
+  legacyValues: Partial<Record<FormFieldName, string>>;
+} {
+  const cleanedState = { ...state };
+  const legacyValues: Partial<Record<FormFieldName, string>> = {};
+
+  for (const field of allApplicationFields) {
+    if (field.kind !== "checkboxGroup" || field.allowOther !== false) {
+      continue;
+    }
+
+    const { selectedValues, otherText } = parseCheckboxGroupValue(
+      state[field.name],
+      field.groups,
+    );
+
+    if (otherText.length > 0) {
+      legacyValues[field.name] = otherText;
+      cleanedState[field.name] = selectedValues.join("\n");
+    }
+  }
+
+  return { cleanedState, legacyValues };
+}
+
+function getFieldCardId(fieldName: FormFieldName) {
+  return `teacher-application-${fieldName}-card`;
 }
 
 function getReadinessMessage(fieldName: FormFieldName) {
@@ -245,6 +300,147 @@ function toTeacherApplicationFormState(
   };
 }
 
+function getFieldDisplayValue(field: TextField, value: string) {
+  if (field.kind === "select") {
+    return (
+      field.options.find((option) => option.value === value)?.label ?? value
+    );
+  }
+
+  return value;
+}
+
+// 審核中（submitted）的唯讀摘要：核心欄位送審後不能編輯，所以只給老師「看」送出去的內容，
+// 不再顯示一張可以填、但存不了的表單。
+function SubmittedApplicationSummary({
+  formState,
+  lastSavedAtLabel,
+}: {
+  formState: TeacherApplicationFormState;
+  lastSavedAtLabel: string | null;
+}) {
+  return (
+    <section
+      aria-labelledby="application-form-title"
+      className="grid gap-6 border-y border-pine/15 bg-pine-tint/60 py-6"
+    >
+      <div className="grid gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="w-fit rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
+            審核中
+          </span>
+          <h2
+            className="text-2xl font-semibold tracking-tight text-ink"
+            id="application-form-title"
+          >
+            你的老師申請正在審核
+          </h2>
+        </div>
+        <p className="max-w-2xl text-sm leading-6 text-ink-soft">
+          已送出審核，接下來會等待平台確認。審核完成後會在站內通知你，審核期間不需要再儲存草稿或重複送出。
+        </p>
+        {lastSavedAtLabel ? (
+          <p className="text-xs text-ink-faint">最後更新：{lastSavedAtLabel}</p>
+        ) : null}
+        <div>
+          <a
+            className="inline-flex rounded-full border border-pine/40 bg-white px-4 py-2 text-sm font-medium text-pine"
+            href="/teacher/dashboard"
+          >
+            回老師總覽
+          </a>
+        </div>
+      </div>
+
+      {applicationSections.map((section) => (
+        <section
+          className="grid gap-3 border-t border-pine/15 pt-5 first:border-t-0 first:pt-0"
+          key={section.title}
+        >
+          <h3 className="text-lg font-medium text-ink">{section.title}</h3>
+          <dl className="grid gap-3 md:grid-cols-2">
+            {section.fields.map((field) => {
+              const value = formState[field.name];
+              const isChoiceList = field.kind === "checkboxGroup";
+              const items = isChoiceList
+                ? value
+                    .split("\n")
+                    .map((item) => item.trim())
+                    .filter((item) => item.length > 0)
+                : [];
+
+              return (
+                <div
+                  className="min-w-0 rounded-2xl border border-ink/12 bg-white p-4"
+                  key={field.name}
+                >
+                  <dt className="text-sm font-medium text-ink">
+                    {field.label}
+                  </dt>
+                  <dd className="mt-2 text-sm leading-6 text-ink-soft">
+                    {isChoiceList ? (
+                      items.length > 0 ? (
+                        <span className="flex flex-wrap gap-2">
+                          {items.map((item) => (
+                            <span
+                              className="rounded-full border border-ink/20 px-3 py-1 text-sm text-ink-soft"
+                              key={item}
+                            >
+                              {item}
+                            </span>
+                          ))}
+                        </span>
+                      ) : (
+                        "未填寫"
+                      )
+                    ) : value.trim().length > 0 ? (
+                      <span className="whitespace-pre-wrap break-words">
+                        {getFieldDisplayValue(field, value)}
+                      </span>
+                    ) : (
+                      "未填寫"
+                    )}
+                  </dd>
+                </div>
+              );
+            })}
+          </dl>
+        </section>
+      ))}
+    </section>
+  );
+}
+
+function SectionProgress({
+  requiredCount,
+  missingCount,
+}: {
+  requiredCount: number;
+  missingCount: number;
+}) {
+  if (requiredCount === 0) {
+    return (
+      <span className="rounded-full bg-sand px-3 py-1 text-xs font-medium text-clay">
+        全部選填
+      </span>
+    );
+  }
+
+  if (missingCount === 0) {
+    return (
+      <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800">
+        必填已完成
+      </span>
+    );
+  }
+
+  return (
+    <span className="rounded-full bg-clay-tint px-3 py-1 text-xs font-medium text-clay-deep">
+      必填 {requiredCount - missingCount} / {requiredCount}
+    </span>
+  );
+}
+
 function RequirementBadge({
   requirement,
 }: {
@@ -260,7 +456,7 @@ function RequirementBadge({
 
   return (
     <span className="rounded-full bg-sand px-3 py-1 text-xs font-medium text-clay">
-      建議，可留空
+      選填，通過後再補也可以
     </span>
   );
 }
@@ -326,11 +522,13 @@ function FieldControl({
     );
     const flatOptions = field.groups.flatMap((group) => group.options);
 
+    const allowOther = field.allowOther !== false;
+
     function toggleOption(optionValue: string) {
       const nextSelected = selectedValues.includes(optionValue)
         ? selectedValues.filter((item) => item !== optionValue)
         : [...selectedValues, optionValue];
-      onChange(buildCheckboxGroupValue(nextSelected, otherText));
+      onChange(buildCheckboxGroupValue(nextSelected, allowOther ? otherText : ""));
     }
 
     return (
@@ -346,17 +544,19 @@ function FieldControl({
             />
           ))}
         </div>
-        <input
-          className={controlClassName}
-          disabled={disabled}
-          onChange={(event) =>
-            onChange(
-              buildCheckboxGroupValue(selectedValues, event.target.value),
-            )
-          }
-          placeholder={field.otherPlaceholder}
-          value={otherText}
-        />
+        {allowOther ? (
+          <input
+            className={controlClassName}
+            disabled={disabled}
+            onChange={(event) =>
+              onChange(
+                buildCheckboxGroupValue(selectedValues, event.target.value),
+              )
+            }
+            placeholder={field.otherPlaceholder}
+            value={otherText}
+          />
+        ) : null}
       </div>
     );
   }
@@ -392,22 +592,48 @@ export function TeacherApplicationForm() {
   const [hydratedProfileStatus, setHydratedProfileStatus] =
     useState<HydratedTeacherProfileStatus | null>(null);
   const [rejectionReason, setRejectionReason] = useState<string | null>(null);
+  // 還沒拿到自己的申請資料前不顯示表單，避免審核中的老師先看到一張空表單再跳成摘要。
+  const [isHydrated, setIsHydrated] = useState(false);
+  // 舊資料裡不在選項清單內的內容（例如自由輸入的服務地區），用來提醒老師改選。
+  const [legacyChoiceValues, setLegacyChoiceValues] = useState<
+    Partial<Record<FormFieldName, string>>
+  >({});
 
   useEffect(() => {
     let isMounted = true;
 
     async function hydrateOwnTeacherProfile() {
-      const profile =
-        await getInitialTeacherProfileApplicationSnapshotAction();
+      try {
+        const profile =
+          await getInitialTeacherProfileApplicationSnapshotAction();
 
-      if (!isMounted || !profile) {
-        return;
+        if (!isMounted || !profile) {
+          return;
+        }
+
+        const loadedState = toTeacherApplicationFormState(profile);
+
+        // 審核中、已通過、已暫停只是唯讀顯示，保留原樣；可編輯（草稿、被退回）才清掉舊的自由輸入內容。
+        if (profile.status === "draft" || profile.status === "rejected") {
+          const { cleanedState, legacyValues } =
+            splitLegacyChoiceValues(loadedState);
+
+          setFormState(cleanedState);
+          setLegacyChoiceValues(legacyValues);
+        } else {
+          setFormState(loadedState);
+        }
+
+        setHydratedProfileStatus(profile.status);
+        setRejectionReason(profile.rejectionReason);
+        setLastSavedAt(profile.updatedAt);
+        // 被退回的申請一進來就標出還缺哪些必填欄位，不用老師再按「檢查準備狀態」。
+        setHasCheckedReadiness(profile.status === "rejected");
+      } finally {
+        if (isMounted) {
+          setIsHydrated(true);
+        }
       }
-
-      setFormState(toTeacherApplicationFormState(profile));
-      setHydratedProfileStatus(profile.status);
-      setRejectionReason(profile.rejectionReason);
-      setLastSavedAt(profile.updatedAt);
     }
 
     void hydrateOwnTeacherProfile();
@@ -473,6 +699,26 @@ export function TeacherApplicationForm() {
     setHasCheckedReadiness(true);
     setDraftSaveFeedback(null);
     setSubmitFeedback(null);
+
+    // 把畫面帶到第一個缺項，老師不用自己找。
+    const firstMissing = missingRequiredFields[0];
+
+    if (firstMissing) {
+      document
+        .getElementById(getFieldCardId(firstMissing))
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }
+
+  function handleJumpToFix() {
+    const firstMissing = missingRequiredFields[0];
+    const targetId = firstMissing
+      ? getFieldCardId(firstMissing)
+      : "application-form-title";
+
+    document
+      .getElementById(targetId)
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
   async function handleSaveDraft() {
@@ -566,7 +812,7 @@ export function TeacherApplicationForm() {
         setSubmitFeedback({
           kind: "success",
           message:
-            "已送出審核，接下來會等待平台確認。審核期間暫時不需要再儲存草稿。",
+            "已送出審核，接下來會等待平台確認。審核完成後會在站內通知你，審核期間不需要再儲存草稿。",
         });
         return;
       }
@@ -602,31 +848,37 @@ export function TeacherApplicationForm() {
     </span>
   );
 
-  const readinessSummary = hasCheckedReadiness ? (
-    <div
-      className={
-        isReadyForFutureSubmit
-          ? "rounded-xl border border-pine/15 bg-pine-tint px-4 py-3 text-sm leading-6 text-ink-soft"
-          : "rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep"
-      }
-    >
-      <p>
-        {isReadyForFutureSubmit ? (
-          "送審必填欄位都已有內容，正式送出前系統還會再確認一次。"
-        ) : (
-          <>
-            <span className="font-medium">還有必填欄位尚未完成：</span>
-            {missingRequiredFields
-              .map((fieldName) => fieldLabels[fieldName])
-              .join("、")}
-          </>
-        )}
-      </p>
-      <p className="mt-1">
-        建議欄位已填 {optionalFieldsWithValue} / {optionalFieldNames.length} 項，可以之後再補。
+  // 比照團主開需求表單：不用先按「檢查準備狀態」，缺幾項、缺哪些隨時看得到，點名稱可跳到該欄位。
+  const readinessSummary = mutationBlockedCopy ? null : isReadyForFutureSubmit ? (
+    <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900">
+      <p>必填欄位都填好了，可以送出審核。</p>
+      <p className="mt-1 text-emerald-800">
+        選填欄位已填 {optionalFieldsWithValue} / {optionalFieldNames.length} 項，通過後再補也可以。
       </p>
     </div>
-  ) : null;
+  ) : (
+    <div className="rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep">
+      <p>
+        <span className="font-medium">
+          還缺 {missingRequiredFields.length} 項才能送審：
+        </span>
+        {missingRequiredFields.map((fieldName, index) => (
+          <span key={fieldName}>
+            {index > 0 ? "、" : null}
+            <a
+              className="underline underline-offset-4"
+              href={`#${getFieldCardId(fieldName)}`}
+            >
+              {fieldLabels[fieldName]}
+            </a>
+          </span>
+        ))}
+      </p>
+      <p className="mt-1">
+        選填欄位已填 {optionalFieldsWithValue} / {optionalFieldNames.length} 項，通過後再補也可以。
+      </p>
+    </div>
+  );
 
   const statusActionBar = (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-full border border-ink/12 bg-white px-4 py-2.5">
@@ -789,8 +1041,40 @@ export function TeacherApplicationForm() {
     </>
   );
 
+  const rejectedBanner = isRejectedProfile ? (
+    <section
+      aria-labelledby="rejected-banner-title"
+      className="min-w-0 rounded-2xl border border-clay/25 bg-clay-tint p-5"
+    >
+      <h2
+        className="text-xl font-semibold tracking-tight text-clay-deep"
+        id="rejected-banner-title"
+      >
+        這份申請需要修正
+      </h2>
+      <h3 className="mt-3 text-sm font-medium text-clay-deep">
+        平台的退回說明
+      </h3>
+      <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-clay">
+        {rejectionReason && rejectionReason.trim().length > 0
+          ? rejectionReason
+          : "平台尚未提供具體說明。你可以先檢查必填欄位並補充教學經歷，準備好後再重新送審。"}
+      </p>
+      <button
+        className="mt-4 rounded-full bg-pine px-5 py-2 text-sm font-medium text-white"
+        onClick={handleJumpToFix}
+        type="button"
+      >
+        {missingRequiredFields.length > 0
+          ? `從第一個缺項開始修正（還缺 ${missingRequiredFields.length} 項）`
+          : "前往修改申請內容"}
+      </button>
+    </section>
+  ) : null;
+
   return (
     <>
+      {rejectedBanner}
       <section>
         <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
           一起建立清楚、安心的瑜伽團課合作
@@ -822,6 +1106,19 @@ export function TeacherApplicationForm() {
         )}
       </section>
 
+      {!isHydrated ? (
+        <p
+          className="border-y border-pine/15 bg-pine-tint/60 py-6 text-sm text-ink-soft"
+          role="status"
+        >
+          正在載入你的申請資料…
+        </p>
+      ) : hydratedProfileStatus === "submitted" ? (
+        <SubmittedApplicationSummary
+          formState={formState}
+          lastSavedAtLabel={lastSavedAtLabel}
+        />
+      ) : (
       <section
         aria-labelledby="application-form-title"
         className="grid gap-6 border-y border-pine/15 bg-pine-tint/60 py-6"
@@ -847,19 +1144,6 @@ export function TeacherApplicationForm() {
         {statusActionBar}
         {statusExtras}
 
-        {isRejectedProfile ? (
-          <div className="min-w-0 rounded-2xl border border-clay/25 bg-clay-tint p-4">
-            <h3 className="text-sm font-medium text-clay-deep">
-              平台的退回說明
-            </h3>
-            <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-clay">
-              {rejectionReason && rejectionReason.trim().length > 0
-                ? rejectionReason
-                : "平台尚未提供具體說明。你可以先檢查必填欄位並補充教學經歷，準備好後再重新送審。"}
-            </p>
-          </div>
-        ) : null}
-
         <form
           className="grid gap-5"
           onSubmit={(event) => {
@@ -873,9 +1157,23 @@ export function TeacherApplicationForm() {
               key={section.title}
             >
               <div className="max-w-2xl">
-                <h3 className="text-lg font-medium text-ink">
-                  {section.title}
-                </h3>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <h3 className="text-lg font-medium text-ink">
+                    {section.title}
+                  </h3>
+                  <SectionProgress
+                    missingCount={
+                      section.fields.filter((field) =>
+                        missingRequiredFieldSet.has(field.name),
+                      ).length
+                    }
+                    requiredCount={
+                      section.fields.filter(
+                        (field) => field.requirement === "submitRequired",
+                      ).length
+                    }
+                  />
+                </div>
                 <p className="mt-2 text-sm leading-6 text-ink-soft">
                   {section.description}
                 </p>
@@ -890,7 +1188,8 @@ export function TeacherApplicationForm() {
 
                   return (
                     <div
-                      className="rounded-2xl border border-ink/12 bg-white p-4"
+                      className="scroll-mt-24 rounded-2xl border border-ink/12 bg-white p-4"
+                      id={getFieldCardId(field.name)}
                       key={field.name}
                     >
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -909,6 +1208,13 @@ export function TeacherApplicationForm() {
                         {field.helper}
                       </p>
 
+                      {field.kind === "textarea" && field.example ? (
+                        <p className="mt-2 rounded-xl bg-cream px-3 py-2 text-sm leading-6 text-ink-soft">
+                          <span className="font-medium text-ink">參考寫法：</span>
+                          {field.example}
+                        </p>
+                      ) : null}
+
                       <FieldControl
                         disabled={mutationBlockedStatus !== null}
                         field={field}
@@ -917,6 +1223,20 @@ export function TeacherApplicationForm() {
                         showReminder={showReminder}
                         value={formState[field.name]}
                       />
+
+                      {legacyChoiceValues[field.name] ? (
+                        <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900">
+                          你先前填寫的「{legacyChoiceValues[field.name]}
+                          」不在選項內，這次不會保留，請改從上方勾選。
+                        </p>
+                      ) : null}
+
+                      {field.kind === "textarea" &&
+                      field.requirement === "submitRequired" ? (
+                        <p className="mt-1 text-right text-xs text-ink-faint">
+                          已輸入 {formState[field.name].trim().length} 字
+                        </p>
+                      ) : null}
 
                       {showReminder ? (
                         <p
@@ -938,6 +1258,7 @@ export function TeacherApplicationForm() {
         {statusActionBar}
         {statusExtras}
       </section>
+      )}
     </>
   );
 }

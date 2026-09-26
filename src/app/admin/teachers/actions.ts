@@ -10,65 +10,58 @@ import { requireAdmin } from "@/lib/auth/session";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-export async function approveTeacherProfileApplicationAction(
-  formData: FormData,
-): Promise<void> {
+// admin-usability 票 06：審核完成後回到老師列表（預設停在「待審」），列表頂端顯示成功提示；
+// 失敗則留在這位老師的詳情頁顯示原因，管理員不用重找。
+function redirectToList(result: "success" | "error", message: string): never {
+  redirect(`/admin/teachers?result=${result}&message=${encodeURIComponent(message)}`);
+}
+
+function redirectToDetail(teacherProfileId: string, message: string): never {
+  redirect(
+    `/admin/teachers/${encodeURIComponent(teacherProfileId)}?result=error&message=${encodeURIComponent(message)}`,
+  );
+}
+
+async function readTeacherProfileId(formData: FormData): Promise<string> {
   try {
     await requireAdmin();
   } catch {
-    redirect(
-      "/admin/teachers?result=error&message=Admin%20permission%20is%20required.",
-    );
+    redirectToList("error", "需要管理員權限才能執行這個操作。");
   }
 
   const teacherProfileId = formData.get("teacherProfileId");
 
   if (typeof teacherProfileId !== "string" || teacherProfileId.length === 0) {
-    redirect(
-      "/admin/teachers?result=error&message=TeacherProfile%20application%20is%20missing.",
-    );
+    redirectToList("error", "找不到這位老師的資料。");
   }
 
-  const result =
-    await approveSubmittedTeacherProfileApplication(teacherProfileId);
+  return teacherProfileId;
+}
+
+export async function approveTeacherProfileApplicationAction(
+  formData: FormData,
+): Promise<void> {
+  const teacherProfileId = await readTeacherProfileId(formData);
+
+  const result = await approveSubmittedTeacherProfileApplication(teacherProfileId);
 
   revalidatePath("/admin/teachers");
 
   if (!result.ok) {
-    redirect(
-      `/admin/teachers?result=error&message=${encodeURIComponent(result.message)}`,
-    );
+    redirectToDetail(teacherProfileId, result.message);
   }
 
-  redirect(
-    `/admin/teachers?result=success&message=${encodeURIComponent("TeacherProfile application approved.")}`,
-  );
+  redirectToList("success", "已通過這位老師的申請。");
 }
 
 export async function rejectTeacherProfileApplicationAction(
   formData: FormData,
 ): Promise<void> {
-  try {
-    await requireAdmin();
-  } catch {
-    redirect(
-      "/admin/teachers?result=error&message=Admin%20permission%20is%20required.",
-    );
-  }
+  const teacherProfileId = await readTeacherProfileId(formData);
 
-  const teacherProfileId = formData.get("teacherProfileId");
-
-  if (typeof teacherProfileId !== "string" || teacherProfileId.length === 0) {
-    redirect(
-      "/admin/teachers?result=error&message=TeacherProfile%20application%20is%20missing.",
-    );
-  }
-
-  // 二次確認：沒有勾選確認就不執行 negative action（前端 required 已擋，後端再守一次）。
+  // 後端再守一次確認欄位：表單以隱藏欄位帶入，代表管理員已在畫面上明確按下「退回申請」。
   if (formData.get("confirmReject") !== "yes") {
-    redirect(
-      `/admin/teachers?result=error&message=${encodeURIComponent("請先勾選確認，才能退回這位老師。")}`,
-    );
+    redirectToDetail(teacherProfileId, "請確認要退回這位老師的申請。");
   }
 
   const rejectionReasonValue = formData.get("rejectionReason");
@@ -83,40 +76,19 @@ export async function rejectTeacherProfileApplicationAction(
   revalidatePath("/admin/teachers");
 
   if (!result.ok) {
-    redirect(
-      `/admin/teachers?result=error&message=${encodeURIComponent(result.message)}`,
-    );
+    redirectToDetail(teacherProfileId, result.message);
   }
 
-  redirect(
-    `/admin/teachers?result=success&message=${encodeURIComponent("TeacherProfile application rejected.")}`,
-  );
+  redirectToList("success", "已退回這位老師的申請，退回原因會顯示給老師。");
 }
 
 export async function suspendTeacherProfileAction(
   formData: FormData,
 ): Promise<void> {
-  try {
-    await requireAdmin();
-  } catch {
-    redirect(
-      "/admin/teachers?result=error&message=Admin%20permission%20is%20required.",
-    );
-  }
+  const teacherProfileId = await readTeacherProfileId(formData);
 
-  const teacherProfileId = formData.get("teacherProfileId");
-
-  if (typeof teacherProfileId !== "string" || teacherProfileId.length === 0) {
-    redirect(
-      "/admin/teachers?result=error&message=TeacherProfile%20is%20missing.",
-    );
-  }
-
-  // 二次確認：沒有勾選確認就不執行 negative action（前端 required 已擋，後端再守一次）。
   if (formData.get("confirmSuspend") !== "yes") {
-    redirect(
-      `/admin/teachers?result=error&message=${encodeURIComponent("請先勾選確認，才能暫停這位老師。")}`,
-    );
+    redirectToDetail(teacherProfileId, "請確認要暫停這位老師。");
   }
 
   const suspensionReasonValue = formData.get("suspensionReason");
@@ -131,39 +103,19 @@ export async function suspendTeacherProfileAction(
   revalidatePath("/admin/teachers");
 
   if (!result.ok) {
-    redirect(
-      `/admin/teachers?result=error&message=${encodeURIComponent(result.message)}`,
-    );
+    redirectToDetail(teacherProfileId, result.message);
   }
 
-  redirect(
-    `/admin/teachers?result=success&message=${encodeURIComponent("這位老師已經暫停。")}`,
-  );
+  redirectToList("success", "這位老師已經暫停。");
 }
 
 export async function restoreTeacherProfileAction(
   formData: FormData,
 ): Promise<void> {
-  try {
-    await requireAdmin();
-  } catch {
-    redirect(
-      "/admin/teachers?result=error&message=Admin%20permission%20is%20required.",
-    );
-  }
-
-  const teacherProfileId = formData.get("teacherProfileId");
-
-  if (typeof teacherProfileId !== "string" || teacherProfileId.length === 0) {
-    redirect(
-      "/admin/teachers?result=error&message=TeacherProfile%20is%20missing.",
-    );
-  }
+  const teacherProfileId = await readTeacherProfileId(formData);
 
   if (formData.get("confirmRestore") !== "yes") {
-    redirect(
-      `/admin/teachers?result=error&message=${encodeURIComponent("請先勾選確認，才能恢復這位老師。")}`,
-    );
+    redirectToDetail(teacherProfileId, "請確認要恢復這位老師。");
   }
 
   const result = await restoreSuspendedTeacherProfile(teacherProfileId);
@@ -171,12 +123,8 @@ export async function restoreTeacherProfileAction(
   revalidatePath("/admin/teachers");
 
   if (!result.ok) {
-    redirect(
-      `/admin/teachers?result=error&message=${encodeURIComponent(result.message)}`,
-    );
+    redirectToDetail(teacherProfileId, result.message);
   }
 
-  redirect(
-    `/admin/teachers?result=success&message=${encodeURIComponent("這位老師已經恢復。")}`,
-  );
+  redirectToList("success", "這位老師已經恢復。");
 }

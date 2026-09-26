@@ -30,13 +30,13 @@ export function getDemandNextStep(input: {
     case "under_review":
       return {
         kind: "waiting",
-        message: "平台正在審核這筆需求，通過後才會公開給合適的老師。",
+        message: "平台正在審核這筆需求。通過後會公開給合適的老師（老師在「需求池」看得到），老師回應時會通知你，再由你選擇合作的老師。",
         shortMessage: "等待平台審核",
       };
     case "published":
       return {
         kind: "waiting",
-        message: "平台審核通過，合適的老師現在看得到這筆需求，收到回應時會通知你。",
+        message: "平台審核通過，合適的老師現在在「需求池」看得到這筆需求。老師回應時會通知你，再由你選擇合作的老師。",
         shortMessage: "已公開，等待老師回應",
       };
     case "teacher_responded":

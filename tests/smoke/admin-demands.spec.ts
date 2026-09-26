@@ -63,7 +63,7 @@ test.describe("/admin/demands smoke", () => {
         contactPhone: "0900000000",
       });
 
-    await createDemandRequest({
+    const reviewDemand = await createDemandRequest({
       organizerProfileId,
       organizationId,
       status: "submitted",
@@ -79,19 +79,87 @@ test.describe("/admin/demands smoke", () => {
     });
     await addAuthSessionCookie(context, adminSessionToken);
 
+    // 列表只放摘要，點進詳情頁才有完整內容。
     await page.goto("/admin/demands");
-
-    const card = page.getByRole("article").filter({
-      has: page.getByRole("heading", {
-        name: `Review Detail Demand ${testRunId}`,
-      }),
-    });
+    await page.getByRole("link").filter({ hasText: `Review Detail Demand ${testRunId}` }).first().click();
+    await expect(page).toHaveURL(new RegExp(`/admin/demands/${reviewDemand.id}$`));
 
     // 防 title-only 回歸：admin 必須在做決定前就看得到完整需求說明、
     // organization contact email、以及 organizer displayName。
-    await expect(card.getByText(distinctiveDescription)).toBeVisible();
-    await expect(card.getByText(distinctiveContactEmail)).toBeVisible();
-    await expect(card.getByText(organizerDisplayName)).toBeVisible();
+    await expect(page.getByText(distinctiveDescription)).toBeVisible();
+    await expect(page.getByText(distinctiveContactEmail)).toBeVisible();
+    await expect(page.getByText(organizerDisplayName)).toBeVisible();
+  });
+
+  test("demand detail page: 404 for non-admin, drafts and unknown ids; processed demands show results only; filter tabs split by status", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-detail-tabs-${Date.now()}`,
+    );
+    const organizerEmail = `detail-organizer-${testRunId}@${testEmailDomain}`;
+    const adminEmail = `detail-admin-${testRunId}@${testEmailDomain}`;
+    const plainEmail = `detail-plain-${testRunId}@${testEmailDomain}`;
+    createdEmails.push(organizerEmail, adminEmail, plainEmail);
+
+    const { organizerProfileId, organizationId } = await createOrganizerProfileWithOrganization({
+      email: organizerEmail,
+      displayName: `Detail Organizer ${testRunId}`,
+      organizationName: `Detail Org ${testRunId}`,
+      contactName: "聯絡人",
+      contactEmail: `detail-contact-${testRunId}@example.com`,
+      contactPhone: "0900000000",
+    });
+    const make = (status: "draft" | "submitted" | "published" | "rejected", label: string) =>
+      createDemandRequest({
+        organizerProfileId,
+        organizationId,
+        status,
+        data: completeDemandRequestData({
+          title: `Detail ${label} ${testRunId}`,
+          ...(status === "rejected" ? { rejectionReason: "需求說明過於簡略，請補充後重新送審。" } : {}),
+        }),
+      });
+    const draft = await make("draft", "Draft");
+    const published = await make("published", "Published");
+    const rejected = await make("rejected", "Rejected");
+
+    const { sessionToken: plainToken } = await createUserSession({ email: plainEmail, isAdmin: false });
+    await addAuthSessionCookie(context, plainToken);
+    const forbidden = await page.goto(`/admin/demands/${rejected.id}`);
+    expect(forbidden?.status()).toBe(404);
+
+    await context.clearCookies();
+    const { sessionToken: adminToken } = await createUserSession({ email: adminEmail, isAdmin: true });
+    await addAuthSessionCookie(context, adminToken);
+
+    // 草稿是團主私人資料、不存在的 id：都是 404。
+    expect((await page.goto(`/admin/demands/${draft.id}`))?.status()).toBe(404);
+    expect((await page.goto("/admin/demands/does-not-exist"))?.status()).toBe(404);
+
+    // 已退回：只顯示結果與原因，沒有審核按鈕。
+    await page.goto(`/admin/demands/${rejected.id}`);
+    await expect(page.getByRole("heading", { name: "這筆需求已退回" })).toBeVisible();
+    await expect(page.getByText("退回原因：需求說明過於簡略，請補充後重新送審。")).toBeVisible();
+    await expect(page.getByRole("button", { name: "公開需求" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "退回需求" })).toHaveCount(0);
+
+    // 已公開：已處理，沒有審核按鈕。
+    await page.goto(`/admin/demands/${published.id}`);
+    await expect(page.getByRole("heading", { name: "這筆需求已處理" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "公開需求" })).toHaveCount(0);
+
+    // 篩選分頁：預設「待審」看不到已公開／已退回；草稿在任何分頁都看不到。
+    await page.goto("/admin/demands");
+    await expect(page.getByText(`Detail Published ${testRunId}`)).toBeHidden();
+    await page.goto("/admin/demands?status=published");
+    await expect(page.getByText(`Detail Published ${testRunId}`)).toBeVisible();
+    await page.goto("/admin/demands?status=rejected");
+    await expect(page.getByText(`Detail Rejected ${testRunId}`)).toBeVisible();
+    await page.goto("/admin/demands?status=all");
+    await expect(page.getByText(`Detail Published ${testRunId}`)).toBeVisible();
+    await expect(page.getByText(`Detail Draft ${testRunId}`)).toBeHidden();
   });
 
   test("lets admin publish a submitted demand, visible afterwards to the organizer", async ({
@@ -128,19 +196,15 @@ test.describe("/admin/demands smoke", () => {
       isAdmin: true,
     });
     await addAuthSessionCookie(context, adminSessionToken);
-    await page.goto("/admin/demands");
+    await page.goto(`/admin/demands/${demand.id}`);
+    await expect(page.getByRole("heading", { level: 1, name: demandTitle })).toBeVisible();
 
-    const card = page.getByRole("article").filter({
-      has: page.getByRole("heading", { name: demandTitle }),
-    });
-    await expect(card.getByRole("heading", { name: demandTitle })).toBeVisible();
+    await page.getByRole("button", { name: "公開需求" }).click();
 
-    await card.getByRole("button", { name: "Publish" }).click();
-
+    // 審核完回到列表（停在待審）並顯示成功提示，這筆需求已離開待審。
+    await expect(page).toHaveURL(/\/admin\/demands\?result=success/);
     await expect(page.getByText("需求已公開。")).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: demandTitle }),
-    ).toBeHidden();
+    await expect(page.getByRole("link", { name: new RegExp(demandTitle) })).toHaveCount(0);
 
     const publishedDemand = await prisma.demandRequest.findUniqueOrThrow({
       where: { id: demand.id },
@@ -188,38 +252,25 @@ test.describe("/admin/demands smoke", () => {
       isAdmin: true,
     });
     await addAuthSessionCookie(context, adminSessionToken);
-    await page.goto("/admin/demands");
+    await page.goto(`/admin/demands/${demand.id}`);
 
-    const card = page.getByRole("article").filter({
-      has: page.getByRole("heading", { name: demandTitle }),
-    });
-    await card.locator("summary").click();
-
-    // 二次確認：空白 reason + 未勾選 confirm，native required 應擋下空白送出。
-    await card.getByRole("button", { name: "確認退回" }).click();
-    await expect(
-      card.getByRole("heading", { name: demandTitle }),
-    ).toBeVisible();
+    // 原因必填：空白時 native required 擋下，仍停在詳情頁。
+    await page.getByRole("button", { name: "退回需求" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: demandTitle })).toBeVisible();
 
     // 繞過前端 minlength/required，證明伺服器端仍會權威地擋下過短原因。
-    const reasonField = card.getByLabel("退回原因");
+    const reasonField = page.getByLabel("退回原因");
     await reasonField.evaluate((el: HTMLTextAreaElement) => {
       el.removeAttribute("required");
       el.removeAttribute("minlength");
       el.removeAttribute("maxlength");
     });
     await reasonField.fill("太短");
-    await card.getByRole("checkbox").check();
-    await card.getByRole("button", { name: "確認退回" }).click();
+    await page.getByRole("button", { name: "退回需求" }).click();
 
-    // 這次送出真的打到伺服器並觸發 redirect（revalidatePath 造成整棵 RSC 樹重新渲染）。
-    // 下面對 heading 的檢查在 redirect 前後都會通過（heading 兩邊都存在），不足以證明
-    // 新頁面真的渲染完成；用 URL 帶有 result=error 當作 redirect 已完成的明確訊號，
-    // 避免在舊頁面還沒被換掉前就對它做後續操作。
-    await expect(page).toHaveURL(/result=error/);
-    await expect(
-      card.getByRole("heading", { name: demandTitle }),
-    ).toBeVisible();
+    // 失敗時留在這筆需求的詳情頁並顯示原因。
+    await expect(page).toHaveURL(new RegExp(`/admin/demands/${demand.id}\\?result=error`));
+    await expect(page.getByRole("heading", { level: 1, name: demandTitle })).toBeVisible();
 
     const stillSubmitted = await prisma.demandRequest.findUniqueOrThrow({
       where: { id: demand.id },
@@ -227,24 +278,13 @@ test.describe("/admin/demands smoke", () => {
     });
     expect(stillSubmitted.status).toBe("submitted");
 
-    // <details> 沒有綁定任何 open 狀態，上面的 redirect 造成它回到預設關閉。這裡確定
-    // redirect 已完成後，直接把 open 設成 true（而不是點擊 summary 做 toggle）——
-    // toggle 在時序不確定時可能誤把「其實還沒被 redirect 收合」的舊節點關掉，
-    // 用明確賦值取代 toggle 才是與時序無關的做法。
-    await card.locator("details").evaluate((element: HTMLDetailsElement) => {
-      element.open = true;
-    });
-
-    // 正常填寫合法長度的 reason 且勾選確認，才能真正退回。
+    // 正常填寫合法長度的 reason，才能真正退回。
     const reason = `需求說明過於簡略，請補充上課對象與希望呈現的課程樣貌 ${testRunId}。`;
-    await reasonField.fill(`  ${reason}  `);
-    await card.getByRole("checkbox").check();
-    await card.getByRole("button", { name: "確認退回" }).click();
+    await page.getByLabel("退回原因").fill(`  ${reason}  `);
+    await page.getByRole("button", { name: "退回需求" }).click();
 
-    await expect(page.getByText("需求已退回。")).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: demandTitle }),
-    ).toBeHidden();
+    await expect(page.getByText("需求已退回，退回原因會顯示給團主。")).toBeVisible();
+    await expect(page.getByRole("link", { name: new RegExp(demandTitle) })).toHaveCount(0);
 
     const rejectedDemand = await prisma.demandRequest.findUniqueOrThrow({
       where: { id: demand.id },
