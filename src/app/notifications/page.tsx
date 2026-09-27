@@ -1,18 +1,15 @@
 import { redirect } from "next/navigation";
 
-import { getOwnOrganizerContext } from "@/domain/organizer-profile/service";
-import { getOwnTeacherProfileApplicationSnapshot } from "@/domain/teacher-profile/service";
 import { requireUser } from "@/lib/auth/session";
 
-import { MemberShell } from "../member/_components/MemberShell";
-import { OrganizerShell } from "../organizer/_components/OrganizerShell";
-import { TeacherShell } from "../teacher/_components/TeacherShell";
+import { LastRoleShell } from "../_components/last-role-shell";
 
 import { OwnNotificationsContent } from "./_components/OwnNotificationsContent";
 
 // 共用的通知網址：學員導覽列與既有通知連結使用。
 // 2026-09-26：老師、團主專區的導覽列改連到各自的 /teacher/notifications、/organizer/notifications，
-// 從哪個專區點「通知」就留在哪個專區。直接開這個網址時才依身分挑外框（兩種身分都有時以團主為準）。
+// 從哪個專區點「通知」就留在哪個專區（學員是 /member/notifications）。直接開這個網址（例如舊的
+// 通知連結）時，2026-09-27 起改用「上次身分」的外框，不再團主優先（signed-in-navigation 決策 3）。
 export default async function NotificationsPage() {
   try {
     await requireUser();
@@ -20,20 +17,9 @@ export default async function NotificationsPage() {
     redirect("/sign-in");
   }
 
-  const [organizerContext, teacherProfile] = await Promise.all([
-    getOwnOrganizerContext(),
-    getOwnTeacherProfileApplicationSnapshot(),
-  ]);
-
-  const content = <OwnNotificationsContent />;
-
-  if (organizerContext) {
-    return <OrganizerShell>{content}</OrganizerShell>;
-  }
-
-  if (teacherProfile) {
-    return <TeacherShell>{content}</TeacherShell>;
-  }
-
-  return <MemberShell>{content}</MemberShell>;
+  return (
+    <LastRoleShell>
+      <OwnNotificationsContent />
+    </LastRoleShell>
+  );
 }

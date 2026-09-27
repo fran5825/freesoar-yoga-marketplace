@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { PublicFooter } from "../_components/public-footer";
-import { PublicHeader } from "../_components/public-header";
+import { SiteShell } from "../_components/site-shell";
 
 export const metadata: Metadata = {
   title: "關於我們",
@@ -25,11 +24,14 @@ const roles = [
   ["Free Soar 平台", "提供審核、連結與流程支持，守住基本品質與信任邊界。"],
 ];
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  // signed-in-navigation 決策 3：登入後用上次身分的專區導覽列，訪客維持公開 header。
   return (
-    <main className="flex min-h-screen flex-col bg-cream text-ink">
-      <PublicHeader />
-      <div className="mx-auto max-w-5xl flex-1 px-5 sm:px-8">
+    <SiteShell
+      publicMainClassName="mx-auto w-full max-w-5xl flex-1 px-5 sm:px-8"
+      signedInArea="last-role"
+      signedInClassName=""
+    >
         <section className="py-16 sm:py-24">
           <p className="text-sm font-medium tracking-[0.2em] text-clay">ABOUT FREE SOAR</p>
           <h1 className="mt-6 max-w-4xl text-4xl font-semibold leading-tight tracking-[-0.03em] sm:text-6xl">讓自由與覺察，長成有品質的共同練習</h1>
@@ -77,8 +79,6 @@ export default function AboutPage() {
             <Link className="rounded-full border border-pine/30 px-5 py-3 text-center font-medium" href="/organizers/request">提出團課需求</Link>
           </div>
         </section>
-      </div>
-      <PublicFooter />
-    </main>
+    </SiteShell>
   );
 }

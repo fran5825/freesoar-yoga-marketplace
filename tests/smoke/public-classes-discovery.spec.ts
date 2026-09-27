@@ -11,6 +11,7 @@ import {
   normalizeForEmail,
   prisma,
 } from "./_helpers/organizer-demand-fixtures";
+import { futureDateTime } from "./_helpers/future-dates";
 import {
   cleanupDemandResponseFixtures,
   createTeacherProfileWithSession,
@@ -273,6 +274,59 @@ test.describe("public classes discovery smoke", () => {
     await page.goto("/classes");
     await page.getByText(`Hatha Public ${testRunId}`).click();
     await expect(page.getByRole("heading", { name: `Hatha Public ${testRunId}` })).toBeVisible();
+  });
+
+  test("/classes cards show an origin tag and remaining seats, chips filter without a submit button, and 只看還有名額 hides full classes", async ({
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-chips-${Date.now()}`,
+    );
+    const teacher = await seedApprovedTeacher(testRunId);
+
+    await seedPublicClassSession({
+      testRunId: `${testRunId}-open`,
+      teacherProfileId: teacher.teacherProfileId,
+      title: `Open Seats ${testRunId}`,
+      startAt: futureDateTime(40, "10:00"),
+      endAt: futureDateTime(40, "11:00"),
+    });
+    const fullId = await seedPublicClassSession({
+      testRunId: `${testRunId}-full`,
+      teacherProfileId: teacher.teacherProfileId,
+      title: `Full Class ${testRunId}`,
+      startAt: futureDateTime(41, "10:00"),
+      endAt: futureDateTime(41, "11:00"),
+    });
+    await prisma.classSession.update({ where: { id: fullId }, data: { capacity: 1 } });
+    const memberEmail = `member-${testRunId}@${testEmailDomain}`;
+    createdEmails.push(memberEmail);
+    const { userId } = await createUserSession({ email: memberEmail });
+    await prisma.enrollment.create({
+      data: { classSessionId: fullId, userId, status: "confirmed", consentedAt: new Date() },
+    });
+
+    await page.goto("/classes");
+    const openCard = page.getByRole("link", { name: new RegExp(`Open Seats ${testRunId}`) });
+    const fullCard = page.getByRole("link", { name: new RegExp(`Full Class ${testRunId}`) });
+    await expect(openCard).toContainText("老師開課");
+    await expect(openCard).toContainText("開放報名");
+    await expect(openCard).toContainText("剩 10 個名額");
+    await expect(fullCard).toContainText("已額滿");
+
+    await expect(page.getByRole("button", { name: "套用篩選" })).toHaveCount(0);
+    await page.getByRole("link", { name: "只看還有名額" }).click();
+    await expect(page).toHaveURL(/available=1/);
+    await expect(openCard).toBeVisible();
+    await expect(fullCard).toBeHidden();
+
+    await page.getByRole("link", { name: "冥想與呼吸" }).click();
+    await expect(page).toHaveURL(/serviceType=/);
+    await expect(page).toHaveURL(/available=1/);
+    await expect(page.getByText("目前沒有符合條件的公開課程")).toBeVisible();
+    await page.getByRole("link", { name: "清除篩選" }).first().click();
+    await expect(page).toHaveURL(/\/classes$/);
+    await expect(fullCard).toBeVisible();
   });
 
   test("/classes excludes a suspended teacher's otherwise-qualifying public class", async ({

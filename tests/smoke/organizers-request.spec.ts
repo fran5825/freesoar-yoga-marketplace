@@ -71,7 +71,7 @@ test.describe("/organizers/request states", () => {
     await expect(page.getByRole("heading", { name: "建立新的團課需求" })).toBeVisible();
   });
 
-  test("the home page hero sends an existing organizer straight to a new demand, and a new user to the pitch", async ({
+  test("the home page sends a visitor to the pitch, and a signed-in organizer to their last-used area's dashboard", async ({
     context,
     page,
   }, testInfo) => {
@@ -97,13 +97,13 @@ test.describe("/organizers/request states", () => {
     });
     await addAuthSessionCookie(context, sessionToken);
 
+    // 2026-09-27 signed-in-navigation 決策 6：已登入的人不看首頁，直接到上次身分的總覽。
+    // 還沒進過任何專區（沒有上次身分）時從學員開始；進過團主專區後，再開首頁就回團主總覽。
     await page.goto("/");
-    await expect(
-      page.getByRole("link", { name: "發起新需求", exact: true }),
-    ).toHaveAttribute("href", "/organizer/demands/new");
-    await expect(
-      page.getByRole("link", { name: "前往團主總覽" }),
-    ).toHaveAttribute("href", "/organizer/dashboard");
+    await expect(page).toHaveURL(/\/member\/dashboard$/);
+    await page.goto("/organizer/dashboard");
+    await page.goto("/");
+    await expect(page).toHaveURL(/\/organizer\/dashboard$/);
   });
 
   test("a signed-in user without an organizer profile who opens the new demand form lands on profile creation", async ({

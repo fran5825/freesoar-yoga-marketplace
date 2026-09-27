@@ -1,12 +1,14 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
+import { getMemberTodos } from "@/domain/enrollment/member-todos";
 import { listOwnEnrollmentsForMember } from "@/domain/enrollment/read-service";
 import { requireUser } from "@/lib/auth/session";
 
-import {
-  EnrollmentStatusBadge,
-} from "../_components/EnrollmentStatusBadge";
+import { CancelEnrollmentForm } from "../_components/CancelEnrollmentForm";
+import { EnrollmentStatusBadge } from "../_components/EnrollmentStatusBadge";
+import { MemberTodoList } from "../_components/MemberTodoList";
 
 import { cancelEnrollmentAction, submitReviewAction } from "./actions";
 
@@ -39,6 +41,25 @@ export default async function MemberEnrollmentsPage({
         }
       : null;
 
+  const now = new Date();
+  const todos = getMemberTodos(enrollments, now);
+  // 即將上課（沒取消、還沒結案）由近到遠排在前面；過去與已取消的放後面、由新到舊。
+  const isUpcoming = (enrollment: (typeof enrollments)[number]) =>
+    enrollment.status !== "cancelled" &&
+    enrollment.classSession.status !== "cancelled" &&
+    enrollment.classSession.status !== "completed" &&
+    enrollment.classSession.endAt.getTime() >= now.getTime();
+  const upcoming = enrollments
+    .filter(isUpcoming)
+    .sort((a, b) => a.classSession.startAt.getTime() - b.classSession.startAt.getTime());
+  const past = enrollments
+    .filter((enrollment) => !isUpcoming(enrollment))
+    .sort((a, b) => b.classSession.startAt.getTime() - a.classSession.startAt.getTime());
+  const groups = [
+    { heading: "即將上課", items: upcoming },
+    { heading: "過去與已取消", items: past },
+  ].filter((group) => group.items.length > 0);
+
   return (
     <div className="flex flex-col gap-8">
       <header className="border-b border-ink/15 pb-6">
@@ -60,24 +81,43 @@ export default async function MemberEnrollmentsPage({
         </section>
       ) : null}
 
+      <MemberTodoList todos={todos} />
+
       {enrollments.length === 0 ? (
         <section className="rounded-2xl border border-ink/15 bg-white p-6">
           <h2 className="text-lg font-medium text-ink">目前沒有任何報名</h2>
           <p className="mt-2 text-sm leading-6 text-ink-soft">
-            透過團主分享的課程連結報名後，會顯示在這裡。
+            報名後的課程會顯示在這裡。
           </p>
+          <Link
+            className="mt-4 inline-flex rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep"
+            href="/classes"
+          >
+            去找一堂課
+          </Link>
         </section>
       ) : (
-        <section className="grid gap-4">
-          {enrollments.map((enrollment) => (
+        <div className="grid gap-8">
+          {groups.map((group) => (
+            <section className="grid gap-4" key={group.heading}>
+              <h2 className="text-sm font-medium text-ink-soft">{group.heading}</h2>
+              {group.items.map((enrollment) => (
             <article
-              className="grid gap-3 rounded-2xl border border-ink/15 bg-white p-5"
+              className="relative grid gap-3 rounded-2xl border border-ink/15 bg-white p-5 transition hover:border-pine/40"
+              id={`enrollment-${enrollment.id}`}
               key={enrollment.id}
             >
               <div className="flex flex-wrap items-center gap-3">
-                <h2 className="min-w-0 break-words text-lg font-medium text-ink">
-                  {enrollment.classSession.title}
-                </h2>
+                <h3 className="min-w-0 break-words text-lg font-medium text-ink">
+                  {/* 標題連結用 after 撐滿整張卡，整張卡都可點進課程詳情；
+                      取消與評價的表單另外用 relative z-10 浮在上層，仍可正常操作。 */}
+                  <Link
+                    className="after:absolute after:inset-0 after:rounded-2xl"
+                    href={`/classes/${enrollment.classSession.id}`}
+                  >
+                    {enrollment.classSession.title}
+                  </Link>
+                </h3>
                 <EnrollmentStatusBadge status={enrollment.status} />
               </div>
               <p className="text-sm text-ink-soft">
@@ -85,40 +125,19 @@ export default async function MemberEnrollmentsPage({
                 {enrollment.classSession.location}
               </p>
 
-              {["confirmed", "pending"].includes(enrollment.status) ? (
-                <details className="rounded-xl border border-amber-200 bg-amber-50/60">
-                  <summary className="cursor-pointer list-none rounded-full px-4 py-2 text-sm font-medium text-amber-800 marker:hidden">
-                    取消報名…
-                  </summary>
-                  <form
-                    action={cancelEnrollmentAction}
-                    className="grid gap-3 border-t border-amber-100 p-4"
-                  >
-                    <input name="enrollmentId" type="hidden" value={enrollment.id} />
-                    <label className="flex items-start gap-2 text-sm leading-6 text-ink-soft">
-                      <input
-                        className="mt-1 shrink-0"
-                        name="confirmCancel"
-                        required
-                        type="checkbox"
-                        value="yes"
-                      />
-                      我確認要取消這則報名。
-                    </label>
-                    <button
-                      className="w-full rounded-full bg-amber-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-800 sm:w-auto"
-                      type="submit"
-                    >
-                      確認取消
-                    </button>
-                  </form>
-                </details>
+              {/* 課程開始後就不顯示取消（按了也會被伺服器擋下，見 cancelOwnEnrollment）。 */}
+              {["confirmed", "pending"].includes(enrollment.status) &&
+              enrollment.classSession.startAt.getTime() > now.getTime() ? (
+                <CancelEnrollmentForm
+                  action={cancelEnrollmentAction}
+                  enrollmentId={enrollment.id}
+                />
               ) : null}
 
               {enrollment.status === "confirmed" &&
               enrollment.classSession.status === "completed" ? (
                 enrollment.classSession.reviews.length > 0 ? (
-                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+                  <div className="relative z-10 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
                     <p className="text-sm font-medium text-emerald-900">
                       你的評價：{"★".repeat(enrollment.classSession.reviews[0].rating)}
                     </p>
@@ -129,7 +148,7 @@ export default async function MemberEnrollmentsPage({
                     ) : null}
                   </div>
                 ) : (
-                  <details className="rounded-xl border border-pine/25 bg-pine-tint/60">
+                  <details className="relative z-10 rounded-xl border border-pine/25 bg-pine-tint/60">
                     <summary className="cursor-pointer list-none rounded-full px-4 py-2 text-sm font-medium text-pine marker:hidden">
                       留下評價…
                     </summary>
@@ -192,8 +211,10 @@ export default async function MemberEnrollmentsPage({
                 )
               ) : null}
             </article>
+              ))}
+            </section>
           ))}
-        </section>
+        </div>
       )}
     </div>
   );

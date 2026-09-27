@@ -2,15 +2,18 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
+import { getMemberTodos } from "@/domain/enrollment/member-todos";
 import { listOwnEnrollmentsForMember } from "@/domain/enrollment/read-service";
 import { listOwnNotifications } from "@/domain/notification/read-service";
 import { requireUser } from "@/lib/auth/session";
 
-import { enrollmentStatusLabels } from "../_components/EnrollmentStatusBadge";
+import { MemberTodoList } from "../_components/MemberTodoList";
 
 const RECENT_NOTIFICATIONS_LIMIT = 5;
 const UPCOMING_ENROLLMENTS_LIMIT = 5;
 
+// 學員首頁：先看「待你處理」，再看即將上課的課，最後才是近期通知——順序比照團主、老師總覽
+// （現在輪到我動手的事放最上面）。「待你處理」與「我的報名」頁共用同一份判斷（getMemberTodos）。
 export default async function MemberDashboardPage() {
   try {
     await requireUser();
@@ -25,13 +28,8 @@ export default async function MemberDashboardPage() {
 
   const recentNotifications = notifications.slice(0, RECENT_NOTIFICATIONS_LIMIT);
 
-  const enrollmentCounts = {
-    pending: enrollments.filter((enrollment) => enrollment.status === "pending").length,
-    confirmed: enrollments.filter((enrollment) => enrollment.status === "confirmed").length,
-    cancelled: enrollments.filter((enrollment) => enrollment.status === "cancelled").length,
-  };
-
   const now = new Date();
+  const todos = getMemberTodos(enrollments, now);
   const upcomingEnrollments = enrollments
     .filter(
       (enrollment) =>
@@ -45,17 +43,72 @@ export default async function MemberDashboardPage() {
         <h1 className="text-3xl font-semibold tracking-tight text-ink">
           我的總覽
         </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
-          這裡彙整你最近的通知與報名狀態。
-        </p>
       </header>
+
+      <MemberTodoList todos={todos} />
+
+      <section className="rounded-2xl border border-ink/15 bg-white p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-ink">即將上課</h2>
+          <Link
+            className="text-sm font-medium text-clay hover:underline"
+            href="/member/enrollments"
+          >
+            查看全部報名
+          </Link>
+        </div>
+
+        {enrollments.length === 0 ? (
+          <>
+            <p className="mt-4 text-sm leading-6 text-ink-soft">
+              目前沒有任何報名。報名後的課程會顯示在這裡。
+            </p>
+            <Link
+              className="mt-4 inline-flex rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep"
+              href="/classes"
+            >
+              去找一堂課
+            </Link>
+          </>
+        ) : upcomingEnrollments.length === 0 ? (
+          <>
+            <p className="mt-4 text-sm leading-6 text-ink-soft">
+              目前沒有即將上課的課程。
+            </p>
+            <Link
+              className="mt-4 inline-flex rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep"
+              href="/classes"
+            >
+              去找一堂課
+            </Link>
+          </>
+        ) : (
+          <div className="mt-4 grid gap-3">
+            {upcomingEnrollments.map((enrollment) => (
+              <Link
+                className="grid gap-1 rounded-2xl border border-ink/10 bg-cream p-4 transition hover:border-pine/40 hover:bg-pine-tint/60"
+                href={`/classes/${enrollment.classSession.id}`}
+                key={enrollment.id}
+              >
+                <span className="min-w-0 break-words text-sm font-medium text-ink">
+                  {enrollment.classSession.title}
+                </span>
+                <span className="text-sm text-ink-soft">
+                  {formatTaipeiDatetime(enrollment.classSession.startAt)} 開始・
+                  {enrollment.classSession.location}
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="rounded-2xl border border-ink/15 bg-white p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-ink">近期通知</h2>
           <Link
             className="text-sm font-medium text-clay hover:underline"
-            href="/notifications"
+            href="/member/notifications"
           >
             查看全部通知
           </Link>
@@ -84,67 +137,6 @@ export default async function MemberDashboardPage() {
               </li>
             ))}
           </ul>
-        )}
-      </section>
-
-      <section className="rounded-2xl border border-ink/15 bg-white p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-ink">我的報名</h2>
-          <Link
-            className="text-sm font-medium text-clay hover:underline"
-            href="/member/enrollments"
-          >
-            查看全部報名
-          </Link>
-        </div>
-
-        {enrollments.length === 0 ? (
-          <p className="mt-4 text-sm leading-6 text-ink-soft">
-            目前沒有任何報名。透過團主分享的課程連結報名後，會顯示在這裡。
-          </p>
-        ) : (
-          <>
-            <dl className="mt-4 flex flex-wrap gap-6 text-sm">
-              <div>
-                <dt className="text-ink-faint">{enrollmentStatusLabels.confirmed}</dt>
-                <dd className="text-xl font-semibold text-ink">
-                  {enrollmentCounts.confirmed}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-ink-faint">{enrollmentStatusLabels.pending}</dt>
-                <dd className="text-xl font-semibold text-ink">
-                  {enrollmentCounts.pending}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-ink-faint">{enrollmentStatusLabels.cancelled}</dt>
-                <dd className="text-xl font-semibold text-ink">
-                  {enrollmentCounts.cancelled}
-                </dd>
-              </div>
-            </dl>
-
-            {upcomingEnrollments.length > 0 ? (
-              <div className="mt-6 grid gap-3">
-                <h3 className="text-sm font-medium text-ink">即將到來</h3>
-                {upcomingEnrollments.map((enrollment) => (
-                  <div
-                    className="rounded-2xl border border-ink/10 bg-cream p-4"
-                    key={enrollment.id}
-                  >
-                    <p className="text-sm font-medium text-ink">
-                      {enrollment.classSession.title}
-                    </p>
-                    <p className="mt-1 text-sm text-ink-soft">
-                      {formatTaipeiDatetime(enrollment.classSession.startAt)} 開始・
-                      {enrollment.classSession.location}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </>
         )}
       </section>
     </div>

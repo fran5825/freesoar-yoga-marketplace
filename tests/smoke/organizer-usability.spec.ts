@@ -176,6 +176,9 @@ test.describe("organizer usability", () => {
     });
     await addAuthSessionCookie(context, organizer.sessionToken);
 
+    // 2026-09-27 signed-in-navigation 決策 3：共用的 /notifications 跟著「上次身分」挑外框
+    // （不再團主優先），所以先進一次團主專區，讓上次身分記成團主。
+    await page.goto("/organizer/dashboard");
     await page.goto("/notifications");
 
     // 團主開通知頁時，仍看得到團主導覽列。

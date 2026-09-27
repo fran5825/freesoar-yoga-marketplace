@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { auth, signOut } from "@/auth";
+import { PublicHeaderMenu } from "./public-header-menu";
 
 const publicLinks = [
   { href: "/organizers/request", label: "發起團課" },
@@ -9,17 +9,11 @@ const publicLinks = [
   { href: "/about", label: "關於飛索" },
 ];
 
-// public-header-shows-signed-in-state：這個 header 原本不管有沒有登入都同時顯示
-// 「登入」跟「我的專區」，完全不反映實際登入狀態（使用者手動測試時發現，登入後也看不出
-// 自己是哪個帳號）。改成用 auth()（比照 src/app/sign-in/page.tsx 既有寫法，讀 session
-// 就好，不需要像 getCurrentUser() 多一趟資料庫查詢）判斷，登入後把「登入」換成
-// email／名字＋登出，未登入維持原樣不變。
-export async function PublicHeader() {
-  const session = await auth();
-  const signedInLabel = session?.user
-    ? (session.user.email ?? session.user.name ?? "已登入")
-    : null;
-
+// 公開 header（docs/context/glossary.md）：只給沒登入的訪客。2026-09-27 signed-in-navigation
+// 決策 1 起，登入後每一頁都改用專區導覽列（公開頁透過 SiteShell 切換外框，首頁與登入頁會把
+// 已登入的人導到上次身分的總覽），所以這裡不再需要顯示登入狀態、登出與「我的專區」。
+// 手機版連結與「登入」收進 ☰ 選單（member-usability 票 08）。
+export function PublicHeader() {
   return (
     <header className="border-b border-ink/10">
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-5 py-4 sm:px-8">
@@ -30,52 +24,30 @@ export async function PublicHeader() {
           <span className="text-base font-semibold tracking-[0.04em] text-ink">飛索・瑜伽團課共創平台</span>
           <span className="text-xs tracking-[0.08em] text-ink-soft">Free Soar Yoga</span>
         </Link>
-        <nav aria-label="公開網站導覽" className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-ink-soft">
-          {publicLinks.map((link) => (
-            <Link
-              className="rounded-xl px-1 py-1 transition hover:text-clay focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
-              href={link.href}
-              key={link.href}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          {signedInLabel ? (
-            <>
-              <span className="rounded-full border border-ink/20 bg-pine-tint px-3 py-1 text-xs font-medium text-pine">
-                已登入：{signedInLabel}
-              </span>
-              <form
-                action={async () => {
-                  "use server";
-                  await signOut({ redirectTo: "/" });
-                }}
+        <PublicHeaderMenu>
+          <nav
+            aria-label="公開網站導覽"
+            className="flex flex-col gap-1 text-sm text-ink-soft md:flex-row md:flex-wrap md:items-center md:gap-x-6 md:gap-y-2"
+          >
+            {publicLinks.map((link) => (
+              <Link
+                className="rounded-xl px-1 py-2 transition hover:text-clay focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay md:py-1"
+                href={link.href}
+                key={link.href}
               >
-                <button
-                  className="rounded-full border border-ink/30 px-4 py-2 font-medium text-ink transition hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
-                  type="submit"
-                >
-                  登出
-                </button>
-              </form>
-            </>
-          ) : (
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
             <Link
-              className="rounded-full border border-ink/30 px-4 py-2 font-medium text-ink transition hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+              className="rounded-full bg-pine px-5 py-2 font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
               href="/sign-in"
             >
               登入
             </Link>
-          )}
-          <Link
-            className="rounded-full bg-pine px-5 py-2 font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
-            href="/member/dashboard"
-          >
-            我的專區
-          </Link>
-        </div>
+          </div>
+        </PublicHeaderMenu>
       </div>
     </header>
   );

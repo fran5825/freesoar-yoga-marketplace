@@ -1,7 +1,11 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+
+import { auth } from "@/auth";
 
 import { getOwnOrganizerContext } from "@/domain/organizer-profile/service";
 import { getOwnTeacherProfileApplicationSnapshot } from "@/domain/teacher-profile/service";
+import { getLastRoleHome } from "@/lib/navigation/last-role";
 
 import { PublicFooter } from "./_components/public-footer";
 import { PublicHeader } from "./_components/public-header";
@@ -14,6 +18,14 @@ import { PublicHeader } from "./_components/public-header";
 // getCurrentUser() 判斷登入狀態——null 時原本連到 /teachers/join、/organizers/request
 // 的行為本來就是對的，不管是「未登入」還是「已登入但還沒申請」。
 export default async function Home() {
+  // 2026-09-27 signed-in-navigation 決策 6：已登入的人不看首頁，直接到上次身分的總覽。
+  // 下方依身分切換文案的邏輯因此只剩訪客會走到（兩個 profile 都會是 null），先保留不動。
+  const session = await auth();
+
+  if (session?.user) {
+    redirect(await getLastRoleHome());
+  }
+
   const [teacherProfile, organizerContext] = await Promise.all([
     getOwnTeacherProfileApplicationSnapshot(),
     getOwnOrganizerContext(),

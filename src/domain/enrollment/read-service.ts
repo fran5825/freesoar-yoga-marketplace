@@ -63,6 +63,8 @@ export type MemberFacingClassSession = {
   endAt: Date;
   location: string;
   capacity: number;
+  // pending + confirmed（都佔名額），供顯示剩餘名額用。
+  activeEnrollmentCount: number;
   status: string;
   // teacher-initiated-open-classes：老師自建課程沒有 organization，改為 nullable；
   // 消費頁面需自行提供中性 fallback 文案（不假設一律有團體名稱）。
@@ -100,6 +102,11 @@ export async function getClassSessionForMember(
       status: true,
       organization: { select: { name: true } },
       teacherProfile: { select: { displayName: true } },
+      _count: {
+        select: {
+          enrollments: { where: { status: { in: ["pending", "confirmed"] } } },
+        },
+      },
     },
   });
 
@@ -107,12 +114,17 @@ export async function getClassSessionForMember(
     return null;
   }
 
+  const { _count, ...classSessionFields } = classSession;
   const ownEnrollment = await prisma.enrollment.findUnique({
     where: { classSessionId_userId: { classSessionId, userId: currentUser.id } },
     select: { id: true, status: true },
   });
 
-  return { ...classSession, ownEnrollment };
+  return {
+    ...classSessionFields,
+    activeEnrollmentCount: _count.enrollments,
+    ownEnrollment,
+  };
 }
 
 export type ClassSessionRosterEntry = {

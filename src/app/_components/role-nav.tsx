@@ -5,14 +5,18 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { MenuIcon } from "./menu-icon";
+
 export type RoleNavLink = { href: string; label: string };
 export type RoleSwitchLink = RoleNavLink & { isJoin?: boolean };
 
-const roleAreaPrefixes: Record<string, string> = {
-  學員: "/member",
-  團主: "/organizer",
-  老師: "/teacher",
-  管理後台: "/admin",
+// 2026-09-27 signed-in-navigation 票 03：登入後 /classes、/about、/teachers/join 這類頁面也會套
+// 專區外框，網址沒有專區前綴，所以「目前身分」與 logo 改依外框的 areaLabel 判斷。
+const areaRoles: Record<string, { roleLabel: string; home: string }> = {
+  學員專區: { roleLabel: "學員", home: "/member/dashboard" },
+  團主專區: { roleLabel: "團主", home: "/organizer/dashboard" },
+  老師專區: { roleLabel: "老師", home: "/teacher/dashboard" },
+  管理後台: { roleLabel: "管理後台", home: "/admin/dashboard" },
 };
 
 // 2026-09-25 organizer-usability：登入後各角色專區共用的導覽列（先用在團主、老師）。
@@ -64,12 +68,11 @@ export function RoleNav({
     };
   }, [isRoleOpen]);
 
-  // 只有同一帳號有兩種以上身分才需要切換；目前所在的身分依網址前綴判斷。
-  const currentRole = roleOptions.find((option) => {
-    if (option.isJoin) return false;
-    const prefix = roleAreaPrefixes[option.label];
-    return prefix ? pathname.startsWith(prefix) : false;
-  });
+  // 目前所在的身分＝這個外框代表的身分；logo 連到該身分的總覽（避免點 logo 回首頁又被導走）。
+  const area = areaRoles[areaLabel];
+  const currentRole = roleOptions.find(
+    (option) => !option.isJoin && option.label === area?.roleLabel,
+  );
 
   function isActive(href: string) {
     return pathname === href || pathname.startsWith(`${href}/`);
@@ -87,7 +90,7 @@ export function RoleNav({
       <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-5 py-3 sm:px-8">
         <Link
           className="flex flex-col leading-tight focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-clay"
-          href="/"
+          href={area?.home ?? "/"}
         >
           <span className="text-base font-semibold tracking-[0.04em] text-ink">
             飛索・瑜伽團課共創平台
@@ -100,11 +103,12 @@ export function RoleNav({
         <button
           aria-controls="role-nav-menu"
           aria-expanded={isMenuOpen}
-          className="rounded-full border border-ink/30 px-4 py-2 text-sm font-medium text-ink md:hidden"
+          aria-label={isMenuOpen ? "關閉選單" : "選單"}
+          className="rounded-full p-2 text-ink transition hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay md:hidden"
           onClick={() => setIsMenuOpen((open) => !open)}
           type="button"
         >
-          {isMenuOpen ? "關閉選單" : "選單"}
+          <MenuIcon isOpen={isMenuOpen} />
         </button>
 
         <div

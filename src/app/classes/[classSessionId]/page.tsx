@@ -7,14 +7,18 @@ import {
   getPublicClassSessionDetail,
   type PublicClassSessionDetail,
 } from "@/domain/class-session/public-read-service";
+import { getClassAvailability } from "@/domain/class-session/availability";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { getCurrentUser } from "@/lib/auth/session";
 
+import { ClassAvailabilityBadge } from "../_components/ClassAvailabilityBadge";
+import { CancelEnrollmentForm } from "../../member/_components/CancelEnrollmentForm";
 import { EnrollmentStatusBadge } from "../../member/_components/EnrollmentStatusBadge";
+import { MemberShell } from "../../member/_components/MemberShell";
 import { PublicFooter } from "../../_components/public-footer";
 import { PublicHeader } from "../../_components/public-header";
 
-import { enrollAction } from "./actions";
+import { cancelEnrollmentFromClassAction, enrollAction } from "./actions";
 
 // teacher-initiated-open-classes 第 8 節（Gate G2/G3）：pending 是三態顯示的第三態，不再是
 // 「非 confirmed 就當作已取消」的二元判斷；狀態標籤與 /member/* 共用 EnrollmentStatusBadge。
@@ -71,16 +75,33 @@ export default async function MemberClassSessionPage({
   }
 
   const hasStarted = hasClassSessionStarted(classSession.startAt);
+  const availability = getClassAvailability({
+    capacity: classSession.capacity,
+    activeEnrollmentCount: classSession.activeEnrollmentCount,
+    startAt: classSession.startAt,
+  });
+  const canEnroll = !classSession.ownEnrollment && availability.state === "open";
 
+  // signed-in-navigation 票 04：登入後套學員專區外框（導覽列「找課程」），不再掉回公開 header；
+  // 訪客仍走下方 VisitorClassSessionView 與公開 header。
   return (
-    <div className="flex min-h-screen flex-col bg-cream text-ink">
-      <PublicHeader />
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-5 py-10 sm:px-8">
+    <MemberShell>
+      <div className="flex flex-col gap-8">
       <header className="border-b border-ink/15 pb-6">
-        <p className="text-sm font-medium text-clay">Class</p>
-        <h1 className="mt-2 min-w-0 break-words text-2xl font-semibold tracking-tight text-ink">
+        <h1 className="min-w-0 break-words text-2xl font-semibold tracking-tight text-ink">
           {classSession.title}
         </h1>
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-3">
+          <ClassAvailabilityBadge availability={availability} />
+          {canEnroll ? (
+            <a
+              className="rounded-full bg-pine px-4 py-2 text-sm font-medium text-white transition hover:bg-pine-deep"
+              href="#enroll"
+            >
+              我要報名
+            </a>
+          ) : null}
+        </div>
       </header>
 
       {feedback ? (
@@ -93,6 +114,14 @@ export default async function MemberClassSessionPage({
           }
         >
           {feedback.message}
+          {feedback.kind === "success" ? (
+            <>
+              {" "}
+              <Link className="font-medium underline" href="/member/enrollments">
+                查看我的報名
+              </Link>
+            </>
+          ) : null}
         </section>
       ) : null}
 
@@ -150,17 +179,16 @@ export default async function MemberClassSessionPage({
           <EnrollmentStatusBadge status={classSession.ownEnrollment.status} />
           {classSession.ownEnrollment.status === "pending" ? (
             <p className="text-sm leading-6 text-ink-soft">
-              你的報名已經送出，等待老師確認後才算成立。
+              你的報名已送出，老師確認後才算成立，確認結果會顯示在「通知」。
             </p>
           ) : null}
-          {["confirmed", "pending"].includes(classSession.ownEnrollment.status) ? (
-            <p className="text-sm leading-6 text-ink-soft">
-              如需取消報名，請前往
-              <Link className="text-clay underline" href="/member/enrollments">
-                我的報名列表
-              </Link>
-              。
-            </p>
+          {/* 課程開始後就不顯示取消（按了也會被伺服器擋下，見 cancelOwnEnrollment）。 */}
+          {["confirmed", "pending"].includes(classSession.ownEnrollment.status) && !hasStarted ? (
+            <CancelEnrollmentForm
+              action={cancelEnrollmentFromClassAction}
+              classSessionId={classSessionId}
+              enrollmentId={classSession.ownEnrollment.id}
+            />
           ) : null}
         </section>
       ) : hasStarted ? (
@@ -169,8 +197,18 @@ export default async function MemberClassSessionPage({
             這堂課程目前無法報名，可能已經開始。
           </p>
         </section>
+      ) : availability.state === "full" ? (
+        <section className="rounded-2xl border border-ink/15 bg-white p-6">
+          <p className="text-sm leading-6 text-ink-soft">
+            這堂課名額已滿。你可以回到
+            <Link className="text-clay underline" href="/classes">
+              課程列表
+            </Link>
+            看看其他課程。
+          </p>
+        </section>
       ) : (
-        <section className="grid gap-5 rounded-2xl border border-ink/15 bg-white p-6">
+        <section className="grid gap-5 rounded-2xl border border-ink/15 bg-white p-6" id="enroll">
           <div>
             <h2 className="text-lg font-medium text-ink">報名這堂課程</h2>
           </div>
@@ -213,9 +251,8 @@ export default async function MemberClassSessionPage({
           </form>
         </section>
       )}
-      </main>
-      <PublicFooter />
-    </div>
+      </div>
+    </MemberShell>
   );
 }
 
@@ -233,15 +270,23 @@ function VisitorClassSessionView({
   classSession: PublicClassSessionDetail;
   classSessionId: string;
 }) {
+  const availability = getClassAvailability({
+    capacity: classSession.capacity,
+    activeEnrollmentCount: classSession.activeEnrollmentCount,
+    startAt: classSession.startAt,
+  });
+
   return (
     <div className="flex min-h-screen flex-col bg-cream text-ink">
       <PublicHeader />
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-5 py-10 sm:px-8">
       <header className="border-b border-ink/15 pb-6">
-        <p className="text-sm font-medium text-clay">Class</p>
-        <h1 className="mt-2 min-w-0 break-words text-2xl font-semibold tracking-tight text-ink">
+        <h1 className="min-w-0 break-words text-2xl font-semibold tracking-tight text-ink">
           {classSession.title}
         </h1>
+        <div className="mt-3">
+          <ClassAvailabilityBadge availability={availability} />
+        </div>
       </header>
 
       <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
@@ -290,12 +335,20 @@ function VisitorClassSessionView({
       </section>
 
       <section className="grid gap-3 rounded-2xl border border-ink/15 bg-white p-6">
-        <p className="text-sm leading-6 text-ink-soft">登入後即可直接報名這堂課程。</p>
+        <p className="text-sm leading-6 text-ink-soft">
+          {availability.state === "open"
+            ? "登入後即可直接報名這堂課程。"
+            : "這堂課目前無法報名，登入後可以看看其他課程。"}
+        </p>
         <Link
           className="w-fit rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-pine-deep"
-          href={`/sign-in?callbackUrl=${encodeURIComponent(`/classes/${classSessionId}`)}`}
+          href={
+            availability.state === "open"
+              ? `/sign-in?callbackUrl=${encodeURIComponent(`/classes/${classSessionId}`)}`
+              : "/classes"
+          }
         >
-          登入後報名
+          {availability.state === "open" ? "登入後報名" : "看看其他課程"}
         </Link>
       </section>
       </main>

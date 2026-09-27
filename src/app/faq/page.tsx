@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { PublicFooter } from "../_components/public-footer";
-import { PublicHeader } from "../_components/public-header";
+import { SiteShell } from "../_components/site-shell";
 
 export const metadata: Metadata = {
   title: "常見問題",
@@ -19,11 +18,14 @@ const questions = [
   ["目前可以在平台上付款或申請退款嗎？", "目前 V1 不提供完整的線上付款與退款自動化。若課程涉及費用，請依課程頁面與團主提供的實際安排確認；不要把尚未顯示的付款或退款方式視為平台承諾。"],
 ];
 
-export default function FaqPage() {
+export default async function FaqPage() {
+  // signed-in-navigation 決策 3：登入後用上次身分的專區導覽列，訪客維持公開 header。
   return (
-    <main className="flex min-h-screen flex-col bg-cream text-ink">
-      <PublicHeader />
-      <div className="mx-auto max-w-4xl flex-1 px-5 sm:px-8">
+    <SiteShell
+      publicMainClassName="mx-auto w-full max-w-4xl flex-1 px-5 sm:px-8"
+      signedInArea="last-role"
+      signedInClassName=""
+    >
         <section className="py-16 sm:py-24">
           <p className="text-sm font-medium tracking-[0.2em] text-clay">FAQ</p>
           <h1 className="mt-6 text-4xl font-semibold tracking-[-0.03em] sm:text-6xl">開始以前，先把重要的事說清楚</h1>
@@ -51,8 +53,6 @@ export default function FaqPage() {
             <Link className="rounded-full border border-pine/30 px-5 py-3 text-center font-medium" href="/organizers/request">提出需求</Link>
           </div>
         </section>
-      </div>
-      <PublicFooter />
-    </main>
+    </SiteShell>
   );
 }

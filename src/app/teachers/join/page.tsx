@@ -3,8 +3,7 @@ import { redirect } from "next/navigation";
 import { getOwnTeacherProfileApplicationSnapshot } from "@/domain/teacher-profile/service";
 import { getCurrentUser } from "@/lib/auth/session";
 
-import { PublicFooter } from "../../_components/public-footer";
-import { PublicHeader } from "../../_components/public-header";
+import { SiteShell } from "../../_components/site-shell";
 
 import { TeacherApplicationForm } from "./_components/TeacherApplicationForm";
 import { TeacherJoinExplainer } from "./_components/TeacherJoinExplainer";
@@ -16,11 +15,13 @@ import { TeacherJoinExplainer } from "./_components/TeacherJoinExplainer";
 // 2026-09-25：已登入的申請表單頁寬與其他老師頁一致（max-w-4xl）；未登入的行銷導覽維持較寬的 5xl。
 export default async function TeacherJoinPage() {
   const currentUser = await getCurrentUser();
+  let hasTeacherProfile = false;
 
   // 2026-09-25：已通過審核或已暫停的老師不需要再看申請頁（表單只剩唯讀），直接進老師總覽。
   // 草稿、審核中、被退回的人還要在這裡填寫、查看或修正，沒有老師資料的人也留在這頁。
   if (currentUser) {
     const teacherProfile = await getOwnTeacherProfileApplicationSnapshot();
+    hasTeacherProfile = teacherProfile !== null;
 
     if (
       teacherProfile &&
@@ -31,17 +32,15 @@ export default async function TeacherJoinPage() {
     }
   }
 
+  // 2026-09-27 signed-in-navigation 票 05：登入後不再用公開 header。已有老師資料（草稿、審核中、
+  // 被退回）用老師專區導覽列，看得到角色切換；還沒有老師資料的人用學員專區。頁面內容不變。
   return (
-    <div className="flex min-h-screen flex-col bg-cream text-ink">
-      <PublicHeader />
-      <main
-        className={`mx-auto flex w-full flex-1 flex-col gap-10 px-5 py-10 sm:px-8 sm:py-14 ${
-          currentUser ? "max-w-4xl" : "max-w-5xl"
-        }`}
-      >
-        {currentUser ? <TeacherApplicationForm /> : <TeacherJoinExplainer />}
-      </main>
-      <PublicFooter />
-    </div>
+    <SiteShell
+      publicMainClassName="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-10 px-5 py-10 sm:px-8 sm:py-14"
+      signedInArea={hasTeacherProfile ? "teacher" : "member"}
+      signedInClassName="flex flex-col gap-10"
+    >
+      {currentUser ? <TeacherApplicationForm /> : <TeacherJoinExplainer />}
+    </SiteShell>
   );
 }

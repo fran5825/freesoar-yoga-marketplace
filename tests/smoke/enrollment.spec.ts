@@ -152,6 +152,44 @@ test.describe("enrollment smoke", () => {
     await expect(page.getByText("測試備註內容")).toBeVisible();
   });
 
+  test("class detail shows remaining seats, a success banner with a link to my enrollments, and hides the form once full", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-seats-${Date.now()}`,
+    );
+    const { classSessionId } = await seedClassSession({ testRunId, capacity: 3 });
+    const { userId: otherMember } = await seedMember(testRunId, "other");
+    const { sessionToken } = await seedMember(testRunId, "me");
+    await createEnrollmentForUser(otherMember, classSessionId, { notes: null });
+
+    await addAuthSessionCookie(context, sessionToken);
+    await page.goto(`/classes/${classSessionId}`);
+    await expect(page.getByText("開放報名", { exact: true })).toBeVisible();
+    await expect(page.getByText("剩 2 個名額")).toBeVisible();
+
+    await page.getByRole("checkbox", { name: /我了解此課程非醫療行為/ }).check();
+    await page.getByRole("button", { name: "確認報名" }).click();
+
+    await expect(page.getByText("報名成功。")).toBeVisible();
+    await expect(page.getByRole("link", { name: "查看我的報名" })).toHaveAttribute(
+      "href",
+      "/member/enrollments",
+    );
+    await expect(page.getByText("剩 1 個名額")).toBeVisible();
+
+    const { classSessionId: fullClassId } = await seedClassSession({
+      testRunId: `${testRunId}-full`,
+      capacity: 1,
+    });
+    await createEnrollmentForUser(otherMember, fullClassId, { notes: null });
+    await page.goto(`/classes/${fullClassId}`);
+    await expect(page.getByText("已額滿", { exact: true })).toBeVisible();
+    await expect(page.getByText("這堂課名額已滿")).toBeVisible();
+    await expect(page.getByRole("button", { name: "確認報名" })).toHaveCount(0);
+  });
+
   test("validation boundaries reject too-long notes and missing consent on the server", async ({
     context,
     page,
@@ -286,10 +324,9 @@ test.describe("enrollment smoke", () => {
     const testRunId = normalizeForEmail(
       `${testInfo.project.name}-${testInfo.workerIndex}-d14-cancel-${Date.now()}`,
     );
-    const { classSessionId } = await seedClassSession({
-      testRunId,
-      startAt: "2020-01-01T00:00:00Z",
-    });
+    // 課程還沒開始時先打開取消表單，送出前才把課程改成已開始——模擬「頁面開著時課程開始了」，
+    // 證明就算畫面還看得到按鈕，伺服器端仍會擋下（課程開始後畫面本來就不會顯示取消）。
+    const { classSessionId } = await seedClassSession({ testRunId });
     const { sessionToken, userId: memberId } = await seedMember(testRunId, "d14c");
     const enrollment = await prisma.enrollment.create({
       data: {
@@ -304,9 +341,17 @@ test.describe("enrollment smoke", () => {
     await page.goto("/member/enrollments");
     await page.getByText("取消報名…").click();
     await page.getByRole("checkbox", { name: "我確認要取消這則報名。" }).check();
+    await prisma.classSession.update({
+      where: { id: classSessionId },
+      data: { startAt: new Date("2020-01-01T00:00:00Z") },
+    });
     await page.getByRole("button", { name: "確認取消" }).click();
 
     await expect(page.getByText("這堂課程已經開始，無法取消報名。")).toBeVisible();
+    // 重新載入後，已開始的課不再顯示取消入口（我的報名與課程詳情都一樣）。
+    await expect(page.getByText("取消報名…")).toHaveCount(0);
+    await page.goto(`/classes/${classSessionId}`);
+    await expect(page.getByText("取消報名…")).toHaveCount(0);
 
     const stillConfirmed = await prisma.enrollment.findUniqueOrThrow({
       where: { id: enrollment.id },
@@ -356,6 +401,122 @@ test.describe("enrollment smoke", () => {
     await page.goto("/member/enrollments");
     await expect(page.getByText("目前沒有任何報名")).toBeVisible();
     await expect(page.getByText(`Class ${testRunId}`)).toBeHidden();
+    await expect(page.getByText("目前沒有待處理事項")).toBeVisible();
+    await expect(page.getByRole("link", { name: "去找一堂課" })).toHaveAttribute(
+      "href",
+      "/classes",
+    );
+  });
+
+  test("a member can cancel from the class detail page with a clear no-re-enroll warning, and cannot cancel someone else's enrollment by tampering with the form", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-detail-cancel-${Date.now()}`,
+    );
+    const { classSessionId } = await seedClassSession({ testRunId, capacity: 3 });
+    const { userId: otherId } = await seedMember(testRunId, "other");
+    const { userId: meId, sessionToken } = await seedMember(testRunId, "me");
+    const other = await createEnrollmentForUser(otherId, classSessionId, { notes: null });
+    const mine = await createEnrollmentForUser(meId, classSessionId, { notes: null });
+    if (!other.ok || !mine.ok) throw new Error("unexpected enrollment failure");
+
+    await addAuthSessionCookie(context, sessionToken);
+
+    // 竄改隱藏欄位，改成別人的報名 id：伺服器只會找自己的報名，所以取消不了。
+    await page.goto(`/classes/${classSessionId}`);
+    await page.getByText("取消報名…").click();
+    await page
+      .locator('input[name="enrollmentId"]')
+      .evaluate((el: HTMLInputElement, id: string) => {
+        el.value = id;
+      }, other.enrollmentId);
+    await page.getByRole("checkbox", { name: "我確認要取消這則報名。" }).check();
+    await page.getByRole("button", { name: "確認取消" }).click();
+    await expect(page.getByText("報名已取消。")).toBeHidden();
+    expect(
+      (await prisma.enrollment.findUniqueOrThrow({ where: { id: other.enrollmentId } })).status,
+    ).toBe("confirmed");
+    expect(
+      (await prisma.enrollment.findUniqueOrThrow({ where: { id: mine.enrollmentId } })).status,
+    ).toBe("confirmed");
+
+    // 正常取消：留在同一堂課的詳情頁，看得到警語與結果，名額也釋出。
+    await page.goto(`/classes/${classSessionId}`);
+    await expect(page.getByText("剩 1 個名額")).toBeVisible();
+    await page.getByText("取消報名…").click();
+    await expect(page.getByText("取消後無法再次報名此課程。")).toBeVisible();
+    await page.getByRole("checkbox", { name: "我確認要取消這則報名。" }).check();
+    await page.getByRole("button", { name: "確認取消" }).click();
+
+    await expect(page).toHaveURL(new RegExp(`/classes/${classSessionId}\\?result=success`));
+    await expect(page.getByText("報名已取消。")).toBeVisible();
+    await expect(page.getByText("已取消", { exact: true })).toBeVisible();
+    await expect(page.getByText("剩 2 個名額")).toBeVisible();
+    await expect(page.getByText("取消報名…")).toHaveCount(0);
+
+    // 「我的報名」狀態一致。
+    await page.goto("/member/enrollments");
+    await expect(page.locator(`#enrollment-${mine.enrollmentId}`)).toContainText("已取消");
+  });
+
+  test("my enrollments lists what needs attention (pending, review not yet left), groups upcoming vs past, and the whole card links to the class", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-todo-${Date.now()}`,
+    );
+    const { classSessionId: pendingClassId } = await seedClassSession({
+      testRunId: `${testRunId}-p`,
+    });
+    const { classSessionId: doneClassId } = await seedClassSession({
+      testRunId: `${testRunId}-d`,
+    });
+    const { userId, sessionToken } = await seedMember(testRunId, "me");
+
+    const pending = await createEnrollmentForUser(userId, pendingClassId, { notes: null });
+    const done = await createEnrollmentForUser(userId, doneClassId, { notes: null });
+    if (!pending.ok || !done.ok) throw new Error("unexpected enrollment failure");
+
+    await prisma.enrollment.update({ where: { id: pending.enrollmentId }, data: { status: "pending" } });
+    await prisma.classSession.update({
+      where: { id: doneClassId },
+      data: {
+        status: "completed",
+        startAt: new Date(Date.now() - 3 * 24 * 3600_000),
+        endAt: new Date(Date.now() - 3 * 24 * 3600_000 + 3600_000),
+      },
+    });
+
+    await addAuthSessionCookie(context, sessionToken);
+    await page.goto("/member/enrollments");
+
+    const todo = page.getByRole("region", { name: "待你處理" });
+    await expect(todo).toContainText("待評價");
+    await expect(todo).toContainText(`Class ${testRunId}-d`);
+    await expect(todo).toContainText("等老師確認");
+    await expect(todo).toContainText(`Class ${testRunId}-p`);
+    await expect(page.getByText("目前沒有待處理事項")).toBeHidden();
+    await expect(page.getByRole("heading", { name: "即將上課" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "過去與已取消" })).toBeVisible();
+
+    // 整張卡都可點：點卡片左上角空白處也會進到課程詳情。
+    await page
+      .locator(`#enrollment-${pending.enrollmentId}`)
+      .click({ position: { x: 8, y: 8 } });
+    await expect(page).toHaveURL(new RegExp(`/classes/${pendingClassId}$`));
+
+    // 留下評價後，該筆從「待你處理」消失。
+    await page.goto("/member/enrollments");
+    await page
+      .locator(`#enrollment-${done.enrollmentId}`)
+      .getByText("留下評價…")
+      .click();
+    await page.locator(`#rating-${done.enrollmentId}`).selectOption("5");
+    await page.getByRole("button", { name: "送出評價" }).click();
+    await expect(page.getByRole("region", { name: "待你處理" })).not.toContainText("待評價");
   });
 
   test("IDOR: an organizer cannot view another organizer's class session detail (404)", async ({

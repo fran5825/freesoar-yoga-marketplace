@@ -135,15 +135,20 @@ test.describe("/member dashboard smoke", () => {
     await expect(page.getByRole("heading", { name: "我的總覽" })).toBeVisible();
     await expect(page.getByText("目前沒有任何通知")).toBeVisible();
     await expect(page.getByText("目前沒有任何報名")).toBeVisible();
+    await expect(page.getByText("目前沒有待處理事項")).toBeVisible();
+    await expect(page.getByRole("link", { name: "去找一堂課" })).toHaveAttribute(
+      "href",
+      "/classes",
+    );
     await expect(
       page.getByRole("link", { name: "查看全部通知" }),
-    ).toHaveAttribute("href", "/notifications");
+    ).toHaveAttribute("href", "/member/notifications");
     await expect(
       page.getByRole("link", { name: "查看全部報名" }),
     ).toHaveAttribute("href", "/member/enrollments");
   });
 
-  test("shows enrollment counts and the soonest 5 upcoming confirmed enrollments, excluding past ones", async ({
+  test("shows what needs attention and the soonest 5 upcoming confirmed enrollments as links, excluding past ones", async ({
     context,
     page,
   }, testInfo) => {
@@ -172,7 +177,7 @@ test.describe("/member dashboard smoke", () => {
     const now = Date.now();
     const dayMs = 24 * 60 * 60 * 1000;
 
-    // 6 筆未來的 confirmed 報名（soonest-first），只有最早的 5 筆會顯示在「即將到來」。
+    // 6 筆未來的 confirmed 報名（soonest-first），只有最早的 5 筆會顯示在「即將上課」。
     const futureClassSessions = [];
     for (let i = 1; i <= 6; i++) {
       const classSession = await seedClassSession({
@@ -191,7 +196,7 @@ test.describe("/member dashboard smoke", () => {
       });
     }
 
-    // 1 筆已過去的 confirmed 報名：計入「已報名」總數，但不進入「即將到來」清單。
+    // 1 筆已過去的 confirmed 報名：不進入「即將上課」清單。
     const pastClassSession = await seedClassSession({
       organizerProfileId,
       organizationId,
@@ -240,17 +245,22 @@ test.describe("/member dashboard smoke", () => {
     await page.setViewportSize({ width: 360, height: 800 });
     await page.goto(dashboardPath);
 
-    // 計數：已報名 7（6 未來 + 1 過去）、處理中 2、已取消 1。
-    const stats = page.locator("dl > div");
-    await expect(stats.filter({ hasText: "已報名" }).locator("dd")).toHaveText("7");
-    await expect(stats.filter({ hasText: "處理中" }).locator("dd")).toHaveText("2");
-    await expect(stats.filter({ hasText: "已取消" }).locator("dd")).toHaveText("1");
+    // 待你處理：2 筆 pending（未來、尚未開始）都在等老師確認；已取消的不列入。
+    const todo = page.getByRole("region", { name: "待你處理" });
+    await expect(todo.getByText("等老師確認")).toHaveCount(2);
+    await expect(todo).toContainText(`Class ${testRunId}-pending-1`);
+    await expect(todo).toContainText(`Class ${testRunId}-pending-2`);
+    await expect(todo).not.toContainText(`Class ${testRunId}-cancelled`);
 
     // 即將到來只顯示最早的 5 筆未來 confirmed 報名。
     for (let i = 1; i <= 5; i++) {
       await expect(page.getByText(`Class ${testRunId}-future-${i}`)).toBeVisible();
     }
     await expect(page.getByText(`Class ${testRunId}-future-6`)).toBeHidden();
+    // 即將上課的卡片整張是連結，點了進課程詳情。
+    await expect(
+      page.getByRole("link", { name: new RegExp(`Class ${testRunId}-future-1`) }),
+    ).toHaveAttribute("href", `/classes/${futureClassSessions[0].id}`);
 
     // 已過去的 confirmed 報名不進入即將到來清單。
     await expect(page.getByText(`Class ${testRunId}-past`)).toBeHidden();
@@ -311,7 +321,7 @@ test.describe("/member dashboard smoke", () => {
 
     await expect(
       page.getByRole("link", { name: "查看全部通知" }),
-    ).toHaveAttribute("href", "/notifications");
+    ).toHaveAttribute("href", "/member/notifications");
   });
 });
 

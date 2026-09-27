@@ -5,9 +5,10 @@
 // 集合，不揭露 organizerProfileId／organizationId／demandRequestId 這些內部關聯 id（即使值是
 // null，也不該讓型別結構暗示內部設計給未登入訪客）。
 
-import type { ClassSessionStatus } from "@prisma/client";
+import type { ClassSessionOrigin, ClassSessionStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import { getClassAvailability } from "./availability";
 import { taipeiDayOfWeek } from "./recurring-series-dates";
 
 export type PublicClassSessionListItem = {
@@ -19,6 +20,10 @@ export type PublicClassSessionListItem = {
   startAt: Date;
   endAt: Date;
   location: string;
+  capacity: number;
+  activeEnrollmentCount: number;
+  // 只是「誰開的課」的分類標籤，不含任何內部關聯 id。
+  origin: ClassSessionOrigin;
   teacherProfile: { displayName: string | null };
 };
 
@@ -26,6 +31,8 @@ export type PublicClassSessionListFilters = {
   serviceType?: string;
   // 0（週日）–6，比照既有 TeacherAvailability／RecurringClassSeries 慣例。
   dayOfWeek?: number;
+  // 只看還有名額（尚未開始且名額未滿）。
+  availableOnly?: boolean;
 };
 
 export type PublicClassSessionDetail = {
@@ -39,6 +46,7 @@ export type PublicClassSessionDetail = {
   endAt: Date;
   location: string;
   capacity: number;
+  activeEnrollmentCount: number;
   teacherProfile: { displayName: string | null };
 };
 
@@ -75,19 +83,37 @@ export async function getPublicClassSessionListItems(
       startAt: true,
       endAt: true,
       location: true,
+      capacity: true,
+      origin: true,
       teacherProfile: { select: { displayName: true } },
       recurringClassSeries: { select: { dayOfWeek: true } },
+      _count: {
+        select: {
+          enrollments: { where: { status: { in: ["pending", "confirmed"] } } },
+        },
+      },
     },
     orderBy: { startAt: "asc" },
   });
 
-  const filtered =
+  const byDayOfWeek =
     filters.dayOfWeek === undefined
       ? rows
       : rows.filter((row) => {
           const effectiveDayOfWeek = row.recurringClassSeries?.dayOfWeek ?? taipeiDayOfWeek(row.startAt);
           return effectiveDayOfWeek === filters.dayOfWeek;
         });
+
+  const filtered = filters.availableOnly
+    ? byDayOfWeek.filter(
+        (row) =>
+          getClassAvailability({
+            capacity: row.capacity,
+            activeEnrollmentCount: row._count.enrollments,
+            startAt: row.startAt,
+          }).state === "open",
+      )
+    : byDayOfWeek;
 
   // 明確逐欄位挑選,而不是 destructure 掉 recurringClassSeries 再 spread 剩下的——那個內部
   // 欄位只是用來算 dayOfWeek,回傳給訪客的 DTO 本來就不該含有任何關聯 id 的痕跡。
@@ -100,6 +126,9 @@ export async function getPublicClassSessionListItems(
     startAt: row.startAt,
     endAt: row.endAt,
     location: row.location,
+    capacity: row.capacity,
+    activeEnrollmentCount: row._count.enrollments,
+    origin: row.origin,
     teacherProfile: row.teacherProfile,
   }));
 }
@@ -109,7 +138,7 @@ export async function getPublicClassSessionListItems(
 export async function getPublicClassSessionDetail(
   classSessionId: string,
 ): Promise<PublicClassSessionDetail | null> {
-  return prisma.classSession.findFirst({
+  const row = await prisma.classSession.findFirst({
     where: {
       id: classSessionId,
       isPublic: true,
@@ -128,6 +157,19 @@ export async function getPublicClassSessionDetail(
       location: true,
       capacity: true,
       teacherProfile: { select: { displayName: true } },
+      _count: {
+        select: {
+          enrollments: { where: { status: { in: ["pending", "confirmed"] } } },
+        },
+      },
     },
   });
+
+  if (!row) {
+    return null;
+  }
+
+  const { _count, ...fields } = row;
+
+  return { ...fields, activeEnrollmentCount: _count.enrollments };
 }

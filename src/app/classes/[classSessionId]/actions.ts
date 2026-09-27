@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { createOwnEnrollment } from "@/domain/enrollment/service";
+import { cancelOwnEnrollment, createOwnEnrollment } from "@/domain/enrollment/service";
 
 export async function enrollAction(formData: FormData): Promise<void> {
   const classSessionId = readFormString(formData, "classSessionId");
@@ -29,6 +29,23 @@ export async function enrollAction(formData: FormData): Promise<void> {
     "success",
     result.status === "pending" ? "報名已送出，等待老師確認。" : "報名成功。",
   );
+}
+
+// 課程詳情頁的取消報名：規則與本人檢查全部沿用 cancelOwnEnrollment（只能取消自己的、
+// 處理中／已報名、課程尚未開始），這裡只負責取消後回到同一堂課的詳情頁。
+export async function cancelEnrollmentFromClassAction(formData: FormData): Promise<void> {
+  const classSessionId = readFormString(formData, "classSessionId");
+  const result = await cancelOwnEnrollment(readFormString(formData, "enrollmentId"));
+
+  revalidatePath(`/classes/${classSessionId}`);
+  revalidatePath("/member/enrollments");
+  revalidatePath("/member/dashboard");
+
+  if (!result.ok) {
+    redirectWithFeedback(classSessionId, "error", result.message);
+  }
+
+  redirectWithFeedback(classSessionId, "success", "報名已取消。");
 }
 
 function readFormString(formData: FormData, name: string): string {

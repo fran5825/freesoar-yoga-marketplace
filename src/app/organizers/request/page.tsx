@@ -3,8 +3,7 @@ import { redirect } from "next/navigation";
 import { getOwnOrganizerContext } from "@/domain/organizer-profile/service";
 import { getCurrentUser } from "@/lib/auth/session";
 
-import { PublicFooter } from "../../_components/public-footer";
-import { PublicHeader } from "../../_components/public-header";
+import { SiteShell } from "../../_components/site-shell";
 
 import { OrganizerRequestExplainer } from "./_components/OrganizerRequestExplainer";
 
@@ -24,13 +23,15 @@ export default async function OrganizersRequestPage() {
     redirect("/organizer/demands/new");
   }
 
+  // 2026-09-27 signed-in-navigation 票 05：登入但還不是團主的人用學員專區導覽列（有角色切換），
+  // 不再用公開 header；頁面內容不變。
   return (
-    <div className="flex min-h-screen flex-col bg-cream text-ink">
-      <PublicHeader />
-      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-10 px-5 py-10 sm:px-8 sm:py-14">
-        <OrganizerRequestExplainer isSignedIn={currentUser !== null} />
-      </main>
-      <PublicFooter />
-    </div>
+    <SiteShell
+      publicMainClassName="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-10 px-5 py-10 sm:px-8 sm:py-14"
+      signedInArea="member"
+      signedInClassName="flex flex-col gap-10"
+    >
+      <OrganizerRequestExplainer isSignedIn={currentUser !== null} />
+    </SiteShell>
   );
 }
