@@ -95,6 +95,23 @@ export function formatDateWithWeekday(date: string): string {
   return weekday === null ? date : `${date}（${dayOfWeekLabels[weekday]}）`;
 }
 
+// 建立結果不確定、再送一次可能重複建立時，不提供重送（Codex review 第 2 輪）。
+// - series_create_failed：系列已寫入、場次生成失敗。
+// - result_unknown：伺服器處理中拋出例外，不知道寫到哪裡。
+// - 系列的 teacher_not_approved：可能是開始前就沒資格，也可能是系列寫入後才失去資格；
+//   後者若之後恢復資格再重送，會多建一個系列，所以保守視為不確定。單堂的這個錯誤發生在寫入前，可以重送。
+export function isResubmitBlocked(state: CreateClassFormState): boolean {
+  if (state.status !== "error") {
+    return false;
+  }
+
+  if (state.code === "series_create_failed" || state.code === "result_unknown") {
+    return true;
+  }
+
+  return state.mode !== "single" && state.code === "teacher_not_approved";
+}
+
 export function buildCreateClassFieldErrors(
   validationErrors?: { field: string; message: string }[],
 ): Partial<Record<CreateClassFormField, string[]>> {

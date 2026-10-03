@@ -30,6 +30,7 @@ import {
   dayOfWeekLabel,
   formatDateWithWeekday,
   initialCreateClassFormState,
+  isResubmitBlocked,
   weekdayOfDateString,
   type CreateClassFormField,
   type CreateClassFormState,
@@ -190,8 +191,6 @@ function focusFirstError(state: CreateClassFormState) {
 
 const WEEKLY_GENERATE_COUNT_MAX = 26;
 
-// 這些錯誤代表結果不確定，再送一次可能重複建立。
-const RESUBMIT_BLOCKING_CODES = ["series_create_failed", "result_unknown"];
 // 這些錯誤發生在寫入之前，可以確定還沒建立。
 const NOT_WRITTEN_CODES = [
   "validation_failed",
@@ -308,7 +307,7 @@ export function ClassSessionCreateForm({
   // 所以不提供重送。系列兩種模式共用，切換模式也一樣擋住。
   const blockingSourceState = mode === "single" ? singleFormState : seriesFormState;
   const blockingState =
-    blockingSourceState.status === "error" && RESUBMIT_BLOCKING_CODES.includes(blockingSourceState.code)
+    blockingSourceState.status === "error" && isResubmitBlocked(blockingSourceState)
       ? blockingSourceState
       : null;
   const isSeriesCreatedButFailed = blockingState !== null;

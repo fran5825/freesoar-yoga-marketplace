@@ -75,6 +75,7 @@
 - 離頁提醒在送出中也保持啟用（建課、申請）：成功 redirect 是 router 導覽，不經過連結點擊或 beforeunload，不會被攔；送出中點連結離開會先問。
 - 老師申請送審中鎖住所有欄位；送審成功後唯讀摘要改用實際送出的 snapshot，不會顯示送出後才改的內容。
 - 建課結果不確定時不提供重送：`series_create_failed` 與新的 `result_unknown`（service 拋出例外時由 action 回傳，redirect 仍在 try/catch 外）都會隱藏建立按鈕；系列兩種模式共用這個判斷，切換模式也擋住。錯誤標題只有在確定寫入前失敗（驗證、時段衝突、未登入、無老師資料）時才寫「還沒建立」，其他寫「建立沒有完成」。
+- Codex 第 2 輪：系列的 `teacher_not_approved` 也可能發生在系列寫入之後（老師剛好在這時被暫停）；若之後恢復資格再用原表單重送，會多建一個系列。判斷抽成 `isResubmitBlocked`（`_lib/form-state.ts`），系列模式遇到這個錯誤也不提供重送；單堂的資格檢查在寫入前，仍可重送。新增純函式測試涵蓋各錯誤碼（PORT=3200，`teacher-class-usability`＋`teacher-recurring-class-series` 28 個通過）。
 - 觸控目標：月曆前後月按鈕 `min-h-11 min-w-11`；月曆改手機一欄、`lg` 以上兩欄，日期格 `min-h-11` 且不留間距；手機建課卡片內距 `p-4`；單堂詳情的系列標籤連結 `min-h-11`。
 
 ## 7. 需要產品主人決定的事與已知限制

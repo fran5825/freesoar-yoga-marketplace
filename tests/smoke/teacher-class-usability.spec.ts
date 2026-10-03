@@ -14,6 +14,7 @@ import {
 import { futureDateString, futureDateTime, futureWeekdayDateString } from "./_helpers/future-dates";
 import { addFixedDate, pickServiceType } from "./_helpers/class-form";
 import { selectFormTime } from "./_helpers/time-select";
+import { isResubmitBlocked } from "../../src/app/teacher/classes/new/_lib/form-state";
 
 // teacher-usability-redesign 票 01、02：開課的結果驗證——
 // 失敗留在原頁且保留輸入與摘要、摘要＝實際建立的值、成功只建立草稿、未建立就離頁會提醒。
@@ -60,6 +61,24 @@ async function fillSingleClass(
 function summary(page: Page) {
   return page.getByRole("region", { name: "建立前核對" });
 }
+
+test.describe("resubmit guard for uncertain create results (pure helper)", () => {
+  const error = (mode: "single" | "weekly" | "fixed_dates", code: string) =>
+    ({ status: "error", mode, code, message: "", fieldErrors: {} }) as const;
+
+  test("blocks resubmit when the write may already have happened, allows it when the failure is before any write", () => {
+    expect(isResubmitBlocked({ status: "idle" })).toBe(false);
+    expect(isResubmitBlocked(error("weekly", "series_create_failed"))).toBe(true);
+    expect(isResubmitBlocked(error("single", "result_unknown"))).toBe(true);
+    // 系列寫入後才失去資格，之後恢復資格再重送會多一個系列：保守擋住。
+    expect(isResubmitBlocked(error("weekly", "teacher_not_approved"))).toBe(true);
+    expect(isResubmitBlocked(error("fixed_dates", "teacher_not_approved"))).toBe(true);
+    // 單堂的資格檢查在寫入前。
+    expect(isResubmitBlocked(error("single", "teacher_not_approved"))).toBe(false);
+    expect(isResubmitBlocked(error("weekly", "validation_failed"))).toBe(false);
+    expect(isResubmitBlocked(error("single", "teacher_schedule_conflict"))).toBe(false);
+  });
+});
 
 test.describe("teacher single-class creation usability (ticket 01)", () => {
   test("a schedule conflict keeps every input and the summary on the page; fixing the date creates exactly one private draft and opens its detail page", async ({
