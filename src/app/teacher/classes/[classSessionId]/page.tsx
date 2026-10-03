@@ -15,6 +15,11 @@ import { requireUser } from "@/lib/auth/session";
 import { ConfirmActionDialog } from "../_components/ConfirmActionDialog";
 import { PendingSubmitButton } from "../_components/PendingSubmitButton";
 import {
+  parseReturnContext,
+  returnContextParams,
+  teacherClassBackLink,
+} from "../_lib/return-context";
+import {
   cancelOwnClassSessionAction,
   completeOwnClassSessionAction,
   confirmPendingEnrollmentAction,
@@ -24,7 +29,14 @@ import {
 
 type TeacherClassSessionDetailPageProps = {
   params: Promise<{ classSessionId: string }>;
-  searchParams?: Promise<{ result?: string; message?: string }>;
+  searchParams?: Promise<{
+    result?: string;
+    message?: string;
+    from?: string;
+    tab?: string;
+    status?: string;
+    series?: string;
+  }>;
 };
 
 const originLabels: Record<string, string> = {
@@ -102,6 +114,16 @@ export default async function TeacherClassSessionDetailPage({
   const canCancel =
     isOwnClass && ["draft", "open_for_enrollment"].includes(classSession.status);
   const canComplete = isOwnClass && classSession.status === "open_for_enrollment";
+  // 票 04：從列表／系列進來時記得從哪裡來；系列只接受這堂課自己的系列。操作表單也帶著，做完仍保留。
+  const returnContext = parseReturnContext(
+    resolvedSearchParams ?? {},
+    classSession.recurringClassSeriesId,
+  );
+  const returnFields = Object.fromEntries(returnContextParams(returnContext));
+  const returnInputs = Object.entries(returnFields).map(([name, value]) => (
+    <input key={name} name={name} type="hidden" value={value} />
+  ));
+  const backLink = teacherClassBackLink(returnContext, classSession.id);
   const timeText = `${formatTaipeiDatetime(classSession.startAt)}–${formatTaipeiDatetime(classSession.endAt)}`;
 
   const contentSection = (
@@ -192,6 +214,7 @@ export default async function TeacherClassSessionDetailPage({
                     <form action={confirmPendingEnrollmentAction}>
                       <input name="enrollmentId" type="hidden" value={enrollment.id} />
                       <input name="classSessionId" type="hidden" value={classSession.id} />
+                      {returnInputs}
                       <PendingSubmitButton className="min-h-11 rounded-full border border-emerald-300 bg-white px-4 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-50">
                         確認報名
                       </PendingSubmitButton>
@@ -199,7 +222,11 @@ export default async function TeacherClassSessionDetailPage({
                     <ConfirmActionDialog
                       action={declinePendingEnrollmentAction}
                       confirmLabel="確定婉拒"
-                      hiddenFields={{ enrollmentId: enrollment.id, classSessionId: classSession.id }}
+                      hiddenFields={{
+                        enrollmentId: enrollment.id,
+                        classSessionId: classSession.id,
+                        ...returnFields,
+                      }}
                       title="婉拒這筆報名？"
                       triggerAriaLabel={`婉拒 ${memberName} 的報名`}
                       triggerClassName="min-h-11 rounded-full border border-ink/25 bg-white px-4 py-2 text-sm font-medium text-ink-soft transition hover:bg-cream"
@@ -263,9 +290,9 @@ export default async function TeacherClassSessionDetailPage({
       <header className="border-b border-ink/15 pb-6">
         <Link
           className="inline-flex min-h-11 items-center text-sm font-medium text-clay hover:underline"
-          href="/teacher/classes"
+          href={backLink.href}
         >
-          ← 回我的課程
+          {backLink.label}
         </Link>
         <h1 className="mt-1 min-w-0 break-words text-3xl font-semibold tracking-tight text-ink">
           {classSession.title}
@@ -334,6 +361,7 @@ export default async function TeacherClassSessionDetailPage({
               {canOpen ? (
                 <form action={openOwnClassSessionForEnrollmentAction}>
                   <input name="classSessionId" type="hidden" value={classSession.id} />
+                  {returnInputs}
                   <PendingSubmitButton className={primaryButtonClassName}>
                     開放報名
                   </PendingSubmitButton>
@@ -347,6 +375,7 @@ export default async function TeacherClassSessionDetailPage({
               {canComplete ? (
                 <form action={completeOwnClassSessionAction}>
                   <input name="classSessionId" type="hidden" value={classSession.id} />
+                  {returnInputs}
                   <PendingSubmitButton className={secondaryButtonClassName}>
                     標記完成
                   </PendingSubmitButton>
@@ -424,7 +453,7 @@ export default async function TeacherClassSessionDetailPage({
             <ConfirmActionDialog
               action={cancelOwnClassSessionAction}
               confirmLabel="確定取消課程"
-              hiddenFields={{ classSessionId: classSession.id }}
+              hiddenFields={{ classSessionId: classSession.id, ...returnFields }}
               title="取消這堂課？"
               triggerClassName="min-h-11 rounded-full border border-clay/40 px-5 py-2 text-sm font-medium text-clay transition hover:bg-clay-tint"
               triggerLabel="取消課程"

@@ -129,7 +129,8 @@ test.describe("teacher recurring class series smoke", () => {
     }
 
     // Slice E：/teacher/classes 統一列表要能看到「這一場屬於哪個系列」，且能點回系列管理頁。
-    await page.goto("/teacher/classes");
+    // teacher-usability-redesign 票 04：我的課程預設只列「即將上課」，系列剛建立的場次是草稿。
+    await page.goto("/teacher/classes?tab=drafts");
     await expect(page.getByText(`系列：${baseSeriesInput.title}`).first()).toBeVisible();
     // 系列管理頁的連結在單堂課詳情頁（列表卡片整張已經是連結，不能再包一個連結）。
     await page.goto(`/teacher/classes/${series.classSessions[0].id}`);

@@ -387,15 +387,16 @@ test.describe("teacher-initiated open classes smoke", () => {
     if (!teacherClass.ok) throw new Error("unexpected create failure in test fixture");
 
     await addAuthSessionCookie(context, matched.teacher.sessionToken);
-    await page.goto("/teacher/classes");
+    // teacher-usability-redesign 票 04：我的課程預設只列「即將上課」，這兩堂草稿在「全部」分頁看得到。
+    await page.goto("/teacher/classes?tab=all");
 
     // 列表上不再有任何操作按鈕，每張卡片都連到該課的詳情頁（teacher-usability 第 06 票）。
     await expect(page.getByRole("button", { name: "取消課程" })).toHaveCount(0);
     await expect(
-      page.locator(`a[href="/teacher/classes/${organizerClass.classSessionId}"]`),
+      page.locator(`a[href^="/teacher/classes/${organizerClass.classSessionId}"]`),
     ).toBeVisible();
     await expect(
-      page.locator(`a[href="/teacher/classes/${teacherClass.classSessionId}"]`),
+      page.locator(`a[href^="/teacher/classes/${teacherClass.classSessionId}"]`),
     ).toBeVisible();
 
     await page.goto(`/teacher/classes/${organizerClass.classSessionId}`);

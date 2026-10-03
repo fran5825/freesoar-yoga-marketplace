@@ -352,7 +352,8 @@ test.describe("class session cancellation smoke", () => {
     await context.clearCookies();
     const { sessionToken: teacherSessionToken } = await createUserSessionFor(teacherUserId);
     await addAuthSessionCookie(context, teacherSessionToken);
-    await page.goto("/teacher/classes");
+    // teacher-usability-redesign 票 04：我的課程預設只列「即將上課」，已取消的課在「全部」分頁。
+    await page.goto("/teacher/classes?tab=all");
     await expect(page.getByText("已取消", { exact: true })).toBeVisible();
   });
 });

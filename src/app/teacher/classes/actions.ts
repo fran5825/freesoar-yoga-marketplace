@@ -13,6 +13,13 @@ import {
   declinePendingEnrollmentForTeacher,
 } from "@/domain/enrollment/service";
 
+import {
+  parseListStatusFilter,
+  parseListTab,
+  returnContextParams,
+  type TeacherClassReturnContext,
+} from "./_lib/return-context";
+
 // teacher-initiated-open-classes Slice A：這三個動作只對老師自建（teacher_initiated）的課程
 // 有意義——團主媒合的課程仍由 Organizer own-scoped 操作，這裡的 service 層函式本身也只會
 // 比對 teacherProfileId，不會誤動到團主媒合的課程（因為那些課程的 teacherProfileId 雖然是
@@ -121,12 +128,36 @@ function revalidateTeacherClassPages(formData: FormData) {
   }
 }
 
+// 票 04：詳情頁的返回上下文（從哪個列表分頁／系列進來）跟著操作表單送來，做完帶回同一堂課。
+// 這裡只收白名單值（分頁、cancelled、id 格式的系列）；系列是否真的屬於這堂課由詳情頁再檢查。
+function readReturnContext(formData: FormData): TeacherClassReturnContext | null {
+  const from = readFormString(formData, "from");
+
+  if (from === "series") {
+    const seriesId = readFormString(formData, "series");
+
+    return /^[A-Za-z0-9_-]{1,64}$/.test(seriesId) ? { kind: "series", seriesId } : null;
+  }
+
+  if (from === "list") {
+    const tab = parseListTab(readFormString(formData, "tab"));
+
+    return { kind: "list", tab, status: parseListStatusFilter(tab, readFormString(formData, "status")) };
+  }
+
+  return null;
+}
+
 function redirectWithFeedback(
   formData: FormData,
   result: "success" | "error",
   message: string,
 ): never {
-  redirect(
-    `${getReturnPath(formData)}?result=${result}&message=${encodeURIComponent(message)}`,
-  );
+  const query = new URLSearchParams([
+    ["result", result],
+    ["message", message],
+    ...returnContextParams(readReturnContext(formData)),
+  ]);
+
+  redirect(`${getReturnPath(formData)}?${query.toString()}`);
 }

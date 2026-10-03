@@ -17,7 +17,7 @@ test.afterAll(async () => {
 
 // 2026-09-26：「建立課程」「發起新需求」不再放在導覽列右上角，改放在各自列表的最底下。
 test.describe("create actions placement smoke", () => {
-  test("an approved teacher creates classes from the bottom of /teacher/classes, not from the nav bar", async ({
+  test("an approved teacher creates classes from the top of /teacher/classes, not from the nav bar", async ({
     context,
     page,
   }, testInfo) => {

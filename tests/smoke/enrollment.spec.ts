@@ -570,7 +570,8 @@ test.describe("enrollment smoke", () => {
     });
 
     await addAuthSessionCookie(context, otherTeacherToken);
-    await page.goto("/teacher/classes");
+    // teacher-usability-redesign 票 04：我的課程預設只列「即將上課」，看全部要切到「全部」分頁。
+    await page.goto("/teacher/classes?tab=all");
     await expect(page.getByText("目前沒有已建立的課程")).toBeVisible();
     await expect(page.getByText("IDOR 測試備註")).toBeHidden();
   });

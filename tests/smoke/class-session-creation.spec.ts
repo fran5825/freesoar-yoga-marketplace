@@ -297,13 +297,14 @@ test.describe("class session creation smoke", () => {
 
     // Teacher A 沒有任何 class session。
     await addAuthSessionCookie(context, teacherA.sessionToken);
-    await page.goto("/teacher/classes");
+    // teacher-usability-redesign 票 04：我的課程預設只列「即將上課」，看全部要切到「全部」分頁。
+    await page.goto("/teacher/classes?tab=all");
     await expect(page.getByText("目前沒有已建立的課程")).toBeVisible();
 
     // Teacher B（suspended）仍可看到自己既有的 class session（D15），
     // 且 DTO 不含 organizer/organization 聯絡資訊。
     await addAuthSessionCookie(context, teacherB.sessionToken);
-    await page.goto("/teacher/classes");
+    await page.goto("/teacher/classes?tab=all");
     await expect(page.getByText(validInput.title)).toBeVisible();
     await expect(page.getByText(validInput.location)).toBeVisible();
     await expect(page.getByText("organizer-secret@example.com")).toBeHidden();

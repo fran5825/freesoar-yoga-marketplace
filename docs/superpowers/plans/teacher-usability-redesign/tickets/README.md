@@ -15,7 +15,7 @@
 | [01 單堂開課](01-single-class-creation.md) | 分區、摘要、錯誤保留、離頁提醒，成功建立完整 draft | None | STANDARD | yes | done（2026-10-04） |
 | [02 重複開課](02-recurring-class-creation.md) | 每週固定與指定日期完整建立、核對與失敗修正 | 01 | STANDARD | yes | done（2026-10-04） |
 | [03 單堂詳情](03-class-detail-actions.md) | 重點與操作置頂，處理報名及取消確認 | None | STANDARD | yes | done（2026-10-04） |
-| [04 我的課程](04-class-list-navigation.md) | 分類、建立入口、系列連結、安全返回與位置 | 03 | STANDARD | yes | draft |
+| [04 我的課程](04-class-list-navigation.md) | 分類、建立入口、系列連結、安全返回與位置 | 03 | STANDARD | yes | done（2026-10-04） |
 | [05 系列管理](05-series-management.md) | 逐場日期／狀態／人數、詳情返回、取消確認 | 03、04 | STANDARD | yes | draft |
 | [06 老師申請](06-teacher-application.md) | 必填集中、即時缺項、摘要送審與各審核狀態 | None | STANDARD | yes | draft |
 | [07 暫停老師入口](07-suspended-teacher-navigation.md) | 原查看資格下找得到既有課程 | None | STANDARD | yes | draft |

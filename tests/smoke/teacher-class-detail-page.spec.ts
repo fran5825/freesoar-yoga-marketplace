@@ -143,14 +143,15 @@ test.describe("teacher class detail page", () => {
     });
 
     await addAuthSessionCookie(context, teacher.sessionToken);
-    await page.goto("/teacher/classes");
+    // teacher-usability-redesign 票 04：我的課程預設只列「即將上課」，草稿在「草稿」分頁；卡片連結帶著返回分頁。
+    await page.goto("/teacher/classes?tab=drafts");
 
-    const card = page.locator(`a[href="/teacher/classes/${classSessionId}"]`);
+    const card = page.locator(`a[href^="/teacher/classes/${classSessionId}"]`);
     await expect(card).toContainText("草稿：請開放報名");
     await expect(card).toContainText("已報名 0 / 8 人");
     await card.click();
 
-    await expect(page).toHaveURL(new RegExp(`/teacher/classes/${classSessionId}$`));
+    await expect(page).toHaveURL(new RegExp(`/teacher/classes/${classSessionId}\\?from=list&tab=drafts$`));
     await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
     await expect(page.getByRole("region", { name: "下一步" })).toContainText("開放報名");
 

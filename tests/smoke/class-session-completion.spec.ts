@@ -216,7 +216,8 @@ test.describe("class session completion smoke", () => {
 
     await context.clearCookies();
     await addAuthSessionCookie(context, teacherSessionToken);
-    await page.goto("/teacher/classes");
+    // teacher-usability-redesign 票 04：我的課程預設只列「即將上課」，已完成的課在「過往」分頁。
+    await page.goto("/teacher/classes?tab=past");
     await expect(page.getByText("已完成", { exact: true }).first()).toBeVisible();
     // 報名名單在單堂課詳情頁（teacher-usability 第 06 票）。
     await page.goto(`/teacher/classes/${classSessionId}`);

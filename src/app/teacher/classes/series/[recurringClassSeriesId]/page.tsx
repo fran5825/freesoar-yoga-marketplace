@@ -13,6 +13,7 @@ import {
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { requireUser } from "@/lib/auth/session";
 
+import { teacherClassDetailHref } from "../../_lib/return-context";
 import { cancelRecurringClassSeriesAction, generateMoreOccurrencesAction } from "./actions";
 
 const dayOfWeekLabels = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
@@ -136,19 +137,22 @@ export default async function RecurringClassSeriesPage({
           <p className="text-sm leading-6 text-ink-soft">目前還沒有生成任何場次。</p>
         ) : (
           <ul className="grid gap-2">
+            {/* 票 04：每場可點進單堂詳情，詳情頁的「返回」會回到這個系列的同一場位置。 */}
             {series.occurrences.map((occurrence) => (
-              <li
-                className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-ink/10 bg-cream p-3 text-sm"
-                key={occurrence.id}
-              >
-                <span className="text-ink">
-                  {formatTaipeiDatetime(occurrence.startAt)} – {formatTaipeiDatetime(occurrence.endAt)}
-                </span>
-                <span
-                  className={`w-fit rounded-full px-3 py-1 text-xs font-medium ${classSessionStatusToneClasses[occurrence.status]}`}
+              <li className="scroll-mt-6" id={`class-${occurrence.id}`} key={occurrence.id}>
+                <Link
+                  className="flex min-h-11 flex-wrap items-center justify-between gap-2 rounded-2xl border border-ink/10 bg-cream p-3 text-sm transition hover:border-pine/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+                  href={teacherClassDetailHref(occurrence.id, { kind: "series", seriesId: series.id })}
                 >
-                  {classSessionStatusLabels[occurrence.status]}
-                </span>
+                  <span className="text-ink">
+                    {formatTaipeiDatetime(occurrence.startAt)} – {formatTaipeiDatetime(occurrence.endAt)}
+                  </span>
+                  <span
+                    className={`w-fit rounded-full px-3 py-1 text-xs font-medium ${classSessionStatusToneClasses[occurrence.status]}`}
+                  >
+                    {classSessionStatusLabels[occurrence.status]}
+                  </span>
+                </Link>
               </li>
             ))}
           </ul>
