@@ -13,6 +13,7 @@ import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { requireUser } from "@/lib/auth/session";
 
 import { ConfirmActionDialog } from "../_components/ConfirmActionDialog";
+import { CopyEnrollLinkButton } from "../_components/CopyEnrollLinkButton";
 import { PendingSubmitButton } from "../_components/PendingSubmitButton";
 import {
   parseReturnContext,
@@ -390,6 +391,22 @@ export default async function TeacherClassSessionDetailPage({
             </p>
           ) : null}
         </section>
+
+        {/* 開放報名後才能分享：學員端只開放「開放報名」與「已完成」的課程連結。 */}
+        {classSession.status === "open_for_enrollment" ? (
+          <section aria-labelledby="share-title" className="grid gap-2 border-t border-ink/10 pt-4">
+            <h3 className="text-sm font-medium text-ink" id="share-title">
+              分享給學員
+            </h3>
+            <p className="text-sm leading-6 text-ink-soft">
+              {classSession.isPublic
+                ? "這堂課也列在公開課程列表；想直接邀請學員，可以把報名連結傳給他們。"
+                : "這堂課不在公開課程列表，請把報名連結傳給學員。"}
+              學員需要先登入飛索帳號，才能打開連結並報名。
+            </p>
+            <CopyEnrollLinkButton classSessionId={classSession.id} />
+          </section>
+        ) : null}
       </section>
 
       {/* 草稿先核對課程內容；開放後先看報名名單。 */}

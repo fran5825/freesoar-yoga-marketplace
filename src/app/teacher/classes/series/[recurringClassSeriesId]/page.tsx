@@ -14,6 +14,7 @@ import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { requireUser } from "@/lib/auth/session";
 
 import { ConfirmActionDialog } from "../../_components/ConfirmActionDialog";
+import { CopyEnrollLinkButton } from "../../_components/CopyEnrollLinkButton";
 import { PendingSubmitButton } from "../../_components/PendingSubmitButton";
 import { teacherClassDetailHref } from "../../_lib/return-context";
 import { cancelRecurringClassSeriesAction, generateMoreOccurrencesAction } from "./actions";
@@ -84,7 +85,7 @@ export default async function RecurringClassSeriesPage({
             : `每週固定系列——每${dayOfWeekLabels[series.dayOfWeek]} ${series.startTime}–${series.endTime}。`}
         </p>
         <p className="mt-1 max-w-2xl text-sm leading-6 text-ink-soft">
-          每一場都是獨立的課：要逐堂開放報名、逐堂處理報名；系列場次不會列在公開課程列表。
+          每一場都是獨立的課：要逐堂開放報名、逐堂處理報名；系列場次不會列在公開課程列表，開放報名的場次可以複製報名連結傳給學員（學員需先登入）。
           {series.requiresApproval ? "新報名需要你確認才算成立。" : "新報名送出即成立。"}
         </p>
       </header>
@@ -121,7 +122,7 @@ export default async function RecurringClassSeriesPage({
                 occurrence.endAt.getTime() <= now;
 
               return (
-                <li className="scroll-mt-6" id={`class-${occurrence.id}`} key={occurrence.id}>
+                <li className="grid scroll-mt-6 gap-1" id={`class-${occurrence.id}`} key={occurrence.id}>
                   <Link
                     className={`grid min-h-11 gap-2 rounded-2xl border p-3 text-sm transition hover:border-pine/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay sm:grid-cols-[1fr_auto] sm:items-center ${
                       isOver ? "border-ink/10 bg-cream/60 text-ink-soft" : "border-ink/10 bg-cream text-ink"
@@ -150,6 +151,16 @@ export default async function RecurringClassSeriesPage({
                       <span aria-hidden="true">→</span>
                     </span>
                   </Link>
+                  {/* 複製按鈕放在場次連結外面，避免連結裡再包按鈕。 */}
+                  {occurrence.status === "open_for_enrollment" ? (
+                    <div className="pl-3">
+                      <CopyEnrollLinkButton
+                        ariaLabel={`複製 ${formatTaipeiDatetime(occurrence.startAt)} 這一場的報名連結`}
+                        className="min-h-11 rounded-full px-3 text-sm font-medium text-pine underline-offset-4 hover:underline"
+                        classSessionId={occurrence.id}
+                      />
+                    </div>
+                  ) : null}
                 </li>
               );
             })}

@@ -371,3 +371,45 @@ test.describe("teacher class detail actions (ticket 03)", () => {
     await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
   });
 });
+
+// 複製報名連結：不公開的課（含系列場次）不在「找課程」，老師把連結傳給學員，學員登入後可打開。
+test.describe("teacher copies the enrol link", () => {
+  test("an open, non-public class offers a copy button whose link a signed-in member can open; a draft does not", async ({
+    browser,
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-share-${Date.now()}`,
+    );
+    const teacher = await seedTeacher(testRunId);
+    const title = `分享連結課程 ${testRunId}`;
+    const openId = await seedClass(teacher.teacherProfileId, { title, daysFromToday: 86 });
+    const draftId = await seedClass(teacher.teacherProfileId, { title: `草稿 ${testRunId}`, daysFromToday: 87 });
+    await prisma.classSession.update({ where: { id: openId }, data: { status: "open_for_enrollment" } });
+
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await addAuthSessionCookie(context, teacher.sessionToken);
+
+    await page.goto(`/teacher/classes/${draftId}`);
+    await expect(page.getByRole("button", { name: "複製報名連結" })).toHaveCount(0);
+
+    await page.goto(`/teacher/classes/${openId}`);
+    await expect(page.getByText("這堂課不在公開課程列表，請把報名連結傳給學員。")).toBeVisible();
+    await page.getByRole("button", { name: "複製報名連結" }).click();
+    await expect(page.getByRole("button", { name: "已複製連結" })).toBeVisible();
+    const copied = await page.evaluate(() => navigator.clipboard.readText());
+    expect(copied).toMatch(new RegExp(`/classes/${openId}$`));
+
+    // 另一位已登入的學員打開這個連結，看得到課程。
+    const memberEmail = `member-${testRunId}@${testEmailDomain}`;
+    createdEmails.push(memberEmail);
+    const { sessionToken } = await createUserSession({ email: memberEmail });
+    const memberContext = await browser.newContext();
+    await addAuthSessionCookie(memberContext, sessionToken);
+    const memberPage = await memberContext.newPage();
+    await memberPage.goto(copied);
+    await expect(memberPage.getByRole("heading", { level: 1, name: title })).toBeVisible();
+    await memberContext.close();
+  });
+});

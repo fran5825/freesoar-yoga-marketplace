@@ -8,6 +8,11 @@
 
 產品主人採用精簡版執行 prompt，授權依 01 → 08 逐票實作（取代上方「尚未授權 source Builder」的歷史狀態）：每票跑 tsc＋lint＋受影響 smoke，通過後在本機 commit 該票檔案（不 push），04、08 加跑 build 與完整 RWD，08 寫完整 review packet。禁止事項與停止條件照各票與 `01-builder-prompt.md`。
 
+## 八票完成後的追加（2026-10-04）
+
+- 複製報名連結：產品主人實際使用時發現系列場次不在「找課程」、學員找不到。依產品主人「1 加複製報名連結按鈕」，在單堂詳情（開放報名時）與系列頁每一場（開放報名的場次）加上 `CopyEnrollLinkButton`，複製 `/classes/<id>`；說明學員需先登入。沒有改權限：學員端本來就允許已登入者開啟開放報名中的課程連結。測試：`teacher-class-detail-page`、`teacher-class-list-navigation` 28 個通過（含剪貼簿內容與另一位已登入學員打開連結）。
+- 已知缺口（不在老師範圍）：未登入的人打開不公開課程連結會看到「目前無法查看這堂課程」，沒有提示先登入；該頁屬學員／公開端，正由其他 task 修改中。
+
 ## 票券索引
 
 | 票 | 完成結果 | Blocked by | Workflow mode | Human Gate | Status |
