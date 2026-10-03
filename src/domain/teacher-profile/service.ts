@@ -97,7 +97,6 @@ export type TeacherProfileSubmitProfile = {
 
 export type TeacherProfileSubmitErrorCode =
   | "authentication_required"
-  | "teacher_profile_draft_required"
   | "submit_validation_failed"
   | "submitted_profile_cannot_submit_again"
   | "approved_profile_cannot_submit_again"
@@ -342,16 +341,11 @@ export async function submitOwnTeacherProfileApplication(
       select: teacherProfileDraftSelect,
     });
 
-    if (!existingProfile) {
-      return {
-        ok: false,
-        code: "teacher_profile_draft_required",
-        message: "請先建立老師申請草稿後再送出審核。",
-      };
-    }
-
+    // 2026-10-03：送審不再要求先儲存草稿。還沒有申請資料的人，視同從 draft 出發，
+    // 通過送審檢查後直接建立一筆 submitted 的資料。
+    const currentStatus = existingProfile?.status ?? "draft";
     const transition = validateTeacherProfileSubmitTransition(
-      existingProfile.status,
+      currentStatus,
       input,
     );
 
@@ -366,11 +360,11 @@ export async function submitOwnTeacherProfileApplication(
       }
 
       if (
-        existingProfile.status === "submitted" ||
-        existingProfile.status === "approved" ||
-        existingProfile.status === "suspended"
+        currentStatus === "submitted" ||
+        currentStatus === "approved" ||
+        currentStatus === "suspended"
       ) {
-        return createSubmitStatusBlockedResult(existingProfile.status);
+        return createSubmitStatusBlockedResult(currentStatus);
       }
 
       return {
@@ -380,16 +374,25 @@ export async function submitOwnTeacherProfileApplication(
       };
     }
 
-    const profile = await prisma.teacherProfile.update({
-      where: { userId: currentUser.id },
-      data: {
-        ...toTeacherProfileDraftData(input),
-        status: "submitted",
-        // D4: rejected → submitted 重新送審時清空舊退回原因，審核中不再顯示。
-        rejectionReason: null,
-      },
-      select: teacherProfileDraftSelect,
-    });
+    const profile = existingProfile
+      ? await prisma.teacherProfile.update({
+          where: { userId: currentUser.id },
+          data: {
+            ...toTeacherProfileDraftData(input),
+            status: "submitted",
+            // D4: rejected → submitted 重新送審時清空舊退回原因，審核中不再顯示。
+            rejectionReason: null,
+          },
+          select: teacherProfileDraftSelect,
+        })
+      : await prisma.teacherProfile.create({
+          data: {
+            userId: currentUser.id,
+            ...toTeacherProfileDraftData(input),
+            status: "submitted",
+          },
+          select: teacherProfileDraftSelect,
+        });
 
     try {
       const adminIds = await listAdminUserIds();

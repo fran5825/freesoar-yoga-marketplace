@@ -44,7 +44,7 @@ export function PublicHeader() {
               className="rounded-full bg-pine px-5 py-2 font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
               href="/sign-in"
             >
-              登入
+              登入／註冊
             </Link>
           </div>
         </PublicHeaderMenu>

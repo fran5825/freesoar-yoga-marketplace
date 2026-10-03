@@ -13,6 +13,8 @@ import {
   SPECIALTY_GROUPS,
   TEACHING_FORMAT_GROUPS,
   fieldLabels,
+  formatMultiChoiceText,
+  normalizePreferredLocationValue,
   type OptionGroup,
 } from "@/app/teachers/join/_lib/application-fields";
 import { formatTeacherRatingSummary } from "@/domain/review/rating-summary";
@@ -56,6 +58,11 @@ const nonApprovedCopy: Record<
 
 function toListText(values: string[]) {
   return values.join("\n");
+}
+
+// 上課頻率、地點是換行分隔的單一字串（可複選），拆成陣列給 CheckboxGroupFields。
+function toChoiceValues(value: string | null) {
+  return (value ?? "").split("\n").filter((item) => item.trim().length > 0);
 }
 
 function toListDisplay(values: string[]) {
@@ -381,40 +388,24 @@ export default async function TeacherProfilePage({
               </select>
             </div>
             <div>
-              <label className="text-sm font-medium text-ink" htmlFor="preferredFrequency">
-                {fieldLabels.preferredFrequency}（選填）
-              </label>
-              <select
-                className={controlClassName}
-                defaultValue={profile.preferredFrequency ?? ""}
-                id="preferredFrequency"
+              <p className="text-sm font-medium text-ink">{fieldLabels.preferredFrequency}（選填，可複選）</p>
+              <CheckboxGroupFields
+                allowOther={false}
+                groups={[{ title: "", options: FREQUENCY_OPTIONS }]}
                 name="preferredFrequency"
-              >
-                <option value="">尚未選擇</option>
-                {FREQUENCY_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+                otherName="preferredFrequencyOther"
+                values={toChoiceValues(profile.preferredFrequency)}
+              />
             </div>
             <div>
-              <label className="text-sm font-medium text-ink" htmlFor="preferredLocationType">
-                {fieldLabels.preferredLocationType}（選填）
-              </label>
-              <select
-                className={controlClassName}
-                defaultValue={profile.preferredLocationType ?? ""}
-                id="preferredLocationType"
+              <p className="text-sm font-medium text-ink">{fieldLabels.preferredLocationType}（選填，可複選）</p>
+              <CheckboxGroupFields
+                allowOther={false}
+                groups={[{ title: "", options: LOCATION_TYPE_OPTIONS }]}
                 name="preferredLocationType"
-              >
-                <option value="">尚未選擇</option>
-                {LOCATION_TYPE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+                otherName="preferredLocationTypeOther"
+                values={toChoiceValues(normalizePreferredLocationValue(profile.preferredLocationType ?? ""))}
+              />
             </div>
             <div>
               <label className="text-sm font-medium text-ink" htmlFor="preferenceNotes">
@@ -466,11 +457,11 @@ export default async function TeacherProfilePage({
             />
             <ReadOnlyItem
               label={fieldLabels.preferredFrequency}
-              value={profile.preferredFrequency ?? "尚未填寫"}
+              value={formatMultiChoiceText(profile.preferredFrequency) ?? "尚未填寫"}
             />
             <ReadOnlyItem
               label={fieldLabels.preferredLocationType}
-              value={profile.preferredLocationType ?? "尚未填寫"}
+              value={formatMultiChoiceText(profile.preferredLocationType) ?? "尚未填寫"}
             />
             <ReadOnlyItem
               label={fieldLabels.preferenceNotes}

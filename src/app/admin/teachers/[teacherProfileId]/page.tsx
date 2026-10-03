@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { formatMultiChoiceText } from "@/app/teachers/join/_lib/application-fields";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { formatTeacherRatingSummary } from "@/domain/review/rating-summary";
 import { getTeacherProfileForAdmin } from "@/domain/teacher-profile/service";
@@ -237,8 +238,8 @@ export default async function AdminTeacherDetailPage({
               : null
           }
         />
-        <Field label="偏好頻率" value={teacher.preferredFrequency} />
-        <Field label="偏好地點類型" value={teacher.preferredLocationType} />
+        <Field label="偏好頻率" value={formatMultiChoiceText(teacher.preferredFrequency)} />
+        <Field label="偏好地點類型" value={formatMultiChoiceText(teacher.preferredLocationType)} />
         <Field label="偏好補充" multiline value={teacher.preferenceNotes} wide />
       </section>
     </div>

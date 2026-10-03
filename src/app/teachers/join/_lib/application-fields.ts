@@ -212,6 +212,7 @@ export function matchExperienceYearsOptionValue(
 
 export const SESSION_LENGTH_OPTIONS: OptionItem[] = [
   { value: "45", label: "45 分鐘" },
+  { value: "50", label: "50 分鐘" },
   { value: "60", label: "60 分鐘" },
   { value: "90", label: "90 分鐘" },
   { value: "120", label: "120 分鐘" },
@@ -229,8 +230,32 @@ export const LOCATION_TYPE_OPTIONS: OptionItem[] = [
     label: "可配合到學員／團主指定的地點授課",
   },
   { value: "希望在自己的教學地點授課", label: "希望在自己的教學地點授課" },
-  { value: "兩者皆可，再個別討論", label: "兩者皆可，再個別討論" },
 ];
+
+// 2026-10-03：上課頻率、上課地點改成可複選，存法沿用 checkboxGroup（換行分隔的字串），
+// 資料庫欄位不用改。原本的「兩者皆可，再個別討論」改成兩個都勾，舊資料讀取時自動轉換。
+const LEGACY_LOCATION_BOTH = "兩者皆可，再個別討論";
+
+export function normalizePreferredLocationValue(value: string): string {
+  return value
+    .split("\n")
+    .flatMap((item) =>
+      item.trim() === LEGACY_LOCATION_BOTH
+        ? LOCATION_TYPE_OPTIONS.map((option) => option.value)
+        : [item],
+    )
+    .join("\n");
+}
+
+// 唯讀畫面顯示複選欄位（頻率、地點）：換行分隔改成頓號；舊的「兩者皆可」一併展開。
+export function formatMultiChoiceText(value: string | null | undefined): string | null {
+  const items = normalizePreferredLocationValue(value ?? "")
+    .split("\n")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+
+  return items.length > 0 ? items.join("、") : null;
+}
 
 // checkboxGroup 欄位把選取的項目跟「其他」自由輸入的內容，合併存成同一個以換行分隔的
 // 字串——跟這個欄位原本自由輸入文字方塊的資料格式完全相同，後端／資料庫都不需要跟著改。
@@ -394,17 +419,19 @@ export const applicationSections: {
         name: "preferredFrequency",
         label: fieldLabels.preferredFrequency,
         requirement: "optionalRecommended",
-        helper: "通過後再補也可以。",
-        kind: "select",
-        options: FREQUENCY_OPTIONS,
+        helper: "可複選，通過後再補也可以。",
+        kind: "checkboxGroup",
+        groups: [{ title: "", options: FREQUENCY_OPTIONS }],
+        allowOther: false,
       },
       {
         name: "preferredLocationType",
         label: fieldLabels.preferredLocationType,
         requirement: "optionalRecommended",
-        helper: "通過後再補也可以。",
-        kind: "select",
-        options: LOCATION_TYPE_OPTIONS,
+        helper: "可複選，通過後再補也可以。",
+        kind: "checkboxGroup",
+        groups: [{ title: "", options: LOCATION_TYPE_OPTIONS }],
+        allowOther: false,
       },
       {
         name: "preferenceNotes",

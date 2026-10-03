@@ -153,6 +153,64 @@ test.describe("/teachers/join smoke", () => {
     await expect(page.getByText("確認送出審核").first()).toBeHidden();
   });
 
+  // 2026-10-03：送審不用先儲存草稿；上課頻率、地點可複選；上課時長多了 50 分鐘。
+  test("submits directly without saving a draft first, with multi-choice preferences", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-${Date.now()}`,
+    );
+    const email = `direct-submit-${testRunId}@${testEmailDomain}`;
+    const sessionToken = await createSignedInSessionWithoutTeacherProfile({
+      email,
+    });
+
+    await context.addCookies([
+      {
+        name: authCookieName,
+        value: sessionToken,
+        domain: "127.0.0.1",
+        path: "/",
+        httpOnly: true,
+        sameSite: "Lax",
+      },
+    ]);
+
+    await page.goto("/teachers/join");
+
+    await page.getByLabel("公開顯示名稱").fill("Direct Submit Teacher");
+    await page.getByLabel("老師簡介").fill("Smoke bio.");
+    await page.getByLabel("教學風格").fill("Smoke style.");
+    await page.getByLabel("教學年資").selectOption("1");
+    await page.getByText("陰瑜伽", { exact: true }).click();
+    await page.getByText("台北市", { exact: true }).click();
+    await page.getByText("小班制教學", { exact: true }).click();
+
+    await page.getByLabel("希望的上課時長").selectOption("50");
+    await page.getByText("每週一次", { exact: true }).click();
+    await page.getByText("每兩週一次", { exact: true }).click();
+    await page
+      .getByText("可配合到學員／團主指定的地點授課", { exact: true })
+      .click();
+    await page.getByText("希望在自己的教學地點授課", { exact: true }).click();
+
+    await page.getByRole("button", { name: "送出審核" }).first().click();
+    await page.getByRole("button", { name: "確認送出審核" }).first().click();
+
+    await expect(page.getByText("已送出審核").first()).toBeVisible();
+
+    const profile = await prisma.teacherProfile.findFirstOrThrow({
+      where: { user: { email } },
+    });
+    expect(profile.status).toBe("submitted");
+    expect(profile.preferredSessionLengthMinutes).toBe(50);
+    expect(profile.preferredFrequency).toBe("每週一次\n每兩週一次");
+    expect(profile.preferredLocationType).toBe(
+      "可配合到學員／團主指定的地點授課\n希望在自己的教學地點授課",
+    );
+  });
+
   test("shows a read-only summary, not an editable form, while the application is under review", async ({
     context,
     page,

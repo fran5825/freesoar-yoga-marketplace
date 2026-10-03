@@ -27,8 +27,16 @@ export async function updateTeacherProfileAction(formData: FormData): Promise<vo
       formData,
       "preferredSessionLengthMinutes",
     ),
-    preferredFrequency: readFormString(formData, "preferredFrequency"),
-    preferredLocationType: readFormString(formData, "preferredLocationType"),
+    preferredFrequency: readCheckboxGroupValue(
+      formData,
+      "preferredFrequency",
+      "preferredFrequencyOther",
+    ),
+    preferredLocationType: readCheckboxGroupValue(
+      formData,
+      "preferredLocationType",
+      "preferredLocationTypeOther",
+    ),
     preferenceNotes: readFormString(formData, "preferenceNotes"),
   });
 

@@ -60,8 +60,8 @@ test.describe("public trust pages", () => {
       await expect(page.locator("header").getByRole("link", { name: "搜尋課程" })).toHaveAttribute("href", "/classes");
       await expect(page.locator("header").getByRole("link", { name: "老師合作" })).toHaveAttribute("href", "/teachers/join");
       await expect(page.locator("header").getByRole("link", { name: "關於飛索" })).toHaveAttribute("href", "/about");
-      await expect(page.locator("header").getByRole("link", { name: "登入" })).toHaveAttribute("href", "/sign-in");
-      // 沒登入時不顯示「我的專區」（沒有專區可去），只有「登入」。
+      await expect(page.locator("header").getByRole("link", { name: "登入／註冊" })).toHaveAttribute("href", "/sign-in");
+      // 沒登入時不顯示「我的專區」（沒有專區可去），只有「登入／註冊」。
       await expect(page.locator("header").getByRole("link", { name: "我的專區" })).toHaveCount(0);
       await expect(page.locator("footer").getByRole("link", { name: "關於我們" })).toHaveAttribute("href", "/about");
       await expect(page.locator("footer").getByRole("link", { name: "常見問題" })).toHaveAttribute("href", "/faq");

@@ -19,6 +19,7 @@ Rules:
 - Only approved teachers can respond to demand requests.
 - Rejected teachers may resubmit if allowed by admin.
 - Suspended teachers cannot appear publicly or respond to new demands.
+- 2026-10-03：送審不需要先儲存草稿。還沒有任何申請資料的人直接按「送出審核」，系統視同從 `draft` 出發，通過送審必填檢查後直接建立一筆 `submitted` 的資料（`submitOwnTeacherProfileApplication`）。狀態轉換規則本身不變。
 
 **V1 落地範圍（`teacher-profile-suspension` 已確認）**：這是這個檔案裡第一次替 TeacherProfile 補上「V1 落地範圍」子集說明（DemandRequest／DemandResponse／ClassSession／Enrollment 都已經有這個格式，TeacherProfile 之前一直沒有，導致 `approved ↔ suspended` 長期被誤讀成早就是 V1 功能）。`draft → submitted → approved|rejected`、`rejected → submitted` 都已落地（`teacher-onboarding-spec.md` 已確認）；`approved ↔ suspended` 這組雙向轉換直到 `teacher-profile-suspension` 一輪才真正接線——Admin-only，`approved → suspended` 必填 `suspensionReason`（獨立欄位，不與 `rejectionReason` 共用），`suspended → approved` 清空該欄位。暫停不連帶處理既有的 `DemandResponse`／`ClassSession`，但 `DemandResponse` 的 `submitted → selected` 轉換（見下方 DemandResponse Status）新增了 teacher 資格檢查，暫停後無法再被選定。
 

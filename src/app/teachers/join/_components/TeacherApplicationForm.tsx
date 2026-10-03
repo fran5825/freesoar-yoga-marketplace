@@ -8,6 +8,7 @@ import {
   applicationSections,
   buildCheckboxGroupValue,
   fieldLabels,
+  normalizePreferredLocationValue,
   parseCheckboxGroupValue,
   requiredFields,
   type FormFieldName,
@@ -237,8 +238,6 @@ function getSubmitErrorMessage(
   switch (result.code) {
     case "authentication_required":
       return "請先登入後再送出老師申請。登入後，你可以回到這裡確認內容並送出審核。";
-    case "teacher_profile_draft_required":
-      return "請先儲存老師申請草稿，再送出審核。這能讓平台確認你的申請資料已建立。";
     case "submit_validation_failed":
       return "送出審核前，還需要補齊以下欄位。你可以慢慢調整，畫面中的內容會保留。";
     case "submitted_profile_cannot_submit_again":
@@ -295,7 +294,9 @@ function toTeacherApplicationFormState(
         ? String(profile.preferredSessionLengthMinutes)
         : "",
     preferredFrequency: profile.preferredFrequency ?? "",
-    preferredLocationType: profile.preferredLocationType ?? "",
+    preferredLocationType: normalizePreferredLocationValue(
+      profile.preferredLocationType ?? "",
+    ),
     preferenceNotes: profile.preferenceNotes ?? "",
   };
 }
