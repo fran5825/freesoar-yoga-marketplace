@@ -202,6 +202,9 @@ export type RecurringClassSeriesOccurrence = {
   startAt: Date;
   endAt: Date;
   status: ClassSessionStatus;
+  // teacher-usability-redesign 票 05：這一場的已確認／待確認報名數，只從本人系列底下這一場的報名推導。
+  confirmedCount: number;
+  pendingCount: number;
 };
 
 export type RecurringClassSeriesDetail = {
@@ -253,7 +256,17 @@ export async function getOwnRecurringClassSeriesDetailForTeacher(
       serviceTypes: true,
       yogaStyles: true,
       classSessions: {
-        select: { id: true, startAt: true, endAt: true, status: true },
+        select: {
+          id: true,
+          startAt: true,
+          endAt: true,
+          status: true,
+          // 只讀狀態，不帶學員資料；查詢仍在 teacherProfileId 限定的系列底下，不會讀到別人的報名。
+          enrollments: {
+            where: { status: { in: ["confirmed", "pending"] } },
+            select: { status: true },
+          },
+        },
         orderBy: { startAt: "asc" },
       },
     },
@@ -265,5 +278,12 @@ export async function getOwnRecurringClassSeriesDetailForTeacher(
 
   const { classSessions, ...rest } = series;
 
-  return { ...rest, occurrences: classSessions };
+  return {
+    ...rest,
+    occurrences: classSessions.map(({ enrollments, ...occurrence }) => ({
+      ...occurrence,
+      confirmedCount: enrollments.filter((enrollment) => enrollment.status === "confirmed").length,
+      pendingCount: enrollments.filter((enrollment) => enrollment.status === "pending").length,
+    })),
+  };
 }

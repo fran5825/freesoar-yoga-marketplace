@@ -13,6 +13,7 @@ import { createClassSessionForTeacher } from "../../src/domain/class-session/__i
 import { validateClassSessionCreate } from "../../src/domain/class-session/validation";
 import {
   addAuthSessionCookie,
+  createUserSession,
   normalizeForEmail,
   prisma,
 } from "./_helpers/organizer-demand-fixtures";
@@ -23,11 +24,14 @@ import {
 import { futureDateTime } from "./_helpers/future-dates";
 
 // teacher-usability-redesign 票 04：我的課程分類、建立入口、詳情返回上下文（含惡意來源）。
+// 票 05：系列頁逐場人數、跨老師隔離、系列 → 單堂 → 返回、整系列取消先確認。
 
 const testEmailDomain = "teacher-class-list-navigation-smoke.local";
 const createdEmails: string[] = [];
 
 test.afterAll(async () => {
+  await prisma.notification.deleteMany({ where: { user: { email: { in: createdEmails } } } });
+  await prisma.enrollment.deleteMany({ where: { user: { email: { in: createdEmails } } } });
   await prisma.classSession.deleteMany({
     where: { teacherProfile: { user: { email: { in: createdEmails } } } },
   });
@@ -249,5 +253,124 @@ test.describe("teacher class list navigation", () => {
     await page.goto("/teacher/classes");
     await expect(page.getByRole("navigation", { name: "課程分類" })).toBeVisible();
     await expect(page.getByRole("main").getByRole("link", { name: /建立課程/ })).toHaveCount(0);
+  });
+});
+
+test.describe("teacher series management (ticket 05)", () => {
+  test("each session shows its own counts; handling an enrollment from the series returns with updated counts; cancelling the series lists the real impact and writes nothing until confirmed", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-series-mgmt-${Date.now()}`,
+    );
+    const teacher = await seedTeacher(testRunId);
+    const other = await seedTeacher(testRunId, "other");
+    const series = await prisma.recurringClassSeries.create({
+      data: {
+        teacherProfileId: teacher.teacherProfileId,
+        title: `系列管理 ${testRunId}`,
+        serviceType: "放鬆紓壓",
+        dayOfWeek: null,
+        startTime: "10:00",
+        endTime: "11:00",
+        location: "台北市系列教室",
+        capacity: 8,
+        requiresApproval: true,
+      },
+      select: { id: true },
+    });
+    const otherSeries = await prisma.recurringClassSeries.create({
+      data: {
+        teacherProfileId: other.teacherProfileId,
+        title: `別人的系列 ${testRunId}`,
+        dayOfWeek: null,
+        startTime: "10:00",
+        endTime: "11:00",
+        location: "別人的教室",
+        capacity: 8,
+      },
+      select: { id: true },
+    });
+    const openId = await seedClass(teacher.teacherProfileId, `場次A ${testRunId}`, 40, series.id);
+    const draftId = await seedClass(teacher.teacherProfileId, `場次B ${testRunId}`, 47, series.id);
+    const doneId = await seedClass(teacher.teacherProfileId, `場次C ${testRunId}`, 54, series.id);
+    await prisma.classSession.update({ where: { id: openId }, data: { status: "open_for_enrollment" } });
+    await prisma.classSession.update({
+      where: { id: doneId },
+      data: {
+        status: "completed",
+        startAt: new Date(Date.now() - 26 * 3600_000),
+        endAt: new Date(Date.now() - 25 * 3600_000),
+      },
+    });
+    const enroll = async (label: string, classSessionId: string, status: "confirmed" | "pending") => {
+      const email = `member-${label}-${testRunId}@${testEmailDomain}`;
+      createdEmails.push(email);
+      const { userId } = await createUserSession({ email });
+      await prisma.enrollment.create({
+        data: { userId, classSessionId, status, consentedAt: new Date(), notes: `備註${label}` },
+      });
+      return userId;
+    };
+    await enroll("a1", openId, "confirmed");
+    await enroll("a2", openId, "pending");
+    await enroll("a3", openId, "pending");
+    await enroll("c1", doneId, "confirmed");
+
+    await addAuthSessionCookie(context, teacher.sessionToken);
+
+    // 別人的系列：看不到。
+    const otherResponse = await page.goto(`/teacher/classes/series/${otherSeries.id}`);
+    expect(otherResponse?.status()).toBe(404);
+
+    await page.goto(`/teacher/classes/series/${series.id}`);
+    await expect(page.getByText("系列場次不會列在公開課程列表")).toBeVisible();
+    await expect(page.locator(`#class-${openId}`)).toContainText("已報名 1 / 8 人");
+    await expect(page.locator(`#class-${openId}`)).toContainText("待確認 2 人");
+    await expect(page.locator(`#class-${draftId}`)).toContainText("已報名 0 / 8 人");
+    await expect(page.locator(`#class-${draftId}`)).not.toContainText("待確認");
+    await expect(page.locator(`#class-${doneId}`)).toContainText("已完成");
+    await expect(page.locator(`#class-${doneId}`)).toContainText("已報名 1 / 8 人");
+
+    // 系列 → 場次 A → 確認一筆 → 返回系列，人數已更新。
+    await page.locator(`#class-${openId}`).getByRole("link").click();
+    await page.locator("li").filter({ hasText: "備註a2" }).getByRole("button", { name: "確認報名" }).click();
+    await expect(page.getByText("已確認這筆報名。")).toBeVisible();
+    await page.getByRole("link", { name: "← 回課程系列" }).click();
+    await expect(page).toHaveURL(new RegExp(`/teacher/classes/series/${series.id}#class-${openId}$`));
+    await expect(page.locator(`#class-${openId}`)).toContainText("已報名 2 / 8 人");
+    await expect(page.locator(`#class-${openId}`)).toContainText("待確認 1 人");
+
+    // 取消整個系列：視窗只列尚未開始的 A、B 與連帶報名；Escape 不寫入。
+    await page.getByRole("button", { name: "取消整個系列（僅影響尚未開始的場次）" }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByRole("list", { name: "會被取消的場次" }).getByRole("listitem")).toHaveCount(2);
+    await expect(dialog).toContainText("已報名 2 筆、待確認 1 筆");
+    await expect(dialog).toContainText("系列本身會保留");
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    expect(
+      await prisma.classSession.count({ where: { recurringClassSeriesId: series.id, status: "cancelled" } }),
+    ).toBe(0);
+
+    await page.getByRole("button", { name: "取消整個系列（僅影響尚未開始的場次）" }).click();
+    await dialog.getByRole("button", { name: "確定取消 2 場" }).click();
+    await expect(page.getByText("已取消 2 場尚未開始的課程。")).toBeVisible();
+    const states = await prisma.classSession.findMany({
+      where: { recurringClassSeriesId: series.id },
+      orderBy: { startAt: "asc" },
+      select: { id: true, status: true },
+    });
+    expect(Object.fromEntries(states.map((item) => [item.id, item.status]))).toEqual({
+      [doneId]: "completed",
+      [openId]: "cancelled",
+      [draftId]: "cancelled",
+    });
+    expect(
+      await prisma.enrollment.count({ where: { classSessionId: openId, status: { in: ["confirmed", "pending"] } } }),
+    ).toBe(0);
+    // 系列本身還在。
+    expect(await prisma.recurringClassSeries.count({ where: { id: series.id } })).toBe(1);
   });
 });

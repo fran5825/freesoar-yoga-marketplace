@@ -437,6 +437,8 @@ test.describe("teacher recurring class series smoke", () => {
     await addAuthSessionCookie(context, teacher.sessionToken);
     await page.goto(`/teacher/classes/series/${series.id}`);
     await page.getByRole("button", { name: "取消整個系列（僅影響尚未開始的場次）" }).click();
+    // 票 05：先在確認視窗看到會被取消的場次，再確認。
+    await page.getByRole("dialog").getByRole("button", { name: "確定取消 2 場" }).click();
 
     await expect(page.getByText("已取消 2 場尚未開始的課程。")).toBeVisible();
 
