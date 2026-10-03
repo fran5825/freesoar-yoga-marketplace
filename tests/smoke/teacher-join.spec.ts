@@ -114,16 +114,20 @@ test.describe("/teachers/join smoke", () => {
       }),
     ).toBeVisible();
     await expect(page.getByRole("button", { name: "儲存草稿" }).first()).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "檢查準備狀態" }).first(),
-    ).toBeVisible();
-
-    // 不用先按「檢查準備狀態」，缺幾項就直接看得到；缺項時「送出審核」是停用的。
+    // 票 06：沒有「檢查準備狀態」按鈕，缺幾項隨時看得到；七項必填集中一區，選填收在「其他資料」。
+    await expect(page.getByRole("button", { name: "檢查準備狀態" })).toHaveCount(0);
     await expect(page.getByText("還缺 7 項才能送審：").first()).toBeVisible();
-    await expect(page.getByRole("button", { name: "送出審核" }).first()).toBeDisabled();
-    await expect(page.getByText("必填 0 / 3").first()).toBeVisible();
-    await expect(page.getByText("全部選填").first()).toBeVisible();
+    await expect(page.getByText("必填 0 / 7").first()).toBeVisible();
+    await expect(page.getByText("其他資料（可之後補）")).toBeVisible();
     await expect(page.getByText("參考寫法：").first()).toBeVisible();
+
+    // 缺項時按「送出審核」：不打開確認，標出缺項並帶到第一個（公開顯示名稱）。
+    await page.getByRole("button", { name: "送出審核" }).first().click();
+    await expect(page.getByText("確認送出審核")).toHaveCount(0);
+    await expect(page.getByLabel("公開顯示名稱")).toBeFocused();
+    await expect(
+      page.getByText("請補上「公開顯示名稱」，讓申請內容更完整、也更容易被理解。"),
+    ).toBeVisible();
 
     // 必填 7 項都填完，「送出審核」才會啟用。
     await page.getByLabel("公開顯示名稱").fill("Smoke Teacher");
@@ -187,6 +191,8 @@ test.describe("/teachers/join smoke", () => {
     await page.getByText("台北市", { exact: true }).click();
     await page.getByText("小班制教學", { exact: true }).click();
 
+    // 選填收在「其他資料（可之後補）」，要先展開。
+    await page.getByText("其他資料（可之後補）").click();
     await page.getByLabel("希望的上課時長").selectOption("50");
     await page.getByText("每週一次", { exact: true }).click();
     await page.getByText("每兩週一次", { exact: true }).click();
@@ -336,9 +342,10 @@ test.describe("/teachers/join smoke", () => {
     // 舊的自由輸入內容不算數：算缺項，並提醒老師改選。
     await expect(page.getByText("還缺 1 項才能送審：").first()).toBeVisible();
     await expect(areaCard.getByText("你先前填寫的「ddde」不在選項內")).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "重新送出審核" }).first(),
-    ).toBeDisabled();
+    // 票 06：缺項時按「重新送出審核」不會打開確認，而是帶到缺的服務地區。
+    await page.getByRole("button", { name: "重新送出審核" }).first().click();
+    await expect(page.getByText("確認送出審核")).toHaveCount(0);
+    await expect(areaCard).toBeInViewport();
 
     await areaCard.getByText("台北市", { exact: true }).click();
 
@@ -534,3 +541,120 @@ async function createRejectedTeacherProfileSession({
 function normalizeForEmail(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 }
+
+// teacher-usability-redesign 票 06：送審摘要＝實際送出內容、儲存只認列送出的那一份、逾時不冒稱已存、未存離頁提醒。
+test.describe("teacher application usability (ticket 06)", () => {
+  async function signInFresh(context: import("@playwright/test").BrowserContext, label: string, testInfo: import("@playwright/test").TestInfo) {
+    const email = `t06-${label}-${normalizeForEmail(`${testInfo.project.name}-${Date.now()}`)}@${testEmailDomain}`;
+    const sessionToken = await createSignedInSessionWithoutTeacherProfile({ email });
+    await context.addCookies([
+      { name: authCookieName, value: sessionToken, domain: "127.0.0.1", path: "/", httpOnly: true, sameSite: "Lax" },
+    ]);
+    return email;
+  }
+
+  async function fillRequired(page: import("@playwright/test").Page, displayName: string) {
+    await page.getByLabel("公開顯示名稱").fill(displayName);
+    await page.getByLabel("老師簡介").fill("十年教學經驗的簡介。");
+    await page.getByLabel("教學風格").fill("溫和清楚的引導。");
+    await page.getByLabel("教學年資").selectOption("1");
+    await page.getByText("陰瑜伽", { exact: true }).click();
+    await page.getByText("台北市", { exact: true }).click();
+    await page.getByText("小班制教學", { exact: true }).click();
+  }
+
+  test("the confirm step shows exactly what will be submitted; backing out submits nothing; confirming submits that snapshot", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const email = await signInFresh(context, "summary", testInfo);
+    await page.goto("/teachers/join");
+    const displayName = `摘要老師 ${Date.now()}`;
+    await fillRequired(page, displayName);
+
+    await page.getByRole("button", { name: "送出審核" }).first().click();
+    const summary = page.getByRole("definition").filter({ hasText: displayName }).first();
+    await expect(summary).toBeVisible();
+    const confirmList = page.locator('dl[aria-label="這次送出的申請內容"]').first();
+    await expect(confirmList).toContainText("陰瑜伽");
+    await expect(confirmList).toContainText("台北市");
+    await expect(confirmList).toContainText("小班制教學");
+    await expect(confirmList).toContainText("已填 0 /");
+
+    await page.getByRole("button", { name: "先回來調整" }).first().click();
+    expect(await prisma.teacherProfile.count({ where: { user: { email } } })).toBe(0);
+
+    await page.getByRole("button", { name: "送出審核" }).first().click();
+    await page.getByRole("button", { name: "確認送出審核" }).first().click();
+    await expect(page.getByText("你的老師申請正在審核")).toBeVisible();
+    const profile = await prisma.teacherProfile.findFirstOrThrow({ where: { user: { email } } });
+    expect(profile).toMatchObject({ status: "submitted", displayName });
+  });
+
+  test("a save only counts what was sent: edits typed while saving stay unsaved; a stalled save says it cannot tell instead of claiming success", async ({
+    context,
+    page,
+  }, testInfo) => {
+    test.setTimeout(60_000);
+    const email = await signInFresh(context, "race", testInfo);
+    await page.goto("/teachers/join");
+    await page.getByLabel("公開顯示名稱").fill("競態老師");
+
+    // 讓儲存請求晚 1.5 秒才送到伺服器，期間再修改名稱。
+    await page.route("**/teachers/join", async (route) => {
+      if (route.request().method() === "POST") {
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+      await route.continue();
+    });
+    await page.getByRole("button", { name: "儲存草稿" }).first().click();
+    await page.getByLabel("公開顯示名稱").fill("競態老師（改過）");
+    await expect(page.getByText("草稿已儲存。").first()).toBeVisible();
+    await expect(page.getByText("有尚未儲存的修改").first()).toBeVisible();
+    const saved = await prisma.teacherProfile.findFirstOrThrow({ where: { user: { email } } });
+    expect(saved.displayName).toBe("競態老師");
+    await page.unrouteAll({ behavior: "ignoreErrors" });
+
+    // 儲存一直沒有回應（請求卡住）：10 秒後說無法確定，不說已儲存，畫面內容保留。
+    await page.route("**/teachers/join", async (route) => {
+      if (route.request().method() !== "POST") {
+        await route.continue();
+      }
+      // POST 故意不回應。
+    });
+    await page.getByRole("button", { name: "儲存草稿" }).first().click();
+    await expect(page.getByText("目前無法確定是否已經存好").first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("草稿已儲存。")).toHaveCount(0);
+    await expect(page.getByLabel("公開顯示名稱")).toHaveValue("競態老師（改過）");
+    await page.unrouteAll({ behavior: "ignoreErrors" });
+  });
+
+  test("leaving with unsaved edits asks first; a freshly loaded draft and a just-saved draft leave without asking", async ({
+    context,
+    page,
+  }, testInfo) => {
+    await signInFresh(context, "leave", testInfo);
+    await page.goto("/teachers/join");
+    const dialogs: string[] = [];
+    page.on("dialog", async (dialog) => {
+      dialogs.push(dialog.message());
+      await dialog.dismiss();
+    });
+    const leaveLink = page.getByRole("banner").locator('a[href^="/"]:visible').first();
+
+    await page.getByLabel("公開顯示名稱").fill("離頁老師");
+    await leaveLink.click();
+    await expect.poll(() => dialogs.length).toBe(1);
+    expect(dialogs[0]).toContain("尚未儲存的修改");
+    await expect(page).toHaveURL(/\/teachers\/join$/);
+    await expect(page.getByLabel("公開顯示名稱")).toHaveValue("離頁老師");
+
+    await page.getByRole("button", { name: "儲存草稿" }).first().click();
+    await expect(page.getByText("草稿已儲存。").first()).toBeVisible();
+    await page.reload();
+    await expect(page.getByLabel("公開顯示名稱")).toHaveValue("離頁老師");
+    await leaveLink.click();
+    await expect(page).not.toHaveURL(/\/teachers\/join$/);
+    expect(dialogs).toHaveLength(1);
+  });
+});

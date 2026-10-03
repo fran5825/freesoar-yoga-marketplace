@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { TagCheckbox } from "@/app/_components/tag-checkbox";
+import { useUnsavedChangesWarning } from "@/app/teacher/classes/new/_lib/use-unsaved-changes";
 
 import {
   applicationSections,
@@ -191,6 +192,28 @@ function splitLegacyChoiceValues(
   }
 
   return { cleanedState, legacyValues };
+}
+
+// teacher-usability-redesign 票 06：七項送審必填集中在一區（依 requiredFields 的順序），
+// 選填收在「其他資料（可之後補）」。欄位定義與驗證沿用 application-fields，不增減。
+const requiredFieldDefs = requiredFields
+  .map((fieldName) => allApplicationFields.find((field) => field.name === fieldName))
+  .filter((field): field is TextField => field !== undefined);
+const optionalFieldDefs = allApplicationFields.filter(
+  (field) => field.requirement === "optionalRecommended",
+);
+
+function isOptionalField(fieldName: string) {
+  return optionalFieldDefs.some((field) => field.name === fieldName);
+}
+
+const unsavedApplicationMessage = "申請資料有尚未儲存的修改，離開後這些修改不會保留。確定要離開嗎？";
+
+function getChoiceItems(value: string) {
+  return value
+    .split("\n")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
 }
 
 function getFieldCardId(fieldName: FormFieldName) {
@@ -581,6 +604,12 @@ export function TeacherApplicationForm() {
   const [formState, setFormState] =
     useState<TeacherApplicationFormState>(initialFormState);
   const [hasCheckedReadiness, setHasCheckedReadiness] = useState(false);
+  // 最後一次「確定存進資料庫」的內容（載入的資料、儲存成功時送出的那份、送審成功的那份）。
+  // 只有跟它不一樣才算有未儲存的修改；儲存途中又改的內容，因為跟送出的那份不同，仍算未儲存。
+  const [savedSnapshotKey, setSavedSnapshotKey] = useState<string | null>(null);
+  // 打開送審確認時的內容：確認框顯示的就是這一份，按確認也送這一份。
+  const [confirmSnapshot, setConfirmSnapshot] = useState<TeacherApplicationFormState | null>(null);
+  const [isOptionalOpen, setIsOptionalOpen] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [draftSaveFeedback, setDraftSaveFeedback] =
     useState<DraftSaveFeedback | null>(null);
@@ -608,21 +637,32 @@ export function TeacherApplicationForm() {
         const profile =
           await getInitialTeacherProfileApplicationSnapshotAction();
 
-        if (!isMounted || !profile) {
+        if (!isMounted) {
+          return;
+        }
+
+        if (!profile) {
+          setSavedSnapshotKey(JSON.stringify(initialFormState));
           return;
         }
 
         const loadedState = toTeacherApplicationFormState(profile);
 
         // 審核中、已通過、已暫停只是唯讀顯示，保留原樣；可編輯（草稿、被退回）才清掉舊的自由輸入內容。
+        // 載入與整理後的內容當作基準，不算使用者改動。
         if (profile.status === "draft" || profile.status === "rejected") {
           const { cleanedState, legacyValues } =
             splitLegacyChoiceValues(loadedState);
 
           setFormState(cleanedState);
           setLegacyChoiceValues(legacyValues);
+          setSavedSnapshotKey(JSON.stringify(cleanedState));
+          setIsOptionalOpen(
+            optionalFieldDefs.some((field) => legacyValues[field.name] !== undefined),
+          );
         } else {
           setFormState(loadedState);
+          setSavedSnapshotKey(JSON.stringify(loadedState));
         }
 
         setHydratedProfileStatus(profile.status);
@@ -672,8 +712,16 @@ export function TeacherApplicationForm() {
     : null;
   const isDraftSaveDisabled =
     isSavingDraft || isSubmitting || mutationBlockedStatus !== null;
-  const isSubmitDisabled =
-    isSubmitting || mutationBlockedStatus !== null || !isReadyForFutureSubmit;
+  // 缺項時送審按鈕仍可按：按下會標出缺項並帶到第一個，不會打開確認。
+  const isSubmitDisabled = isSubmitting || mutationBlockedStatus !== null;
+  const isEditable =
+    isHydrated && mutationBlockedStatus === null && hydratedProfileStatus !== "submitted";
+  const hasUnsavedChanges =
+    savedSnapshotKey !== null && JSON.stringify(formState) !== savedSnapshotKey;
+  useUnsavedChangesWarning(
+    isEditable && hasUnsavedChanges && !isSubmitting,
+    unsavedApplicationMessage,
+  );
   const statusBadge = mutationBlockedCopy
     ? {
         label: mutationBlockedCopy.saveButton,
@@ -696,29 +744,28 @@ export function TeacherApplicationForm() {
     setIsConfirmingSubmit(false);
   }
 
-  function handleReadinessCheck() {
-    setHasCheckedReadiness(true);
-    setDraftSaveFeedback(null);
-    setSubmitFeedback(null);
+  // 把畫面帶到某個欄位並聚焦（勾選類欄位聚焦第一個選項）。
+  function focusField(fieldName: FormFieldName) {
+    const card = document.getElementById(getFieldCardId(fieldName));
 
-    // 把畫面帶到第一個缺項，老師不用自己找。
-    const firstMissing = missingRequiredFields[0];
-
-    if (firstMissing) {
-      document
-        .getElementById(getFieldCardId(firstMissing))
-        ?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
+    card?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const control =
+      document.getElementById(`teacher-application-${fieldName}`) ??
+      card?.querySelector<HTMLElement>("input, select, textarea");
+    control?.focus({ preventScroll: true });
   }
 
   function handleJumpToFix() {
     const firstMissing = missingRequiredFields[0];
-    const targetId = firstMissing
-      ? getFieldCardId(firstMissing)
-      : "application-form-title";
+
+    if (firstMissing) {
+      setHasCheckedReadiness(true);
+      focusField(firstMissing);
+      return;
+    }
 
     document
-      .getElementById(targetId)
+      .getElementById("application-form-title")
       ?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
@@ -727,28 +774,30 @@ export function TeacherApplicationForm() {
       return;
     }
 
-    setHasCheckedReadiness(false);
     setSubmitFeedback(null);
     setIsSavingDraft(true);
     setDraftSaveFeedback(null);
+    // 送出的這一份才是這次要存的內容；儲存途中再改的內容不算在這次儲存裡。
+    const sentState = formState;
 
     try {
       const result = await Promise.race([
-        saveTeacherProfileDraftAction(formState),
+        saveTeacherProfileDraftAction(sentState),
         createDraftSaveTimeout(),
       ]);
 
+      // 逾時只代表畫面等太久，不代表伺服器取消了請求：不能說已儲存，也不能說沒存到。
       if (result === "timeout") {
         setDraftSaveFeedback({
           kind: "error",
           message:
-            "請先登入後再儲存草稿。登入後，你可以回到這裡繼續整理老師申請資料。你目前畫面中的內容仍會保留。",
-          showSignInLink: true,
+            "儲存一直沒有回應，目前無法確定是否已經存好。畫面中的內容仍會保留，請稍後再按一次「儲存」。",
         });
         return;
       }
 
       if (result.ok) {
+        setSavedSnapshotKey(JSON.stringify(sentState));
         setLastSavedAt(result.profile.updatedAt);
         setDraftSaveFeedback({
           kind: "success",
@@ -757,6 +806,10 @@ export function TeacherApplicationForm() {
             : "草稿已儲存。這還不是正式送審，你可以慢慢調整內容。",
         });
         return;
+      }
+
+      if (result.validationErrors?.some((error) => isOptionalField(error.field))) {
+        setIsOptionalOpen(true);
       }
 
       setDraftSaveFeedback({
@@ -781,6 +834,15 @@ export function TeacherApplicationForm() {
 
     setDraftSaveFeedback(null);
     setSubmitFeedback(null);
+
+    // 還有缺項：標出缺項、帶到第一個，不打開確認。
+    if (!isReadyForFutureSubmit) {
+      setHasCheckedReadiness(true);
+      focusField(missingRequiredFields[0]);
+      return;
+    }
+
+    setConfirmSnapshot(formState);
     setIsConfirmingSubmit(true);
   }
 
@@ -793,19 +855,20 @@ export function TeacherApplicationForm() {
   }
 
   async function handleSubmitApplication() {
-    if (isSubmitDisabled) {
+    if (isSubmitDisabled || !confirmSnapshot) {
       return;
     }
 
-    setHasCheckedReadiness(false);
     setDraftSaveFeedback(null);
     setIsSubmitting(true);
     setSubmitFeedback(null);
+    const sentState = confirmSnapshot;
 
     try {
-      const result = await submitTeacherProfileApplicationAction(formState);
+      const result = await submitTeacherProfileApplicationAction(sentState);
 
       if (result.ok) {
+        setSavedSnapshotKey(JSON.stringify(sentState));
         setHydratedProfileStatus(result.profile.status);
         setIsConfirmingSubmit(false);
         setLastSavedAt(result.profile.updatedAt);
@@ -820,6 +883,10 @@ export function TeacherApplicationForm() {
 
       if (result.code === "submit_validation_failed") {
         setHasCheckedReadiness(true);
+
+        if (result.validationErrors?.some((error) => isOptionalField(error.field))) {
+          setIsOptionalOpen(true);
+        }
       }
 
       setSubmitFeedback({
@@ -839,6 +906,69 @@ export function TeacherApplicationForm() {
       setIsConfirmingSubmit(false);
       setIsSubmitting(false);
     }
+  }
+
+  function renderFieldCard(field: TextField) {
+    const showReminder =
+      hasCheckedReadiness && missingRequiredFieldSet.has(field.name);
+    const inputId = `teacher-application-${field.name}`;
+
+    return (
+      <div
+        className="scroll-mt-24 rounded-2xl border border-ink/12 bg-white p-4"
+        id={getFieldCardId(field.name)}
+        key={field.name}
+      >
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <label className="text-sm font-medium text-ink" htmlFor={inputId}>
+              {field.label}
+            </label>
+          </div>
+          <RequirementBadge requirement={field.requirement} />
+        </div>
+
+        <p className="mt-3 text-sm leading-6 text-ink-soft">{field.helper}</p>
+
+        {field.kind === "textarea" && field.example ? (
+          <p className="mt-2 rounded-xl bg-cream px-3 py-2 text-sm leading-6 text-ink-soft">
+            <span className="font-medium text-ink">參考寫法：</span>
+            {field.example}
+          </p>
+        ) : null}
+
+        <FieldControl
+          disabled={mutationBlockedStatus !== null}
+          field={field}
+          inputId={inputId}
+          onChange={(value) => updateField(field.name, value)}
+          showReminder={showReminder}
+          value={formState[field.name]}
+        />
+
+        {legacyChoiceValues[field.name] ? (
+          <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900">
+            你先前填寫的「{legacyChoiceValues[field.name]}
+            」不在選項內，這次不會保留，請改從上方勾選。
+          </p>
+        ) : null}
+
+        {field.kind === "textarea" && field.requirement === "submitRequired" ? (
+          <p className="mt-1 text-right text-xs text-ink-faint">
+            已輸入 {formState[field.name].trim().length} 字
+          </p>
+        ) : null}
+
+        {showReminder ? (
+          <p
+            className="mt-2 rounded-xl border border-clay/25 bg-clay-tint px-3 py-2 text-sm leading-6 text-clay"
+            id={`${inputId}-reminder`}
+          >
+            {getReadinessMessage(field.name)}
+          </p>
+        ) : null}
+      </div>
+    );
   }
 
   const statusPill = (
@@ -869,6 +999,11 @@ export function TeacherApplicationForm() {
             <a
               className="underline underline-offset-4"
               href={`#${getFieldCardId(fieldName)}`}
+              onClick={(event) => {
+                event.preventDefault();
+                setHasCheckedReadiness(true);
+                focusField(fieldName);
+              }}
             >
               {fieldLabels[fieldName]}
             </a>
@@ -882,8 +1017,13 @@ export function TeacherApplicationForm() {
   );
 
   const statusActionBar = (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-full border border-ink/12 bg-white px-4 py-2.5">
-      {statusPill}
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-ink/12 bg-white px-4 py-2.5 sm:rounded-full">
+      <div className="flex flex-wrap items-center gap-2">
+        {statusPill}
+        {!mutationBlockedCopy && hasUnsavedChanges ? (
+          <span className="text-xs text-ink-faint">有尚未儲存的修改</span>
+        ) : null}
+      </div>
       {mutationBlockedCopy ? (
         <p className="text-xs leading-5 text-ink-faint">
           {mutationBlockedCopy.notice}
@@ -891,14 +1031,7 @@ export function TeacherApplicationForm() {
       ) : (
         <div className="flex flex-wrap items-center gap-2">
           <button
-            className="rounded-full border border-ink/20 px-4 py-2 text-sm font-medium text-ink"
-            onClick={handleReadinessCheck}
-            type="button"
-          >
-            檢查準備狀態
-          </button>
-          <button
-            className="rounded-full border border-pine/40 px-4 py-2 text-sm font-medium text-pine disabled:cursor-not-allowed disabled:border-ink/15 disabled:text-ink-faint"
+            className="min-h-11 rounded-full border border-pine/40 px-4 py-2 text-sm font-medium text-pine disabled:cursor-not-allowed disabled:border-ink/15 disabled:text-ink-faint"
             disabled={isDraftSaveDisabled}
             onClick={handleSaveDraft}
             type="button"
@@ -912,7 +1045,7 @@ export function TeacherApplicationForm() {
                 : "儲存草稿"}
           </button>
           <button
-            className="rounded-full bg-pine px-5 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-ink/15 disabled:text-ink-soft"
+            className="min-h-11 rounded-full bg-pine px-5 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-ink/15 disabled:text-ink-soft"
             disabled={isSubmitDisabled}
             onClick={handleOpenSubmitConfirmation}
             type="button"
@@ -1002,17 +1135,43 @@ export function TeacherApplicationForm() {
     </div>
   );
 
-  const submitConfirmation = isConfirmingSubmit ? (
+  const submitConfirmation = isConfirmingSubmit && confirmSnapshot ? (
     <div className="rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep">
       <p className="font-medium text-ink">確認送出審核</p>
       <p className="mt-2">
         {isRejectedProfile
-          ? "重新送出後，這份老師申請會再次進入平台審核。請確認修正內容已準備好，再送出。"
-          : "送出後，這份老師申請會進入平台審核。審核期間暫時不需要再儲存草稿；請確認主要資料已準備好，再送出。"}
+          ? "重新送出後，這份老師申請會再次進入平台審核。以下是這次會送出的內容，送審期間不能修改。"
+          : "送出後，這份老師申請會進入平台審核。以下是這次會送出的內容，送審期間不能修改。"}
       </p>
+      <dl
+        aria-label="這次送出的申請內容"
+        className="mt-3 grid gap-2 rounded-xl border border-ink/10 bg-white p-3 text-ink-soft sm:grid-cols-[8rem_1fr]"
+      >
+        {requiredFieldDefs.map((field) => {
+          const value = confirmSnapshot[field.name];
+          const display =
+            field.kind === "checkboxGroup"
+              ? getChoiceItems(value).join("、")
+              : getFieldDisplayValue(field, value).trim();
+
+          return (
+            <div className="contents" key={field.name}>
+              <dt className="font-medium text-ink">{field.label}</dt>
+              <dd className="min-w-0 whitespace-pre-wrap break-words">{display}</dd>
+            </div>
+          );
+        })}
+        <div className="contents">
+          <dt className="font-medium text-ink">其他資料</dt>
+          <dd>
+            已填 {optionalFieldDefs.filter((field) => !isBlank(confirmSnapshot[field.name])).length} /{" "}
+            {optionalFieldDefs.length} 項
+          </dd>
+        </div>
+      </dl>
       <div className="mt-4 flex flex-col gap-3 sm:flex-row">
         <button
-          className="rounded-full bg-pine px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-ink/15 disabled:text-ink-soft"
+          className="min-h-11 rounded-full bg-pine px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-ink/15 disabled:text-ink-soft"
           disabled={isSubmitting}
           onClick={handleSubmitApplication}
           type="button"
@@ -1020,7 +1179,7 @@ export function TeacherApplicationForm() {
           {isSubmitting ? "正在送出..." : "確認送出審核"}
         </button>
         <button
-          className="rounded-full border border-clay/40 bg-white px-4 py-2 text-sm font-medium text-ink disabled:cursor-not-allowed disabled:text-ink-faint"
+          className="min-h-11 rounded-full border border-clay/40 bg-white px-4 py-2 text-sm font-medium text-ink disabled:cursor-not-allowed disabled:text-ink-faint"
           disabled={isSubmitting}
           onClick={handleCancelSubmitConfirmation}
           type="button"
@@ -1062,7 +1221,7 @@ export function TeacherApplicationForm() {
           : "平台尚未提供具體說明。你可以先檢查必填欄位並補充教學經歷，準備好後再重新送審。"}
       </p>
       <button
-        className="mt-4 rounded-full bg-pine px-5 py-2 text-sm font-medium text-white"
+        className="mt-4 min-h-11 rounded-full bg-pine px-5 py-2 text-left text-sm font-medium text-white"
         onClick={handleJumpToFix}
         type="button"
       >
@@ -1102,7 +1261,7 @@ export function TeacherApplicationForm() {
           <p className="mt-4 ml-6 text-sm leading-6 text-ink-faint">
             {isRejectedProfile
               ? "下方會顯示被退回的申請資料；你可以依修正方向調整後重新送審。"
-              : "下方表單可手動儲存草稿；準備好後，請經過二次確認再正式送出審核。"}
+              : "填好下方 7 項必填就能直接送出審核，不需要先儲存草稿；想分次填寫也可以先儲存。"}
           </p>
         )}
       </section>
@@ -1137,7 +1296,7 @@ export function TeacherApplicationForm() {
             </p>
           ) : (
             <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-soft">
-              你可以先在這裡整理申請需要的內容並手動儲存草稿；準備好後，正式送出審核前系統會再請你確認一次。
+              7 項必填填好就能送審；其他資料可以之後再補。正式送出前會請你核對一次送出的內容。
             </p>
           )}
         </div>
@@ -1148,112 +1307,45 @@ export function TeacherApplicationForm() {
         <form
           className="grid gap-5"
           onSubmit={(event) => {
+            // 不靠按 Enter 送審：送審一律走上方的「送出審核」與確認。
             event.preventDefault();
-            handleReadinessCheck();
           }}
         >
-          {applicationSections.map((section) => (
-            <section
-              className="grid gap-5 border-t border-pine/15 pt-5 first:border-t-0 first:pt-0"
-              key={section.title}
-            >
-              <div className="max-w-2xl">
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <h3 className="text-lg font-medium text-ink">
-                    {section.title}
-                  </h3>
-                  <SectionProgress
-                    missingCount={
-                      section.fields.filter((field) =>
-                        missingRequiredFieldSet.has(field.name),
-                      ).length
-                    }
-                    requiredCount={
-                      section.fields.filter(
-                        (field) => field.requirement === "submitRequired",
-                      ).length
-                    }
-                  />
-                </div>
-                <p className="mt-2 text-sm leading-6 text-ink-soft">
-                  {section.description}
-                </p>
+          <section className="grid gap-5" aria-labelledby="required-fields-title">
+            <div className="max-w-2xl">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <h3 className="text-lg font-medium text-ink" id="required-fields-title">
+                  送審必填（{requiredFieldDefs.length} 項）
+                </h3>
+                <SectionProgress
+                  missingCount={missingRequiredFields.length}
+                  requiredCount={requiredFieldDefs.length}
+                />
               </div>
+              <p className="mt-2 text-sm leading-6 text-ink-soft">
+                這幾項讓平台與團主認識你；填好就能送審，不需要先儲存草稿。
+              </p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              {requiredFieldDefs.map((field) => renderFieldCard(field))}
+            </div>
+          </section>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                {section.fields.map((field) => {
-                  const showReminder =
-                    hasCheckedReadiness &&
-                    missingRequiredFieldSet.has(field.name);
-                  const inputId = `teacher-application-${field.name}`;
-
-                  return (
-                    <div
-                      className="scroll-mt-24 rounded-2xl border border-ink/12 bg-white p-4"
-                      id={getFieldCardId(field.name)}
-                      key={field.name}
-                    >
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                          <label
-                            className="text-sm font-medium text-ink"
-                            htmlFor={inputId}
-                          >
-                            {field.label}
-                          </label>
-                        </div>
-                        <RequirementBadge requirement={field.requirement} />
-                      </div>
-
-                      <p className="mt-3 text-sm leading-6 text-ink-soft">
-                        {field.helper}
-                      </p>
-
-                      {field.kind === "textarea" && field.example ? (
-                        <p className="mt-2 rounded-xl bg-cream px-3 py-2 text-sm leading-6 text-ink-soft">
-                          <span className="font-medium text-ink">參考寫法：</span>
-                          {field.example}
-                        </p>
-                      ) : null}
-
-                      <FieldControl
-                        disabled={mutationBlockedStatus !== null}
-                        field={field}
-                        inputId={inputId}
-                        onChange={(value) => updateField(field.name, value)}
-                        showReminder={showReminder}
-                        value={formState[field.name]}
-                      />
-
-                      {legacyChoiceValues[field.name] ? (
-                        <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900">
-                          你先前填寫的「{legacyChoiceValues[field.name]}
-                          」不在選項內，這次不會保留，請改從上方勾選。
-                        </p>
-                      ) : null}
-
-                      {field.kind === "textarea" &&
-                      field.requirement === "submitRequired" ? (
-                        <p className="mt-1 text-right text-xs text-ink-faint">
-                          已輸入 {formState[field.name].trim().length} 字
-                        </p>
-                      ) : null}
-
-                      {showReminder ? (
-                        <p
-                          className="mt-2 rounded-xl border border-clay/25 bg-clay-tint px-3 py-2 text-sm leading-6 text-clay"
-                          id={`${inputId}-reminder`}
-                        >
-                          {getReadinessMessage(field.name)}
-                        </p>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
-
+          <details
+            className="rounded-2xl border border-ink/12 bg-white/60 px-4"
+            onToggle={(event) => setIsOptionalOpen(event.currentTarget.open)}
+            open={isOptionalOpen}
+          >
+            <summary className="flex min-h-11 cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 py-3 text-lg font-medium text-ink">
+              其他資料（可之後補）
+              <span className="text-sm font-normal text-ink-soft">
+                已填 {optionalFieldsWithValue} / {optionalFieldNames.length} 項，不填也能送審
+              </span>
+            </summary>
+            <div className="grid gap-4 pb-4 md:grid-cols-2">
+              {optionalFieldDefs.map((field) => renderFieldCard(field))}
+            </div>
+          </details>
         </form>
 
         {statusActionBar}

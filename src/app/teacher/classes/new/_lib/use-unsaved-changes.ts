@@ -9,7 +9,8 @@ export const UNSAVED_CHANGES_MESSAGE = "這堂課還沒建立，離開後剛才�
 // - 點站內連結（Next.js Link 是 client-side 導覽，不會觸發 beforeunload）：在 document 的 capture
 //   階段先攔下點擊、跳出確認；按取消就 preventDefault，Link 看到 defaultPrevented 不會導覽。
 // 只是提醒，不做任何暫存或離頁續填。成功建立後是 Server Action 的 redirect，不經過這兩條路徑。
-export function useUnsavedChangesWarning(enabled: boolean) {
+// 票 06 老師申請表單也沿用，傳入自己的提醒文字。
+export function useUnsavedChangesWarning(enabled: boolean, message: string = UNSAVED_CHANGES_MESSAGE) {
   useEffect(() => {
     if (!enabled) {
       return;
@@ -50,7 +51,7 @@ export function useUnsavedChangesWarning(enabled: boolean) {
         return;
       }
 
-      if (!window.confirm(UNSAVED_CHANGES_MESSAGE)) {
+      if (!window.confirm(message)) {
         event.preventDefault();
         event.stopPropagation();
       }
@@ -63,5 +64,5 @@ export function useUnsavedChangesWarning(enabled: boolean) {
       window.removeEventListener("beforeunload", handleBeforeUnload);
       document.removeEventListener("click", handleDocumentClick, true);
     };
-  }, [enabled]);
+  }, [enabled, message]);
 }
