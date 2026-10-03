@@ -113,11 +113,10 @@ test.describe("teacher-initiated open classes smoke", () => {
     await selectFormTime(page, "single-", "end", "15:00");
     await page.getByLabel("地點").fill(baseInput.location);
     await page.getByLabel("名額上限").fill(String(baseInput.capacity));
-    await page.getByRole("checkbox", { name: "公開這堂課", exact: false }).check();
+    await page.locator("#isPublic-yes").check();
     // 瑜伽類型必填：勾選一個標籤，再用「其他」補兩個自訂項目（頓號分隔）。
     await page.getByText("陰瑜伽", { exact: true }).click();
     await page.locator("#yoga-styles-other").fill("亞歷山大技巧、脈輪流動");
-    await page.getByRole("checkbox", { name: /我確認以上資訊無誤/ }).check();
     await page.getByRole("button", { name: "建立課程" }).click();
 
     await expect(page.getByText("課程已建立。")).toBeVisible();

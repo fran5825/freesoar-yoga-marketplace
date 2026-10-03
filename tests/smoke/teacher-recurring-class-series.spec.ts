@@ -67,7 +67,7 @@ test.describe("teacher recurring class series smoke", () => {
 
     await addAuthSessionCookie(context, teacher.sessionToken);
     await page.goto("/teacher/classes/new");
-    await page.getByRole("button", { name: "常規（每週固定星期）" }).click();
+    await page.getByRole("button", { name: "每週固定" }).click();
 
     // 起始日期必須是選定的星期幾（這裡是週一）。
     const weeklyStartDate = futureWeekdayDateString(60, 1);
@@ -150,7 +150,7 @@ test.describe("teacher recurring class series smoke", () => {
 
     await addAuthSessionCookie(context, teacher.sessionToken);
     await page.goto("/teacher/classes/new");
-    await page.getByRole("button", { name: "常規（每週固定星期）" }).click();
+    await page.getByRole("button", { name: "每週固定" }).click();
 
     // 還沒選星期幾：選起始日期（一個週四）會自動帶入週四。
     const thursday = futureWeekdayDateString(30, 4);
@@ -197,6 +197,8 @@ test.describe("teacher recurring class series smoke", () => {
     await selectFormTime(page, "single-", "end", "13:30");
     await page.locator("#location").fill("台北市測試教室");
     await page.locator("#capacity").fill("15");
+    // 課程說明預設收起，點開才能填。
+    await page.getByText("課程說明（選填）").click();
     await page.locator("#description").fill("說明內容");
 
     // 24 小時制：小時選項是 00–23，沒有上午／下午。
@@ -204,7 +206,7 @@ test.describe("teacher recurring class series smoke", () => {
     await expect(page.locator("#single-startTime-hour")).toHaveValue("12");
     await expect(page.getByText("12:00 是中午")).toBeVisible();
 
-    await page.getByRole("button", { name: "常規（每週固定星期）" }).click();
+    await page.getByRole("button", { name: "每週固定" }).click();
     await expect(page.locator("#weekly-title")).toHaveValue("切換保留測試");
     await expect(page.getByRole("checkbox", { name: baseSeriesInput.serviceType })).toBeChecked();
     await expect(page.locator("#weekly-startTime-hour")).toHaveValue("12");
@@ -214,12 +216,12 @@ test.describe("teacher recurring class series smoke", () => {
     await expect(page.locator("#weekly-description")).toHaveValue("說明內容");
     await page.locator("#weekly-dayOfWeek").selectOption("3");
 
-    await page.getByRole("button", { name: "固定期（明確日期清單）" }).click();
+    await page.getByRole("button", { name: "指定日期" }).click();
     await expect(page.locator("#fixed-title")).toHaveValue("切換保留測試");
     await expect(page.locator("#fixed-startTime-hour")).toHaveValue("12");
 
     // 回到常規模式：模式專屬欄位（星期幾）也還在。
-    await page.getByRole("button", { name: "常規（每週固定星期）" }).click();
+    await page.getByRole("button", { name: "每週固定" }).click();
     await expect(page.locator("#weekly-dayOfWeek")).toHaveValue("3");
 
     // 回到單堂：內容還在。
@@ -255,7 +257,7 @@ test.describe("teacher recurring class series smoke", () => {
 
     await addAuthSessionCookie(context, teacher.sessionToken);
     await page.goto("/teacher/classes/new");
-    await page.getByRole("button", { name: "固定期（明確日期清單）" }).click();
+    await page.getByRole("button", { name: "指定日期" }).click();
 
     await page.locator("#fixed-title").fill(baseSeriesInput.title);
     await pickServiceType(page, baseSeriesInput.serviceType);

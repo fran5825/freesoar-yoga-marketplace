@@ -257,7 +257,6 @@ test.describe("teacher class detail page", () => {
     await page.locator("#single-date").fill(futureDateString(84));
     await selectFormTime(page, "single-", "start", "19:00");
     await selectFormTime(page, "single-", "end", "20:00");
-    await page.getByRole("checkbox", { name: /我確認以上資訊無誤/ }).check();
     await page.getByRole("button", { name: "建立課程" }).click();
 
     await expect(page.getByText("課程已建立。下一步：確認內容後按「開放報名」。")).toBeVisible();

@@ -5,9 +5,19 @@ import { redirect } from "next/navigation";
 
 import { createOwnClassSessionForTeacher } from "@/domain/class-session/service";
 
+import {
+  formFieldForValidationField,
+  type CreateClassFormField,
+  type CreateClassFormState,
+} from "./_lib/form-state";
 import { readServiceTypesFromForm, readYogaStylesFromForm } from "./read-yoga-styles";
 
-export async function createOwnClassSessionAction(formData: FormData): Promise<void> {
+// teacher-usability-redesign 票 01：失敗時回傳結果給表單（useActionState），表單留在原頁、保留輸入；
+// 成功才 redirect。redirect 放在任何 try/catch 之外，domain service 與寫入規則不變。
+export async function createOwnClassSessionAction(
+  _previousState: CreateClassFormState,
+  formData: FormData,
+): Promise<CreateClassFormState> {
   const result = await createOwnClassSessionForTeacher({
     title: readFormString(formData, "title"),
     description: readFormString(formData, "description"),
@@ -22,7 +32,11 @@ export async function createOwnClassSessionAction(formData: FormData): Promise<v
   });
 
   if (!result.ok) {
-    redirectWithFeedback("error", buildErrorMessage(result.message, result.validationErrors));
+    return {
+      status: "error",
+      message: result.message,
+      fieldErrors: buildFieldErrors(result.code, result.message, result.validationErrors),
+    };
   }
 
   revalidatePath("/teacher/classes");
@@ -53,17 +67,25 @@ function readFormNumber(formData: FormData, name: string): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function buildErrorMessage(
+function buildFieldErrors(
+  code: string,
   message: string,
-  validationErrors?: { message: string }[],
-): string {
-  if (!validationErrors || validationErrors.length === 0) {
-    return message;
+  validationErrors?: { field: string; message: string }[],
+): Partial<Record<CreateClassFormField, string[]>> {
+  const fieldErrors: Partial<Record<CreateClassFormField, string[]>> = {};
+
+  for (const error of validationErrors ?? []) {
+    const field = formFieldForValidationField(error.field);
+
+    if (field) {
+      fieldErrors[field] = [...(fieldErrors[field] ?? []), error.message];
+    }
   }
 
-  return [message, ...validationErrors.map((error) => error.message)].join(" ");
-}
+  // 時段衝突沒有 validationErrors，錯誤說明直接放在時間欄位旁邊。
+  if (code === "teacher_schedule_conflict") {
+    fieldErrors.time = [...(fieldErrors.time ?? []), message];
+  }
 
-function redirectWithFeedback(result: "success" | "error", message: string): never {
-  redirect(`/teacher/classes/new?result=${result}&message=${encodeURIComponent(message)}`);
+  return fieldErrors;
 }

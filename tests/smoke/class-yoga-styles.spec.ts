@@ -144,7 +144,6 @@ test.describe("yoga styles in the teacher class form and public pages", () => {
     await selectFormTime(page, "single-", "end", "11:00");
     await page.locator("#location").fill(baseInput.location);
     await page.locator("#capacity").fill("10");
-    await page.getByRole("checkbox", { name: /我確認以上資訊無誤/ }).check();
     await page.getByRole("button", { name: "建立課程" }).click();
 
     // 沒選瑜伽類型：留在原頁、顯示提醒，沒有建立任何課程。
@@ -202,7 +201,6 @@ test.describe("yoga styles in the teacher class form and public pages", () => {
     await page.locator("#location").fill(baseInput.location);
     await page.locator("#capacity").fill("10");
     await page.getByText("流瑜伽", { exact: true }).click();
-    await page.getByRole("checkbox", { name: /我確認以上資訊無誤/ }).check();
     await page.getByRole("button", { name: "建立課程" }).click();
     await expect(page.getByText("課程已建立。")).toBeVisible();
     await expect(page.getByText("流汗活力、核心與體態、冥想與呼吸")).toBeVisible();

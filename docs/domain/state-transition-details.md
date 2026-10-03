@@ -272,7 +272,7 @@ Future / admin-only 後續能力：
 | `confirmed` | `cancelled` | Member / Admin | Member own-scoped，或 Admin（不檢查擁有權）；皆需 `startAt` 尚未到達（D14；Admin 版由 `admin-class-enrollment-management` D4 新增，資格條件完全相同） | 釋放名額（不計入 capacity COUNT），但**不可**重新報名（D8）；通知該筆 enrollment 的 Member 本人（`enrollment_cancelled`／`self`），不論觸發者是 Member 自己還是 Admin |
 
 - **跳過 `pending`**（D1）：建立當下的原子檢查（capacity／重複報名）已經涵蓋完整設計裡 `pending → confirmed` 的唯一前置條件，沒有獨立業務動作需要一個中繼狀態，對齊本專案一貫的簡化先例。
-- **`consentedAt` 非 nullable**（D6）：spec 明確要求「記錄」basic consent，這不是本專案其他確認 checkbox（`confirmReject`/`confirmSelect`/`confirmCreate`）那種純 UX 防誤觸，是需要留存的紀錄。
+- **`consentedAt` 非 nullable**（D6）：spec 明確要求「記錄」basic consent，這不是本專案其他確認 checkbox（`confirmReject`/`confirmSelect`/`confirmCreate`）那種純 UX 防誤觸，是需要留存的紀錄。（2026-10-04 老師 usability 票 01：老師單堂建課的 `confirmCreate` 勾選已改成「建立前核對」摘要；團主建課與老師系列建課仍用勾選。轉換規則不變。）
 - **取消也受 `startAt` 限制**（D14，與建立、開放報名一致）：取消一堂已經開始的課程的報名會抹除歷史報名紀錄，且讓這筆 enrollment 永遠無法銜接未來的 `confirmed → attended/no_show`，V1 課程開始後不提供自助取消。
 - **取消後不可重新報名**（D8）：`@@unique([classSessionId, userId])` 是資料庫層面唯一約束，只認這個組合本身是否已存在過，不分狀態。
 - ~~**Admin 不介入**（D10）：本輪 Enrollment 生命週期完全是 Member 與 Organizer/Teacher（唯讀 roster）的範圍。~~ **修正：`admin-class-enrollment-management` 一輪已經打破這個限制**——Admin 現在可以取消任何一筆 `confirmed` enrollment，資格條件跟 Member 自助取消完全相同（D4），只是不檢查 `userId` 擁有權。`Confirm enrollment`（`pending → confirmed`）與 `attended`/`no_show` 標記仍然完全不接線，這部分的「Admin 不介入」維持成立；只有「取消」這一種轉換打破了原本 D10 的範圍。
