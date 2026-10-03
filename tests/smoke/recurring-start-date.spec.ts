@@ -28,7 +28,7 @@ test.describe("weekly series start date (pure functions)", () => {
   const baseInput = {
     title: "起始日期測試",
     serviceTypes: ["放鬆紓壓"],
-    yogaStyles: ["陰瑜珈"],
+    yogaStyles: ["陰瑜伽"],
     startTime: "10:00",
     endTime: "11:00",
     location: "台北市測試教室",

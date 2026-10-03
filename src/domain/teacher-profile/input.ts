@@ -1,3 +1,5 @@
+import { normalizeYogaWording } from "@/domain/yoga-wording";
+
 import type { TeacherProfileApplicationInput } from "./validation";
 
 export type TeacherProfileDraftFormInput = {
@@ -26,7 +28,8 @@ export function normalizeTeacherProfileDraftInput(
     teachingStyle: normalizeOptionalString(input.teachingStyle),
     experienceYears: normalizeOptionalNumber(input.experienceYears),
     certifications: normalizeStringList(input.certifications),
-    specialties: normalizeStringList(input.specialties),
+    // 擅長類型的自訂項目也統一寫「瑜伽」（見 yoga-wording.ts）。
+    specialties: normalizeStringList(input.specialties).map(normalizeYogaWording),
     serviceAreas: normalizeStringList(input.serviceAreas),
     teachingFormats: normalizeStringList(input.teachingFormats),
     priceRange: normalizeOptionalString(input.priceRange),

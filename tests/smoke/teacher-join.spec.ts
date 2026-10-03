@@ -130,7 +130,7 @@ test.describe("/teachers/join smoke", () => {
     await page.getByLabel("老師簡介").fill("Smoke bio.");
     await page.getByLabel("教學風格").fill("Smoke style.");
     await page.getByLabel("教學年資").selectOption("1");
-    await page.getByText("陰瑜珈", { exact: true }).click();
+    await page.getByText("陰瑜伽", { exact: true }).click();
     await page.getByText("台北市", { exact: true }).click();
     await page.getByText("小班制教學", { exact: true }).click();
 

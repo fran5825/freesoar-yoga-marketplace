@@ -52,7 +52,7 @@ async function seedClass(
       title: options.title,
       description: "詳情頁測試用。",
       serviceTypes: ["放鬆紓壓"],
-      yogaStyles: ["陰瑜珈"],
+      yogaStyles: ["陰瑜伽"],
       startAt: futureDateTime(options.daysFromToday, "10:00"),
       endAt: futureDateTime(options.daysFromToday, "11:00"),
       location: options.location ?? "台北市詳情測試教室",
@@ -158,7 +158,7 @@ test.describe("teacher class detail page", () => {
     const headings = await page.getByRole("heading", { level: 2 }).allTextContents();
     expect(headings).toEqual(["下一步", "報名狀況", "課程內容", "課程操作"]);
     await expect(page.getByText("放鬆紓壓", { exact: true })).toBeVisible();
-    await expect(page.getByText("陰瑜珈", { exact: true })).toBeVisible();
+    await expect(page.getByText("陰瑜伽", { exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: "開放報名" }).click();
     await expect(page.getByText("已開放報名。")).toBeVisible();
@@ -253,7 +253,7 @@ test.describe("teacher class detail page", () => {
     const title = `新的單堂課 ${testRunId}`;
     await page.locator("#title").fill(title);
     await pickServiceType(page, "放鬆紓壓");
-    await page.getByText("修復瑜珈", { exact: true }).click();
+    await page.getByText("修復瑜伽", { exact: true }).click();
     await page.locator("#single-date").fill(futureDateString(84));
     await selectFormTime(page, "single-", "start", "19:00");
     await selectFormTime(page, "single-", "end", "20:00");

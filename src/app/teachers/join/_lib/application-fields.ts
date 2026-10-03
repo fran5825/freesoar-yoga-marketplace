@@ -88,6 +88,8 @@ export const requiredFields: FormFieldName[] = [
   "teachingFormats",
 ];
 
+// 2026-10-03：選項一律寫「瑜伽」（原本 14 個寫成「瑜珈」，舊資料由 migration
+// 20261003000000_yoga_wording_unify 轉換）；「特殊對象與主題」新增親子、兒童、樂齡瑜伽，並改成對象在前、主題在後。
 // 2026-09-20 老師擅長清單：整理合併使用者提供的短版與分類版用詞而成，分四組方便勾選。
 // 2026-09-20 補充：拿掉英文原文，選項只留中文。
 export const SPECIALTY_GROUPS: OptionGroup[] = [
@@ -95,8 +97,8 @@ export const SPECIALTY_GROUPS: OptionGroup[] = [
     title: "靜心與修復系",
     options: [
       { value: "哈達瑜伽", label: "哈達瑜伽" },
-      { value: "陰瑜珈", label: "陰瑜珈" },
-      { value: "修復瑜珈", label: "修復瑜珈" },
+      { value: "陰瑜伽", label: "陰瑜伽" },
+      { value: "修復瑜伽", label: "修復瑜伽" },
       { value: "昆達里尼瑜伽", label: "昆達里尼瑜伽" },
       { value: "正念冥想與呼吸法", label: "正念冥想與呼吸法" },
     ],
@@ -104,29 +106,32 @@ export const SPECIALTY_GROUPS: OptionGroup[] = [
   {
     title: "活力與動態系",
     options: [
-      { value: "流瑜珈", label: "流瑜珈" },
-      { value: "阿斯坦加瑜珈", label: "阿斯坦加瑜珈" },
-      { value: "力量瑜珈", label: "力量瑜珈" },
-      { value: "熱瑜珈", label: "熱瑜珈" },
-      { value: "火箭瑜珈", label: "火箭瑜珈" },
+      { value: "流瑜伽", label: "流瑜伽" },
+      { value: "阿斯坦加瑜伽", label: "阿斯坦加瑜伽" },
+      { value: "力量瑜伽", label: "力量瑜伽" },
+      { value: "熱瑜伽", label: "熱瑜伽" },
+      { value: "火箭瑜伽", label: "火箭瑜伽" },
     ],
   },
   {
     title: "正位與功能性",
     options: [
-      { value: "艾揚格瑜珈", label: "艾揚格瑜珈" },
-      { value: "寰宇瑜珈", label: "寰宇瑜珈" },
-      { value: "皮拉提斯瑜珈", label: "皮拉提斯瑜珈" },
-      { value: "療癒瑜珈／身體正位", label: "療癒瑜珈／身體正位" },
+      { value: "艾揚格瑜伽", label: "艾揚格瑜伽" },
+      { value: "寰宇瑜伽", label: "寰宇瑜伽" },
+      { value: "皮拉提斯瑜伽", label: "皮拉提斯瑜伽" },
+      { value: "療癒瑜伽／身體正位", label: "療癒瑜伽／身體正位" },
     ],
   },
   {
     title: "特殊對象與主題",
     options: [
-      { value: "空中瑜珈", label: "空中瑜珈" },
-      { value: "孕婦瑜珈", label: "孕婦瑜珈" },
+      { value: "孕婦瑜伽", label: "孕婦瑜伽" },
+      { value: "親子瑜伽", label: "親子瑜伽" },
+      { value: "兒童瑜伽", label: "兒童瑜伽" },
+      { value: "樂齡瑜伽", label: "樂齡瑜伽" },
+      { value: "空中瑜伽", label: "空中瑜伽" },
       { value: "倒立與後彎特訓", label: "倒立與後彎特訓" },
-      { value: "壁繩瑜珈", label: "壁繩瑜珈" },
+      { value: "壁繩瑜伽", label: "壁繩瑜伽" },
     ],
   },
 ];

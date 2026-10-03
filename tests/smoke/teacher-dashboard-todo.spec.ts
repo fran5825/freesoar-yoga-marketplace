@@ -100,7 +100,7 @@ test.describe("teacher dashboard todo list", () => {
       {
         title: `待確認報名課 ${testRunId}`,
         serviceTypes: ["放鬆紓壓"],
-        yogaStyles: ["陰瑜珈"],
+        yogaStyles: ["陰瑜伽"],
         startAt: futureDateTime(90, "10:00"),
         endAt: futureDateTime(90, "11:00"),
         location: "台北市測試教室",

@@ -273,7 +273,7 @@ Fields:
 - description
 - serviceType（主要課程風格，＝serviceTypes 的第一個）
 - serviceTypes（2026-09-26 新增，`String[] @default([])`：課程風格，可多選最多 3 個，值須落在 `service-types.ts` 清單內）
-- yogaStyles（2026-09-26 新增，`String[] @default([])`：瑜伽類型，老師建課必填，標籤來源同老師「擅長類型」，可加自訂項目；團主媒合的課為空）
+- yogaStyles（2026-09-26 新增，`String[] @default([])`：瑜伽類型，老師建課必填，標籤來源同老師「擅長類型」，可加自訂項目；團主媒合的課為空。2026-10-03 起所有值一律寫「瑜伽」：儲存時自動把「瑜珈」改成「瑜伽」，舊資料由 data-only migration `20261003000000_yoga_wording_unify` 轉換，同一規則也套用在 `TeacherProfile.specialties`）
 - startAt
 - endAt
 - location

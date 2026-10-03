@@ -43,8 +43,8 @@ const baseInput = {
 
 test.describe("yoga styles validation (pure functions, no UI)", () => {
   test("normalizeYogaStyles trims, drops empty items and duplicates, keeps order", () => {
-    expect(normalizeYogaStyles(["  陰瑜珈 ", "", "陰瑜珈", "哈達瑜伽", "   "])).toEqual([
-      "陰瑜珈",
+    expect(normalizeYogaStyles(["  陰瑜伽 ", "", "陰瑜伽", "哈達瑜伽", "   "])).toEqual([
+      "陰瑜伽",
       "哈達瑜伽",
     ]);
     expect(normalizeYogaStyles(null)).toEqual([]);
@@ -54,7 +54,7 @@ test.describe("yoga styles validation (pure functions, no UI)", () => {
   test("checkYogaStyles enforces required, count and length limits", () => {
     expect(checkYogaStyles([], { required: true })).toBe("yoga_styles_required");
     expect(checkYogaStyles([], { required: false })).toBeNull();
-    expect(checkYogaStyles(["陰瑜珈"], { required: true })).toBeNull();
+    expect(checkYogaStyles(["陰瑜伽"], { required: true })).toBeNull();
     expect(
       checkYogaStyles(
         Array.from({ length: YOGA_STYLES_MAX_COUNT + 1 }, (_, index) => `風格${index}`),
@@ -108,12 +108,12 @@ test.describe("yoga styles validation (pure functions, no UI)", () => {
     }
 
     const teacherPathOk = validateClassSessionCreate(
-      { ...baseInput, yogaStyles: [" 陰瑜珈 ", "陰瑜珈", "自訂風格"] },
+      { ...baseInput, yogaStyles: [" 陰瑜伽 ", "陰瑜伽", "自訂風格"] },
       { requireYogaStyles: true },
     );
     expect(teacherPathOk.valid).toBe(true);
     if (teacherPathOk.valid) {
-      expect(teacherPathOk.normalized.yogaStyles).toEqual(["陰瑜珈", "自訂風格"]);
+      expect(teacherPathOk.normalized.yogaStyles).toEqual(["陰瑜伽", "自訂風格"]);
     }
   });
 });
@@ -201,7 +201,7 @@ test.describe("yoga styles in the teacher class form and public pages", () => {
     await selectFormTime(page, "single-", "end", "10:00");
     await page.locator("#location").fill(baseInput.location);
     await page.locator("#capacity").fill("10");
-    await page.getByText("流瑜珈", { exact: true }).click();
+    await page.getByText("流瑜伽", { exact: true }).click();
     await page.getByRole("checkbox", { name: /我確認以上資訊無誤/ }).check();
     await page.getByRole("button", { name: "建立課程" }).click();
     await expect(page.getByText("課程已建立。")).toBeVisible();
@@ -228,7 +228,7 @@ test.describe("yoga styles in the teacher class form and public pages", () => {
     });
 
     const validation = validateClassSessionCreate(
-      { ...baseInput, title: `公開風格課 ${testRunId}`, yogaStyles: ["哈達瑜伽", "陰瑜珈"] },
+      { ...baseInput, title: `公開風格課 ${testRunId}`, yogaStyles: ["哈達瑜伽", "陰瑜伽"] },
       { requireYogaStyles: true },
     );
     if (!validation.valid) throw new Error("unexpected invalid input in test fixture");
@@ -242,9 +242,9 @@ test.describe("yoga styles in the teacher class form and public pages", () => {
 
     await page.goto(`/classes/${created.classSessionId}`);
     await expect(page.getByText("瑜伽類型", { exact: true })).toBeVisible();
-    await expect(page.getByText("哈達瑜伽、陰瑜珈")).toBeVisible();
+    await expect(page.getByText("哈達瑜伽、陰瑜伽")).toBeVisible();
 
     await page.goto("/classes");
-    await expect(page.getByText("瑜伽類型：哈達瑜伽、陰瑜珈").first()).toBeVisible();
+    await expect(page.getByText("瑜伽類型：哈達瑜伽、陰瑜伽").first()).toBeVisible();
   });
 });

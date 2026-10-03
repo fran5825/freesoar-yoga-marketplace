@@ -197,7 +197,7 @@ test.describe("teacher profile edit smoke", () => {
     await page.getByLabel("公開顯示名稱").fill(`Teacher ${testRunId} Updated`);
     await page.getByLabel("老師簡介").fill("Updated bio content.");
     // 擅長類型改成標籤選擇：點選一個既有選項，再用「其他」欄位補一個自訂的。
-    await page.getByText("陰瑜珈", { exact: true }).click();
+    await page.getByText("陰瑜伽", { exact: true }).click();
     await page.locator('input[name="specialtiesOther"]').fill("Stretch Yoga");
     await page.getByLabel("證照或訓練背景（選填，可用逗號或換行分隔）").fill("RYT 500");
     await page.getByRole("button", { name: "儲存變更" }).click();
@@ -209,7 +209,7 @@ test.describe("teacher profile edit smoke", () => {
     });
     expect(updated.displayName).toBe(`Teacher ${testRunId} Updated`);
     expect(updated.bio).toBe("Updated bio content.");
-    expect(updated.specialties).toEqual(["陰瑜珈", "Stretch Yoga"]);
+    expect(updated.specialties).toEqual(["陰瑜伽", "Stretch Yoga"]);
     expect(updated.certifications).toEqual(["RYT 500"]);
     expect(updated.status).toBe("approved"); // D3：編輯不改變 status。
 

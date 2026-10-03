@@ -30,6 +30,10 @@ Avoid:
 - Overly mystical claims
 - Medical claims without evidence
 
+## 用字規則
+
+- 一律寫「瑜伽」，不寫「瑜珈」：包含介面文案、選項（擅長類型、瑜伽類型）、範例與文件。老師在「其他」自訂的擅長類型與瑜伽類型，儲存時系統會自動把「瑜珈」改成「瑜伽」；簡介等自由文字不自動改。（2026-10-03 定案）
+
 ## Example Phrases
 
 Good:

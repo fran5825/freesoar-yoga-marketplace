@@ -115,13 +115,13 @@ test.describe("teacher-initiated open classes smoke", () => {
     await page.getByLabel("名額上限").fill(String(baseInput.capacity));
     await page.getByRole("checkbox", { name: "公開這堂課", exact: false }).check();
     // 瑜伽類型必填：勾選一個標籤，再用「其他」補兩個自訂項目（頓號分隔）。
-    await page.getByText("陰瑜珈", { exact: true }).click();
+    await page.getByText("陰瑜伽", { exact: true }).click();
     await page.locator("#yoga-styles-other").fill("亞歷山大技巧、脈輪流動");
     await page.getByRole("checkbox", { name: /我確認以上資訊無誤/ }).check();
     await page.getByRole("button", { name: "建立課程" }).click();
 
     await expect(page.getByText("課程已建立。")).toBeVisible();
-    await expect(page.getByText("陰瑜珈、亞歷山大技巧、脈輪流動")).toBeVisible();
+    await expect(page.getByText("陰瑜伽、亞歷山大技巧、脈輪流動")).toBeVisible();
     await expect(page.getByText(baseInput.title)).toBeVisible();
     await expect(page.getByText("自己開的課", { exact: true })).toBeVisible();
     // 老師自建課程沒有團體，顯示中性 fallback，不是空白區塊。
@@ -137,7 +137,7 @@ test.describe("teacher-initiated open classes smoke", () => {
         yogaStyles: true,
       },
     });
-    expect(created.yogaStyles).toEqual(["陰瑜珈", "亞歷山大技巧", "脈輪流動"]);
+    expect(created.yogaStyles).toEqual(["陰瑜伽", "亞歷山大技巧", "脈輪流動"]);
     expect(created.origin).toBe("teacher_initiated");
     expect(created.organizerProfileId).toBeNull();
     expect(created.organizationId).toBeNull();
@@ -446,7 +446,8 @@ test.describe("teacher-initiated open classes smoke", () => {
     await expect(page.getByText("（老師自建課程）").first()).toBeVisible();
 
     // Member-facing detail page（isPublic=true，未報名的已登入會員直連查看）也不能因為
-    // organization 為 null 而拋錯，且要顯示中性 fallback 而不是空白區塊。
+    // organization 為 null 而拋錯。2026-10-03 member-usability 票 07：來源改用與課程列表一致的
+    // 「老師開課」標籤，沒有團體時不顯示「團體」欄位（不再用「老師自己開的課」替代文字）。
     const memberEmail = `member-view-${testRunId}@${testEmailDomain}`;
     createdEmails.push(memberEmail);
     const { sessionToken: memberSessionToken } = await createUserSession({ email: memberEmail });
@@ -455,7 +456,8 @@ test.describe("teacher-initiated open classes smoke", () => {
     await addAuthSessionCookie(context, memberSessionToken);
     const memberResponse = await page.goto(`/classes/${created.classSessionId}`);
     expect(memberResponse?.status()).toBe(200);
-    await expect(page.getByText("老師自己開的課")).toBeVisible();
+    await expect(page.getByText("老師開課", { exact: true })).toBeVisible();
+    await expect(page.getByText("團體", { exact: true })).toHaveCount(0);
   });
 });
 
