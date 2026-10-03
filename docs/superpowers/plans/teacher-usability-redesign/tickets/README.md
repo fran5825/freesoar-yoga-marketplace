@@ -18,7 +18,7 @@
 | [04 我的課程](04-class-list-navigation.md) | 分類、建立入口、系列連結、安全返回與位置 | 03 | STANDARD | yes | done（2026-10-04） |
 | [05 系列管理](05-series-management.md) | 逐場日期／狀態／人數、詳情返回、取消確認 | 03、04 | STANDARD | yes | done（2026-10-04） |
 | [06 老師申請](06-teacher-application.md) | 必填集中、即時缺項、摘要送審與各審核狀態 | None | STANDARD | yes | done（2026-10-04） |
-| [07 暫停老師入口](07-suspended-teacher-navigation.md) | 原查看資格下找得到既有課程 | None | STANDARD | yes | draft |
+| [07 暫停老師入口](07-suspended-teacher-navigation.md) | 原查看資格下找得到既有課程 | None | STANDARD | yes | done（2026-10-04） |
 | [08 完整旅程驗收](08-teacher-journey-acceptance.md) | 全旅程／RWD／品牌／角色邊界驗收證據 | 01–07 | STANDARD | yes | draft |
 
 所有票的風險標籤為 BRAND_RISK、LOW_PRESSURE_UX_RISK、SCOPE_DRIFT_RISK。既有 domain 寫入、權限、狀態與通知規則不改；STANDARD 不代表可略過核心流程的產品確認。

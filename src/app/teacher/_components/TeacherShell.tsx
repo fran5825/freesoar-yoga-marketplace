@@ -20,17 +20,28 @@ const limitedLinks = [
   { href: "/teacher/notifications", label: "通知" },
 ];
 
+// teacher-usability-redesign 票 07：暫停中的老師原本就能查看自己既有的課程（D15），
+// 只是導覽列沒有入口；這裡補回「我的課程」。不加需求池、建課等暫停期間不能用的功能，權限不變。
+const suspendedLinks = [
+  { href: "/teacher/dashboard", label: "總覽" },
+  { href: "/teacher/classes", label: "我的課程" },
+  { href: "/teacher/profile", label: "老師資料" },
+  { href: "/teacher/notifications", label: "通知" },
+];
+
 // 老師專區外框。/teacher/* 由 layout.tsx 套用（含 /teacher/notifications）；直接開共用的 /notifications
 // 且不是團主時，由通知頁自己包這個。
 export async function TeacherShell({ children }: { children: ReactNode }) {
   const teacherProfile = await getOwnTeacherProfileApplicationSnapshot();
-  const isApproved = teacherProfile?.status === "approved";
+  const links =
+    teacherProfile?.status === "approved"
+      ? approvedLinks
+      : teacherProfile?.status === "suspended"
+        ? suspendedLinks
+        : limitedLinks;
 
   return (
-    <RoleShell
-      areaLabel="老師專區"
-      links={isApproved ? approvedLinks : limitedLinks}
-    >
+    <RoleShell areaLabel="老師專區" links={links}>
       {children}
     </RoleShell>
   );

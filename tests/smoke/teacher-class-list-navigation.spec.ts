@@ -25,6 +25,7 @@ import { futureDateTime } from "./_helpers/future-dates";
 
 // teacher-usability-redesign 票 04：我的課程分類、建立入口、詳情返回上下文（含惡意來源）。
 // 票 05：系列頁逐場人數、跨老師隔離、系列 → 單堂 → 返回、整系列取消先確認。
+// 票 07：暫停老師的導覽有「我的課程」，只能查看，不能建課或看需求池。
 
 const testEmailDomain = "teacher-class-list-navigation-smoke.local";
 const createdEmails: string[] = [];
@@ -42,7 +43,11 @@ test.afterAll(async () => {
   await prisma.$disconnect();
 });
 
-async function seedTeacher(testRunId: string, label = "owner", status: "approved" | "suspended" = "approved") {
+async function seedTeacher(
+  testRunId: string,
+  label = "owner",
+  status: "approved" | "suspended" | "draft" | "submitted" | "rejected" = "approved",
+) {
   const email = `${label}-${testRunId}@${testEmailDomain}`;
   createdEmails.push(email);
   return createTeacherProfileWithSession({ email, displayName: `Teacher ${label} ${testRunId}`, status });
@@ -372,5 +377,70 @@ test.describe("teacher series management (ticket 05)", () => {
     ).toBe(0);
     // 系列本身還在。
     expect(await prisma.recurringClassSeries.count({ where: { id: series.id } })).toBe(1);
+  });
+});
+
+test.describe("suspended teacher navigation (ticket 07)", () => {
+  async function teacherNav(page: import("@playwright/test").Page) {
+    const menuButton = page.getByRole("button", { name: "選單" });
+    if (await menuButton.isVisible()) {
+      await menuButton.click();
+    }
+    return page.getByRole("navigation", { name: "老師專區導覽" });
+  }
+
+  test("only approved and suspended teachers get the 我的課程 entry; a suspended teacher can read own classes but still cannot create or browse demands", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-nav-${Date.now()}`,
+    );
+
+    for (const status of ["draft", "submitted", "rejected"] as const) {
+      const teacher = await seedTeacher(testRunId, status, status);
+      await context.clearCookies();
+      await addAuthSessionCookie(context, teacher.sessionToken);
+      await page.goto("/teacher/dashboard");
+      const nav = await teacherNav(page);
+      await expect(nav.getByRole("link", { name: "總覽" })).toBeVisible();
+      await expect(nav.getByRole("link", { name: "我的課程" })).toHaveCount(0);
+    }
+
+    const approved = await seedTeacher(testRunId, "approved-nav");
+    await context.clearCookies();
+    await addAuthSessionCookie(context, approved.sessionToken);
+    await page.goto("/teacher/dashboard");
+    let nav = await teacherNav(page);
+    await expect(nav.getByRole("link", { name: "我的課程" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "需求池" })).toBeVisible();
+
+    // 先以審核通過的身分開課，再暫停（暫停後不能開新課）。
+    const suspended = await seedTeacher(testRunId, "suspended-nav");
+    const ownClassId = await seedClass(suspended.teacherProfileId, `暫停前的課 ${testRunId}`, 60);
+    await prisma.teacherProfile.update({
+      where: { id: suspended.teacherProfileId },
+      data: { status: "suspended" },
+    });
+    const otherClassId = await seedClass(approved.teacherProfileId, `別人的課 ${testRunId}`, 61);
+    await context.clearCookies();
+    await addAuthSessionCookie(context, suspended.sessionToken);
+    await page.goto("/teacher/dashboard");
+    nav = await teacherNav(page);
+    await expect(nav.getByRole("link", { name: "需求池" })).toHaveCount(0);
+    await nav.getByRole("link", { name: "我的課程" }).click();
+    await expect(page).toHaveURL(/\/teacher\/classes$/);
+    await expect(page.getByText("老師資格目前暫停中")).toBeVisible();
+    await expect(page.getByRole("main").getByRole("link", { name: /建立課程/ })).toHaveCount(0);
+
+    // 本人既有課程可讀；別人的課仍 404；直接進建課頁仍被原守門擋下。
+    const own = await page.goto(`/teacher/classes/${ownClassId}`);
+    expect(own?.status()).toBe(200);
+    await expect(page.getByRole("heading", { level: 1, name: `暫停前的課 ${testRunId}` })).toBeVisible();
+    const other = await page.goto(`/teacher/classes/${otherClassId}`);
+    expect(other?.status()).toBe(404);
+    await page.goto("/teacher/classes/new");
+    await expect(page.getByRole("heading", { name: "老師資格已暫停" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "建立課程" })).toHaveCount(0);
   });
 });

@@ -99,6 +99,12 @@ export default async function TeacherClassesPage({ searchParams }: TeacherClasse
         </div>
       </header>
 
+      {profile?.status === "suspended" ? (
+        <p className="rounded-xl border border-ink/15 bg-white px-4 py-3 text-sm leading-6 text-ink-soft">
+          老師資格目前暫停中：你仍可以查看既有課程與報名名單，但暫時不能開新課或回應團主需求。暫停原因請見老師總覽。
+        </p>
+      ) : null}
+
       {feedback ? (
         <section
           aria-live="polite"
