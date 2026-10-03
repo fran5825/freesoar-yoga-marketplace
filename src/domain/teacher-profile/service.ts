@@ -246,6 +246,21 @@ export async function listSubmittedTeacherProfileApplicationsForAdmin(): Promise
   });
 }
 
+// admin-usability 票 13d：被退回的申請原本離開列表後就只能靠網址進詳情頁找。
+// 這裡回傳同一個 snapshot 形狀（含 rejectionReason），讓列表多一個「已退回」分頁。
+// 老師修改後重新送審會回到 submitted，自然離開這個分頁。
+export async function listRejectedTeacherProfilesForAdmin(): Promise<
+  SubmittedTeacherProfileApplication[]
+> {
+  await requireAdmin();
+
+  return prisma.teacherProfile.findMany({
+    where: { status: "rejected" },
+    orderBy: { updatedAt: "desc" },
+    select: submittedTeacherProfileApplicationSelect,
+  });
+}
+
 export async function saveOwnTeacherProfileDraft(
   input: TeacherProfileApplicationInput,
 ): Promise<TeacherProfileDraftSaveResult> {

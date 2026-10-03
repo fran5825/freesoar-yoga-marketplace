@@ -133,9 +133,19 @@ test.describe("/admin/teachers smoke", () => {
     );
     await page.goto("/admin/teachers?status=all");
     await expect(page.getByText(`Detail Approved ${testRunId}`)).toBeVisible();
-    // 草稿、已退回不在任何分頁。
+    // 草稿不在任何分頁；已退回在自己的分頁，不在「全部」以外的其他分頁。
     await expect(page.getByText(`Detail Draft ${testRunId}`)).toBeHidden();
+    await expect(page.getByText(`Detail Rejected ${testRunId}`)).toBeVisible();
+
+    await page.goto("/admin/teachers");
     await expect(page.getByText(`Detail Rejected ${testRunId}`)).toBeHidden();
+    await page.goto("/admin/teachers?status=rejected");
+    await expect(page.getByText(`Detail Rejected ${testRunId}`)).toBeVisible();
+    await expect(page.getByRole("link", { name: /已退回・\d+/ })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    await expect(page.getByText(`Detail Draft ${testRunId}`)).toBeHidden();
   });
 
   test("lets admin approve submitted teacher applications", async ({

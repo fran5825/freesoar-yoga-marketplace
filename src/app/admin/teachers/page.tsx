@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import {
   listApprovedAndSuspendedTeacherProfilesForAdmin,
+  listRejectedTeacherProfilesForAdmin,
   listSubmittedTeacherProfileApplicationsForAdmin,
 } from "@/domain/teacher-profile/service";
 import { formatRelativeTime } from "@/lib/format-relative-time";
@@ -18,12 +19,14 @@ import {
 type TeacherStatus = keyof typeof adminTeacherStatusLabels;
 
 // 票 06：預設停在「待審」，因為老師審核是管理員每天最常做的事；列表只放名稱、狀態、多久前、
-// 服務地區，完整資料與審核按鈕都在詳情頁。列表只涵蓋 submitted／approved／suspended
-// （草稿是老師私人資料、退回的申請不再需要處理，這兩種本來就不在列表裡）。
+// 服務地區，完整資料與審核按鈕都在詳情頁。列表涵蓋 submitted／approved／suspended／rejected
+// （草稿是老師私人資料，管理員看不到，不在任何分頁；票 13d 補上「已退回」分頁，不然退回後
+// 這位老師就從列表消失，只能靠網址進詳情頁找）。
 const statusTabs: { key: string; label: string; statuses: TeacherStatus[] | null }[] = [
   { key: "pending", label: "待審", statuses: ["submitted"] },
   { key: "approved", label: "已通過", statuses: ["approved"] },
   { key: "suspended", label: "已暫停", statuses: ["suspended"] },
+  { key: "rejected", label: "已退回", statuses: ["rejected"] },
   { key: "all", label: "全部", statuses: null },
 ];
 
@@ -31,6 +34,7 @@ const emptyMessages: Record<string, string> = {
   pending: "目前沒有待審核的老師申請。",
   approved: "目前沒有已通過的老師。",
   suspended: "目前沒有暫停中的老師。",
+  rejected: "目前沒有已退回的老師申請。",
   all: "目前沒有任何老師。",
 };
 
@@ -45,13 +49,14 @@ export default async function AdminTeachersPage({ searchParams }: AdminTeachersP
     notFound();
   }
 
-  const [submitted, approvedAndSuspended, resolvedSearchParams] = await Promise.all([
+  const [submitted, approvedAndSuspended, rejected, resolvedSearchParams] = await Promise.all([
     listSubmittedTeacherProfileApplicationsForAdmin(),
     listApprovedAndSuspendedTeacherProfilesForAdmin(),
+    listRejectedTeacherProfilesForAdmin(),
     searchParams,
   ]);
 
-  const teachers = [...submitted, ...approvedAndSuspended];
+  const teachers = [...submitted, ...approvedAndSuspended, ...rejected];
   const now = new Date();
 
   const tabs = statusTabs.map((tab) => ({
