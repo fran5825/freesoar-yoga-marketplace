@@ -93,7 +93,7 @@ export default async function NewClassSessionPage({
         </section>
       ) : null}
 
-      <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
+      <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-4 sm:p-6">
         <ClassSessionCreateForm defaults={formDefaults} />
       </section>
     </div>

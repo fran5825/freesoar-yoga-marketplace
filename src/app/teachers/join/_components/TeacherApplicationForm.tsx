@@ -718,10 +718,7 @@ export function TeacherApplicationForm() {
     isHydrated && mutationBlockedStatus === null && hydratedProfileStatus !== "submitted";
   const hasUnsavedChanges =
     savedSnapshotKey !== null && JSON.stringify(formState) !== savedSnapshotKey;
-  useUnsavedChangesWarning(
-    isEditable && hasUnsavedChanges && !isSubmitting,
-    unsavedApplicationMessage,
-  );
+  useUnsavedChangesWarning(isEditable && hasUnsavedChanges, unsavedApplicationMessage);
   const statusBadge = mutationBlockedCopy
     ? {
         label: mutationBlockedCopy.saveButton,
@@ -868,6 +865,8 @@ export function TeacherApplicationForm() {
       const result = await submitTeacherProfileApplicationAction(sentState);
 
       if (result.ok) {
+        // 唯讀摘要要顯示實際送出的內容。
+        setFormState(sentState);
         setSavedSnapshotKey(JSON.stringify(sentState));
         setHydratedProfileStatus(result.profile.status);
         setIsConfirmingSubmit(false);
@@ -938,7 +937,8 @@ export function TeacherApplicationForm() {
         ) : null}
 
         <FieldControl
-          disabled={mutationBlockedStatus !== null}
+          // 送審中鎖住欄位，避免畫面跟實際送出的內容不一致。
+          disabled={mutationBlockedStatus !== null || isSubmitting}
           field={field}
           inputId={inputId}
           onChange={(value) => updateField(field.name, value)}

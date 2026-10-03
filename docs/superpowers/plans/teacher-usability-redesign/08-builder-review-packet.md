@@ -32,6 +32,7 @@
 | `npx tsc --noEmit` | 通過（每票） |
 | `npx eslint`（老師相關目錄） | 通過（每票） |
 | `npm run build` | 通過（每票改 source 後重建） |
+| Codex review 第 1 輪修正後（PORT=3200） | `npm run build` 通過；`teacher-class-usability`、`teacher-recurring-class-series`、`teacher-join`、`teacher-class-detail-page`、`class-yoga-styles` 76 個通過；新增「送審中欄位鎖住、唯讀摘要＝送出內容」測試 2 個通過（桌機＋手機） |
 | 完整老師旅程 Playwright（`teacher-*.spec.ts`＋建課／報名審核／取消／完成／建立入口，桌機＋手機，PORT=3200） | 284 個中 283 通過；1 個（`class-session-completion.spec.ts:209` 團主標記完成，桌機）單獨重跑 8/8 通過，判定為負載下偶發 |
 
 限制與未處理的既有失敗（不在本工作範圍，未修改）：
@@ -47,6 +48,7 @@
 - 所有頁面無橫向捲動；main 內按鈕、連結、單選卡片、收合標題高度 ≥ 44px。
 - 建課錯誤後焦點到第一個可修正欄位；申請缺項時焦點到第一個缺項；確認視窗預設焦點在「先不要」、Escape 關閉、焦點回觸發按鈕；單選可用方向鍵切換；建課與列表可用 Tab 走到主要操作。
 - 長課名、長地址、長備註、26 場日期清單（建課摘要兩欄、取消視窗內捲動）都正常換行。
+- Codex review 第 1 輪後實測：月曆前後月按鈕、單堂詳情系列標籤在三種寬度皆 44px；月曆日期格 768px 寬 90、1440px 寬 51、高 44；**375px 寬 42、高 44**（七欄已貼齊老師專區頁寬，差 2px，需改共用外框才能再加寬，列為已知限制）。
 - 已知限制：課程風格／瑜伽類型／擅長類型標籤用共用 `TagCheckbox`（`src/app/_components/tag-checkbox.tsx`，約 32px 高），其他角色也在用，不在本工作允許範圍。
 
 ## 5. Self review
@@ -68,9 +70,19 @@
 - 票 08 修改既有 `teacher-recurring-class-series.spec.ts` 的寫死日期（2026-10-05 起），避免明天開始失敗；只改測試資料日期，斷言不變。
 - 沒有其他超出票券的改動。
 
-## 7. 需要產品主人決定的事
+### Codex peer review 第 1 輪後的修正（2026-10-04）
+
+- 離頁提醒在送出中也保持啟用（建課、申請）：成功 redirect 是 router 導覽，不經過連結點擊或 beforeunload，不會被攔；送出中點連結離開會先問。
+- 老師申請送審中鎖住所有欄位；送審成功後唯讀摘要改用實際送出的 snapshot，不會顯示送出後才改的內容。
+- 建課結果不確定時不提供重送：`series_create_failed` 與新的 `result_unknown`（service 拋出例外時由 action 回傳，redirect 仍在 try/catch 外）都會隱藏建立按鈕；系列兩種模式共用這個判斷，切換模式也擋住。錯誤標題只有在確定寫入前失敗（驗證、時段衝突、未登入、無老師資料）時才寫「還沒建立」，其他寫「建立沒有完成」。
+- 觸控目標：月曆前後月按鈕 `min-h-11 min-w-11`；月曆改手機一欄、`lg` 以上兩欄，日期格 `min-h-11` 且不留間距；手機建課卡片內距 `p-4`；單堂詳情的系列標籤連結 `min-h-11`。
+
+## 7. 需要產品主人決定的事與已知限制
 
 - `TagCheckbox` 觸控高度約 32px（規格要求 44px）。這是全站共用元件（團主需求、老師資料也在用），改它會影響其他角色畫面。建議另開一張小票統一調整。
+- 系列「已建立但場次生成失敗」時，service 回傳結果不含系列 id；若系列一場都沒生成，「我的課程」只從場次列出系列入口，找不到它。要讓畫面直接帶到系列頁，需要 `createOwnRecurringClassSeriesForTeacher` 失敗結果多回傳 `recurringClassSeriesId`（domain service 回傳值變更，不在本次授權範圍）。目前做法：不提供重送、說明可能已建立並引導到我的課程（全部）或聯絡平台。
+- 瀏覽器「上一頁／下一頁」不會觸發離頁提醒：Next.js App Router 沒有可靠攔截 popstate 的公開 API，自行改寫 history 會破壞 router 狀態。目前涵蓋關閉分頁、重新整理、輸入網址與站內連結。
+- 系列場次不列在公開「找課程」，學員要有該場連結才能報名，但老師詳情頁沒有「複製報名連結」按鈕，老師要自己把網址的 `/teacher` 拿掉。產品主人已在使用中遇到這個問題，建議另開小票加上分享連結。
 
 ## Recommended Next Step（Common Handoff Schema）
 

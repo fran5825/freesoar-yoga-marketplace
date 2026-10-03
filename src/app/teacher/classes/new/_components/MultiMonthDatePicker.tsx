@@ -57,7 +57,7 @@ export function MultiMonthDatePicker({
       <div className="flex items-center justify-between gap-2">
         <button
           aria-label="往前一個月"
-          className="rounded-full border border-ink/20 px-3 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:text-ink-faint"
+          className="min-h-11 min-w-11 rounded-full border border-ink/20 px-3 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:text-ink-faint"
           disabled={isAtFirstMonth}
           onClick={() => setStartMonth(addMonths(startMonth, -1))}
           type="button"
@@ -69,7 +69,7 @@ export function MultiMonthDatePicker({
         </p>
         <button
           aria-label="往後一個月"
-          className="rounded-full border border-ink/20 px-3 py-1.5 text-sm text-ink"
+          className="min-h-11 min-w-11 rounded-full border border-ink/20 px-3 py-1.5 text-sm text-ink"
           onClick={() => setStartMonth(addMonths(startMonth, 1))}
           type="button"
         >
@@ -77,7 +77,7 @@ export function MultiMonthDatePicker({
         </button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-2">
         {months.map(({ year, month }) => {
           const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
           const firstWeekday = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
@@ -85,7 +85,7 @@ export function MultiMonthDatePicker({
           return (
             <div
               aria-label={`${year} 年 ${month} 月`}
-              className="min-w-0 rounded-2xl border border-ink/10 bg-cream/60 p-3"
+              className="min-w-0 rounded-2xl border border-ink/10 bg-cream/60 p-1 sm:p-3"
               key={`${year}-${month}`}
               role="group"
             >
@@ -97,7 +97,7 @@ export function MultiMonthDatePicker({
                   <span key={label}>{label}</span>
                 ))}
               </div>
-              <div className="mt-1 grid grid-cols-7 gap-1">
+              <div className="mt-1 grid grid-cols-7">
                 {Array.from({ length: firstWeekday }, (_, index) => (
                   <span aria-hidden="true" key={`blank-${index}`} />
                 ))}
@@ -112,7 +112,7 @@ export function MultiMonthDatePicker({
                     <button
                       aria-label={`${year} 年 ${month} 月 ${day} 日`}
                       aria-pressed={isSelected}
-                      className={`aspect-square rounded-full text-sm transition ${
+                      className={`min-h-11 rounded-full text-sm transition ${
                         isSelected
                           ? "bg-pine font-medium text-white"
                           : isDisabled

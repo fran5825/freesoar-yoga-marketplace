@@ -308,7 +308,7 @@ export default async function TeacherClassSessionDetailPage({
           </span>
           {classSession.recurringClassSeriesId ? (
             <Link
-              className="w-fit rounded-full bg-pine-tint px-3 py-1 text-xs font-medium text-pine transition hover:bg-pine/15"
+              className="inline-flex min-h-11 w-fit items-center rounded-full bg-pine-tint px-4 text-xs font-medium text-pine transition hover:bg-pine/15"
               href={`/teacher/classes/series/${classSession.recurringClassSeriesId}`}
             >
               系列：{classSession.recurringClassSeries?.title ?? "課程系列"}

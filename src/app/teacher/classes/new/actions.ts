@@ -14,7 +14,10 @@ export async function createOwnClassSessionAction(
   _previousState: CreateClassFormState,
   formData: FormData,
 ): Promise<CreateClassFormState> {
-  const result = await createOwnClassSessionForTeacher({
+  let result: Awaited<ReturnType<typeof createOwnClassSessionForTeacher>>;
+
+  try {
+    result = await createOwnClassSessionForTeacher({
     title: readFormString(formData, "title"),
     description: readFormString(formData, "description"),
     serviceTypes: readServiceTypesFromForm(formData),
@@ -25,7 +28,11 @@ export async function createOwnClassSessionAction(
     capacity: readFormNumber(formData, "capacity"),
     isPublic: formData.get("isPublic") === "yes",
     requiresApproval: formData.get("requiresApproval") === "yes",
-  });
+    });
+  } catch {
+    // 伺服器處理到一半出錯：不知道有沒有寫入，不能讓使用者直接重送。
+    return { status: "error", mode: "single", code: "result_unknown", message: RESULT_UNKNOWN_MESSAGE, fieldErrors: {} };
+  }
 
   if (!result.ok) {
     const fieldErrors = buildCreateClassFieldErrors(result.validationErrors);
@@ -53,6 +60,9 @@ export async function createOwnClassSessionAction(
     )}`,
   );
 }
+
+const RESULT_UNKNOWN_MESSAGE =
+  "建立結果無法確認：可能已經建立，也可能沒有。";
 
 function readFormString(formData: FormData, name: string): string {
   const value = formData.get(name);

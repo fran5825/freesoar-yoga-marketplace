@@ -591,6 +591,32 @@ test.describe("teacher application usability (ticket 06)", () => {
     expect(profile).toMatchObject({ status: "submitted", displayName });
   });
 
+  test("fields are locked while the submission is in flight, and the read-only summary shows exactly what was submitted", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const email = await signInFresh(context, "inflight", testInfo);
+    await page.goto("/teachers/join");
+    const displayName = `送審中老師 ${Date.now()}`;
+    await fillRequired(page, displayName);
+    await page.getByRole("button", { name: "送出審核" }).first().click();
+
+    // 讓送審請求晚 1.5 秒才送到伺服器，期間欄位應該不能改。
+    await page.route("**/teachers/join", async (route) => {
+      if (route.request().method() === "POST") {
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+      await route.continue();
+    });
+    await page.getByRole("button", { name: "確認送出審核" }).first().click();
+    await expect(page.getByLabel("公開顯示名稱")).toBeDisabled();
+    await expect(page.getByText("你的老師申請正在審核")).toBeVisible();
+    await expect(page.getByText(displayName).first()).toBeVisible();
+    const profile = await prisma.teacherProfile.findFirstOrThrow({ where: { user: { email } } });
+    expect(profile.displayName).toBe(displayName);
+    await page.unrouteAll({ behavior: "ignoreErrors" });
+  });
+
   test("a save only counts what was sent: edits typed while saving stay unsaved; a stalled save says it cannot tell instead of claiming success", async ({
     context,
     page,

@@ -41,7 +41,20 @@ export async function createOwnRecurringClassSeriesAction(
         : undefined,
   };
 
-  const result = await createOwnRecurringClassSeriesForTeacher(input);
+  let result: Awaited<ReturnType<typeof createOwnRecurringClassSeriesForTeacher>>;
+
+  try {
+    result = await createOwnRecurringClassSeriesForTeacher(input);
+  } catch {
+    // 系列可能已建立、場次生成到一半出錯：結果不確定，不能讓使用者直接重送。
+    return {
+      status: "error",
+      mode: mode === "fixed_dates" ? "fixed_dates" : "weekly",
+      code: "result_unknown",
+      message: "建立結果無法確認：系列可能已經建立，也可能沒有。",
+      fieldErrors: {},
+    };
+  }
 
   if (!result.ok) {
     return {

@@ -190,6 +190,16 @@ function focusFirstError(state: CreateClassFormState) {
 
 const WEEKLY_GENERATE_COUNT_MAX = 26;
 
+// 這些錯誤代表結果不確定，再送一次可能重複建立。
+const RESUBMIT_BLOCKING_CODES = ["series_create_failed", "result_unknown"];
+// 這些錯誤發生在寫入之前，可以確定還沒建立。
+const NOT_WRITTEN_CODES = [
+  "validation_failed",
+  "teacher_schedule_conflict",
+  "authentication_required",
+  "teacher_profile_required",
+];
+
 type FieldErrors = Partial<Record<CreateClassFormField, string[]>>;
 
 // teacher-initiated-open-classes Slice B：三個模式各自是獨立的 <form>，每個 form 的 action 一律綁定
@@ -250,7 +260,8 @@ export function ClassSessionCreateForm({
   }
 
   const isDirty = JSON.stringify({ shared, modeFields }) !== initialSnapshot;
-  useUnsavedChangesWarning(isDirty && !isPending);
+  // 送出中也保持提醒：成功後的 redirect 是 router 導覽，不經過連結點擊或 beforeunload，不會被攔。
+  useUnsavedChangesWarning(isDirty);
 
   useEffect(() => focusFirstError(singleFormState), [singleFormState]);
   useEffect(() => focusFirstError(seriesFormState), [seriesFormState]);
@@ -293,8 +304,15 @@ export function ClassSessionCreateForm({
         ),
       )
     : {};
-  // 系列已建立但場次生成失敗：再按一次會多建一個系列，所以不提供重送，改引導到我的課程。
-  const isSeriesCreatedButFailed = activeFormState?.code === "series_create_failed";
+  // 建立結果不確定（系列已建立但場次生成失敗，或伺服器回應異常）：再按一次可能重複建立，
+  // 所以不提供重送。系列兩種模式共用，切換模式也一樣擋住。
+  const blockingSourceState = mode === "single" ? singleFormState : seriesFormState;
+  const blockingState =
+    blockingSourceState.status === "error" && RESUBMIT_BLOCKING_CODES.includes(blockingSourceState.code)
+      ? blockingSourceState
+      : null;
+  const isSeriesCreatedButFailed = blockingState !== null;
+  const bannerState = activeFormState ?? blockingState;
 
   const startTimeString = toTimeString(shared.startTime);
   const endTimeString = toTimeString(shared.endTime);
@@ -423,7 +441,7 @@ export function ClassSessionCreateForm({
     "如果某個日期跟你其他課程的時段衝突，那一天會跳過不建立，建立後會列出來。",
   ];
 
-  const formErrorBanner = activeFormState ? (
+  const formErrorBanner = bannerState ? (
     <div
       className="rounded-xl border border-clay/40 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep"
       id="create-form-error"
@@ -432,19 +450,22 @@ export function ClassSessionCreateForm({
     >
       {isSeriesCreatedButFailed ? (
         <>
-          <p className="font-medium">{activeFormState.message}</p>
+          <p className="font-medium">{bannerState.message}</p>
           <p>
-            系列本身已經建立，請不要再按一次建立（會多出一個系列）。請到
-            <Link className="mx-1 underline" href="/teacher/classes">
-              我的課程
+            為了避免重複建立，這裡先不提供再次送出。請到
+            <Link className="mx-1 underline" href="/teacher/classes?tab=all">
+              我的課程（全部）
             </Link>
-            找到這個系列再處理。
+            確認是否已經建立；如果系列沒有任何場次而找不到，請聯絡平台協助處理。
           </p>
         </>
       ) : (
         <>
           <p className="font-medium">
-            {mode === "single" ? "課程" : "課程系列"}還沒建立：{activeFormState.message}
+            {NOT_WRITTEN_CODES.includes(bannerState.code)
+              ? `${mode === "single" ? "課程" : "課程系列"}還沒建立：`
+              : "建立沒有完成："}
+            {bannerState.message}
           </p>
           <p>
             你填的內容都還在，修正標示的欄位後再按一次「{mode === "single" ? "建立課程" : "建立課程系列"}」。
