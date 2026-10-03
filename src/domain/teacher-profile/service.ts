@@ -533,7 +533,7 @@ export async function approveSubmittedTeacherProfileApplication(
         return {
           ok: false,
           code: "teacher_profile_not_found",
-          message: "TeacherProfile application was not found.",
+          message: "找不到這份老師申請。",
         };
       }
 
@@ -546,7 +546,7 @@ export async function approveSubmittedTeacherProfileApplication(
           ok: false,
           code: "teacher_profile_not_submitted",
           message:
-            "Only submitted TeacherProfile applications can be approved.",
+            "這份申請不是待審核狀態，可能剛才已經被處理過，請重新整理頁面確認。",
         };
       }
     }
@@ -573,14 +573,14 @@ export async function approveSubmittedTeacherProfileApplication(
       return {
         ok: false,
         code: "admin_permission_required",
-        message: "Admin permission is required to approve TeacherProfile.",
+        message: "需要管理員權限才能通過這份申請。",
       };
     }
 
     return {
       ok: false,
       code: "teacher_profile_approve_failed",
-      message: "TeacherProfile application could not be approved.",
+      message: "申請暫時無法通過，請稍後再試。",
     };
   }
 }
@@ -626,7 +626,7 @@ export async function rejectSubmittedTeacherProfileApplication(
         return {
           ok: false,
           code: "teacher_profile_not_found",
-          message: "TeacherProfile application was not found.",
+          message: "找不到這份老師申請。",
         };
       }
 
@@ -639,7 +639,7 @@ export async function rejectSubmittedTeacherProfileApplication(
           ok: false,
           code: "teacher_profile_not_submitted",
           message:
-            "Only submitted TeacherProfile applications can be rejected.",
+            "這份申請不是待審核狀態，可能剛才已經被處理過，請重新整理頁面確認。",
         };
       }
     }
@@ -668,14 +668,14 @@ export async function rejectSubmittedTeacherProfileApplication(
       return {
         ok: false,
         code: "admin_permission_required",
-        message: "Admin permission is required to reject TeacherProfile.",
+        message: "需要管理員權限才能退回這份申請。",
       };
     }
 
     return {
       ok: false,
       code: "teacher_profile_reject_failed",
-      message: "TeacherProfile application could not be rejected.",
+      message: "申請暫時無法退回，請稍後再試。",
     };
   }
 }
