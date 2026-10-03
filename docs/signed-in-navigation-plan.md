@@ -34,6 +34,10 @@
 ## 需要注意的前置查證（動工前先做）
 
 - 決策 4、5：Next.js 16 用 `src/proxy.ts`（原 middleware）在進入 `/member`、`/teacher`、`/organizer`、`/admin` 時寫 cookie；確認不影響 Auth.js 的登入流程與既有 cookie。cookie 只存身分代號，不存任何個資。
+  - 2026-10-04 修正（`docs/superpowers/plans/member-flow-redesign/tickets/01-fix-last-role-prefetch.md`）：背景預先載入（prefetch）不算「進入」。原本 proxy 對所有 `/member/*` 等請求都寫 cookie，老師只是逛了套學員外框的 `/classes`，導覽列連結被 Next.js 預先載入就變成學員。Next.js 會在 proxy 之前拿掉 prefetch header，proxy 分不出預先載入與站內換頁，所以拆成兩條路：
+    - 整頁載入：`src/proxy.ts` 只在 `sec-fetch-dest: document`（或沒有這個 header 的非瀏覽器請求）時寫入。
+    - 站內換頁（點 logo、導覽列、切換身分選單）：四個專區 layout 放 `RememberLastRole`（`src/app/_components/remember-last-role.tsx`），畫面實際出現、且每次專區內換頁完成時呼叫 server action `rememberLastRole`（`src/lib/navigation/remember-last-role-action.ts`）。server action 讀當下 cookie，不同才寫，避免其他分頁改過後本分頁漏記；只接受合法身分代號。
+    - 兩條路共用 `lastRoleCookieOptions`（`src/lib/navigation/last-role-cookie.ts`），cookie 屬性一致。
 - 決策 2：`/classes` 系列的訪客分支（`getPublicClassSessionDetail`）與登入分支要分別套不同外框，不能讓訪客資料路徑改變。
 - 決策 3：角色切換的「目前身分」現在靠網址前綴判斷，`/classes`、`/about` 這類頁面沒有前綴，要改成依外框傳入的身分判斷。
 - 決策 8：上次身分失效的判斷要沿用 `getRoleSwitchOptions` 已有的身分判斷，不另寫一套。

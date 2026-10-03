@@ -83,6 +83,108 @@ test.describe("signed-in navigation", () => {
     await expect(page).toHaveURL(/\/teacher\/dashboard$/);
   });
 
+  // member-flow-redesign 票 01：/classes 套學員外框，導覽列的 /member/* 會被背景預先載入；
+  // 預先載入不算進入學員專區，真的點進去才算。
+  test("background prefetch of member links does not change the last-used area; actually entering the member area does", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const id = runId(testInfo, "prefetch");
+    const { sessionToken } = await seedTeacher(id, "submitted");
+    await addAuthSessionCookie(context, sessionToken);
+    const lastRole = async () =>
+      (await context.cookies()).find((cookie) => cookie.name === "fsy_last_role")?.value;
+
+    await page.goto("/teacher/dashboard");
+    expect(await lastRole()).toBe("teacher");
+
+    const memberPrefetch = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname.startsWith("/member/") &&
+        response.request().headers()["next-router-prefetch"] !== undefined,
+    );
+    await page.goto("/classes");
+    await memberPrefetch;
+    expect(await lastRole()).toBe("teacher");
+
+    await page.goto("/");
+    await expect(page).toHaveURL(/\/teacher\/dashboard$/);
+
+    // 從 /classes 點 logo 真的進入學員總覽：上次身分改為學員。
+    await page.goto("/classes");
+    await page.getByRole("banner").getByRole("link", { name: /飛索・瑜伽團課共創平台/ }).click();
+    await expect(page).toHaveURL(/\/member\/dashboard$/);
+    await expect.poll(lastRole).toBe("member");
+    await page.goto("/");
+    await expect(page).toHaveURL(/\/member\/dashboard$/);
+  });
+
+  // 同專區換頁會重用 layout；另一個分頁改掉 cookie 後，這個分頁在同專區換頁也要寫回。
+  test("navigating inside an area rewrites the last-used area even after another tab changed it", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const id = runId(testInfo, "tabs");
+    const { sessionToken } = await seedTeacher(id, "submitted");
+    await addAuthSessionCookie(context, sessionToken);
+    const lastRole = async () =>
+      (await context.cookies()).find((cookie) => cookie.name === "fsy_last_role")?.value;
+
+    await page.goto("/teacher/dashboard");
+    expect(await lastRole()).toBe("teacher");
+    // 等這個分頁掛載時送出的記錄請求完成，避免它晚於另一個分頁抵達而蓋掉 member。
+    await page.waitForLoadState("networkidle");
+
+    const otherTab = await context.newPage();
+    await otherTab.goto("/member/dashboard");
+    expect(await lastRole()).toBe("member");
+    await otherTab.close();
+
+    const menuButton = page.getByRole("banner").getByRole("button", { name: "選單", exact: true });
+    if (await menuButton.isVisible()) {
+      await menuButton.click();
+    }
+    await page.getByRole("link", { name: "通知", exact: true }).click();
+    await expect(page).toHaveURL(/\/teacher\/notifications$/);
+    await expect.poll(lastRole).toBe("teacher");
+
+    await page.goto("/");
+    await expect(page).toHaveURL(/\/teacher\/dashboard$/);
+  });
+
+  test("switching role from the menu updates the last-used area each time", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const id = runId(testInfo, "switch");
+    const { sessionToken } = await seedTeacher(id, "submitted");
+    await addAuthSessionCookie(context, sessionToken);
+    const lastRole = async () =>
+      (await context.cookies()).find((cookie) => cookie.name === "fsy_last_role")?.value;
+    const switchTo = async (label: string) => {
+      const menuButton = page.getByRole("banner").getByRole("button", { name: "選單", exact: true });
+      if (await menuButton.isVisible()) {
+        await menuButton.click();
+      }
+      await page.getByRole("button", { name: /目前身分/ }).click();
+      await page.locator("#role-switch-menu").getByRole("link", { name: label, exact: true }).click();
+    };
+
+    await page.goto("/teacher/dashboard");
+
+    await switchTo("學員");
+    await expect(page).toHaveURL(/\/member\/dashboard$/);
+    await expect.poll(lastRole).toBe("member");
+    await page.goto("/");
+    await expect(page).toHaveURL(/\/member\/dashboard$/);
+
+    await switchTo("老師");
+    await expect(page).toHaveURL(/\/teacher\/dashboard$/);
+    await expect.poll(lastRole).toBe("teacher");
+    await page.goto("/");
+    await expect(page).toHaveURL(/\/teacher\/dashboard$/);
+  });
+
   test("a remembered role the user no longer has falls back to the member dashboard", async ({
     context,
     page,

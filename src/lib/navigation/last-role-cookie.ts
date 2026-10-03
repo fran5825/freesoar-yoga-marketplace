@@ -18,6 +18,17 @@ export const LAST_ROLE_HOME: Record<LastRole, string> = {
 // 一年：只是記住使用者習慣，過期了就從學員開始，沒有安全上的影響。
 export const LAST_ROLE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
+// proxy（整頁載入）與 remember-last-role（站內換頁）兩條寫入路徑共用，屬性必須一致。
+export function lastRoleCookieOptions(secure: boolean) {
+  return {
+    httpOnly: true,
+    maxAge: LAST_ROLE_MAX_AGE_SECONDS,
+    path: "/",
+    sameSite: "lax" as const,
+    secure,
+  };
+}
+
 const AREA_PREFIXES: [string, LastRole][] = [
   ["/member", "member"],
   ["/teacher", "teacher"],

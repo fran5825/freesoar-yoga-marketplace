@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 
 import { requireAdmin } from "@/lib/auth/session";
 
+import { RememberLastRole } from "../_components/remember-last-role";
+
 import { AdminShell } from "./_components/AdminShell";
 
 // 2026-09-26 admin-usability 票 01：/admin/* 全部頁面共用的導覽列與頁寬。
@@ -15,5 +17,10 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     notFound();
   }
 
-  return <AdminShell>{children}</AdminShell>;
+  return (
+    <AdminShell>
+      <RememberLastRole role="admin" />
+      {children}
+    </AdminShell>
+  );
 }
