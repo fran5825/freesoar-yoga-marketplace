@@ -82,7 +82,6 @@ test.describe("teacher recurring class series smoke", () => {
     await page.getByText("哈達瑜伽", { exact: true }).click();
     // 選填的起始日期：第一場是這一天（含）起的第一個週一。
     await page.locator("#weekly-startDate").fill(weeklyStartDate);
-    await page.locator("#weekly-confirmCreate").check();
     await page.getByRole("button", { name: "建立課程系列" }).click();
 
     await expect(page.getByText(/課程系列已建立，共生成 3 場/)).toBeVisible();
@@ -169,7 +168,6 @@ test.describe("teacher recurring class series smoke", () => {
     await selectFormTime(page, "weekly-", "end", "11:00");
     await page.locator("#weekly-location").fill(baseSeriesInput.location);
     await page.locator("#weekly-capacity").fill("10");
-    await page.locator("#weekly-confirmCreate").check();
     await page.getByRole("button", { name: "建立課程系列" }).click();
     await expect(page).toHaveURL(/\/teacher\/classes\/new$/);
     expect(
@@ -279,7 +277,6 @@ test.describe("teacher recurring class series smoke", () => {
     await addFixedDate(page, "2026-10-26");
     await expect(page.getByText("已選 3 / 26")).toBeVisible();
     await page.getByText("哈達瑜伽", { exact: true }).click();
-    await page.locator("#fixed-confirmCreate").check();
     await page.getByRole("button", { name: "建立課程系列" }).click();
 
     await expect(page.getByText(/共生成 2 場/)).toBeVisible();

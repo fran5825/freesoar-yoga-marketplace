@@ -5,11 +5,7 @@ import { redirect } from "next/navigation";
 
 import { createOwnClassSessionForTeacher } from "@/domain/class-session/service";
 
-import {
-  formFieldForValidationField,
-  type CreateClassFormField,
-  type CreateClassFormState,
-} from "./_lib/form-state";
+import { buildCreateClassFieldErrors, type CreateClassFormState } from "./_lib/form-state";
 import { readServiceTypesFromForm, readYogaStylesFromForm } from "./read-yoga-styles";
 
 // teacher-usability-redesign 票 01：失敗時回傳結果給表單（useActionState），表單留在原頁、保留輸入；
@@ -32,10 +28,19 @@ export async function createOwnClassSessionAction(
   });
 
   if (!result.ok) {
+    const fieldErrors = buildCreateClassFieldErrors(result.validationErrors);
+
+    // 時段衝突沒有 validationErrors，錯誤說明直接放在時間欄位旁邊。
+    if (result.code === "teacher_schedule_conflict") {
+      fieldErrors.time = [...(fieldErrors.time ?? []), result.message];
+    }
+
     return {
       status: "error",
+      mode: "single",
+      code: result.code,
       message: result.message,
-      fieldErrors: buildFieldErrors(result.code, result.message, result.validationErrors),
+      fieldErrors,
     };
   }
 
@@ -65,27 +70,4 @@ function readFormNumber(formData: FormData, name: string): number | null {
   const parsed = Number(value);
 
   return Number.isFinite(parsed) ? parsed : null;
-}
-
-function buildFieldErrors(
-  code: string,
-  message: string,
-  validationErrors?: { field: string; message: string }[],
-): Partial<Record<CreateClassFormField, string[]>> {
-  const fieldErrors: Partial<Record<CreateClassFormField, string[]>> = {};
-
-  for (const error of validationErrors ?? []) {
-    const field = formFieldForValidationField(error.field);
-
-    if (field) {
-      fieldErrors[field] = [...(fieldErrors[field] ?? []), error.message];
-    }
-  }
-
-  // 時段衝突沒有 validationErrors，錯誤說明直接放在時間欄位旁邊。
-  if (code === "teacher_schedule_conflict") {
-    fieldErrors.time = [...(fieldErrors.time ?? []), message];
-  }
-
-  return fieldErrors;
 }

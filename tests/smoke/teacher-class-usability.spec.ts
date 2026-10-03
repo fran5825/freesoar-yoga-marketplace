@@ -11,18 +11,21 @@ import {
   cleanupDemandResponseFixtures,
   createTeacherProfileWithSession,
 } from "./_helpers/demand-response-fixtures";
-import { futureDateString, futureDateTime } from "./_helpers/future-dates";
-import { pickServiceType } from "./_helpers/class-form";
+import { futureDateString, futureDateTime, futureWeekdayDateString } from "./_helpers/future-dates";
+import { addFixedDate, pickServiceType } from "./_helpers/class-form";
 import { selectFormTime } from "./_helpers/time-select";
 
-// teacher-usability-redesign 票 01：單堂開課的結果驗證——
-// 失敗留在原頁且保留輸入與摘要、摘要＝實際建立的值、成功只建立一堂草稿、未建立就離頁會提醒。
+// teacher-usability-redesign 票 01、02：開課的結果驗證——
+// 失敗留在原頁且保留輸入與摘要、摘要＝實際建立的值、成功只建立草稿、未建立就離頁會提醒。
 
 const testEmailDomain = "teacher-class-usability-smoke.local";
 const createdEmails: string[] = [];
 
 test.afterAll(async () => {
   await prisma.classSession.deleteMany({
+    where: { teacherProfile: { user: { email: { in: createdEmails } } } },
+  });
+  await prisma.recurringClassSeries.deleteMany({
     where: { teacherProfile: { user: { email: { in: createdEmails } } } },
   });
   await cleanupDemandResponseFixtures(createdEmails);
@@ -252,4 +255,121 @@ test.describe("teacher single-class creation usability (ticket 01)", () => {
     await expect(page).toHaveURL(/\/teacher\/dashboard/);
     expect(dialogs).toHaveLength(1);
   });
+
+  test("weekly series: a rejected start date keeps every input; the summary lists the exact dates that then get created as non-public drafts", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-weekly-${Date.now()}`,
+    );
+    const teacher = await seedApprovedTeacher(testRunId);
+
+    await addAuthSessionCookie(context, teacher.sessionToken);
+    await page.goto("/teacher/classes/new");
+    await page.getByRole("button", { name: "每週固定" }).click();
+    await expect(page.locator("#weekly-confirmCreate")).toHaveCount(0);
+    await expect(summary(page)).toContainText("不列在公開課程列表");
+
+    const title = `每週系列 ${testRunId}`;
+    await page.locator("#weekly-title").fill(title);
+    await pickServiceType(page, "放鬆紓壓");
+    await page.getByText("哈達瑜伽", { exact: true }).click();
+    // 起始日期填今天：瀏覽器端不擋，由既有驗證拒絕（需晚於今天）。
+    await page.locator("#weekly-startDate").fill(futureDateString(0));
+    await selectFormTime(page, "weekly-", "start", "18:00");
+    await selectFormTime(page, "weekly-", "end", "19:00");
+    await page.locator("#weekly-location").fill("台北市每週教室");
+    await page.locator("#weekly-capacity").fill("6");
+    await page.locator("#weekly-generateCount").fill("3");
+    await page.getByRole("button", { name: "建立課程系列" }).click();
+
+    await expect(page.getByRole("alert").filter({ hasText: "課程系列還沒建立" })).toBeVisible();
+    await expect(page.locator("#weekly-startDate-error")).toContainText("起始日期需晚於今天");
+    await expect(page.locator("#weekly-startDate")).toBeFocused();
+    await expect(page.locator("#weekly-title")).toHaveValue(title);
+    await expect(page.locator("#weekly-generateCount")).toHaveValue("3");
+    await expect(page.locator("#weekly-location")).toHaveValue("台北市每週教室");
+    expect(
+      await prisma.recurringClassSeries.count({ where: { teacherProfileId: teacher.teacherProfileId } }),
+    ).toBe(0);
+
+    // 改成兩週後的同一個星期幾：摘要列出 3 個實際日期，建立結果要完全一樣。
+    const weekday = Number(await page.locator("#weekly-dayOfWeek").inputValue());
+    const startDate = futureWeekdayDateString(14, weekday);
+    await page.locator("#weekly-startDate").fill(startDate);
+    await expect(page.locator("#weekly-startDate-error")).toHaveCount(0);
+    const summaryDates = summary(page).getByRole("list", { name: "會建立的上課日期" }).getByRole("listitem");
+    await expect(summaryDates).toHaveCount(3);
+    await expect(summaryDates.first()).toContainText(startDate);
+    const listedDates = (await summaryDates.allTextContents()).map((text) => text.slice(0, 10));
+
+    await page.getByRole("button", { name: "建立課程系列" }).click();
+    await expect(page.getByText(/課程系列已建立，共生成 3 場。每一場目前都是草稿，請逐堂開放報名/)).toBeVisible();
+
+    const sessions = await prisma.classSession.findMany({
+      where: { teacherProfileId: teacher.teacherProfileId, recurringClassSeriesId: { not: null } },
+      orderBy: { startAt: "asc" },
+      select: { startAt: true, status: true, isPublic: true },
+    });
+    expect(sessions.map((session) => taipeiDate(session.startAt))).toEqual(listedDates);
+    expect(sessions.every((session) => session.status === "draft" && !session.isPublic)).toBe(true);
+  });
+
+  test("fixed-dates series: a rejected time keeps the picked dates; the summary lists exactly the dates that get created", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-fixed-${Date.now()}`,
+    );
+    const teacher = await seedApprovedTeacher(testRunId);
+
+    await addAuthSessionCookie(context, teacher.sessionToken);
+    await page.goto("/teacher/classes/new");
+    await page.getByRole("button", { name: "指定日期" }).click();
+
+    const title = `指定日期系列 ${testRunId}`;
+    const dates = [futureDateString(20), futureDateString(27)];
+    await page.locator("#fixed-title").fill(title);
+    await pickServiceType(page, "放鬆紓壓");
+    await page.getByText("哈達瑜伽", { exact: true }).click();
+    for (const date of dates) {
+      await addFixedDate(page, date);
+    }
+    // 結束早於開始：畫面會提醒但不擋送出，由既有驗證拒絕。
+    await selectFormTime(page, "fixed-", "start", "20:00");
+    await selectFormTime(page, "fixed-", "end", "19:00");
+    await page.locator("#fixed-location").fill("台北市指定日期教室");
+    await page.locator("#fixed-capacity").fill("5");
+    await page.getByRole("button", { name: "建立課程系列" }).click();
+
+    await expect(page.getByRole("alert").filter({ hasText: "課程系列還沒建立" })).toBeVisible();
+    await expect(page.locator("#fixed-time-error")).toBeVisible();
+    const pickedDates = page.getByRole("list", { name: "已加入的上課日期" }).getByRole("listitem");
+    await expect(pickedDates).toHaveCount(2);
+    const summaryDates = summary(page).getByRole("list", { name: "會建立的上課日期" }).getByRole("listitem");
+    await expect(summaryDates).toHaveCount(2);
+    expect(
+      await prisma.recurringClassSeries.count({ where: { teacherProfileId: teacher.teacherProfileId } }),
+    ).toBe(0);
+
+    await selectFormTime(page, "fixed-", "end", "21:00");
+    await expect(page.locator("#fixed-time-error")).toHaveCount(0);
+    await expect(summary(page)).toContainText("20:00–21:00");
+    await page.getByRole("button", { name: "建立課程系列" }).click();
+    await expect(page.getByText(/課程系列已建立，共生成 2 場/)).toBeVisible();
+
+    const sessions = await prisma.classSession.findMany({
+      where: { teacherProfileId: teacher.teacherProfileId },
+      orderBy: { startAt: "asc" },
+      select: { startAt: true, status: true, isPublic: true },
+    });
+    expect(sessions.map((session) => taipeiDate(session.startAt))).toEqual(dates);
+    expect(sessions.every((session) => session.status === "draft" && !session.isPublic)).toBe(true);
+  });
 });
+
+function taipeiDate(date: Date): string {
+  return date.toLocaleDateString("en-CA", { timeZone: "Asia/Taipei" });
+}

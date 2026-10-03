@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   startTransition,
   useActionState,
@@ -12,12 +13,16 @@ import {
 import { TagCheckbox } from "@/app/_components/tag-checkbox";
 import { SPECIALTY_GROUPS } from "@/app/teachers/join/_lib/application-fields";
 import {
+  computeNextWeeklyOccurrenceDates,
+  weeklyAfterDateForStartDate,
+} from "@/domain/class-session/recurring-series-dates";
+import {
   MAX_SERVICE_TYPES,
   SERVICE_TYPES,
   UNDECIDED_SERVICE_TYPE,
 } from "@/domain/demand-request/service-types";
 
-import { ClassCreateSummary } from "./ClassCreateSummary";
+import { ClassCreateSummary, type SummaryRow } from "./ClassCreateSummary";
 import { MultiMonthDatePicker } from "./MultiMonthDatePicker";
 import { createOwnClassSessionAction } from "../actions";
 import {
@@ -125,17 +130,65 @@ const sharedKeyToErrorField: Record<keyof SharedFields, CreateClassFormField | n
   isPublic: null,
 };
 
-// 錯誤時要把焦點帶去的元素（單堂表單）。fieldset 本身不能聚焦，會改聚焦裡面第一個可操作的欄位。
-const errorFieldElementId: Record<CreateClassFormField, string> = {
-  title: "title",
-  serviceTypes: "service-types-field",
-  yogaStyles: "yoga-styles-field",
-  description: "description",
-  date: "single-date",
-  time: "single-startTime-hour",
-  location: "location",
-  capacity: "capacity",
+const modeFieldToErrorField: Record<keyof ModeFields, CreateClassFormField> = {
+  date: "date",
+  dayOfWeek: "dayOfWeek",
+  startDate: "startDate",
+  generateCount: "generateCount",
+  fixedDates: "dates",
 };
+
+const idPrefixByMode: Record<Mode, string> = { single: "", weekly: "weekly-", fixed_dates: "fixed-" };
+
+// 錯誤時要把焦點帶去的元素。fieldset 本身不能聚焦，會改聚焦裡面第一個可操作的欄位。
+function errorElementId(field: CreateClassFormField, mode: Mode): string {
+  const prefix = idPrefixByMode[mode];
+
+  switch (field) {
+    case "serviceTypes":
+      return "service-types-field";
+    case "yogaStyles":
+      return "yoga-styles-field";
+    case "date":
+      return "single-date";
+    case "time":
+      return `${mode === "single" ? "single-" : prefix}startTime-hour`;
+    case "dayOfWeek":
+    case "startDate":
+    case "generateCount":
+      return `weekly-${field}`;
+    case "dates":
+      return "fixed-dates-field";
+    default:
+      return `${prefix}${field}`;
+  }
+}
+
+function focusFirstError(state: CreateClassFormState) {
+  if (state.status !== "error") {
+    return;
+  }
+
+  const firstField = CREATE_CLASS_FIELD_ORDER.find(
+    (field) => (state.fieldErrors[field]?.length ?? 0) > 0,
+  );
+
+  // 等收合區展開後再聚焦；沒有對應欄位時聚焦錯誤摘要。
+  requestAnimationFrame(() => {
+    const target = firstField
+      ? document.getElementById(errorElementId(firstField, state.mode))
+      : document.getElementById("create-form-error");
+    const focusable =
+      target && target.matches("input, select, textarea, [tabindex]")
+        ? target
+        : target?.querySelector<HTMLElement>("input:not([disabled]), select, textarea, button");
+
+    (focusable ?? target)?.focus();
+    target?.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+}
+
+const WEEKLY_GENERATE_COUNT_MAX = 26;
 
 type FieldErrors = Partial<Record<CreateClassFormField, string[]>>;
 
@@ -173,47 +226,34 @@ export function ClassSessionCreateForm({
     createOwnClassSessionAction,
     initialCreateClassFormState,
   );
+  const [seriesFormState, seriesFormAction, isSeriesPending] = useActionState(
+    createOwnRecurringClassSeriesAction,
+    initialCreateClassFormState,
+  );
+  const isPending = isSinglePending || isSeriesPending;
   // 送出後使用者動過的欄位：該欄位的錯誤提示先收起，避免修正後還掛著舊錯誤。
   const [editedFields, setEditedFields] = useState<CreateClassFormField[]>([]);
-  const [lastSingleFormState, setLastSingleFormState] =
-    useState<CreateClassFormState>(singleFormState);
+  const [lastFormStates, setLastFormStates] = useState({
+    single: singleFormState,
+    series: seriesFormState,
+  });
 
-  if (lastSingleFormState !== singleFormState) {
-    setLastSingleFormState(singleFormState);
+  if (lastFormStates.single !== singleFormState || lastFormStates.series !== seriesFormState) {
+    const changed = lastFormStates.single !== singleFormState ? singleFormState : seriesFormState;
+    setLastFormStates({ single: singleFormState, series: seriesFormState });
     setEditedFields([]);
 
     // 課程說明有錯誤時展開收合區，才看得到錯誤、也才能聚焦。
-    if (singleFormState.status === "error" && singleFormState.fieldErrors.description) {
+    if (changed.status === "error" && changed.fieldErrors.description) {
       setDescriptionOpen(true);
     }
   }
 
   const isDirty = JSON.stringify({ shared, modeFields }) !== initialSnapshot;
-  useUnsavedChangesWarning(isDirty && !isSinglePending);
+  useUnsavedChangesWarning(isDirty && !isPending);
 
-  useEffect(() => {
-    if (singleFormState.status !== "error") {
-      return;
-    }
-
-    const firstField = CREATE_CLASS_FIELD_ORDER.find(
-      (field) => (singleFormState.fieldErrors[field]?.length ?? 0) > 0,
-    );
-
-    // 等收合區展開後再聚焦；沒有對應欄位時聚焦錯誤摘要。
-    requestAnimationFrame(() => {
-      const target = firstField
-        ? document.getElementById(errorFieldElementId[firstField])
-        : document.getElementById("single-form-error");
-      const focusable =
-        target && target.matches("input, select, textarea, [tabindex]")
-          ? target
-          : target?.querySelector<HTMLElement>("input:not([disabled]), select, textarea");
-
-      (focusable ?? target)?.focus();
-      target?.scrollIntoView({ behavior: "smooth", block: "center" });
-    });
-  }, [singleFormState]);
+  useEffect(() => focusFirstError(singleFormState), [singleFormState]);
+  useEffect(() => focusFirstError(seriesFormState), [seriesFormState]);
 
   function markEdited(field: CreateClassFormField | null) {
     if (field) {
@@ -234,22 +274,27 @@ export function ClassSessionCreateForm({
     value: ModeFields[K],
   ) {
     setModeFields((current) => ({ ...current, [key]: value }));
+    markEdited(modeFieldToErrorField[key]);
 
     // 時段衝突也可能靠改日期解決，所以改日期同時收起時間的錯誤。
     if (key === "date") {
-      markEdited("date");
       markEdited("time");
     }
   }
 
-  const singleFieldErrors: FieldErrors =
-    singleFormState.status === "error"
-      ? Object.fromEntries(
-          Object.entries(singleFormState.fieldErrors).filter(
-            ([field]) => !editedFields.includes(field as CreateClassFormField),
-          ),
-        )
-      : {};
+  // 只顯示目前這個排程模式送出後的錯誤（系列兩種模式共用同一個 action）。
+  const rawFormState = mode === "single" ? singleFormState : seriesFormState;
+  const activeFormState =
+    rawFormState.status === "error" && rawFormState.mode === mode ? rawFormState : null;
+  const fieldErrors: FieldErrors = activeFormState
+    ? Object.fromEntries(
+        Object.entries(activeFormState.fieldErrors).filter(
+          ([field]) => !editedFields.includes(field as CreateClassFormField),
+        ),
+      )
+    : {};
+  // 系列已建立但場次生成失敗：再按一次會多建一個系列，所以不提供重送，改引導到我的課程。
+  const isSeriesCreatedButFailed = activeFormState?.code === "series_create_failed";
 
   const startTimeString = toTimeString(shared.startTime);
   const endTimeString = toTimeString(shared.endTime);
@@ -279,7 +324,7 @@ export function ClassSessionCreateForm({
 
   // 課程風格、瑜伽類型都必填，但「勾選標籤（或填其他）至少一項」沒辦法用瀏覽器內建的 required 表達，
   // 所以在送出前自己擋一次（後端也會再驗證一次）。指定日期還要至少加入一個日期。
-  function guardRequiredTags(event: FormEvent<HTMLFormElement>) {
+  function guardRequiredTags(): boolean {
     let firstProblemId: string | null = null;
 
     if (!hasServiceType) {
@@ -302,32 +347,130 @@ export function ClassSessionCreateForm({
     }
 
     if (!firstProblemId) {
-      return;
+      return false;
     }
 
-    event.preventDefault();
     document
       .getElementById(firstProblemId)
       ?.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    return true;
   }
 
-  // 單堂：自己攔下送出再呼叫 action，而不是用 <form action>——後者在 action 回傳後會自動重設表單，
-  // 勾選類欄位的畫面會被清掉。送出中不再送第二次（避免網路慢時重複點擊建立兩堂）；結果不明時也不自動重送。
-  function handleSingleSubmit(event: FormEvent<HTMLFormElement>) {
+  // 自己攔下送出再呼叫 action，而不是用 <form action>——後者在 action 回傳後會自動重設表單，
+  // 勾選類欄位的畫面會被清掉。送出中不再送第二次（避免網路慢時重複點擊建立兩次）；結果不明時也不自動重送。
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (isSinglePending) {
-      return;
-    }
-
-    guardRequiredTags(event);
-
-    if (!hasServiceType || !hasYogaStyle) {
+    if (isPending || isSeriesCreatedButFailed || guardRequiredTags()) {
       return;
     }
 
     const formData = new FormData(event.currentTarget);
-    startTransition(() => singleFormAction(formData));
+    startTransition(() =>
+      mode === "single" ? singleFormAction(formData) : seriesFormAction(formData),
+    );
+  }
+
+  // 每週固定：用跟 domain 建立系列時同一個函式推算實際日期，摘要才會跟建立結果一致。
+  const weeklyDayOfWeek = modeFields.dayOfWeek === "" ? null : Number(modeFields.dayOfWeek);
+  const weeklyGenerateCount = Number(modeFields.generateCount);
+  const canPreviewWeeklyDates =
+    mode === "weekly" &&
+    weeklyDayOfWeek !== null &&
+    Number.isInteger(weeklyGenerateCount) &&
+    weeklyGenerateCount >= 1 &&
+    weeklyGenerateCount <= WEEKLY_GENERATE_COUNT_MAX &&
+    !isStartDateWeekdayMismatch;
+  const weeklyDates =
+    canPreviewWeeklyDates && weeklyDayOfWeek !== null
+      ? computeNextWeeklyOccurrenceDates(
+          weeklyDayOfWeek,
+          weeklyGenerateCount,
+          modeFields.startDate ? weeklyAfterDateForStartDate(modeFields.startDate) : undefined,
+        )
+      : [];
+  const weeklyStartRule =
+    weeklyDayOfWeek === null
+      ? null
+      : modeFields.startDate
+        ? `從 ${formatDateWithWeekday(modeFields.startDate)} 開始，每${dayOfWeekLabel(weeklyDayOfWeek)}一場`
+        : `從今天之後最近的${dayOfWeekLabel(weeklyDayOfWeek)}開始，每${dayOfWeekLabel(weeklyDayOfWeek)}一場`;
+
+  const timeSummary =
+    startTimeString && endTimeString ? `${startTimeString}–${endTimeString}（24 小時制）` : null;
+  const titleSummaryRow: SummaryRow = { label: "課程名稱", value: shared.title.trim() || null };
+  const placeSummaryRows: SummaryRow[] = [
+    { label: "時間", value: timeSummary },
+    { label: "地點", value: shared.location.trim() || null },
+    { label: "名額上限", value: shared.capacity.trim() ? `${shared.capacity.trim()} 人` : null },
+  ];
+  const approvalSummaryRow: SummaryRow = {
+    label: "報名方式",
+    value: shared.requiresApproval ? "需要你確認才算報名成功" : "報名送出即成立",
+  };
+  const seriesSummaryRows = (scheduleLabel: string, extraRows: SummaryRow[]): SummaryRow[] => [
+    titleSummaryRow,
+    { label: "排程", value: scheduleLabel },
+    ...extraRows,
+    ...placeSummaryRows,
+    { label: "公開列表", value: "不列在公開課程列表" },
+    approvalSummaryRow,
+  ];
+  const seriesSummaryNotes = [
+    "建立後目前無法修改課程內容，請先確認以上資訊。",
+    "每一場都會先存成草稿，要逐堂開放報名；系列場次不會列在公開課程列表。",
+    "如果某個日期跟你其他課程的時段衝突，那一天會跳過不建立，建立後會列出來。",
+  ];
+
+  const formErrorBanner = activeFormState ? (
+    <div
+      className="rounded-xl border border-clay/40 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep"
+      id="create-form-error"
+      role="alert"
+      tabIndex={-1}
+    >
+      {isSeriesCreatedButFailed ? (
+        <>
+          <p className="font-medium">{activeFormState.message}</p>
+          <p>
+            系列本身已經建立，請不要再按一次建立（會多出一個系列）。請到
+            <Link className="mx-1 underline" href="/teacher/classes">
+              我的課程
+            </Link>
+            找到這個系列再處理。
+          </p>
+        </>
+      ) : (
+        <>
+          <p className="font-medium">
+            {mode === "single" ? "課程" : "課程系列"}還沒建立：{activeFormState.message}
+          </p>
+          <p>
+            你填的內容都還在，修正標示的欄位後再按一次「{mode === "single" ? "建立課程" : "建立課程系列"}」。
+          </p>
+        </>
+      )}
+    </div>
+  ) : null;
+
+  function submitArea(label: string) {
+    if (isSeriesCreatedButFailed) {
+      return null;
+    }
+
+    return (
+      <div>
+        <button className={submitButtonClassName} disabled={isPending} type="submit">
+          {isPending ? "建立中…" : label}
+        </button>
+        {isPending ? (
+          <p aria-live="polite" className="mt-2 text-xs leading-5 text-ink-faint">
+            正在建立，請稍候，不需要再按一次。
+          </p>
+        ) : null}
+      </div>
+    );
   }
 
   const serviceTypesFieldProps = {
@@ -364,30 +507,16 @@ export function ClassSessionCreateForm({
       </p>
 
       {mode === "single" ? (
-        <form
-          aria-busy={isSinglePending}
-          className="grid gap-6"
-          onSubmit={handleSingleSubmit}
-        >
-          {singleFormState.status === "error" ? (
-            <div
-              className="rounded-xl border border-clay/40 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep"
-              id="single-form-error"
-              role="alert"
-              tabIndex={-1}
-            >
-              <p className="font-medium">課程還沒建立：{singleFormState.message}</p>
-              <p>你填的內容都還在，修正標示的欄位後再按一次「建立課程」。</p>
-            </div>
-          ) : null}
+        <form aria-busy={isPending} className="grid gap-6" onSubmit={handleSubmit}>
+          {formErrorBanner}
           <FormSection title="課程內容">
-            <TitleField {...sharedFieldProps} error={singleFieldErrors.title} />
+            <TitleField {...sharedFieldProps} error={fieldErrors.title} />
             <ServiceTypesField
               {...serviceTypesFieldProps}
-              serverError={singleFieldErrors.serviceTypes}
+              serverError={fieldErrors.serviceTypes}
             />
-            <YogaStylesField {...yogaStylesFieldProps} serverError={singleFieldErrors.yogaStyles} />
-            <DescriptionField {...descriptionProps} error={singleFieldErrors.description} />
+            <YogaStylesField {...yogaStylesFieldProps} serverError={fieldErrors.yogaStyles} />
+            <DescriptionField {...descriptionProps} error={fieldErrors.description} />
           </FormSection>
           <FormSection title="時間地點">
             <div>
@@ -395,8 +524,8 @@ export function ClassSessionCreateForm({
                 上課日期
               </label>
               <input
-                aria-describedby={singleFieldErrors.date ? "single-date-error" : undefined}
-                aria-invalid={singleFieldErrors.date ? true : undefined}
+                aria-describedby={fieldErrors.date ? "single-date-error" : undefined}
+                aria-invalid={fieldErrors.date ? true : undefined}
                 className={inputClassName}
                 id="single-date"
                 onChange={(event) => updateModeField("date", event.target.value)}
@@ -404,7 +533,7 @@ export function ClassSessionCreateForm({
                 type="date"
                 value={modeFields.date}
               />
-              <FieldError id="single-date-error" messages={singleFieldErrors.date} />
+              <FieldError id="single-date-error" messages={fieldErrors.date} />
             </div>
             <TimeRangeFields
               {...sharedFieldProps}
@@ -414,7 +543,7 @@ export function ClassSessionCreateForm({
                   ? `${modeFields.date}T${endTimeString}`
                   : ""
               }
-              error={singleFieldErrors.time}
+              error={fieldErrors.time}
               idPrefix="single-"
               isEndNotAfterStart={isEndNotAfterStart}
               startName="startAt"
@@ -424,52 +553,54 @@ export function ClassSessionCreateForm({
                   : ""
               }
             />
-            <LocationField {...sharedFieldProps} error={singleFieldErrors.location} />
-            <CapacityField {...sharedFieldProps} error={singleFieldErrors.capacity} />
+            <LocationField {...sharedFieldProps} error={fieldErrors.location} />
+            <CapacityField {...sharedFieldProps} error={fieldErrors.capacity} />
           </FormSection>
           <FormSection title="報名設定">
             <PublicListingField {...sharedFieldProps} />
             <RequiresApprovalField {...sharedFieldProps} />
           </FormSection>
           <ClassCreateSummary
-            capacity={shared.capacity}
-            date={modeFields.date}
-            endTime={endTimeString}
-            isPublic={shared.isPublic}
-            location={shared.location}
-            requiresApproval={shared.requiresApproval}
-            startTime={startTimeString}
-            title={shared.title}
+            notes={[
+              "建立後目前無法修改課程內容，請先確認以上資訊。",
+              "建立後會先存成草稿，不會立即開放報名；到課程頁按「開放報名」學員才能報名。",
+            ]}
+            rows={[
+              titleSummaryRow,
+              { label: "排程", value: "單堂" },
+              {
+                label: "日期",
+                value: modeFields.date ? formatDateWithWeekday(modeFields.date) : null,
+              },
+              ...placeSummaryRows,
+              {
+                label: "公開列表",
+                value: shared.isPublic ? "列在公開課程列表" : "不列在公開課程列表",
+              },
+              approvalSummaryRow,
+            ]}
           />
-          <div>
-            <button
-              className={submitButtonClassName}
-              disabled={isSinglePending}
-              type="submit"
-            >
-              {isSinglePending ? "建立中…" : "建立課程"}
-            </button>
-            {isSinglePending ? (
-              <p aria-live="polite" className="mt-2 text-xs leading-5 text-ink-faint">
-                正在建立，請稍候，不需要再按一次。
-              </p>
-            ) : null}
-          </div>
+          {submitArea("建立課程")}
         </form>
       ) : null}
 
       {mode === "weekly" ? (
-        <form
-          action={createOwnRecurringClassSeriesAction}
-          className="grid gap-6"
-          onSubmit={guardRequiredTags}
-        >
+        <form aria-busy={isPending} className="grid gap-6" onSubmit={handleSubmit}>
           <input name="mode" type="hidden" value="weekly" />
+          {formErrorBanner}
           <FormSection title="課程內容">
-            <TitleField {...sharedFieldProps} idPrefix="weekly-" />
-            <ServiceTypesField {...serviceTypesFieldProps} idPrefix="weekly-" />
-            <YogaStylesField {...yogaStylesFieldProps} idPrefix="weekly-" />
-            <DescriptionField {...descriptionProps} idPrefix="weekly-" />
+            <TitleField {...sharedFieldProps} error={fieldErrors.title} idPrefix="weekly-" />
+            <ServiceTypesField
+              {...serviceTypesFieldProps}
+              idPrefix="weekly-"
+              serverError={fieldErrors.serviceTypes}
+            />
+            <YogaStylesField
+              {...yogaStylesFieldProps}
+              idPrefix="weekly-"
+              serverError={fieldErrors.yogaStyles}
+            />
+            <DescriptionField {...descriptionProps} error={fieldErrors.description} idPrefix="weekly-" />
           </FormSection>
           <FormSection title="時間地點">
             <div>
@@ -477,6 +608,7 @@ export function ClassSessionCreateForm({
                 星期幾
               </label>
               <select
+                {...errorAttributes("weekly-dayOfWeek-error", fieldErrors.dayOfWeek)}
                 className={inputClassName}
                 id="weekly-dayOfWeek"
                 name="dayOfWeek"
@@ -493,12 +625,14 @@ export function ClassSessionCreateForm({
                   </option>
                 ))}
               </select>
+              <FieldError id="weekly-dayOfWeek-error" messages={fieldErrors.dayOfWeek} />
             </div>
             <div>
               <label className={labelClassName} htmlFor="weekly-startDate">
                 起始日期（選填）
               </label>
               <input
+                {...errorAttributes("weekly-startDate-error", fieldErrors.startDate)}
                 className={inputClassName}
                 id="weekly-startDate"
                 name="startDate"
@@ -529,12 +663,14 @@ export function ClassSessionCreateForm({
                   {dayOfWeekLabel(startDateWeekday)}。
                 </p>
               ) : null}
+              <FieldError id="weekly-startDate-error" messages={fieldErrors.startDate} />
             </div>
             <div>
               <label className={labelClassName} htmlFor="weekly-generateCount">
                 首次要生成幾場
               </label>
               <input
+                {...errorAttributes("weekly-generateCount-error", fieldErrors.generateCount)}
                 className={inputClassName}
                 id="weekly-generateCount"
                 max={26}
@@ -550,42 +686,54 @@ export function ClassSessionCreateForm({
               <p className="mt-1 text-xs leading-5 text-ink-faint">
                 之後可以在系列管理頁手動生成更多場次，目前不支援自動無上限延伸。
               </p>
+              <FieldError id="weekly-generateCount-error" messages={fieldErrors.generateCount} />
             </div>
             <TimeRangeFields
               {...sharedFieldProps}
               endName="endTime"
               endValueForForm={endTimeString}
+              error={fieldErrors.time}
               idPrefix="weekly-"
               isEndNotAfterStart={isEndNotAfterStart}
               startName="startTime"
               startValueForForm={startTimeString}
             />
-            <LocationField {...sharedFieldProps} idPrefix="weekly-" />
-            <CapacityField {...sharedFieldProps} idPrefix="weekly-" />
+            <LocationField {...sharedFieldProps} error={fieldErrors.location} idPrefix="weekly-" />
+            <CapacityField {...sharedFieldProps} error={fieldErrors.capacity} idPrefix="weekly-" />
           </FormSection>
           <FormSection title="報名設定">
             <SeriesListingNote />
             <RequiresApprovalField {...sharedFieldProps} idPrefix="weekly-" />
           </FormSection>
-          <ConfirmField idPrefix="weekly-" />
-          <button className={submitButtonClassName} type="submit">
-            建立課程系列
-          </button>
+          <ClassCreateSummary
+            dates={weeklyDates}
+            datesPlaceholder="選好星期幾、起始日期與場次後，會列出實際的上課日期"
+            notes={seriesSummaryNotes}
+            rows={seriesSummaryRows("每週固定", [
+              { label: "起始規則", value: weeklyStartRule },
+            ])}
+          />
+          {submitArea("建立課程系列")}
         </form>
       ) : null}
 
       {mode === "fixed_dates" ? (
-        <form
-          action={createOwnRecurringClassSeriesAction}
-          className="grid gap-6"
-          onSubmit={guardRequiredTags}
-        >
+        <form aria-busy={isPending} className="grid gap-6" onSubmit={handleSubmit}>
           <input name="mode" type="hidden" value="fixed_dates" />
+          {formErrorBanner}
           <FormSection title="課程內容">
-            <TitleField {...sharedFieldProps} idPrefix="fixed-" />
-            <ServiceTypesField {...serviceTypesFieldProps} idPrefix="fixed-" />
-            <YogaStylesField {...yogaStylesFieldProps} idPrefix="fixed-" />
-            <DescriptionField {...descriptionProps} idPrefix="fixed-" />
+            <TitleField {...sharedFieldProps} error={fieldErrors.title} idPrefix="fixed-" />
+            <ServiceTypesField
+              {...serviceTypesFieldProps}
+              idPrefix="fixed-"
+              serverError={fieldErrors.serviceTypes}
+            />
+            <YogaStylesField
+              {...yogaStylesFieldProps}
+              idPrefix="fixed-"
+              serverError={fieldErrors.yogaStyles}
+            />
+            <DescriptionField {...descriptionProps} error={fieldErrors.description} idPrefix="fixed-" />
           </FormSection>
           <FormSection title="時間地點">
             <FixedDatesField
@@ -605,28 +753,33 @@ export function ClassSessionCreateForm({
                 );
                 setShowFixedDatesError(false);
               }}
+              serverError={fieldErrors.dates}
               showError={showFixedDatesError && modeFields.fixedDates.length === 0}
             />
             <TimeRangeFields
               {...sharedFieldProps}
               endName="endTime"
               endValueForForm={endTimeString}
+              error={fieldErrors.time}
               idPrefix="fixed-"
               isEndNotAfterStart={isEndNotAfterStart}
               startName="startTime"
               startValueForForm={startTimeString}
             />
-            <LocationField {...sharedFieldProps} idPrefix="fixed-" />
-            <CapacityField {...sharedFieldProps} idPrefix="fixed-" />
+            <LocationField {...sharedFieldProps} error={fieldErrors.location} idPrefix="fixed-" />
+            <CapacityField {...sharedFieldProps} error={fieldErrors.capacity} idPrefix="fixed-" />
           </FormSection>
           <FormSection title="報名設定">
             <SeriesListingNote />
             <RequiresApprovalField {...sharedFieldProps} idPrefix="fixed-" />
           </FormSection>
-          <ConfirmField idPrefix="fixed-" />
-          <button className={submitButtonClassName} type="submit">
-            建立課程系列
-          </button>
+          <ClassCreateSummary
+            dates={modeFields.fixedDates}
+            datesPlaceholder="在月曆上點選上課日期後，會列在這裡"
+            notes={seriesSummaryNotes}
+            rows={seriesSummaryRows("指定日期", [])}
+          />
+          {submitArea("建立課程系列")}
         </form>
       ) : null}
     </div>
@@ -773,11 +926,13 @@ function FixedDatesField({
   onToggle,
   onRemove,
   showError,
+  serverError,
 }: {
   dates: string[];
   onToggle: (date: string) => void;
   onRemove: (date: string) => void;
   showError: boolean;
+  serverError?: string[];
 }) {
   return (
     <fieldset className="min-w-0" id="fixed-dates-field">
@@ -821,6 +976,7 @@ function FixedDatesField({
           請至少選一個上課日期。
         </p>
       ) : null}
+      <FieldError id="fixed-dates-error" messages={serverError} />
     </fieldset>
   );
 }
@@ -1201,23 +1357,5 @@ function RequiresApprovalField({
         value="yes"
       />
     </fieldset>
-  );
-}
-
-// 系列（每週固定／指定日期）暫時保留「我確認以上資訊無誤」勾選，票 02 再改成摘要。
-// 刻意不跨模式保留：換了排程方式後，要重新確認一次。
-function ConfirmField({ idPrefix = "" }: { idPrefix?: string }) {
-  return (
-    <label className="flex items-start gap-2 text-sm leading-6 text-ink-soft">
-      <input
-        className="mt-1 shrink-0"
-        id={`${idPrefix}confirmCreate`}
-        name="confirmCreate"
-        required
-        type="checkbox"
-        value="yes"
-      />
-      我確認以上資訊無誤，同意建立課程。
-    </label>
   );
 }

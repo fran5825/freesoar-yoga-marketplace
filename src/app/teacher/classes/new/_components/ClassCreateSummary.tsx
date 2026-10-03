@@ -1,46 +1,27 @@
 import { formatDateWithWeekday } from "../_lib/form-state";
 
-// 單堂「建立前核對」摘要（teacher-usability-redesign 票 01）。
+export type SummaryRow = { label: string; value: string | null };
+
+// 「建立前核對」摘要（teacher-usability-redesign 票 01 單堂、票 02 系列）。
 // 顯示的值跟表單送出的值來自同一份 state，所以摘要＝實際會建立的內容；取代原本泛用的「我確認以上資訊無誤」勾選。
+// dates：系列實際會建立的日期（每週固定用既有的生成規則推算、指定日期就是送出的清單）。
 export function ClassCreateSummary({
-  title,
-  date,
-  startTime,
-  endTime,
-  location,
-  capacity,
-  isPublic,
-  requiresApproval,
+  rows,
+  dates,
+  datesPlaceholder,
+  notes,
 }: {
-  title: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  location: string;
-  capacity: string;
-  isPublic: boolean;
-  requiresApproval: boolean;
+  rows: SummaryRow[];
+  dates?: string[];
+  datesPlaceholder?: string;
+  notes: string[];
 }) {
-  const timeText =
-    startTime && endTime ? `${startTime}–${endTime}（24 小時制）` : null;
-
-  const rows: { label: string; value: string | null }[] = [
-    { label: "課程名稱", value: title.trim() || null },
-    { label: "排程", value: "單堂" },
-    { label: "日期", value: date ? formatDateWithWeekday(date) : null },
-    { label: "時間", value: timeText },
-    { label: "地點", value: location.trim() || null },
-    { label: "名額上限", value: capacity.trim() ? `${capacity.trim()} 人` : null },
-    { label: "公開列表", value: isPublic ? "列在公開課程列表" : "不列在公開課程列表" },
-    { label: "報名方式", value: requiresApproval ? "需要你確認才算報名成功" : "報名送出即成立" },
-  ];
-
   return (
     <section
-      aria-labelledby="single-summary-heading"
+      aria-labelledby="create-summary-heading"
       className="grid gap-3 rounded-2xl border border-pine/25 bg-pine-tint/40 p-4 sm:p-5"
     >
-      <h2 className="text-base font-medium text-ink" id="single-summary-heading">
+      <h2 className="text-base font-medium text-ink" id="create-summary-heading">
         建立前核對
       </h2>
       <dl className="grid gap-x-4 gap-y-2 text-sm leading-6 sm:grid-cols-[7rem_1fr]">
@@ -52,10 +33,38 @@ export function ClassCreateSummary({
             </dd>
           </div>
         ))}
+        {dates ? (
+          <div className="contents">
+            <dt className="text-ink-soft">
+              上課日期{dates.length > 0 ? `（共 ${dates.length} 場）` : ""}
+            </dt>
+            <dd className="min-w-0">
+              {dates.length > 0 ? (
+                <ul
+                  aria-label="會建立的上課日期"
+                  className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap"
+                >
+                  {dates.map((date) => (
+                    <li
+                      className="rounded-full border border-ink/15 bg-white px-2.5 py-0.5 text-center text-ink sm:text-left"
+                      key={date}
+                    >
+                      {formatDateWithWeekday(date)}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <span className="text-ink-faint">{datesPlaceholder ?? "尚未填寫"}</span>
+              )}
+            </dd>
+          </div>
+        ) : null}
       </dl>
-      <p className="text-xs leading-5 text-ink-soft">
-        建立後目前無法修改課程內容，請先確認以上資訊。建立後會先存成草稿，不會立即開放報名；到課程頁按「開放報名」學員才能報名。
-      </p>
+      {notes.map((note) => (
+        <p className="text-xs leading-5 text-ink-soft" key={note}>
+          {note}
+        </p>
+      ))}
     </section>
   );
 }

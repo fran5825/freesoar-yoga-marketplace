@@ -1,4 +1,4 @@
-// 建課表單送出後的結果（teacher-usability-redesign 票 01）。
+// 建課表單送出後的結果（teacher-usability-redesign 票 01 單堂、票 02 系列）。
 // 失敗時 Server Action 回傳這個物件，不再導回空白表單；表單內容存在 client state，所以原輸入會保留。
 // 成功時 Server Action 直接 redirect 到課程詳情頁，不會回到這裡。
 
@@ -10,12 +10,19 @@ export type CreateClassFormField =
   | "time"
   | "location"
   | "capacity"
-  | "description";
+  | "description"
+  | "dayOfWeek"
+  | "startDate"
+  | "generateCount"
+  | "dates";
 
 export type CreateClassFormState =
   | { status: "idle" }
   | {
       status: "error";
+      // 哪一種排程送出的：系列兩種模式共用同一個 action，錯誤只顯示在送出的那個表單。
+      mode: "single" | "weekly" | "fixed_dates";
+      code: string;
       message: string;
       fieldErrors: Partial<Record<CreateClassFormField, string[]>>;
     };
@@ -29,12 +36,17 @@ export const CREATE_CLASS_FIELD_ORDER: CreateClassFormField[] = [
   "yogaStyles",
   "description",
   "date",
+  "dayOfWeek",
+  "startDate",
+  "generateCount",
+  "dates",
   "time",
   "location",
   "capacity",
 ];
 
-// domain 驗證錯誤的欄位名稱 → 表單欄位。startAt／endAt 在表單上是「日期＋時、分」，統一指到時間。
+// domain 驗證錯誤的欄位名稱 → 表單欄位。startAt／endAt（單堂）、startTime／endTime（系列）在表單上都是
+// 時、分下拉選單，統一指到時間。
 export function formFieldForValidationField(field: string): CreateClassFormField | null {
   switch (field) {
     case "title":
@@ -42,12 +54,18 @@ export function formFieldForValidationField(field: string): CreateClassFormField
     case "capacity":
     case "description":
     case "yogaStyles":
+    case "dayOfWeek":
+    case "startDate":
+    case "generateCount":
+    case "dates":
       return field;
     case "serviceType":
     case "serviceTypes":
       return "serviceTypes";
     case "startAt":
     case "endAt":
+    case "startTime":
+    case "endTime":
       return "time";
     default:
       return null;
@@ -75,4 +93,20 @@ export function formatDateWithWeekday(date: string): string {
   const weekday = weekdayOfDateString(date);
 
   return weekday === null ? date : `${date}（${dayOfWeekLabels[weekday]}）`;
+}
+
+export function buildCreateClassFieldErrors(
+  validationErrors?: { field: string; message: string }[],
+): Partial<Record<CreateClassFormField, string[]>> {
+  const fieldErrors: Partial<Record<CreateClassFormField, string[]>> = {};
+
+  for (const error of validationErrors ?? []) {
+    const field = formFieldForValidationField(error.field);
+
+    if (field) {
+      fieldErrors[field] = [...(fieldErrors[field] ?? []), error.message];
+    }
+  }
+
+  return fieldErrors;
 }
