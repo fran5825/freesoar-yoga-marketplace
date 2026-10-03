@@ -1,4 +1,4 @@
-import type { ClassSessionStatus, EnrollmentStatus } from "@prisma/client";
+import type { ClassSessionOrigin, ClassSessionStatus, EnrollmentStatus } from "@prisma/client";
 
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
@@ -65,6 +65,7 @@ export type MemberFacingClassSession = {
   capacity: number;
   // pending + confirmed（都佔名額），供顯示剩餘名額用。
   activeEnrollmentCount: number;
+  origin: ClassSessionOrigin;
   status: string;
   // teacher-initiated-open-classes：老師自建課程沒有 organization，改為 nullable；
   // 消費頁面需自行提供中性 fallback 文案（不假設一律有團體名稱）。
@@ -100,6 +101,7 @@ export async function getClassSessionForMember(
       location: true,
       capacity: true,
       status: true,
+      origin: true,
       organization: { select: { name: true } },
       teacherProfile: { select: { displayName: true } },
       _count: {

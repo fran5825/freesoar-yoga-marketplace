@@ -47,6 +47,7 @@ export type PublicClassSessionDetail = {
   location: string;
   capacity: number;
   activeEnrollmentCount: number;
+  origin: ClassSessionOrigin;
   teacherProfile: { displayName: string | null };
 };
 
@@ -156,6 +157,7 @@ export async function getPublicClassSessionDetail(
       endAt: true,
       location: true,
       capacity: true,
+      origin: true,
       teacherProfile: { select: { displayName: true } },
       _count: {
         select: {

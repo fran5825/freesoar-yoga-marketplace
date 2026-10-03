@@ -136,6 +136,12 @@
 - 風險：要改 Prisma schema 並新增 migration，屬於 HEAVY，需要產品主人另外放行；上線後還要重新確認 migration 風險。
 - 時機：等 cookie 版本用一陣子、確認真的有跨裝置需求再做。
 
+### 15. 課程詳情「登入後報名」直接開 Google，省掉登入頁（2026-10-03）
+
+- 現況（member-usability 票 07 實測）：訪客從分享連結報名要經過 3 個站內畫面＋Google 自己的畫面：課程詳情 → 登入頁（只有一顆「使用 Google 帳號繼續」）→ Google → 回到課程詳情 → 按報名。
+- 想法：課程詳情的「登入後報名」直接觸發 Google 登入（帶 callbackUrl 回這堂課），站內畫面從 3 個減為 2 個。
+- 風險：動到 Auth（登入動作從登入頁搬到課程頁），屬於 HEAVY，需要產品主人放行；之後若加 LINE／Facebook（第 4 項），多種登入方式就需要選擇畫面，這個捷徑可能要改回登入頁或改成彈出選單，建議跟第 4 項一起決定。
+
 ### 4. 新增 LINE 與 Facebook 登入
 
 - 目前只有 Google（`src/auth.ts` 的 `providers`）。

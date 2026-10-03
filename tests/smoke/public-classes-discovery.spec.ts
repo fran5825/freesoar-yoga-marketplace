@@ -128,6 +128,65 @@ test.describe("public classes discovery smoke", () => {
     );
   });
 
+  // member-usability 票 07：把「分享連結 → 詳情 → 登入 → 回原頁 → 自己按報名 → 看到下一步」串成一次走完。
+  // Google 登入本身無法在測試裡操作，用「在登入頁加上 session cookie 後重新整理」模擬 Google 登入完成：
+  // 已登入的人開登入頁會被導回 callbackUrl（signed-in-navigation 決策 7），跟 Google 登入完成後的導向一致。
+  test("share link to enrolled: visitor detail → sign-in with callbackUrl → back on the same class (not auto-enrolled) → enroll → pending next step", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-share-flow-${Date.now()}`,
+    );
+    const teacher = await seedApprovedTeacher(testRunId);
+    const classSessionId = await seedPublicClassSession({
+      testRunId,
+      teacherProfileId: teacher.teacherProfileId,
+      title: `Share Flow ${testRunId}`,
+      startAt: futureDateTime(45, "19:00"),
+      endAt: futureDateTime(45, "20:00"),
+    });
+    await prisma.classSession.update({
+      where: { id: classSessionId },
+      data: { requiresApproval: true },
+    });
+    const memberEmail = `member-${testRunId}@${testEmailDomain}`;
+    createdEmails.push(memberEmail);
+    const { userId, sessionToken } = await createUserSession({ email: memberEmail });
+
+    // 畫面 1：分享連結打開的課程詳情（訪客）。
+    await page.goto(`/classes/${classSessionId}`);
+    await expect(page.getByText("剩 10 個名額")).toBeVisible();
+    await expect(page.getByText("老師開課", { exact: true })).toBeVisible();
+    await page.getByRole("link", { name: "登入後報名" }).click();
+
+    // 畫面 2：登入頁（接著是 Google 自己的畫面）。
+    await expect(page).toHaveURL(/\/sign-in\?callbackUrl=/);
+    await expect(page.getByRole("button", { name: "使用 Google 帳號繼續" })).toBeVisible();
+
+    // 模擬 Google 登入完成 → 畫面 3：回到同一堂課，已是學員專區，但不會自動報名。
+    await addAuthSessionCookie(context, sessionToken);
+    await page.reload();
+    await expect(page).toHaveURL(new RegExp(`/classes/${classSessionId}$`));
+    await expect(page.getByRole("banner").getByText("學員專區", { exact: true })).toBeVisible();
+    expect(await prisma.enrollment.count({ where: { classSessionId, userId } })).toBe(0);
+
+    // 同一畫面完成報名：看到「處理中」與下一步，名額已被佔用。
+    await page.getByRole("checkbox", { name: /我了解此課程非醫療行為/ }).check();
+    await page.getByRole("button", { name: "確認報名" }).click();
+    await expect(page.getByText("報名已送出，等待老師確認。")).toBeVisible();
+    await expect(page.getByText("處理中", { exact: true })).toBeVisible();
+    await expect(page.getByText(/老師確認後才算成立，確認結果會顯示在「通知」/)).toBeVisible();
+    await expect(page.getByRole("link", { name: "查看我的報名" })).toHaveAttribute(
+      "href",
+      "/member/enrollments",
+    );
+    await expect(page.getByText("剩 9 個名額")).toBeVisible();
+    expect(
+      (await prisma.enrollment.findFirstOrThrow({ where: { classSessionId, userId } })).status,
+    ).toBe("pending");
+  });
+
   test("a visitor gets not-found (no existence leak) for a non-public class, a draft class, and a class taught by a suspended teacher, even though the last one is otherwise open_for_enrollment and isPublic=true", async ({
     page,
   }, testInfo) => {

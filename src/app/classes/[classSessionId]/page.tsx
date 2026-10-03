@@ -12,6 +12,7 @@ import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { getCurrentUser } from "@/lib/auth/session";
 
 import { ClassAvailabilityBadge } from "../_components/ClassAvailabilityBadge";
+import { ClassOriginTag } from "../_components/ClassOriginTag";
 import { CancelEnrollmentForm } from "../../member/_components/CancelEnrollmentForm";
 import { EnrollmentStatusBadge } from "../../member/_components/EnrollmentStatusBadge";
 import { MemberShell } from "../../member/_components/MemberShell";
@@ -92,6 +93,7 @@ export default async function MemberClassSessionPage({
           {classSession.title}
         </h1>
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-3">
+          <ClassOriginTag origin={classSession.origin} />
           <ClassAvailabilityBadge availability={availability} />
           {canEnroll ? (
             <a
@@ -127,10 +129,14 @@ export default async function MemberClassSessionPage({
 
       <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
         <dl className="grid gap-3 text-sm text-ink-soft sm:grid-cols-2">
-          <div className="min-w-0">
-            <dt className="font-medium text-ink">團體</dt>
-            <dd className="mt-1 break-words">{classSession.organization?.name ?? "老師自己開的課"}</dd>
-          </div>
+          {/* member-usability 票 07：來源改用標題下方的「團主團課／老師開課」標籤（與課程列表一致），
+              團體只在團主團課時顯示，老師開課不再顯示替代文字。 */}
+          {classSession.organization ? (
+            <div className="min-w-0">
+              <dt className="font-medium text-ink">團體</dt>
+              <dd className="mt-1 break-words">{classSession.organization.name}</dd>
+            </div>
+          ) : null}
           <div className="min-w-0">
             <dt className="font-medium text-ink">授課老師</dt>
             <dd className="mt-1 break-words">
@@ -284,7 +290,8 @@ function VisitorClassSessionView({
         <h1 className="min-w-0 break-words text-2xl font-semibold tracking-tight text-ink">
           {classSession.title}
         </h1>
-        <div className="mt-3">
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-3">
+          <ClassOriginTag origin={classSession.origin} />
           <ClassAvailabilityBadge availability={availability} />
         </div>
       </header>
