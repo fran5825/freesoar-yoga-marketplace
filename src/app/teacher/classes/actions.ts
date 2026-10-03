@@ -90,7 +90,7 @@ export async function declinePendingEnrollmentAction(formData: FormData): Promis
     redirectWithFeedback(formData, "error", result.message);
   }
 
-  redirectWithFeedback(formData, "success", "已拒絕這筆報名。");
+  redirectWithFeedback(formData, "success", "已婉拒這筆報名。");
 }
 
 function readFormString(formData: FormData, name: string): string {

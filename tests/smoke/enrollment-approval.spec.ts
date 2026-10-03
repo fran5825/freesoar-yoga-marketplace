@@ -186,8 +186,10 @@ test.describe("enrollment approval (requiresApproval) smoke", () => {
     await expect(page.getByText("已確認這筆報名。")).toBeVisible();
 
     const pendingCardB = page.locator("li").filter({ hasText: `note-from-${memberB.userId}` });
-    await pendingCardB.getByRole("button", { name: "拒絕" }).click();
-    await expect(page.getByText("已拒絕這筆報名。")).toBeVisible();
+    // 票 03：婉拒先在確認視窗看過學員與課程，再按「確定婉拒」。
+    await pendingCardB.getByRole("button", { name: /^婉拒/ }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "確定婉拒" }).click();
+    await expect(page.getByText("已婉拒這筆報名。")).toBeVisible();
 
     await expect(page.getByText(/待確認報名/)).toBeHidden();
 

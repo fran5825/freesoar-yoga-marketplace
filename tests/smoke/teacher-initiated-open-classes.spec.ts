@@ -121,7 +121,7 @@ test.describe("teacher-initiated open classes smoke", () => {
 
     await expect(page.getByText("課程已建立。")).toBeVisible();
     await expect(page.getByText("陰瑜伽、亞歷山大技巧、脈輪流動")).toBeVisible();
-    await expect(page.getByText(baseInput.title)).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: baseInput.title })).toBeVisible();
     await expect(page.getByText("自己開的課", { exact: true })).toBeVisible();
     // 老師自建課程沒有團體，顯示中性 fallback，不是空白區塊。
     await expect(page.getByText("（自己開的課）")).toBeVisible();
@@ -142,6 +142,7 @@ test.describe("teacher-initiated open classes smoke", () => {
     expect(created.organizationId).toBeNull();
 
     await page.getByRole("button", { name: "取消課程" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "確定取消課程" }).click();
     await expect(page.getByText("課程已取消。")).toBeVisible();
     await expect(page.getByText("已取消", { exact: true })).toBeVisible();
 

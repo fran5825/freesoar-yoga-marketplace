@@ -154,9 +154,9 @@ test.describe("teacher class detail page", () => {
     await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
     await expect(page.getByRole("region", { name: "下一步" })).toContainText("開放報名");
 
-    // 區塊順序：下一步 → 報名狀況 → 課程內容 → 課程操作。
+    // 區塊順序（票 03）：課程重點（含下一步與開放報名）→ 草稿先看課程內容 → 報名狀況 → 取消這堂課。
     const headings = await page.getByRole("heading", { level: 2 }).allTextContents();
-    expect(headings).toEqual(["下一步", "報名狀況", "課程內容", "課程操作"]);
+    expect(headings).toEqual(["課程重點", "課程內容", "報名狀況", "取消這堂課"]);
     await expect(page.getByText("放鬆紓壓", { exact: true })).toBeVisible();
     await expect(page.getByText("陰瑜伽", { exact: true })).toBeVisible();
 
@@ -271,5 +271,102 @@ test.describe("teacher class detail page", () => {
       capacity: 14,
       requiresApproval: true,
     });
+  });
+});
+
+// teacher-usability-redesign 票 03：頂端課程重點、婉拒／取消先確認影響、確認視窗可返回且不寫入。
+test.describe("teacher class detail actions (ticket 03)", () => {
+  test("decline and cancel open a confirm dialog with the real impact; backing out (button or Escape) writes nothing and returns focus; confirming does", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-dialogs-${Date.now()}`,
+    );
+    const teacher = await seedTeacher(testRunId);
+    const title = `確認視窗課程 ${testRunId}`;
+    const classSessionId = await seedClass(teacher.teacherProfileId, {
+      title,
+      daysFromToday: 83,
+      requiresApproval: true,
+      capacity: 10,
+    });
+    await prisma.classSession.update({
+      where: { id: classSessionId },
+      data: { status: "open_for_enrollment" },
+    });
+    const memberIds: string[] = [];
+    for (const label of ["a", "b"]) {
+      const memberEmail = `member-${label}-${testRunId}@${testEmailDomain}`;
+      createdEmails.push(memberEmail);
+      const { userId } = await createUserSession({ email: memberEmail });
+      await prisma.user.update({ where: { id: userId }, data: { name: `學員${label.toUpperCase()} ${testRunId}` } });
+      memberIds.push(userId);
+      await prisma.enrollment.create({
+        data: { userId, classSessionId, status: "pending", consentedAt: new Date(), notes: `備註${label}` },
+      });
+    }
+
+    await addAuthSessionCookie(context, teacher.sessionToken);
+    await page.goto(`/teacher/classes/${classSessionId}`);
+
+    // 頂端重點：人數與下一步，下一步旁邊就是前往確認報名。
+    const overview = page.getByRole("region", { name: "課程重點" });
+    await expect(overview).toContainText("0 / 10 人");
+    await expect(overview).toContainText("2 人");
+    await expect(overview.getByRole("link", { name: "前往確認報名" })).toBeVisible();
+
+    // 直接確認：不跳視窗，人數更新、留在同一堂。
+    await page.locator("li").filter({ hasText: "備註a" }).getByRole("button", { name: "確認報名" }).click();
+    await expect(page.getByText("已確認這筆報名。")).toBeVisible();
+    await expect(overview).toContainText("1 / 10 人");
+
+    // 婉拒：先看到學員與課程；按「先不要」不寫入，焦點回到婉拒按鈕。
+    const declineTrigger = page.getByRole("button", { name: `婉拒 學員B ${testRunId} 的報名` });
+    await declineTrigger.click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toContainText(`學員B ${testRunId}`);
+    await expect(dialog).toContainText(title);
+    await expect(dialog.getByRole("button", { name: "先不要" })).toBeFocused();
+    await dialog.getByRole("button", { name: "先不要" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(declineTrigger).toBeFocused();
+    expect(
+      (await prisma.enrollment.findFirstOrThrow({ where: { userId: memberIds[1], classSessionId } })).status,
+    ).toBe("pending");
+
+    // 取消課程：視窗寫出日期與連帶影響；按 Escape 關閉也不寫入。
+    await page.getByRole("button", { name: "取消課程" }).click();
+    await expect(dialog).toContainText("目前已報名 1 人、待確認 1 人");
+    await expect(dialog).toContainText("學員會收到通知");
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(page.getByRole("button", { name: "取消課程" })).toBeFocused();
+    expect(
+      (await prisma.classSession.findUniqueOrThrow({ where: { id: classSessionId } })).status,
+    ).toBe("open_for_enrollment");
+
+    // 確定婉拒才寫入。
+    await declineTrigger.click();
+    await dialog.getByRole("button", { name: "確定婉拒" }).click();
+    await expect(page.getByText("已婉拒這筆報名。")).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/teacher/classes/${classSessionId}\?`));
+    expect(
+      (await prisma.enrollment.findFirstOrThrow({ where: { userId: memberIds[1], classSessionId } })).status,
+    ).toBe("cancelled");
+
+    // 確定取消才寫入，已報名的那筆也一起取消。
+    await page.getByRole("button", { name: "取消課程" }).click();
+    await dialog.getByRole("button", { name: "確定取消課程" }).click();
+    await expect(page.getByText("課程已取消。")).toBeVisible();
+    expect(
+      (await prisma.classSession.findUniqueOrThrow({ where: { id: classSessionId } })).status,
+    ).toBe("cancelled");
+    expect(
+      (await prisma.enrollment.findFirstOrThrow({ where: { userId: memberIds[0], classSessionId } })).status,
+    ).toBe("cancelled");
+    // 已取消的課仍可查看，但不再有取消或開放的操作。
+    await expect(page.getByRole("button", { name: "取消課程" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
   });
 });
