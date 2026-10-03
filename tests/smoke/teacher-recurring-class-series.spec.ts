@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { addFixedDate, pickServiceType } from "./_helpers/class-form";
-import { futureWeekdayDateString } from "./_helpers/future-dates";
+import { futureDateString, futureWeekdayDateString } from "./_helpers/future-dates";
 import { selectFormTime } from "./_helpers/time-select";
 import { createClassSessionForTeacher } from "../../src/domain/class-session/__internal__/create-teacher-class-session-core";
 import { cancelClassSessionForTeacher } from "../../src/domain/class-session/__internal__/cancel-class-session-core-for-teacher";
@@ -238,11 +238,18 @@ test.describe("teacher recurring class series smoke", () => {
     );
     const teacher = await seedApprovedTeacher(testRunId);
 
+    // 票 08：原本寫死 2026-10-05 等日期，過了就會失敗；改成相對今天的日期（間隔一週）。
+    const dates = {
+      first: futureDateString(14),
+      second: futureDateString(21),
+      third: futureDateString(28),
+      fourth: futureDateString(35),
+    };
     const conflictingInput = validateClassSessionCreate({
       title: "既有課程",
       serviceType: "伸展與身體保養",
-      startAt: "2026-10-12T10:00",
-      endAt: "2026-10-12T11:00",
+      startAt: `${dates.second}T10:00`,
+      endAt: `${dates.second}T11:00`,
       location: "台北市信義區測試教室",
       capacity: 10,
       isPublic: false,
@@ -264,24 +271,24 @@ test.describe("teacher recurring class series smoke", () => {
     await selectFormTime(page, "fixed-", "end", baseSeriesInput.endTime);
     await page.locator("#fixed-location").fill(baseSeriesInput.location);
     await page.locator("#fixed-capacity").fill(String(baseSeriesInput.capacity));
-    await addFixedDate(page, "2026-10-19");
-    await addFixedDate(page, "2026-10-05");
-    await addFixedDate(page, "2026-10-12");
+    await addFixedDate(page, dates.third);
+    await addFixedDate(page, dates.first);
+    await addFixedDate(page, dates.second);
     // 日期清單會自動由早到晚排序；再點一次月曆上的日子會取消。
     await expect(page.getByRole("list", { name: "已加入的上課日期" }).getByRole("listitem")).toHaveText([
-      /2026-10-05/,
-      /2026-10-12/,
-      /2026-10-19/,
+      new RegExp(dates.first),
+      new RegExp(dates.second),
+      new RegExp(dates.third),
     ]);
-    await addFixedDate(page, "2026-10-26");
+    await addFixedDate(page, dates.fourth);
     await expect(page.getByText("已選 4 / 26")).toBeVisible();
-    await addFixedDate(page, "2026-10-26");
+    await addFixedDate(page, dates.fourth);
     await expect(page.getByText("已選 3 / 26")).toBeVisible();
     await page.getByText("哈達瑜伽", { exact: true }).click();
     await page.getByRole("button", { name: "建立課程系列" }).click();
 
     await expect(page.getByText(/共生成 2 場/)).toBeVisible();
-    await expect(page.getByText(/2026-10-12/)).toBeVisible();
+    await expect(page.getByText(new RegExp(dates.second))).toBeVisible();
     await expect(page.getByText("已生成場次（2）")).toBeVisible();
     // dayOfWeek === null（固定期），「生成更多」表單不該出現。
     await expect(page.getByRole("button", { name: "生成", exact: true })).toBeHidden();
