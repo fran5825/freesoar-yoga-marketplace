@@ -144,6 +144,52 @@ Rules:
 
 **老師自建課程（`teacher_initiated`）沿用完全相同的狀態機（`teacher-initiated-open-classes` 已確認）**：`origin` 欄位只影響擁有權（誰能操作、鎖查詢的 WHERE 過濾條件是 `teacherProfileId` 而不是 `organizerProfileId`），**不是**第二套狀態機——`draft → open_for_enrollment → completed`、`draft`／`open_for_enrollment → cancelled` 這兩條路徑對兩種 origin 完全同構，Teacher own-scoped 版本走平行的核心檔案（`__internal__/*-core-for-teacher.ts`），不修改既有 Organizer/Admin 版本本體。連帶取消的 Enrollment 條件也同步涵蓋 `pending`（見下方 Enrollment Status 的 Gate G2/G3 說明）。老師自建課程額外多了「建立」這一步的資格檢查（`TeacherProfile.status = 'approved'`）與跨 origin 共用的雙重預約衝突檢查（見 `docs/domain/data-model.md` 的 `ClassSession` 說明），但這些都是建立/報名這一層的規則，不影響狀態機本身。
 
+**已核准・未實作：團主直接開團（`organizer_direct`，organizer-usability-redesign 票 09）**：新增 `(none) → open_for_enrollment` 這條建立路徑。團主對已確認的 `OrganizerClassProposal` 按「開放報名」時，在同一個 transaction 建立課程並直接開放，不先建 `draft`。建立之後沿用同一套狀態機（`open_for_enrollment → completed`、`open_for_enrollment → cancelled`），由團主 own-scoped 操作；老師端的開放、取消、完成在 server 端限定 `origin = teacher_initiated`（票 09 補上目前缺少的 origin 檢查）。細節見 `docs/specs/organizer-usability-redesign-spec.md` 第 13.5–13.6 節。
+
+## OrganizerClassProposal Status
+
+**已核准・未實作**（organizer-usability-redesign，Q18：A；票 05–09）。
+
+```text
+(none)
+  → draft
+  → pending_confirmation
+  → confirmed
+  → converted
+
+draft（本人授課）
+  → confirmed
+
+pending_confirmation
+  → declined
+  → pending_confirmation（團主修改，version +1）
+
+declined
+  → pending_confirmation（直接重送）
+  → draft（團主修改內容，version +1）
+
+confirmed
+  → draft（團主修改內容：確認失效、釋放時段）
+
+draft / pending_confirmation / declined / confirmed
+  → withdrawn
+```
+
+Terminal states：
+
+```text
+withdrawn
+converted
+```
+
+Rules:
+
+- 只有 `confirmed` 且尚未轉課的邀請占用老師時段；pending、declined、draft 不占。
+- 老師確認的必須是最新 `version`；舊版本不能被接受。
+- 已送出的邀請不能換團體（以永不清空的 `submittedAt` 判斷，退回 draft 也一樣）；`converted` 之後不能修改，只能沿用課程的取消流程。
+- 超過 `startAt` 不能送出、確認或開放；不新增 `expired` 狀態或 cron。
+- 每個轉換的 actor、guard、時段與通知見 `state-transition-details.md` 的 OrganizerClassProposal 段落。
+
 ## Enrollment Status
 
 ```text

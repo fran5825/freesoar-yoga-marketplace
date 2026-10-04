@@ -40,6 +40,8 @@ V1 採用能力模型，而不是限制一個 `User` 只能有一種身分：
 
 公開資料仍需遵守 visibility policy；不是所有 teacher profile 或 class session 都一定公開。
 
+**已核准・未實作（organizer-usability-redesign 票 13）**：未登入開啟公開規則讀不到的 `/classes/[id]`（不存在、草稿、僅透過連結招募、已取消、老師非 approved）時，一律顯示同一個通用登入引導，HTTP 狀態、內容與 metadata 相同，不透露課程是否存在或任何內容；登入後依 Member 規則讀取。這會取代目前「匿名一律 not-found」的呈現，可見範圍本身不變。
+
 公開 class session 僅限 `open_for_enrollment` 或 `confirmed`，且已標記可公開。**已落地（`teacher-initiated-open-classes` Slice D 已確認）**：`/classes` 與 `/classes/[id]`，額外要求授課老師 `status = approved`（不在這條規則落地前就已經是完整未來設計的一部分，是這一輪新增的必要條件——沒有這條會讓已被暫停老師的舊公開課程繼續留在列表與可報名狀態）。
 
 ## User / Account
@@ -100,6 +102,8 @@ Teacher 只有在 published demand 或 matched class 需要時，才可看到必
 
 **V1 落地範圍（`organizer-profile-edit` 已確認）**：`Edit organizer profile` 這一列的 `Own`（Organizer）已落地——只有 `displayName` 這一個欄位，沒有狀態機也沒有狀態閘門（`OrganizerProfile` 不像 `TeacherProfile` 有 draft/approve/suspend，建立當下就是可用狀態），任何已建立 `OrganizerProfile` 的使用者都能隨時編輯。`Admin` 欄位仍是完整未來設計，V1 未開放（沒有任何頁面讓 Admin 代編輯 Organizer 的 `displayName`）。
 
+**已核准・未實作（organizer-usability-redesign，Q18：A；票 02–03）：多團體 own**。一位團主可以建立並管理多個自己的團體；表中 Organization 各列的 `Own` 改以 `Organization.ownerOrganizerProfileId` 判斷，查詢 `WHERE` 同時帶團體 id 與 owner。選取團體的 ID 一律由 server 驗證，他人的 ID 回 not-found；找不到 owner 的歷史團體只有 Admin 看得到。老師可以用同一個帳號建立團主資料與團體（沿用上方 bootstrap 例外），approved 資格只限制授課、不限制建團；切換身分不會讓老師取得額外的團體管理權。不新增多人共管、移交或刪除。
+
 **V1 落地範圍（`admin-organizations` 已確認）**：`View organization` 這一列的 `Admin` 已落地，但只是**唯讀**——`/admin/organizations` 讓 Admin 查看全平台所有 organization（名稱、類型、聯絡資訊、所屬 organizer 清單、需求與課程數量），依名稱字母排序。`Edit organization` 這一列的 `Admin` 仍是明確 Non-goal，V1 未開放（沒有任何頁面讓 Admin 編輯或代管 organization 資料）。
 
 ## DemandRequest
@@ -155,6 +159,30 @@ Teacher 可查看自己的 class session；下方「V1 落地範圍」對 Comple
 **V1 落地範圍**（`class-session-creation`、`enrollment`、`class-session-cancellation`、`class-session-completion` 已確認）：`Create class session from matched demand` 僅 Organizer own-scoped 可執行，**Admin 不介入**（D1，上表 Admin 欄位為完整未來設計，V1 未開放）；`Edit draft class session` 本輪不實作（D2，一次到位建立、建立後不可編輯）；**`Open for enrollment` 僅 Organizer own-scoped 可執行**（`enrollment` D2，Admin 不介入，且 `startAt` 已過不可開放，D14）；**`Cancel class session` Organizer own-scoped 或 Admin 皆可執行**（`class-session-cancellation` D1；`startAt` 已過不可取消，D2；取消可從 `draft` 或 `open_for_enrollment` 觸發，並連帶取消該課程底下所有 `confirmed` 的 Enrollment，見 `state-transition-details.md`——**修正（`admin-class-enrollment-management` 已確認）：Admin 版取消已落地**，`/admin/classes/[classSessionId]` 提供跟 Organizer own-scoped 版本完全相同資格條件的取消能力，只是不檢查擁有權；不記錄取消原因、不做「協助補齊必要資訊」或泛用的「變更 status」，這兩項刻意窄於 `docs/product/admin-mvp-spec.md` 原始描述的範圍，理由見該文件的落地現況說明）；**`Complete class session` 僅 Organizer own-scoped 可執行**（`class-session-completion` D1，Admin 不介入——修正原本標記為不接線、且誤寫成 Admin-only 的敘述，這條動作已落地；只能從 `open_for_enrollment` 觸發，且 `endAt` 必須已經過去，時間方向與 Cancel／Open for enrollment 相反；不連帶處理 Enrollment，也不觸發新的 Notification）。`View private class session` 的 Teacher 欄位在 V1 不受 approved 狀態限制（`class-session-creation` D15，比照 View own response 的既有唯讀先例）。**`admin-class-enrollment-management` 一輪同時新增了 Admin 唯讀查看全平台所有 class session（含完整 roster）的能力**，不在上表的動作清單裡（上表只列會員資格檢查的動作，純讀取沒有獨立一列），見 `/admin/classes`／`/admin/classes/[classSessionId]`。
 
 **V1 落地範圍（`teacher-initiated-open-classes` 已確認）**：新增 `Create own class session directly` 這一列——approved 老師可以自己開單堂、常規（每週固定星期）或固定期課程，不需要團主媒合，own-scoped，Admin 不介入（沒有 Admin 專用的老師建課入口）；建立時檢查自己的 `TeacherProfile.status = 'approved'`，並套用跨 origin 共用的雙重預約衝突檢查（見 `data-model.md` 的 `ClassSession` 說明）。`Open for enrollment`／`Cancel class session`／`Complete class session` 這三列的 **Teacher 欄位從 No 改為 Own**——但只對自己 `origin = teacher_initiated` 的課程有實際 UI 入口（`/teacher/classes` 只在來源是老師自建時才顯示對應按鈕），底層 own-scoped 函式本身不分來源（用 `teacherProfileId` 過濾，即使誤呼叫也不會動到別人或團主媒合的課程，只是刻意不在 UI 上對團主媒合課程顯示這些按鈕，避免混淆兩種來源的操作邊界）。老師自建課程額外支援「需要老師確認才算報名成功」（`requiresApproval`），見下方 `Enrollment` 表的 `Confirm enrollment`／`Decline enrollment` 兩列。
+
+**已核准・未實作（organizer-usability-redesign 票 09）：`organizer_direct` 與老師端 origin guard**。團主可以從自己已確認的合作邀請直接開團（見下方 OrganizerClassProposal 表的 `Open direct class from proposal`）。上表 `Open for enrollment`／`Cancel class session`／`Complete class session` 的 Teacher `Own` 會在 server 端限定 `origin = teacher_initiated`：目前的老師端核心只用 `teacherProfileId` 過濾、只靠 UI 隱藏按鈕，票 09 補上這個檢查。受邀老師確認授課，不會因此取得團主課程的開放、取消、完成或名單管理權；團主端核心同時適用 `organizer_matched` 與 `organizer_direct`。Admin 維持既有的查看與取消，不新增代確認或直接開團。
+
+## OrganizerClassProposal
+
+**已核准・未實作**（organizer-usability-redesign，Q18：A；票 05–09）。
+
+| Action | Visitor | Member | Organizer | Teacher | Admin |
+|---|---|---|---|---|---|
+| Create / save proposal draft | No | No | Own | No | No |
+| Submit proposal to teacher | No | No | Own | No | No |
+| View proposal | No | No | Own | Own（受邀老師） | No |
+| Confirm proposal | No | No | No | Own（受邀老師） | No |
+| Decline proposal | No | No | No | Own（受邀老師） | No |
+| Self-confirm（本人授課） | No | No | Own＋approved Teacher（同一 User） | — | No |
+| Revise proposal | No | No | Own | No | No |
+| Withdraw proposal | No | No | Own | No | No |
+| Open direct class from proposal | No | No | Own | No | No |
+| Search approved teacher cards | No | No | Own（僅公開名片欄位） | No | No |
+
+- 所有 Own 都由 server 判斷：團主看邀請的 `organizerProfileId`，老師看邀請的 `teacherProfileId`；不符回 not-found。團體必須是團主自己擁有的團體。
+- 確認、本人授課與開放報名都要重新檢查老師 `approved`、最新 `version`、未來時間與排課衝突；suspended 老師不能確認或本人授課，團主仍可查看與撤回。
+- 老師名片查詢只回傳公開顯示名稱、擅長類型、服務地區與照片，不使用 admin 查詢，不回傳 email 或電話。
+- Admin 欄位為 No：本輪不新增 Admin 代確認、代選老師或直接開團；Admin 是否需要唯讀查看邀請，留待之後的後台需求。
 
 ## RecurringClassSeries
 

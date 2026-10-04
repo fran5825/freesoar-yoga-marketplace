@@ -286,6 +286,40 @@ Future / admin-only 後續能力：
 - 已完成課程不應接受新的 enrollment。
 - V1 不做完整 Teacher attendance workflow。
 
+## OrganizerClassProposal（已核准・未實作）
+
+organizer-usability-redesign（Q18：A）。每個轉換的 actor、guard、時段占用、下一位處理者與通知收件人，以 `docs/specs/organizer-usability-redesign-spec.md` 第 13.3 節的總表為準；各票落地時把該列標成已落地，並在此補上實際函式名稱。
+
+### 共通前置條件
+
+- 所有動作都由 server 從登入者解析身分：團主動作要求邀請的 `organizerProfileId` 是本人，老師動作要求邀請的 `teacherProfileId` 是本人的 TeacherProfile；不符一律回 `proposal_not_found`，不揭露存在性。
+- 送出、確認、本人授課、開放報名都要重新檢查：老師是 `approved`（在 TeacherProfile 鎖內讀取）、`startAt` 在未來、欄位完整、團體聯絡資料完整。
+- 確認、婉拒、開放報名都要帶 `expectedVersion`，必須等於目前的 `version`。
+- 鎖順序：TeacherProfile（兩位老師時依 id 由小到大）→ OrganizerClassProposal → 其他資料列。
+
+### 時段占用
+
+| 狀態 | 是否占用老師時段 |
+| --- | --- |
+| draft／pending_confirmation／declined／withdrawn | 否 |
+| confirmed（`classSessionId` 為 null） | 是 |
+| converted | 由轉出的 `ClassSession` 占用 |
+
+### 禁止條件
+
+- 老師不能確認舊版本的內容，也不能確認已撤回、已轉課或已過期的邀請。
+- 團主不能修改或撤回 `converted` 的邀請；`submittedAt` 不為 null 的邀請不能換團體（即使已退回 draft）。
+- `withdrawn`、`converted` 不能再轉回其他狀態。
+- 未 approved（含 suspended）的老師不能確認或本人授課；Admin 不能代為確認。
+- 開放報名不能分成兩個 transaction（先建 draft 再開放）；重試只能回傳同一堂課。
+
+### ClassSession：`(none) → open_for_enrollment`（organizer_direct）
+
+- Actor：團主 own。
+- 前置：對應的邀請是 `confirmed`、`confirmedVersion = version = expectedVersion`、老師仍是 `approved`、`startAt` 在未來、排課無衝突（只排除這筆邀請自己的占用）。
+- 後置：同一個 transaction 內建立 `ClassSession`（`origin = organizer_direct`、`requiresApproval = false`、`isPublic` 取邀請設定），邀請轉為 `converted` 並寫入 `classSessionId`；失敗時全部 rollback，邀請維持 `confirmed`。
+- 之後的取消、完成沿用既有團主 own-scoped 規則與連帶取消報名的行為。
+
 ## Notification Side Effects
 
 狀態變更可能觸發 notification。**已落地**（`docs/superpowers/plans/2026-07-27-notification-plan.md`、`2026-07-28-class-session-cancellation-plan.md`、`2026-07-28-demand-request-cancellation-plan.md`、`2026-07-29-teacher-profile-suspension-plan.md` 已確認）：以下 15 個事件會在對應狀態變更**成功之後**建立 `Notification` 記錄（`channel="in_app"`，見 notification 一輪 D2），失敗（收件人解析或寫入本身出錯）絕不影響觸發它的主要商業邏輯（notification 一輪 D4）：
@@ -298,3 +332,5 @@ Future / admin-only 後續能力：
 - Enrollment confirmed（Member 自己）/ cancelled（Member 自己——僅限 Member 透過 `/member/enrollments` 自助取消這個觸發來源；Organizer 取消 ClassSession 造成的連帶取消改發 `class_session_cancelled`／`affected_member`，不是這個事件，見 `class-session-cancellation` D7/D8）
 
 Notification 內容需遵守品牌語氣：清楚、溫和、可信任，不使用焦慮式推銷。
+
+**已核准・未實作（organizer-usability-redesign 票 12，需先取得 schema 確認）**：合作邀請的送出、確認、婉拒、撤回、內容更新會各發一則站內通知，收件人由 service 依邀請的 owner 與受邀老師決定，本人授課不發給自己；直接開團成立後沿用 `class_session_created`。新增通知類型與「直達單筆、重試不重複」所需欄位見 `docs/specs/organizer-usability-redesign-spec.md` 第 13.7 節。

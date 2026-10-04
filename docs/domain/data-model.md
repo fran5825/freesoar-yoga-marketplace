@@ -87,7 +87,7 @@ Phase 1 schema notes（`organizer-demand-request-foundation` D1/D2/D3 已確認�
 
 - 實際 Prisma schema 以 `displayName`（必填）作為 organizer 顯示名稱／聯絡窗口稱謂，**不新增** `title` / `phone` 欄位（reconcile 早期設計稿）。若未來需要聯絡電話，走 `Organization.contactPhone`（見下）或 `User.phone`，不在 `OrganizerProfile` 重複存放。
 - `userId` 為 `@unique`：V1 一個 `User` 至多一個 `OrganizerProfile`。
-- `organizationId` 為單一 nullable FK：V1 一個 `OrganizerProfile` 至多一個 `Organization`，不支援多對多。
+- `organizationId` 為單一 nullable FK：V1 一個 `OrganizerProfile` 至多一個 `Organization`，不支援多對多。**已核准・未實作（organizer-usability-redesign）**：改由 `Organization.ownerOrganizerProfileId` 表達一位團主擁有多個團體（見下方 Organization 說明）；這個欄位降級為相容期的 legacy pointer，票 15 移除。
 - **Organizer capability bootstrap 例外**：任何 signed-in user 皆可自助建立自己的 `OrganizerProfile` + `Organization`（比照 `TeacherProfile` 的 onboarding 模式），不需要 Admin 指派或審核；建立後僅能管理自己的 own 資料。詳見 `docs/domain/permissions-matrix.md` 與 `docs/product/route-map.md` 的對應標注。
 - 建立流程一律「新建專屬 `Organization`」，V1 不提供搜尋/加入既有組織的協作邀請（non-goal，屬 enterprise 協作範疇）。
 - **Edit（`organizer-profile-edit` 已確認）**：已建立 `OrganizerProfile` 的 Organizer 可以在 `/organizer/profile` 編輯 `displayName`（沿用建立時的必填規則）。`id`／`userId`／`organizationId`／`createdAt`／`updatedAt` 不可由 Organizer 編輯。因為 `OrganizerProfile` 沒有狀態機（不像 `TeacherProfile` 需要 Admin 審核才能進入 `approved`），這個編輯能力不需要任何狀態閘門——只要有自己的 `OrganizerProfile` 就能隨時編輯。不新增 notification。
@@ -122,6 +122,15 @@ Phase 1 schema notes（`organizer-demand-request-foundation` D4 已確認）：
 - `contactName` / `contactEmail` / `contactPhone` 是提交 `DemandRequest` 前的必填欄位（團體對外聯絡窗口），但 Prisma schema 層級宣告為 `String?`（nullable），以維持 migration additive-safe（既有 `Organization` 資料列不會因新增 `NOT NULL` 欄位而失敗）；必填規則由 application-layer 在 `DemandRequest` submit 時驗證（見下方 `DemandRequest` 說明），不是 schema 層級的資料庫約束。
 - `area` / `address` 為 V1 optional / deferred 欄位，可留空，不阻擋任何流程。
 - `contactEmail` 只做「非空 + 基本 email 形狀」驗證，不做寄送驗證；`contactPhone` 只做「非空 + 長度界線」驗證，不做電信驗證。
+
+**已核准・未實作（organizer-usability-redesign，Q18：A）：多團體 owner**。完整 contract 見 `docs/specs/organizer-usability-redesign-spec.md` 第 13.1 節。
+
+- 一位團主可以擁有多個團體：新增 `Organization.ownerOrganizerProfileId`（nullable FK、`onDelete: SetNull`、有 index），反向集合為 `OrganizerProfile.ownedOrganizations`。Prisma relation name 用 `OrganizationOwner`；既有 legacy 關聯改名為 `OrganizerLegacyOrganization`，只是 Prisma 層的命名，資料庫不變。
+- 不做多人共管、移交或團體刪除；新建團體一律由 server 寫入 owner，client 不能指定或修改。
+- 第一個團體在首次建立團主資料時要填完整聯絡資料；之後新增的團體可以先存未完整的資料，但需求送審或合作邀請送出前必須補齊。
+- 舊資料回填 owner 時，如果有一個團體對應到兩位以上的團主，migration 會整個失敗並回報，不挑第一人；找不到 owner 的團體保持 null，只有 admin 看得到。
+- 相容期：授權一律看 owner；`OrganizerProfile.organizationId` 只當舊畫面的預設團體，等所有呼叫點遷移完（票 15）才移除。
+- 不新增歷史聯絡資料 snapshot：需求與課程繼續引用團體目前的名稱與聯絡資料。
 
 ## ServiceType
 
@@ -295,6 +304,7 @@ Fields:
 
 - organizer_matched（既有路徑：由已媒合的 `DemandRequest` 轉換產生）
 - teacher_initiated（新路徑：老師直接建課，不需要團主媒合）
+- organizer_direct（**已核准・未實作**，organizer-usability-redesign 票 09）：團主邀請已合作的老師、老師確認後由團主直接開團。沒有 `DemandRequest`，必有 organizer／organization，且有一筆 `converted` 的 `OrganizerClassProposal` 指向這堂課。建立時直接是 `open_for_enrollment`、`requiresApproval = false`。三種來源的不變量見 `docs/specs/organizer-usability-redesign-spec.md` 第 13.6 節。
 
 Phase 2 schema notes（`teacher-initiated-open-classes` 已確認）：
 
@@ -330,6 +340,42 @@ Phase 2 schema notes：
 - 固定期課程（例如連續 4 週的特定日期組合）不在這個 model 記錄每一個具體日期——生成時由呼叫端直接提供明確日期清單，逐筆寫入對應 `ClassSession.startAt`/`endAt`，系列本身只保留 `startTime`/`endTime` 這組共用的時鐘時間。
 - 沒有 `status`／`isPublic` 欄位：「取消系列」等同於「取消它底下所有還來得及取消的場次」，series 這一列本身仍會保留，之後仍可用「生成更多」再生成新的未來場次（僅限每週固定模式）；`isPublic` 只存在於每一筆獨立 `ClassSession`，系列生成的每一場目前一律預設 `isPublic = false`（V1 的刻意簡化，系列本身沒有能設定公開性的欄位/UI，且 `ClassSession` 建立後無法事後修改可見性）。
 - `onDelete: Cascade` 從 `TeacherProfile` 指向這個 model；`onDelete: SetNull` 從這個 model 指向底下生成的 `ClassSession`（見上方 `ClassSession.recurringClassSeriesId`）。
+
+## OrganizerClassProposal
+
+**已核准・未實作**（organizer-usability-redesign，Q18：A；票 05–09）。代表團主對平台上已通過審核的老師提出的單堂合作邀請，也保存直接開團的草稿。老師確認前不建立正式 `ClassSession`；團主開放報名時才在同一個 transaction 轉成正式課程。完整 Prisma 形狀見 `docs/specs/organizer-usability-redesign-spec.md` 第 13.2 節。
+
+Fields:
+
+- id
+- organizerProfileId（owner，server 從登入者解析；`onDelete: Cascade`）
+- organizationId（必須是 owner 自己的團體；送出後不可改；`onDelete: Restrict`）
+- teacherProfileId（nullable，草稿可以還沒選老師；`onDelete: Restrict`）
+- title／description／serviceType／serviceTypes／yogaStyles／startAt／endAt／location／capacity（草稿可部分空白，送出時驗證完整；長度與範圍沿用 `ClassSession`）
+- isPublic（預設 `false`＝僅透過連結招募）
+- status（`OrganizerClassProposalStatus`）
+- version（內容每次存檔 +1，老師確認時必須符合）
+- transitionSeq（每次成功寫入 +1，包括內容修改，供通知去重；見 spec 13.7）
+- declineReason／withdrawReason
+- submittedAt／confirmedVersion／confirmedAt／confirmedByUserId
+- classSessionId（nullable、`@unique`，轉課後指向正式課程；`onDelete: Restrict`）
+- createdAt／updatedAt
+
+Status：
+
+- draft
+- pending_confirmation
+- confirmed
+- declined
+- withdrawn
+- converted
+
+Schema notes：
+
+- 只有 `confirmed` 且還沒轉課的邀請會占用老師時段；pending、declined、draft 不占。所有建課路徑共用同一個衝突檢查（見 `ClassSession` 的雙重預約說明）。
+- 本人授課沒有獨立欄位，由「確認者＝團主本人＝受邀老師」推導。
+- 不產生假的 `DemandRequest`／`DemandResponse`。
+- 不支援多堂系列（backlog 第 18 項）。
 
 ## Enrollment
 
@@ -400,6 +446,8 @@ Fields:
 - status（`NotificationStatus`：`pending`／`sent`／`failed`／`cancelled`，V1 只會出現 `sent`／`failed`）
 - createdAt
 - sentAt（nullable，`pending`／`failed` 狀態時為 null）
+
+**待確認（organizer-usability-redesign 票 12 的 Human Gate）**：合作邀請的站內通知需要新增 5 個 `NotificationType`。另外，要讓通知直達單筆、重試不重複，需要新增可空欄位 `targetType`、`targetId` 與 `eventKey`（unique）。這兩項都是 schema 變更，要在票 12 開始前取得產品主人確認；建議內容見 `docs/specs/organizer-usability-redesign-spec.md` 第 13.7 節。確認前沿用目前的做法（依通知類型連到列表頁）。
 
 ## AdminNote
 

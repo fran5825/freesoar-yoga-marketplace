@@ -114,6 +114,33 @@ Exception 欄位：
 | `frequency` | `DemandRequest.frequency` |
 | `budgetRange` | `DemandRequest.budgetRange` |
 
+### 已核准・未實作：多團體與需求表單（organizer-usability-redesign 票 03–04）
+
+- **首次建立**（`/organizer/profile`）：同一頁分「你是誰」「第一個團體」「聯絡方式」三區，姓名與 email 預填；顯示名稱與聯絡窗口預設同步，手動改聯絡人後停止同步。第一個團體的 `contactName`／`contactEmail`／`contactPhone` 必填，與團主資料在同一個 transaction 建立。
+- **我的團體**（`/organizer/organizations`）：欄位同上方 `organization*` 與 `contact*`。之後新增的團體可以先存未完整的資料，但用它送出需求或合作邀請前必須補齊。
+- **需求表單**新增 `organizationId`（必填，只能選自己擁有的團體，只有一個時預選）。草稿可以換團體；已送出的需求不能換。其餘需求欄位與驗證規則不變。
+- 驗證失敗或存檔失敗都保留輸入；「存草稿」與「送出審核」是兩個按鈕；第一次存檔後網址轉到含 ID 的 edit 頁。
+
+## Organizer Class Proposal Form（已核准・未實作）
+
+organizer-usability-redesign 票 05–08。「我已有合作老師」路徑使用，單頁分「團體與老師」「課程安排」「招募設定」三區。草稿可以部分空白；送出邀請或本人確認授課時，以下標「送出時必填」的欄位必須完整。長度與範圍沿用 Class Session Form。
+
+| Field | 必填 | 說明 |
+|---|---|---|
+| `organizationId` | 送出時必填 | 自己擁有的團體；聯絡資料必須完整；送出後不能改 |
+| `teacherProfileId` | 送出時必填 | 從 approved 老師名片選擇（只顯示公開名稱、擅長類型、服務地區、照片）；本人是 approved 老師時可選自己 |
+| `title` | 送出時必填 | 課程名稱（≤200 字） |
+| `serviceTypes` | 送出時必填 | 課程風格，最多 3 項，受控清單 |
+| `yogaStyles` | 否 | 瑜伽類型；團主課程不強制 |
+| `startAt`／`endAt` | 送出時必填 | 以 Asia/Taipei 輸入與顯示；必須在未來，結束晚於開始 |
+| `location` | 送出時必填 | 地點（≤200 字） |
+| `capacity` | 送出時必填 | 名額（1–500） |
+| `description` | 否 | 課程說明（≤2000 字） |
+| `isPublic` | 否 | 預設 false＝僅透過連結招募；勾選才出現在公開課程列表。說明連結可以轉傳，不代表限定公司或社團成員 |
+
+- 送出前的確認畫面顯示團體、老師、時間，以及送出後會發生什麼（通知老師、等老師確認，還沒開放報名）。
+- 老師婉拒時填 `declineReason`（必填，1–500 字）；團主撤回時可填 `withdrawReason`（選填，≤500 字）。
+
 ## Demand Response Form
 
 | Field | 必填 | 說明 |
@@ -134,6 +161,8 @@ Exception 欄位：
 | `location` | 是 | 地點 |
 | `capacity` | 是 | 名額上限 |
 | `isPublic` | 否 | 是否允許公開 class detail / share link；預設 false |
+
+**已核准・未實作（organizer-usability-redesign 票 11）**：團主從已媒合需求成立課程時，表單可以預先帶入需求裡能確定的已存欄位（標題、地點、人數、說明、課程風格），由團主確認後送出；偏好時段與頻率只是偏好，不會被帶成正式的開始時間或整期安排。
 
 ## Enrollment Form
 

@@ -56,10 +56,13 @@ Can:
 - View teacher responses to own demand requests
 - Manage own class roster basics
 - Enroll in class sessions only through the same User's Member capability
+- **已核准・未實作（organizer-usability-redesign，Q18：A）**：建立並管理多個自己擁有的團體（owner 判斷）；為自己的團體建立合作邀請、選平台 approved 老師、修改／撤回尚未轉課的邀請；老師確認後直接開放報名（`organizer_direct`）。本人也是 approved 老師時，可以在團主表單明確確認由自己授課。細節見 `permissions-matrix.md` 的 OrganizerClassProposal 表。
 
 Cannot:
 
 - See other organizers' private demand requests
+- Manage organizations owned by other organizers, or transfer / co-manage organizations（V1 不做）
+- Confirm a proposal on behalf of the invited teacher
 - Approve teachers
 - Modify teacher profiles
 - Manage platform-wide data
@@ -79,6 +82,7 @@ Can:
 - **View own single class session detail（`teacher-usability` 第 05 票，產品主人 2026-09-25 放行）**：老師只能讀自己的單堂課詳情（範圍與上方列表完全相同，未新增可讀欄位：只含 confirmed／pending 報名的學員姓名、email、備註，評價者姓名與 email，Organization 只有名稱、無團主聯絡資料，無學員電話與頭像）；別人的課、不存在、沒有老師資料一律回傳找不到；suspended 老師仍可查看自己既有的課。own-scope 寫在查詢 WHERE，不是事後比對。
 - View own calendar
 - Enroll in class sessions only through the same User's Member capability
+- **已核准・未實作（organizer-usability-redesign）**：查看自己收到的團主合作邀請，確認最新版本或附原因婉拒；確認需要 `approved` 且排課無衝突。確認授課不會取得團主課程的開放、修改、取消、完成或名單管理權。同一個帳號可以另外建立團主資料與團體，approved 資格只限制授課、不限制建團。
 
 Cannot:
 
@@ -87,6 +91,7 @@ Cannot:
 - Approve self
 - Access admin dashboard
 - Create class sessions while own `TeacherProfile.status` is not `approved`（含 `suspended`）——資格檢查與既有 demand-response 資格檢查同等嚴格
+- **已核准・未實作（organizer-usability-redesign 票 09）**：Open / cancel / complete class sessions whose `origin` is not `teacher_initiated` through teacher-side services——目前只靠 UI 隱藏按鈕，票 09 在 server 端補上 origin 檢查
 
 ## Admin
 
