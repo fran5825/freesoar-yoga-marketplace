@@ -84,6 +84,15 @@ test.describe("admin organizations smoke", () => {
         status: "submitted",
       },
     });
+    // 草稿管理員看不到，不能算進需求數。
+    await prisma.demandRequest.create({
+      data: {
+        organizerProfileId: alpha.organizerProfileId,
+        organizationId: alpha.organizationId,
+        title: `Alpha Draft ${runId}`,
+        status: "draft",
+      },
+    });
 
     const { sessionToken } = await createUserSession({ email: adminEmail, isAdmin: true });
     await addAuthSessionCookie(context, sessionToken);
@@ -114,6 +123,53 @@ test.describe("admin organizations smoke", () => {
     const zebraIndex = cardTexts.indexOf(zebraOrgName);
     expect(alphaIndex).toBeGreaterThanOrEqual(0);
     expect(zebraIndex).toBeGreaterThan(alphaIndex);
+
+    for (const keyword of [alphaOrgName, "Contact Alpha", "contact-alpha@example.com", `Alpha Organizer ${runId}`]) {
+      await page.getByRole("searchbox", { name: "搜尋團體" }).fill(keyword);
+      await page.getByRole("button", { name: "搜尋", exact: true }).click();
+      await expect(alphaCard).toBeVisible();
+      await expect(zebraCard).toHaveCount(0);
+    }
+    await page.screenshot({ path: `.ai-runs/admin-usability/${testInfo.project.name}-organizations.png`, fullPage: true });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await page.getByRole("searchbox").fill(`missing-${runId}`);
+    await page.getByRole("searchbox").press("Enter");
+    await expect(page.getByText("搜尋結果：0 筆", { exact: true })).toBeVisible();
+    await expect(page.getByText("沒有符合搜尋條件的團體。", { exact: true })).toBeVisible();
+    await page.getByRole("link", { name: "清除關鍵字", exact: true }).click();
+    await expect(page.getByRole("searchbox")).toHaveValue("");
+  });
+
+  test("keeps long unbroken organization names and emails inside the page width", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const runId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-long-${Date.now()}`,
+    );
+    const adminEmail = `admin-long-${runId}@${testEmailDomain}`;
+    createdEmails.push(adminEmail);
+
+    // 沒有空白的長字串：break-words 不會縮小最小寬度，必須能在任意位置換行。
+    const longName = `LongOrg${"x".repeat(80)}${runId}`;
+    const organization = await prisma.organization.create({
+      data: {
+        name: longName,
+        type: "company",
+        contactName: `Contact${"y".repeat(60)}`,
+        contactEmail: `contact.${"z".repeat(60)}@example-organization-domain.com`,
+      },
+      select: { id: true },
+    });
+    createdOrganizationIds.push(organization.id);
+
+    const { sessionToken } = await createUserSession({ email: adminEmail, isAdmin: true });
+    await addAuthSessionCookie(context, sessionToken);
+
+    await page.goto(`/admin/organizations?q=${encodeURIComponent(longName)}`);
+    await expect(page.getByRole("heading", { level: 2, name: longName })).toBeVisible();
+    await expect(page.getByText("搜尋結果：1 筆", { exact: true })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 
   test("shows every organizer on a multi-organizer organization", async ({
@@ -208,7 +264,7 @@ test.describe("admin organizations smoke", () => {
     if (await menuButton.isVisible()) await menuButton.click();
 
     const nav = page.getByRole("navigation");
-    await expect(nav.getByRole("link", { name: "總覽", exact: true })).toHaveAttribute(
+    await expect(nav.getByRole("link", { name: "工作總覽", exact: true })).toHaveAttribute(
       "href",
       "/admin/dashboard",
     );
@@ -220,7 +276,7 @@ test.describe("admin organizations smoke", () => {
       "href",
       "/admin/demands",
     );
-    await expect(nav.getByRole("link", { name: "課程", exact: true })).toHaveAttribute(
+    await expect(nav.getByRole("link", { name: "課程與報名", exact: true })).toHaveAttribute(
       "href",
       "/admin/classes",
     );

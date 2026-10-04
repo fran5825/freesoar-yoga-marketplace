@@ -36,7 +36,10 @@ export async function listOrganizationsForAdmin(): Promise<AdminOrganizationSumm
       organizerProfiles: {
         select: { id: true, displayName: true, user: { select: { email: true } } },
       },
-      _count: { select: { demandRequests: true, classSessions: true } },
+      // 需求草稿是團主私人資料，管理員看不到，所以也不算進需求數，避免數字暗示有看不到的資料。
+      _count: {
+        select: { demandRequests: { where: { status: { not: "draft" } } }, classSessions: true },
+      },
     },
     orderBy: { name: "asc" },
   });

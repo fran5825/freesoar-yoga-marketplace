@@ -1,8 +1,10 @@
 // admin-usability 票 04：審核、取消等操作完成後顯示在頁面上方的結果提示。
 // Server Action 導回時用 ?result=success|error&message=... 帶過來（沿用既有做法）。
-export type AdminFlashParams = { result?: string; message?: string };
+import Link from "next/link";
 
-export function AdminFlash({ result, message }: AdminFlashParams) {
+export type AdminFlashParams = { result?: string; message?: string; item?: string };
+
+export function AdminFlash({ result, message, detailHref, detailLabel }: AdminFlashParams & { detailHref?: string; detailLabel?: string }) {
   if (!result || !message) {
     return null;
   }
@@ -17,6 +19,7 @@ export function AdminFlash({ result, message }: AdminFlashParams) {
       }
     >
       {message}
+      {detailHref ? <Link className="ml-2 font-medium underline underline-offset-4" href={detailHref}>{detailLabel ?? "查看剛處理的資料"}</Link> : null}
     </section>
   );
 }

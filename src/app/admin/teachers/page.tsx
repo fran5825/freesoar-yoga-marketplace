@@ -11,6 +11,8 @@ import { requireAdmin } from "@/lib/auth/session";
 import { AdminFilterBar, resolveActiveTab } from "../_components/AdminFilterBar";
 import { AdminFlash, type AdminFlashParams } from "../_components/AdminFlash";
 import { AdminListCard } from "../_components/AdminListCard";
+import { AdminSearchForm, AdminListResults } from "../_components/AdminSearchForm";
+import { adminDetailHref, adminListHref, matchesAdminSearch, normalizeAdminListQuery } from "../_lib/list-context";
 import {
   adminTeacherStatusLabels,
   adminTeacherStatusToneClasses,
@@ -39,7 +41,7 @@ const emptyMessages: Record<string, string> = {
 };
 
 type AdminTeachersPageProps = {
-  searchParams?: Promise<AdminFlashParams & { status?: string }>;
+  searchParams?: Promise<AdminFlashParams & { status?: string; q?: string }>;
 };
 
 export default async function AdminTeachersPage({ searchParams }: AdminTeachersPageProps) {
@@ -57,20 +59,24 @@ export default async function AdminTeachersPage({ searchParams }: AdminTeachersP
   ]);
 
   const teachers = [...submitted, ...approvedAndSuspended, ...rejected];
+  const query = normalizeAdminListQuery("teachers", resolvedSearchParams);
+  const returnTo = adminListHref("teachers", query);
+  const searchedTeachers = teachers.filter((teacher) => matchesAdminSearch(query.q, [teacher.displayName, teacher.user.name, teacher.user.email]));
+  const processedTeacher = teachers.find((teacher) => teacher.id === resolvedSearchParams?.item);
   const now = new Date();
 
   const tabs = statusTabs.map((tab) => ({
     ...tab,
     count: tab.statuses
-      ? teachers.filter((teacher) => tab.statuses?.includes(teacher.status)).length
-      : teachers.length,
+      ? searchedTeachers.filter((teacher) => tab.statuses?.includes(teacher.status)).length
+      : searchedTeachers.length,
   }));
-  const activeTab = resolveActiveTab(tabs, resolvedSearchParams?.status);
+  const activeTab = resolveActiveTab(tabs, query.status);
   // 待審的排最久的在前（先處理等最久的）；其他狀態最近更新的在前。
   const visibleTeachers = (
     activeTab.statuses
-      ? teachers.filter((teacher) => activeTab.statuses?.includes(teacher.status))
-      : teachers
+      ? searchedTeachers.filter((teacher) => activeTab.statuses?.includes(teacher.status))
+      : searchedTeachers
   ).sort((a, b) => {
     if (activeTab.key === "pending") {
       return a.updatedAt.getTime() - b.updatedAt.getTime();
@@ -87,24 +93,29 @@ export default async function AdminTeachersPage({ searchParams }: AdminTeachersP
         </p>
       </header>
 
-      <AdminFlash message={resolvedSearchParams?.message} result={resolvedSearchParams?.result} />
+      <AdminFlash message={resolvedSearchParams?.message} result={resolvedSearchParams?.result} detailHref={processedTeacher ? adminDetailHref("teachers", processedTeacher.id, returnTo) : undefined} detailLabel={processedTeacher ? `查看 ${processedTeacher.displayName ?? "剛處理的老師"}（目前：${adminTeacherStatusLabels[processedTeacher.status]}）` : undefined} />
+
+      <AdminSearchForm kind="teachers" query={query} label="搜尋老師" hint="顯示名稱、帳號姓名或 email" />
 
       <AdminFilterBar
         activeKey={activeTab.key}
         ariaLabel="老師狀態篩選"
         basePath="/admin/teachers"
         tabs={tabs}
+        q={query.q}
       />
+
+      <AdminListResults count={visibleTeachers.length} query={query} />
 
       {visibleTeachers.length === 0 ? (
         <section className="rounded-2xl border border-ink/15 bg-white p-6">
-          <h2 className="text-lg font-medium text-ink">{emptyMessages[activeTab.key]}</h2>
+          <h2 className="text-lg font-medium text-ink">{query.q ? "這個分類沒有符合搜尋條件的老師。" : emptyMessages[activeTab.key]}</h2>
         </section>
       ) : (
         <section className="grid gap-3">
           {visibleTeachers.map((teacher) => (
             <AdminListCard
-              href={`/admin/teachers/${teacher.id}`}
+              href={adminDetailHref("teachers", teacher.id, returnTo)}
               key={teacher.id}
               lines={[
                 `${teacher.serviceAreas.length > 0 ? teacher.serviceAreas.join("、") : "尚未填服務地區"}${

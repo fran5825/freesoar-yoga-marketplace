@@ -3,10 +3,10 @@ import type { ReactNode } from "react";
 import { RoleShell } from "@/app/_components/role-shell";
 
 const links = [
-  { href: "/admin/dashboard", label: "總覽" },
+  { href: "/admin/dashboard", label: "工作總覽" },
   { href: "/admin/teachers", label: "老師" },
   { href: "/admin/demands", label: "需求" },
-  { href: "/admin/classes", label: "課程" },
+  { href: "/admin/classes", label: "課程與報名" },
   { href: "/admin/organizations", label: "團體" },
 ];
 

@@ -17,7 +17,7 @@ export function AdminListCard({
 }) {
   return (
     <Link
-      className="grid gap-2 rounded-2xl border border-ink/15 bg-white p-5 transition hover:bg-sand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+      className="grid min-w-0 gap-2 rounded-2xl border border-ink/15 bg-white p-4 transition hover:bg-sand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] sm:items-center sm:gap-5 sm:py-3"
       href={href}
     >
       <div className="flex flex-wrap items-center gap-3">
@@ -32,11 +32,11 @@ export function AdminListCard({
           </span>
         ) : null}
       </div>
-      {lines.map((line) => (
+      <div className="grid min-w-0 gap-1">{lines.map((line) => (
         <p className="break-words text-sm text-ink-soft" key={line}>
           {line}
         </p>
-      ))}
+      ))}</div>
     </Link>
   );
 }

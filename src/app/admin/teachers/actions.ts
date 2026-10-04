@@ -9,17 +9,13 @@ import {
 import { requireAdmin } from "@/lib/auth/session";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { adminActionError, adminReviewFailure, type AdminActionState } from "../_lib/action-state";
+import { adminFeedbackHref } from "../_lib/list-context";
 
-// admin-usability 票 06：審核完成後回到老師列表（預設停在「待審」），列表頂端顯示成功提示；
-// 失敗則留在這位老師的詳情頁顯示原因，管理員不用重找。
-function redirectToList(result: "success" | "error", message: string): never {
-  redirect(`/admin/teachers?result=${result}&message=${encodeURIComponent(message)}`);
-}
-
-function redirectToDetail(teacherProfileId: string, message: string): never {
-  redirect(
-    `/admin/teachers/${encodeURIComponent(teacherProfileId)}?result=error&message=${encodeURIComponent(message)}`,
-  );
+// admin-usability 票 06：操作完成後回到老師列表（保留原搜尋／分類），列表頂端顯示成功提示；
+// 失敗則留在這位老師的詳情頁顯示原因（第二批起由 action 回傳狀態，不再跳頁）。
+function redirectToList(result: "success" | "error", message: string, formData?: FormData, item?: string): never {
+  redirect(adminFeedbackHref("teachers", formData?.get("returnTo"), result, message, item));
 }
 
 async function readTeacherProfileId(formData: FormData): Promise<string> {
@@ -38,30 +34,41 @@ async function readTeacherProfileId(formData: FormData): Promise<string> {
   return teacherProfileId;
 }
 
+// 第二批票 05：審核失敗一律回傳錯誤、不跳頁，表單保留已填的原因。
+// 資格已變（申請已被處理或已不存在）時另外標記 stale，畫面停用審核按鈕並提供重新載入／回列表。
+// 失敗時不呼叫 revalidatePath：重新整理會讓詳情頁換成目前狀態、卸載表單，已填的原因就不見了。
+function reviewFailure(result: { code: string; message: string }): AdminActionState {
+  return adminReviewFailure(result, {
+    missing: "teacher_profile_not_found",
+    changed: "teacher_profile_not_submitted",
+  });
+}
+
 export async function approveTeacherProfileApplicationAction(
+  _previousState: AdminActionState,
   formData: FormData,
-): Promise<void> {
+): Promise<AdminActionState> {
   const teacherProfileId = await readTeacherProfileId(formData);
 
   const result = await approveSubmittedTeacherProfileApplication(teacherProfileId);
 
-  revalidatePath("/admin/teachers");
-
   if (!result.ok) {
-    redirectToDetail(teacherProfileId, result.message);
+    return reviewFailure(result);
   }
 
-  redirectToList("success", "已通過這位老師的申請。");
+  revalidatePath("/admin/teachers");
+  redirectToList("success", "已通過這位老師的申請。", formData, teacherProfileId);
 }
 
 export async function rejectTeacherProfileApplicationAction(
+  _previousState: AdminActionState,
   formData: FormData,
-): Promise<void> {
+): Promise<AdminActionState> {
   const teacherProfileId = await readTeacherProfileId(formData);
 
-  // 後端再守一次確認欄位：表單以隱藏欄位帶入，代表管理員已在畫面上明確按下「退回申請」。
+  // 後端再守一次確認欄位：表單以隱藏欄位帶入，代表管理員已在畫面上明確展開並送出退回。
   if (formData.get("confirmReject") !== "yes") {
-    redirectToDetail(teacherProfileId, "請確認要退回這位老師的申請。");
+    return adminActionError("請確認要退回這位老師的申請。");
   }
 
   const rejectionReasonValue = formData.get("rejectionReason");
@@ -73,22 +80,24 @@ export async function rejectTeacherProfileApplicationAction(
     rejectionReason,
   );
 
-  revalidatePath("/admin/teachers");
-
   if (!result.ok) {
-    redirectToDetail(teacherProfileId, result.message);
+    return reviewFailure(result);
   }
 
-  redirectToList("success", "已退回這位老師的申請，退回原因會顯示給老師。");
+  revalidatePath("/admin/teachers");
+  redirectToList("success", "已退回這位老師的申請，退回原因會顯示給老師。", formData, teacherProfileId);
 }
 
+// 第二批票 07：暫停／恢復沿用票 05 的回饋模式。失敗回傳狀態、不跳頁，暫停原因留在本頁；
+// 資格已變（已不是可暫停／可恢復的狀態，或老師已不存在）時標記 stale。只有成功才 revalidate。
 export async function suspendTeacherProfileAction(
+  _previousState: AdminActionState,
   formData: FormData,
-): Promise<void> {
+): Promise<AdminActionState> {
   const teacherProfileId = await readTeacherProfileId(formData);
 
   if (formData.get("confirmSuspend") !== "yes") {
-    redirectToDetail(teacherProfileId, "請確認要暫停這位老師。");
+    return adminActionError("請確認要暫停這位老師。");
   }
 
   const suspensionReasonValue = formData.get("suspensionReason");
@@ -100,31 +109,38 @@ export async function suspendTeacherProfileAction(
     suspensionReason,
   );
 
-  revalidatePath("/admin/teachers");
-
   if (!result.ok) {
-    redirectToDetail(teacherProfileId, result.message);
+    return adminReviewFailure(result, {
+      missing: "teacher_profile_not_found",
+      changed: "teacher_profile_not_approved",
+      changedMessage: "這位老師已不是「已通過」狀態，可能剛才已經被處理過。",
+    });
   }
 
-  redirectToList("success", "這位老師已經暫停。");
+  revalidatePath("/admin/teachers");
+  redirectToList("success", "這位老師已經暫停，暫停原因會顯示給老師。", formData, teacherProfileId);
 }
 
 export async function restoreTeacherProfileAction(
+  _previousState: AdminActionState,
   formData: FormData,
-): Promise<void> {
+): Promise<AdminActionState> {
   const teacherProfileId = await readTeacherProfileId(formData);
 
   if (formData.get("confirmRestore") !== "yes") {
-    redirectToDetail(teacherProfileId, "請確認要恢復這位老師。");
+    return adminActionError("請確認要恢復這位老師。");
   }
 
   const result = await restoreSuspendedTeacherProfile(teacherProfileId);
 
-  revalidatePath("/admin/teachers");
-
   if (!result.ok) {
-    redirectToDetail(teacherProfileId, result.message);
+    return adminReviewFailure(result, {
+      missing: "teacher_profile_not_found",
+      changed: "teacher_profile_not_suspended",
+      changedMessage: "這位老師已不是「已暫停」狀態，可能剛才已經被處理過。",
+    });
   }
 
-  redirectToList("success", "這位老師已經恢復。");
+  revalidatePath("/admin/teachers");
+  redirectToList("success", "這位老師已經恢復。", formData, teacherProfileId);
 }

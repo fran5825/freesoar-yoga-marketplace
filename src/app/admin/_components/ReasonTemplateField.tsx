@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export type ReasonTemplate = { label: string; text: string };
 
@@ -15,6 +15,7 @@ export function ReasonTemplateField({
   templates,
   minLength,
   maxLength,
+  autoFocus,
 }: {
   id: string;
   name: string;
@@ -24,8 +25,21 @@ export function ReasonTemplateField({
   templates: ReasonTemplate[];
   minLength: number;
   maxLength: number;
+  autoFocus?: boolean;
 }) {
   const [value, setValue] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // 第二批票 07：瀏覽器內建的 minLength 會把前後空白算進去，「十個空白＋兩個字」也能通過。
+  // 這裡比照伺服器規則用 trim 後的字數再檢查一次，送出或開確認視窗前就擋下；伺服器驗證照舊保留。
+  useEffect(() => {
+    const trimmedLength = value.trim().length;
+    textareaRef.current?.setCustomValidity(
+      value.length > 0 && trimmedLength < minLength
+        ? `扣掉前後空白後至少需要 ${minLength} 個字，目前 ${trimmedLength} 字。`
+        : "",
+    );
+  }, [value, minLength]);
 
   return (
     <div>
@@ -48,6 +62,7 @@ export function ReasonTemplateField({
         </div>
       ) : null}
       <textarea
+        autoFocus={autoFocus}
         className="mt-2 min-h-24 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
         id={id}
         maxLength={maxLength}
@@ -55,6 +70,7 @@ export function ReasonTemplateField({
         name={name}
         onChange={(event) => setValue(event.target.value)}
         placeholder={placeholder}
+        ref={textareaRef}
         required
         value={value}
       />

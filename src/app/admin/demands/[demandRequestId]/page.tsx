@@ -11,14 +11,15 @@ import { formatRelativeTime } from "@/lib/format-relative-time";
 import { requireAdmin } from "@/lib/auth/session";
 
 import { AdminFlash, type AdminFlashParams } from "../../_components/AdminFlash";
-import { ReasonTemplateField } from "../../_components/ReasonTemplateField";
+import { AdminReviewPanel } from "../../_components/AdminReviewPanel";
+import { adminDetailHref, safeAdminReturnTo } from "../../_lib/list-context";
 import { demandRejectionTemplates } from "../../_components/reason-templates";
 import { publishDemandRequestAction, rejectDemandRequestAction } from "../actions";
 import { adminDemandStatusLabel, adminDemandStatusToneClass } from "../status-labels";
 
 type AdminDemandDetailPageProps = {
   params: Promise<{ demandRequestId: string }>;
-  searchParams?: Promise<AdminFlashParams>;
+  searchParams?: Promise<AdminFlashParams & { returnTo?: string }>;
 };
 
 const frequencyLabels: Record<string, string> = {
@@ -28,8 +29,10 @@ const frequencyLabels: Record<string, string> = {
   monthly: "每月",
 };
 
-// 票 07：需求審核詳情頁。順序：下一步（公開／退回）→ 團主與團體 → 需求內容。
+// 第二批票 06：需求詳情頁先閱讀再操作。順序：返回 → 對象／狀態／時間與摘要 → 處理結果 →
+// 需求內容 → 團主與聯絡資料 → 其他資料（收合）→ 審核操作；頁首有跳到審核區的連結。
 // 已處理過（已公開、已退回、之後的各狀態）的需求只顯示結果，不再顯示審核按鈕。
+// 需求退回是終局：文案一律說明「另建需求」，不寫成修改後重新送審。
 export default async function AdminDemandDetailPage({
   params,
   searchParams,
@@ -51,18 +54,27 @@ export default async function AdminDemandDetailPage({
   }
 
   const title = demand.title ?? "尚未命名的需求";
+  const returnTo = safeAdminReturnTo("demands", resolvedSearchParams?.returnTo);
   const contact = [
     demand.organization.contactName,
     demand.organization.contactEmail,
     demand.organization.contactPhone,
   ];
+  const locations = getDemandLocationItems(demand).join("、");
+  const frequency = demand.frequency ? (frequencyLabels[demand.frequency] ?? demand.frequency) : null;
+  const summary = [
+    demand.organization.name,
+    typeof demand.expectedParticipants === "number" ? `預期 ${demand.expectedParticipants} 人` : null,
+    frequency,
+    locations || null,
+  ].filter(Boolean);
 
   return (
     <div className="flex flex-col gap-8">
       <header className="border-b border-ink/15 pb-6">
         <Link
           className="text-sm font-medium text-clay underline underline-offset-4"
-          href="/admin/demands"
+          href={returnTo}
         >
           ← 回需求列表
         </Link>
@@ -80,101 +92,46 @@ export default async function AdminDemandDetailPage({
           {demand.status === "submitted" ? "送審於" : "最後更新"}{" "}
           {formatRelativeTime(demand.updatedAt)}（{formatTaipeiDatetime(demand.updatedAt)}）
         </p>
+        {summary.length > 0 ? (
+          <p className="mt-2 wrap-anywhere text-sm leading-6 text-ink">{summary.join("・")}</p>
+        ) : null}
+        {demand.status === "submitted" ? (
+          <a
+            className="mt-4 inline-flex w-full justify-center rounded-full border border-pine/40 px-5 py-2 text-sm font-medium text-pine transition hover:border-pine focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay sm:w-auto"
+            href="#demand-actions"
+          >
+            前往審核操作
+          </a>
+        ) : null}
       </header>
 
       <AdminFlash message={resolvedSearchParams?.message} result={resolvedSearchParams?.result} />
 
-      <section
-        aria-labelledby="next-step-title"
-        className="grid gap-4 rounded-2xl border border-pine/25 bg-pine-tint p-6"
-      >
-        {demand.status === "submitted" ? (
-          <>
-            <div>
-              <h2 className="text-xl font-semibold text-ink" id="next-step-title">
-                審核這筆需求
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-ink-soft">
-                看完下方內容後決定。公開後，合適的老師會在「需求池」看到；退回時，原因會顯示給團主。
-              </p>
-            </div>
-            <form action={publishDemandRequestAction}>
-              <input name="demandRequestId" type="hidden" value={demand.id} />
-              <button
-                className="w-full rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay sm:w-auto"
-                type="submit"
-              >
-                公開需求
-              </button>
-            </form>
-            <form
-              action={rejectDemandRequestAction}
-              className="grid gap-3 rounded-xl border border-rose-200 bg-white p-4"
-            >
-              <input name="demandRequestId" type="hidden" value={demand.id} />
-              <input name="confirmReject" type="hidden" value="yes" />
-              <ReasonTemplateField
-                hint="此說明會顯示給團主，請具體、溫和地寫出需要修正的方向（10–1000 字）。"
-                id="reject-reason"
-                label="退回原因"
-                maxLength={1000}
-                minLength={10}
-                name="rejectionReason"
-                placeholder="例如：需求說明過於簡略，請補充上課對象與希望呈現的課程樣貌。"
-                templates={demandRejectionTemplates}
-              />
-              <button
-                className="w-full rounded-full bg-rose-700 px-5 py-2 text-sm font-medium text-white transition hover:bg-rose-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay sm:w-auto"
-                type="submit"
-              >
-                退回需求
-              </button>
-            </form>
-          </>
-        ) : null}
-
-        {demand.status === "rejected" ? (
-          <div>
-            <h2 className="text-xl font-semibold text-ink" id="next-step-title">
-              這筆需求已退回
-            </h2>
-            <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-ink-soft">
-              {demand.rejectionReason
-                ? `退回原因：${demand.rejectionReason}`
-                : "團主修改後可以重新送審。"}
+      {demand.status === "rejected" ? (
+        <section className="rounded-2xl border border-ink/15 bg-white p-6">
+          <h2 className="text-xl font-semibold text-ink">這筆需求已退回</h2>
+          {demand.rejectionReason ? (
+            <p className="mt-2 whitespace-pre-wrap wrap-anywhere text-sm leading-6 text-ink-soft">
+              退回原因：{demand.rejectionReason}
             </p>
-          </div>
-        ) : null}
+          ) : null}
+          <p className="mt-2 text-sm leading-6 text-ink-soft">
+            退回後這筆需求不會再進入審核；團主需要另建一筆需求送審，原需求不能修改後重新送出。
+          </p>
+        </section>
+      ) : null}
 
-        {demand.status !== "submitted" && demand.status !== "rejected" ? (
-          <div>
-            <h2 className="text-xl font-semibold text-ink" id="next-step-title">
-              這筆需求已處理
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-ink-soft">
-              目前狀態：{adminDemandStatusLabel(demand.status)}。這個階段不需要管理員審核。
-            </p>
-          </div>
-        ) : null}
-      </section>
-
-      <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6 sm:grid-cols-2">
-        <h2 className="text-lg font-semibold text-ink sm:col-span-2">團主與團體</h2>
-        <Field label="團主" value={demand.organizerProfile.displayName} />
-        <Field
-          label="團體"
-          value={`${demand.organization.name}（${
-            organizationTypeLabels[demand.organization.type] ?? demand.organization.type
-          }）`}
-        />
-        <Field label="聯絡人" value={contact[0]} />
-        <Field label="聯絡 Email" value={contact[1]} />
-        <Field label="聯絡電話" value={contact[2]} />
-      </section>
+      {demand.status !== "submitted" && demand.status !== "rejected" ? (
+        <section className="rounded-2xl border border-ink/15 bg-white p-6">
+          <h2 className="text-xl font-semibold text-ink">這筆需求已處理</h2>
+          <p className="mt-2 text-sm leading-6 text-ink-soft">
+            目前狀態：{adminDemandStatusLabel(demand.status)}。這個階段不需要管理員審核。
+          </p>
+        </section>
+      ) : null}
 
       <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6 sm:grid-cols-2">
         <h2 className="text-lg font-semibold text-ink sm:col-span-2">需求內容</h2>
-        <Field label="服務類型" value={getDemandServiceTypes(demand).join("、") || null} />
         <Field
           label="學員程度"
           value={
@@ -191,18 +148,7 @@ export default async function AdminDemandDetailPage({
               : null
           }
         />
-        <Field
-          label="每堂長度"
-          value={
-            typeof demand.classLengthMinutes === "number"
-              ? `${demand.classLengthMinutes} 分鐘`
-              : null
-          }
-        />
-        <Field
-          label="頻率"
-          value={demand.frequency ? (frequencyLabels[demand.frequency] ?? demand.frequency) : null}
-        />
+        <Field label="偏好時段" value={demand.preferredTimeSlots.join("、") || null} />
         <Field
           label="期望開始日期"
           value={
@@ -213,11 +159,77 @@ export default async function AdminDemandDetailPage({
               : null
           }
         />
+        <Field label="期望地點" value={locations || null} />
+        <Field label="頻率" value={frequency} />
         <Field label="預算" value={demand.budgetRange} />
-        <Field label="期望地點" value={getDemandLocationItems(demand).join("、") || null} />
-        <Field label="偏好時段" value={demand.preferredTimeSlots.join("、") || null} wide />
+        <Field label="服務類型" value={getDemandServiceTypes(demand).join("、") || null} />
         <Field label="需求說明" multiline value={demand.description} wide />
       </section>
+
+      <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6 sm:grid-cols-2">
+        <h2 className="text-lg font-semibold text-ink sm:col-span-2">團主與聯絡資料</h2>
+        <Field label="團主" value={demand.organizerProfile.displayName} />
+        <Field label="團體" value={demand.organization.name} />
+        <Field label="聯絡人" value={contact[0]} />
+        <Field label="聯絡 Email" value={contact[1]} />
+        <Field label="聯絡電話" value={contact[2]} />
+      </section>
+
+      <details className="rounded-2xl border border-ink/15 bg-white p-6">
+        <summary className="cursor-pointer text-lg font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay">
+          其他資料：每堂長度與團體類型
+        </summary>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <Field
+            label="每堂長度"
+            value={
+              typeof demand.classLengthMinutes === "number"
+                ? `${demand.classLengthMinutes} 分鐘`
+                : null
+            }
+          />
+          <Field
+            label="團體類型"
+            value={organizationTypeLabels[demand.organization.type] ?? demand.organization.type}
+          />
+        </div>
+      </details>
+
+      {demand.status === "submitted" ? (
+        <section
+          aria-labelledby="next-step-title"
+          className="grid scroll-mt-6 gap-4 rounded-2xl border border-pine/25 bg-pine-tint p-6"
+          id="demand-actions"
+        >
+          <div>
+            <h2 className="text-xl font-semibold text-ink" id="next-step-title">
+              審核這筆需求
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-ink-soft">
+              公開後，合適的老師會在「需求池」看到；退回時，原因會顯示給團主，團主需要另建一筆需求才能再送審。
+            </p>
+          </div>
+          <AdminReviewPanel
+            approveAction={publishDemandRequestAction}
+            detailHref={adminDetailHref("demands", demand.id, returnTo)}
+            id={demand.id}
+            idField="demandRequestId"
+            labels={{
+              approve: "公開需求",
+              approvePending: "公開處理中…",
+              approveRetry: "這筆需求仍是待審，可以稍後再按一次公開。",
+              rejectOpen: "退回需求",
+              rejectPending: "退回處理中…",
+              backToList: "回需求列表",
+            }}
+            reasonHint="團主會看到這段原因。退回後原需求不能修改重送，請具體、溫和地說明另建需求時要補充什麼（10–1000 字）。"
+            reasonPlaceholder="可以點上方常用原因帶入，再依這筆需求的情況修改。"
+            rejectAction={rejectDemandRequestAction}
+            returnTo={returnTo}
+            templates={demandRejectionTemplates}
+          />
+        </section>
+      ) : null}
     </div>
   );
 }
@@ -237,7 +249,7 @@ function Field({
     <div className={`min-w-0 text-sm ${wide ? "sm:col-span-2" : ""}`}>
       <h3 className="font-medium text-ink">{label}</h3>
       <p
-        className={`mt-1 break-words leading-6 text-ink-soft ${multiline ? "whitespace-pre-wrap" : ""}`}
+        className={`mt-1 wrap-anywhere leading-6 text-ink-soft ${multiline ? "whitespace-pre-wrap" : ""}`}
       >
         {value && value.trim().length > 0 ? value : "尚未填寫"}
       </p>

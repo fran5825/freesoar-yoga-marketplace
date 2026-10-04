@@ -14,6 +14,8 @@ import { requireAdmin } from "@/lib/auth/session";
 import { AdminFilterBar, resolveActiveTab } from "../_components/AdminFilterBar";
 import { AdminFlash, type AdminFlashParams } from "../_components/AdminFlash";
 import { AdminListCard } from "../_components/AdminListCard";
+import { AdminSearchForm, AdminListResults } from "../_components/AdminSearchForm";
+import { adminDetailHref, adminListHref, matchesAdminSearch, normalizeAdminListQuery, sortAdminClasses } from "../_lib/list-context";
 
 type ClassStatus = AdminClassSessionSummary["status"];
 
@@ -28,7 +30,7 @@ const statusTabs: { key: string; label: string; statuses: ClassStatus[] | null }
 ];
 
 type AdminClassesPageProps = {
-  searchParams?: Promise<AdminFlashParams & { status?: string }>;
+  searchParams?: Promise<AdminFlashParams & { status?: string; q?: string }>;
 };
 
 export default async function AdminClassesPage({ searchParams }: AdminClassesPageProps) {
@@ -43,15 +45,19 @@ export default async function AdminClassesPage({ searchParams }: AdminClassesPag
     searchParams,
   ]);
 
+  const query = normalizeAdminListQuery("classes", resolvedSearchParams);
+  const returnTo = adminListHref("classes", query);
+  const searched = classSessions.filter((item) => matchesAdminSearch(query.q, [item.title, item.teacherDisplayName, item.organizerDisplayName, item.organizationName, item.location]));
+  const processed = classSessions.find((item) => item.id === resolvedSearchParams?.item);
   const countOf = (statuses: ClassStatus[] | null) =>
     statuses
-      ? classSessions.filter((classSession) => statuses.includes(classSession.status)).length
-      : classSessions.length;
+      ? searched.filter((classSession) => statuses.includes(classSession.status)).length
+      : searched.length;
   const tabs = statusTabs.map((tab) => ({ ...tab, count: countOf(tab.statuses) }));
-  const activeTab = resolveActiveTab(tabs, resolvedSearchParams?.status);
-  const visibleClassSessions = activeTab.statuses
-    ? classSessions.filter((classSession) => activeTab.statuses?.includes(classSession.status))
-    : classSessions;
+  const activeTab = resolveActiveTab(tabs, query.status);
+  const visibleClassSessions = sortAdminClasses(activeTab.statuses
+    ? searched.filter((classSession) => activeTab.statuses?.includes(classSession.status))
+    : searched, new Date());
 
   return (
     <div className="flex flex-col gap-8">
@@ -62,30 +68,26 @@ export default async function AdminClassesPage({ searchParams }: AdminClassesPag
         </p>
       </header>
 
-      <AdminFlash message={resolvedSearchParams?.message} result={resolvedSearchParams?.result} />
+      <AdminFlash message={resolvedSearchParams?.message} result={resolvedSearchParams?.result} detailHref={processed ? adminDetailHref("classes", processed.id, returnTo) : undefined} detailLabel={processed ? `查看 ${processed.title}` : undefined} />
+      <AdminSearchForm kind="classes" query={query} label="搜尋課程" hint="標題、老師、團主、團體或地點" />
+      <AdminFilterBar activeKey={activeTab.key} ariaLabel="課程狀態篩選" basePath="/admin/classes" tabs={tabs} q={query.q} />
+      <AdminListResults count={visibleClassSessions.length} query={query} />
 
-      {classSessions.length === 0 ? (
+      {classSessions.length === 0 && !query.q ? (
         <section className="rounded-2xl border border-ink/15 bg-white p-6">
           <h2 className="text-lg font-medium text-ink">目前沒有任何課程</h2>
         </section>
       ) : (
         <>
-          <AdminFilterBar
-            activeKey={activeTab.key}
-            ariaLabel="課程狀態篩選"
-            basePath="/admin/classes"
-            tabs={tabs}
-          />
-
           {visibleClassSessions.length === 0 ? (
             <p className="rounded-2xl border border-ink/15 bg-white p-6 text-sm leading-6 text-ink-soft">
-              這個分類目前沒有課程。
+              {query.q ? "這個分類沒有符合搜尋條件的課程。" : "這個分類目前沒有課程。"}
             </p>
           ) : (
             <section className="grid gap-3">
               {visibleClassSessions.map((classSession) => (
                 <AdminListCard
-                  href={`/admin/classes/${classSession.id}`}
+                  href={adminDetailHref("classes", classSession.id, returnTo)}
                   key={classSession.id}
                   lines={[
                     `${classSession.teacherDisplayName ?? "老師尚未填寫"}・${

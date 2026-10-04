@@ -106,6 +106,37 @@ async function seedConfirmedEnrollment(testRunId: string, suffix: string, classS
 }
 
 test.describe("admin class session management smoke", () => {
+  test("searches class participants and location, preserves roster context and returns to filtered list after class cancellation", async ({ context, page }, testInfo) => {
+    const runId = normalizeForEmail(`${testInfo.project.name}-search-${Date.now()}`);
+    const seeded = await seedClassSession({ testRunId: runId, status: "open_for_enrollment", startAtOffsetMs: 86400_000 });
+    await seedConfirmedEnrollment(runId, "search", seeded.classSessionId);
+    const adminEmail = `admin-search-${runId}@${testEmailDomain}`;
+    createdEmails.push(adminEmail);
+    await addAuthSessionCookie(context, (await createUserSession({ email: adminEmail, isAdmin: true })).sessionToken);
+    for (const keyword of [`Class ${runId}`, `Teacher ${runId}`, `Organizer ${runId}`, `Org ${runId}`, "Test Studio"]) {
+      await page.goto(`/admin/classes?status=open&q=${encodeURIComponent(keyword)}`);
+      await expect(page.getByRole("heading", { level: 2, name: `Class ${runId}`, exact: true })).toBeVisible();
+    }
+    await page.getByRole("searchbox", { name: "搜尋課程" }).fill(runId);
+    await page.getByRole("button", { name: "搜尋", exact: true }).click();
+    await expect(page.getByText("搜尋結果：1 筆", { exact: true })).toBeVisible();
+    await page.screenshot({ path: `.ai-runs/admin-usability/${testInfo.project.name}-classes.png`, fullPage: true });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await page.getByRole("link").filter({ has: page.getByRole("heading", { name: `Class ${runId}`, exact: true }) }).click();
+    await page.getByRole("link", { name: "← 回課程列表" }).click();
+    await expect(page.getByRole("searchbox")).toHaveValue(runId);
+    await page.getByRole("link").filter({ has: page.getByRole("heading", { name: `Class ${runId}`, exact: true }) }).click();
+    await page.getByRole("button", { name: "取消這筆報名", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "確認取消報名", exact: true }).click();
+    await expect(page).toHaveURL((url) => url.pathname === `/admin/classes/${seeded.classSessionId}` && url.searchParams.has("returnTo"));
+    await expect(page.getByText(/^已取消「.+」的報名，同一位學員不能再報名這堂課。$/)).toBeVisible();
+    await page.getByRole("button", { name: "取消課程", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "確認取消課程", exact: true }).click();
+    await expect(page).toHaveURL((url) => url.pathname === "/admin/classes" && url.searchParams.get("q") === runId && url.searchParams.get("status") === "open" && url.searchParams.get("result") === "success");
+    await expect(page.getByText("搜尋結果：0 筆", { exact: true })).toBeVisible();
+    await page.getByRole("link", { name: `查看 Class ${runId}`, exact: true }).click();
+    await expect(page.getByRole("heading", { level: 1, name: `Class ${runId}`, exact: true })).toBeVisible();
+  });
   test("blocks non-admin sessions from /admin/classes", async ({ context, page }, testInfo) => {
     const email = `non-admin-${normalizeForEmail(
       `${testInfo.project.name}-${testInfo.workerIndex}-${Date.now()}`,
@@ -311,10 +342,10 @@ test.describe("admin class session management smoke", () => {
     // 整張卡片可點，進到詳情頁。
     await page.goto("/admin/classes?status=open");
     await page.getByRole("link", { name: new RegExp(`Class ${openRunId}`) }).click();
-    await expect(page).toHaveURL(new RegExp(`/admin/classes/${openSession.classSessionId}$`));
+    await expect(page).toHaveURL((url) => url.pathname === `/admin/classes/${openSession.classSessionId}` && url.searchParams.get("returnTo") === "/admin/classes?status=open");
     await expect(page.getByRole("link", { name: "← 回課程列表" })).toHaveAttribute(
       "href",
-      "/admin/classes",
+      "/admin/classes?status=open",
     );
   });
 
@@ -371,32 +402,41 @@ test.describe("admin class session management smoke", () => {
 
     const rowA = page.locator("li", { hasText: `member-e2e-a-${testRunId}` });
 
-    // 確認視窗：按「返回」或 Esc 都不會取消；按「確認」才會送出。
-    await rowA.getByRole("button", { name: "取消這筆報名" }).click();
-    const dialog = page.getByRole("dialog", { name: "確定要取消這筆報名嗎？" });
+    // 確認視窗：顯示學員與課程、不可恢復與不可重報；按「返回」或 Esc 都不會取消，焦點回到觸發按鈕。
+    const rowATrigger = rowA.getByRole("button", { name: "取消這筆報名" });
+    await rowATrigger.click();
+    const dialog = page.getByRole("dialog", { name: new RegExp(`確定要取消「.*e2e-a.*」的報名嗎？`) });
     await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText(`課程：Class ${testRunId}`);
+    await expect(dialog).toContainText("同一位學員也不能再報名這堂課");
+    await page.screenshot({ path: `.ai-runs/admin-usability/${testInfo.project.name}-enrollment-cancel-confirm.png`, fullPage: true });
     await dialog.getByRole("button", { name: "返回" }).click();
     await expect(dialog).toBeHidden();
+    await expect(rowATrigger).toBeFocused();
     await expect(page.getByText("報名名單（2 人）")).toBeVisible();
 
-    await rowA.getByRole("button", { name: "取消這筆報名" }).click();
+    await rowATrigger.click();
     await expect(dialog).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
+    await expect(rowATrigger).toBeFocused();
     await expect(page.getByText("報名名單（2 人）")).toBeVisible();
 
-    await rowA.getByRole("button", { name: "取消這筆報名" }).click();
+    await rowATrigger.click();
     await dialog.getByRole("button", { name: "確認取消報名" }).click();
 
-    await expect(page.getByText("報名已取消。")).toBeVisible();
+    // 單筆取消成功留在同一課程名單，結果指出學員。
+    await expect(page.getByText(/^已取消「.*e2e-a.*」的報名，同一位學員不能再報名這堂課。$/)).toBeVisible();
+    await expect(page).toHaveURL((url) => url.pathname === `/admin/classes/${seeded.classSessionId}`);
 
+    // 整堂取消確認顯示課程名稱與連帶取消的報名數（剩 1 筆有效報名）。
     await page.getByRole("button", { name: "取消課程", exact: true }).click();
-    await page
-      .getByRole("dialog", { name: "確定要取消這堂課程嗎？" })
-      .getByRole("button", { name: "確認取消課程" })
-      .click();
+    const classDialog = page.getByRole("dialog", { name: `確定要取消「Class ${testRunId}」嗎？` });
+    await expect(classDialog).toContainText("目前 1 筆報名（含待老師確認）會一併取消");
+    await expect(classDialog).toContainText("無法復原");
+    await classDialog.getByRole("button", { name: "確認取消課程" }).click();
 
-    await expect(page.getByText("課程已取消。")).toBeVisible();
+    await expect(page.getByText("課程已取消，已報名學員的報名也一併取消。")).toBeVisible();
     await expect(page.getByText("已取消", { exact: true }).first()).toBeVisible();
 
     const classSession = await prisma.classSession.findUniqueOrThrow({
@@ -413,5 +453,133 @@ test.describe("admin class session management smoke", () => {
       where: { userId: enrollmentA.memberUserId, type: "enrollment_cancelled" },
     });
     expect(memberANotification.body).not.toContain("你已經");
+  });
+
+  test("when eligibility changed meanwhile, cancellation fails with the object and next step, the page refreshes, and remaining buttons still work", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-stale-${Date.now()}`,
+    );
+    const seeded = await seedClassSession({ testRunId, status: "open_for_enrollment", startAtOffsetMs: 3600_000 });
+    const enrollmentA = await seedConfirmedEnrollment(testRunId, "stale-a", seeded.classSessionId);
+    await seedConfirmedEnrollment(testRunId, "stale-b", seeded.classSessionId);
+    const adminEmail = `admin-stale-${testRunId}@${testEmailDomain}`;
+    createdEmails.push(adminEmail);
+    await addAuthSessionCookie(context, (await createUserSession({ email: adminEmail, isAdmin: true })).sessionToken);
+
+    await page.goto(`/admin/classes/${seeded.classSessionId}`);
+    const rowA = page.locator("li", { hasText: `member-stale-a-${testRunId}` });
+    const rowB = page.locator("li", { hasText: `member-stale-b-${testRunId}` });
+    await expect(rowA.getByRole("button", { name: "取消這筆報名" })).toBeEnabled();
+
+    // 別人先取消了 A：送出後由 server 依當下狀態擋下，提示學員、原因與下一步，畫面換成最新狀態。
+    await prisma.enrollment.update({ where: { id: enrollmentA.enrollmentId }, data: { status: "cancelled" } });
+    await rowA.getByRole("button", { name: "取消這筆報名" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "確認取消報名" }).click();
+    await expect(page.getByText(/「.*stale-a.*」的報名沒有取消：.*畫面已更新為目前狀態，請確認後再操作。/)).toBeVisible();
+    await expect(rowA.getByRole("button", { name: "取消這筆報名" })).toHaveCount(0);
+    // 失敗後其他取消操作沒有被永久停用。
+    await expect(rowB.getByRole("button", { name: "取消這筆報名" })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "取消課程", exact: true })).toBeEnabled();
+
+    // 課程在這段期間已開始：整堂取消被擋下，取消區塊消失，不再提供無效操作。
+    await prisma.classSession.update({
+      where: { id: seeded.classSessionId },
+      data: { startAt: new Date(Date.now() - 60_000), endAt: new Date(Date.now() + 3600_000) },
+    });
+    await page.getByRole("button", { name: "取消課程", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "確認取消課程" }).click();
+    await expect(page.getByText(/^課程沒有取消：.*畫面已更新為目前狀態，請確認後再操作。$/)).toBeVisible();
+    await expect(page.getByRole("button", { name: "取消課程", exact: true })).toHaveCount(0);
+    await expect(rowB.getByRole("button", { name: "取消這筆報名" })).toHaveCount(0);
+    expect((await prisma.classSession.findUniqueOrThrow({ where: { id: seeded.classSessionId } })).status).toBe("open_for_enrollment");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+
+  test("after a failure the same cancel button is enabled again and a retry succeeds, for one enrollment and for the whole class", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-retry-${Date.now()}`,
+    );
+    const seeded = await seedClassSession({ testRunId, status: "open_for_enrollment", startAtOffsetMs: 3600_000 });
+    await seedConfirmedEnrollment(testRunId, "retry-a", seeded.classSessionId);
+    const adminEmail = `admin-retry-${testRunId}@${testEmailDomain}`;
+    createdEmails.push(adminEmail);
+    await addAuthSessionCookie(context, (await createUserSession({ email: adminEmail, isAdmin: true })).sessionToken);
+    await page.goto(`/admin/classes/${seeded.classSessionId}`);
+
+    // 單筆：讓第一次送出失敗，但這筆報名仍可取消，所以同一顆按鈕要留下、解除停用並能重試成功。
+    const row = page.locator("li", { hasText: `member-retry-a-${testRunId}` });
+    const rowTrigger = row.getByRole("button", { name: "取消這筆報名" });
+    await expect(rowTrigger).toBeEnabled();
+    await row.locator('input[name="enrollmentId"]').evaluate((el: HTMLInputElement) => { el.value = "does-not-exist"; });
+    await rowTrigger.click();
+    await page.getByRole("dialog").getByRole("button", { name: "確認取消報名" }).click();
+    await expect(page.getByText(/「.*retry-a.*」的報名沒有取消：/)).toBeVisible();
+    await expect(rowTrigger).toBeEnabled();
+    await rowTrigger.click();
+    await page.getByRole("dialog").getByRole("button", { name: "確認取消報名" }).click();
+    await expect(page.getByText(/^已取消「.*retry-a.*」的報名，同一位學員不能再報名這堂課。$/)).toBeVisible();
+
+    // 整堂：第一次送出被 server 擋下（確認欄位不符），同一顆按鈕解除停用，重試成功回課程列表。
+    const classTrigger = page.getByRole("button", { name: "取消課程", exact: true });
+    await page.locator('input[name="confirmCancel"]').last().evaluate((el: HTMLInputElement) => { el.value = "no"; });
+    await classTrigger.click();
+    await page.getByRole("dialog").getByRole("button", { name: "確認取消課程" }).click();
+    await expect(page.getByText(/請先勾選確認，才能取消這堂課程。/)).toBeVisible();
+    await expect(classTrigger).toBeEnabled();
+    expect((await prisma.classSession.findUniqueOrThrow({ where: { id: seeded.classSessionId } })).status).toBe("open_for_enrollment");
+    await classTrigger.click();
+    await page.getByRole("dialog").getByRole("button", { name: "確認取消課程" }).click();
+    await expect(page).toHaveURL((url) => url.pathname === "/admin/classes" && url.searchParams.get("result") === "success");
+    expect((await prisma.classSession.findUniqueOrThrow({ where: { id: seeded.classSessionId } })).status).toBe("cancelled");
+  });
+
+  test("while a cancellation is in flight the button shows a processing state, stays disabled, and only one request is sent", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-pending-${Date.now()}`,
+    );
+    const seeded = await seedClassSession({ testRunId, status: "open_for_enrollment", startAtOffsetMs: 3600_000 });
+    await seedConfirmedEnrollment(testRunId, "pending-a", seeded.classSessionId);
+    const adminEmail = `admin-pending-${testRunId}@${testEmailDomain}`;
+    createdEmails.push(adminEmail);
+    await addAuthSessionCookie(context, (await createUserSession({ email: adminEmail, isAdmin: true })).sessionToken);
+    await page.goto(`/admin/classes/${seeded.classSessionId}`);
+    const row = page.locator("li", { hasText: `member-pending-a-${testRunId}` });
+    await expect(row.getByRole("button", { name: "取消這筆報名" })).toBeEnabled();
+
+    // 攔住 server action 請求，延到檢查完處理中狀態才放行。
+    let actionRequests = 0;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    await page.route("**/admin/classes/**", async (route) => {
+      const request = route.request();
+      if (request.method() === "POST" && request.headers()["next-action"]) {
+        actionRequests += 1;
+        await gate;
+      }
+      await route.continue();
+    });
+
+    await row.getByRole("button", { name: "取消這筆報名" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "確認取消報名" }).click();
+    const processing = row.getByRole("button", { name: "取消處理中…" });
+    await expect(processing).toBeDisabled();
+    await processing.click({ force: true });
+    await processing.evaluate((el: HTMLButtonElement) => el.click());
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    expect(actionRequests).toBe(1);
+
+    release();
+    await expect(page.getByText(/^已取消「.*pending-a.*」的報名，同一位學員不能再報名這堂課。$/)).toBeVisible();
+    expect(actionRequests).toBe(1);
+    await page.unroute("**/admin/classes/**");
   });
 });

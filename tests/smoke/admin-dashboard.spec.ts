@@ -269,7 +269,7 @@ test.describe("admin dashboard smoke", () => {
       await page.goto(startPath);
       const menuButton = page.getByRole("button", { name: "選單" });
       if (await menuButton.isVisible()) await menuButton.click();
-      await expect(page.getByRole("navigation").getByRole("link", { name: "總覽", exact: true })).toHaveAttribute(
+      await expect(page.getByRole("navigation").getByRole("link", { name: "工作總覽", exact: true })).toHaveAttribute(
         "href",
         "/admin/dashboard",
       );
@@ -281,7 +281,7 @@ test.describe("admin dashboard smoke", () => {
         "href",
         "/admin/demands",
       );
-      await expect(page.getByRole("navigation").getByRole("link", { name: "課程", exact: true })).toHaveAttribute(
+      await expect(page.getByRole("navigation").getByRole("link", { name: "課程與報名", exact: true })).toHaveAttribute(
         "href",
         "/admin/classes",
       );

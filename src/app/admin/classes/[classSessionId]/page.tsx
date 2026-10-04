@@ -13,11 +13,12 @@ import { requireAdmin } from "@/lib/auth/session";
 
 import { AdminConfirmButton } from "../../_components/AdminConfirmButton";
 import { AdminFlash } from "../../_components/AdminFlash";
+import { safeAdminReturnTo } from "../../_lib/list-context";
 import { cancelClassSessionAdminAction, cancelEnrollmentAdminAction } from "./actions";
 
 type AdminClassSessionDetailPageProps = {
   params: Promise<{ classSessionId: string }>;
-  searchParams?: Promise<{ result?: string; message?: string }>;
+  searchParams?: Promise<{ result?: string; message?: string; returnTo?: string }>;
 };
 
 const enrollmentStatusLabels: Record<string, string> = {
@@ -49,15 +50,20 @@ export default async function AdminClassSessionDetailPage({
   }
 
   const started = hasClassSessionStarted(classSession.startAt);
+  const returnTo = safeAdminReturnTo("classes", resolvedSearchParams?.returnTo);
   const canCancelClassSession =
     CANCELLABLE_CLASS_SESSION_STATUSES.has(classSession.status) && !started;
+  // 第二批票 08：整堂取消會連帶取消的報名數（與取消核心相同：pending／confirmed）。
+  const activeEnrollmentCount = classSession.roster.filter(
+    (entry) => entry.status === "pending" || entry.status === "confirmed",
+  ).length;
 
   return (
     <div className="flex flex-col gap-8">
       <header className="border-b border-ink/15 pb-6">
         <Link
           className="text-sm font-medium text-clay underline underline-offset-4"
-          href="/admin/classes"
+          href={returnTo}
         >
           ← 回課程列表
         </Link>
@@ -150,14 +156,17 @@ export default async function AdminClassSessionDetailPage({
 
                 {entry.status === "confirmed" && !started ? (
                   <form action={cancelEnrollmentAdminAction} className="mt-2">
+                    <input name="returnTo" type="hidden" value={returnTo} />
                     <input name="classSessionId" type="hidden" value={classSessionId} />
                     <input name="enrollmentId" type="hidden" value={entry.id} />
                     <input name="confirmCancel" type="hidden" value="yes" />
+                    <input name="memberLabel" type="hidden" value={entry.memberLabel} />
                     <AdminConfirmButton
                       confirmLabel="確認取消報名"
-                      description="取消後無法復原，也無法重新建立這筆報名，學員會收到通知。"
-                      title="確定要取消這筆報名嗎？"
-                      triggerClassName="rounded-full border border-rose-300 px-3 py-1.5 text-xs font-medium text-rose-800 transition hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+                      description={`課程：${classSession.title}。取消後無法復原，同一位學員也不能再報名這堂課；學員會收到通知。`}
+                      pendingLabel="取消處理中…"
+                      title={`確定要取消「${entry.memberLabel}」的報名嗎？`}
+                      triggerClassName="rounded-full border border-rose-300 px-3 py-1.5 text-xs font-medium text-rose-800 transition hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay disabled:cursor-not-allowed disabled:opacity-60"
                       triggerLabel="取消這筆報名"
                     />
                   </form>
@@ -175,12 +184,19 @@ export default async function AdminClassSessionDetailPage({
             取消後無法復原，也無法重新建立，已報名的學員報名也會一併取消，並會收到通知。
           </p>
           <form action={cancelClassSessionAdminAction}>
+            <input name="returnTo" type="hidden" value={returnTo} />
             <input name="classSessionId" type="hidden" value={classSessionId} />
             <input name="confirmCancel" type="hidden" value="yes" />
             <AdminConfirmButton
               confirmLabel="確認取消課程"
-              description="取消後無法復原，也無法重新建立。已報名的學員報名會一併取消，並會收到通知。"
-              title="確定要取消這堂課程嗎？"
+              description={`取消後無法復原，也無法重新建立。${
+                activeEnrollmentCount > 0
+                  ? `目前 ${activeEnrollmentCount} 筆報名（含待老師確認）會一併取消，學員會收到通知。`
+                  : "目前沒有需要一併取消的報名。"
+              }`}
+              pendingLabel="取消處理中…"
+              title={`確定要取消「${classSession.title}」嗎？`}
+              triggerClassName="w-full rounded-full bg-rose-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               triggerLabel="取消課程"
             />
           </form>

@@ -19,6 +19,48 @@ test.afterAll(async () => {
 });
 
 test.describe("/admin/demands smoke", () => {
+  test("searches contact details, separates lifecycle categories, and preserves context after publishing", async ({ context, page }, testInfo) => {
+    const runId = normalizeForEmail(`${testInfo.project.name}-search-${Date.now()}`);
+    const organizerEmail = `organizer-search-${runId}@${testEmailDomain}`;
+    const adminEmail = `admin-search-${runId}@${testEmailDomain}`;
+    createdEmails.push(organizerEmail, adminEmail);
+    const contact = `contact-${runId}@example.com`;
+    const organizer = await createOrganizerProfileWithOrganization({ email: organizerEmail, displayName: `團主 ${runId}`, organizationName: `團體 ${runId}`, contactName: `聯絡 ${runId}`, contactEmail: contact });
+    const title = `春日需求 ${runId}`;
+    for (const [status, label] of [["submitted", title], ["published", `公開 ${runId}`], ["matched", `媒合 ${runId}`], ["converted_to_class", `建課 ${runId}`], ["cancelled", `取消 ${runId}`], ["draft", `草稿 ${runId}`]] as const) {
+      await createDemandRequest({ organizerProfileId: organizer.organizerProfileId, organizationId: organizer.organizationId, status, data: completeDemandRequestData({ title: label }) });
+    }
+    await addAuthSessionCookie(context, (await createUserSession({ email: adminEmail, isAdmin: true })).sessionToken);
+    await page.goto("/admin/demands");
+    await page.getByRole("searchbox", { name: "搜尋需求" }).fill(contact);
+    await page.getByRole("searchbox").press("Enter");
+    await expect(page.getByText("搜尋結果：1 筆", { exact: true })).toBeVisible();
+    for (const label of ["已公開・1", "已媒合・1", "已建課・1", "已取消・1", "全部・5"]) {
+      await page.getByRole("link", { name: label, exact: true }).click();
+      await expect(page.getByRole("searchbox")).toHaveValue(contact);
+    }
+    await expect(page.getByRole("heading", { name: `草稿 ${runId}`, exact: true })).toHaveCount(0);
+    await page.getByRole("link", { name: "待審・1", exact: true }).click();
+    await expect(page.getByRole("link", { name: "待審・1", exact: true })).toHaveAttribute("aria-current", "page");
+    await page.screenshot({ path: `.ai-runs/admin-usability/${testInfo.project.name}-demands.png`, fullPage: true });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await page.getByRole("link").filter({ has: page.getByRole("heading", { name: title, exact: true }) }).click();
+    await page.getByRole("button", { name: "公開需求", exact: true }).click();
+    await expect(page).toHaveURL((url) => url.pathname === "/admin/demands" && url.searchParams.get("q") === contact && url.searchParams.get("result") === "success");
+    await expect(page.getByText("搜尋結果：0 筆", { exact: true })).toBeVisible();
+    await page.getByRole("link", { name: `查看 ${title}`, exact: true }).click();
+    await page.getByRole("link", { name: "← 回需求列表" }).click();
+    await expect(page.getByRole("searchbox")).toHaveValue(contact);
+    for (const keyword of [title, `團體 ${runId}`, `團主 ${runId}`, `聯絡 ${runId}`]) {
+      await page.goto(`/admin/demands?status=all&q=${encodeURIComponent(keyword)}`);
+      await expect(page.getByRole("heading", { level: 2, name: title, exact: true })).toBeVisible();
+    }
+    await page.getByRole("searchbox").fill(`missing-${runId}`);
+    await page.getByRole("button", { name: "搜尋", exact: true }).click();
+    await expect(page.getByText("搜尋結果：0 筆", { exact: true })).toBeVisible();
+    await page.getByRole("link", { name: "清除全部條件", exact: true }).click();
+    await expect(page).toHaveURL(/\/admin\/demands$/);
+  });
   test("blocks non-admin sessions from the review route", async ({
     context,
     page,
@@ -142,13 +184,24 @@ test.describe("/admin/demands smoke", () => {
     await page.goto(`/admin/demands/${rejected.id}`);
     await expect(page.getByRole("heading", { name: "這筆需求已退回" })).toBeVisible();
     await expect(page.getByText("退回原因：需求說明過於簡略，請補充後重新送審。")).toBeVisible();
+    // 票 06：需求退回是終局，結果一律說明另建需求。
+    await expect(page.getByText(/團主需要另建一筆需求送審，原需求不能修改後重新送出/)).toBeVisible();
+    await expect(page.getByText("團主修改後可以重新送審。")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "公開需求" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "退回需求" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "前往審核操作" })).toHaveCount(0);
 
     // 已公開：已處理，沒有審核按鈕。
     await page.goto(`/admin/demands/${published.id}`);
     await expect(page.getByRole("heading", { name: "這筆需求已處理" })).toBeVisible();
     await expect(page.getByRole("button", { name: "公開需求" })).toHaveCount(0);
+
+    // 無原因的舊退回資料也要有另建需求的 fallback。
+    const rejectedWithoutReason = await make("rejected", "NoReason");
+    await prisma.demandRequest.update({ where: { id: rejectedWithoutReason.id }, data: { rejectionReason: null } });
+    await page.goto(`/admin/demands/${rejectedWithoutReason.id}`);
+    await expect(page.getByText(/團主需要另建一筆需求送審/)).toBeVisible();
+    await expect(page.getByText(/退回原因：/)).toHaveCount(0);
 
     // 篩選分頁：預設「待審」看不到已公開／已退回；草稿在任何分頁都看不到。
     await page.goto("/admin/demands");
@@ -204,7 +257,7 @@ test.describe("/admin/demands smoke", () => {
     // 審核完回到列表（停在待審）並顯示成功提示，這筆需求已離開待審。
     await expect(page).toHaveURL(/\/admin\/demands\?result=success/);
     await expect(page.getByText("需求已公開。")).toBeVisible();
-    await expect(page.getByRole("link", { name: new RegExp(demandTitle) })).toHaveCount(0);
+    await expect(page.getByRole("heading", { level: 2, name: demandTitle, exact: true })).toHaveCount(0);
 
     const publishedDemand = await prisma.demandRequest.findUniqueOrThrow({
       where: { id: demand.id },
@@ -216,6 +269,75 @@ test.describe("/admin/demands smoke", () => {
     await addAuthSessionCookie(context, organizerSessionToken);
     await page.goto(`/organizer/demands/${demand.id}`);
     await expect(page.getByText("已公開")).toBeVisible();
+  });
+
+  test("keeps the typed reason and disables review when the demand was handled or deleted meanwhile", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-stale-${Date.now()}`,
+    );
+    const organizerEmail = `stale-organizer-${testRunId}@${testEmailDomain}`;
+    const adminEmail = `stale-admin-${testRunId}@${testEmailDomain}`;
+    createdEmails.push(organizerEmail, adminEmail);
+    const { organizerProfileId, organizationId } = await createOrganizerProfileWithOrganization({
+      email: organizerEmail,
+      displayName: `Stale Organizer ${testRunId}`,
+      organizationName: `Stale Org ${testRunId}`,
+      contactName: "聯絡人",
+      contactEmail: `stale.contact.${"x".repeat(50)}-${testRunId}@example.com`,
+      contactPhone: "0900000000",
+    });
+    const handled = await createDemandRequest({
+      organizerProfileId,
+      organizationId,
+      status: "submitted",
+      data: completeDemandRequestData({ title: `Stale Handled ${testRunId}` }),
+    });
+    const deleted = await createDemandRequest({
+      organizerProfileId,
+      organizationId,
+      status: "submitted",
+      data: completeDemandRequestData({ title: `Stale Deleted ${testRunId}` }),
+    });
+    const { sessionToken } = await createUserSession({ email: adminEmail, isAdmin: true });
+    await addAuthSessionCookie(context, sessionToken);
+
+    // 從搜尋後的列表進入，摘要與跳轉連結在頁首。
+    await page.goto(`/admin/demands?q=${encodeURIComponent(testRunId)}`);
+    await page.getByRole("link").filter({ hasText: `Stale Handled ${testRunId}` }).first().click();
+    await expect(page.getByRole("button", { name: "公開需求" })).toBeEnabled();
+    await expect(page.getByText(new RegExp(`Stale Org ${testRunId}・預期`))).toBeVisible();
+    await page.getByRole("link", { name: "前往審核操作" }).click();
+    await expect(page).toHaveURL(/#demand-actions$/);
+
+    // 已被別人公開：退回失敗，原因保留、審核停用，可重新載入看目前狀態。
+    const reason = "請另建一筆需求，補充上課對象、人數與希望呈現的課程樣貌後送審。";
+    await page.getByRole("button", { name: "退回需求" }).click();
+    await page.getByLabel("退回原因").fill(reason);
+    await prisma.demandRequest.update({ where: { id: handled.id }, data: { status: "published" } });
+    await page.getByRole("button", { name: "送出退回" }).click();
+    const stale = page.getByRole("alert").filter({ hasText: "這頁的審核操作已停用" });
+    await expect(stale).toContainText("這筆需求已不是待審狀態");
+    await expect(page.getByLabel("退回原因")).toHaveValue(reason);
+    await expect(page.getByRole("button", { name: "送出退回" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "公開需求" })).toBeDisabled();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await page.screenshot({ path: `.ai-runs/admin-usability/${testInfo.project.name}-demand-review-stale.png`, fullPage: true });
+    await page.getByRole("link", { name: "重新載入，查看目前狀態" }).click();
+    await expect(page.getByRole("heading", { name: "這筆需求已處理" })).toBeVisible();
+    expect((await prisma.demandRequest.findUniqueOrThrow({ where: { id: handled.id }, select: { status: true } })).status).toBe("published");
+
+    // 已被刪除：顯示找不到並提供回到原搜尋的列表，不落入 404。
+    await page.goto(`/admin/demands?q=${encodeURIComponent(testRunId)}`);
+    await page.getByRole("link").filter({ hasText: `Stale Deleted ${testRunId}` }).first().click();
+    await expect(page.getByRole("button", { name: "公開需求" })).toBeEnabled();
+    await prisma.demandRequest.delete({ where: { id: deleted.id } });
+    await page.getByRole("button", { name: "公開需求" }).click();
+    await expect(page.getByRole("alert").filter({ hasText: "找不到這筆需求" })).toBeVisible();
+    await page.getByRole("link", { name: "回需求列表", exact: true }).click();
+    await expect(page).toHaveURL((url) => url.pathname === "/admin/demands" && url.searchParams.get("q") === testRunId);
   });
 
   test("lets admin reject a submitted demand with a required reason and confirmation, visible afterwards to the organizer", async ({
@@ -254,23 +376,40 @@ test.describe("/admin/demands smoke", () => {
     await addAuthSessionCookie(context, adminSessionToken);
     await page.goto(`/admin/demands/${demand.id}`);
 
-    // 原因必填：空白時 native required 擋下，仍停在詳情頁。
+    // 票 06：退回先展開才有原因欄；原因必填，空白時 native required 擋下，仍停在詳情頁。
+    await expect(page.getByLabel("退回原因")).toHaveCount(0);
     await page.getByRole("button", { name: "退回需求" }).click();
+    await expect(page.getByLabel("退回原因")).toBeFocused();
+    await page.getByRole("button", { name: "送出退回" }).click();
     await expect(page.getByRole("heading", { level: 1, name: demandTitle })).toBeVisible();
 
-    // 繞過前端 minlength/required，證明伺服器端仍會權威地擋下過短原因。
+    // 範本逐字使用規格第 9 節，三句都說明另建需求。
     const reasonField = page.getByLabel("退回原因");
+    for (const [label, text] of [
+      ["說明不足", "請另建一筆需求，補充上課對象、人數與希望呈現的課程樣貌後送審，讓老師更容易評估。"],
+      ["安排不明", "請另建一筆需求，說明可配合的時段、地點與預算範圍後送審，讓老師判斷是否能配合。"],
+      ["聯絡資料", "請先確認團體的聯絡人與聯絡方式，再另建一筆需求送審，方便後續聯繫。"],
+    ]) {
+      await page.getByRole("button", { name: label, exact: true }).click();
+      await expect(reasonField).toHaveValue(text);
+    }
+
+    // 繞過前端 minlength/required 與 trim 後字數檢查，證明伺服器端仍會權威地擋下過短原因；
+    // 失敗留在本頁、保留原因、不進 URL。
     await reasonField.evaluate((el: HTMLTextAreaElement) => {
       el.removeAttribute("required");
       el.removeAttribute("minlength");
       el.removeAttribute("maxlength");
+      el.setCustomValidity = () => {};
+      HTMLTextAreaElement.prototype.setCustomValidity.call(el, "");
     });
     await reasonField.fill("太短");
-    await page.getByRole("button", { name: "退回需求" }).click();
+    await page.getByRole("button", { name: "送出退回" }).click();
 
-    // 失敗時留在這筆需求的詳情頁並顯示原因。
-    await expect(page).toHaveURL(new RegExp(`/admin/demands/${demand.id}\\?result=error`));
+    await expect(page.getByRole("alert").filter({ hasText: "已填的原因仍保留" })).toBeVisible();
+    await expect(reasonField).toHaveValue("太短");
     await expect(page.getByRole("heading", { level: 1, name: demandTitle })).toBeVisible();
+    expect(page.url()).not.toContain(encodeURIComponent("太短"));
 
     const stillSubmitted = await prisma.demandRequest.findUniqueOrThrow({
       where: { id: demand.id },
@@ -278,13 +417,13 @@ test.describe("/admin/demands smoke", () => {
     });
     expect(stillSubmitted.status).toBe("submitted");
 
-    // 正常填寫合法長度的 reason，才能真正退回。
+    // 修正後重試，才能真正退回。
     const reason = `需求說明過於簡略，請補充上課對象與希望呈現的課程樣貌 ${testRunId}。`;
     await page.getByLabel("退回原因").fill(`  ${reason}  `);
-    await page.getByRole("button", { name: "退回需求" }).click();
+    await page.getByRole("button", { name: "送出退回" }).click();
 
-    await expect(page.getByText("需求已退回，退回原因會顯示給團主。")).toBeVisible();
-    await expect(page.getByRole("link", { name: new RegExp(demandTitle) })).toHaveCount(0);
+    await expect(page.getByText("需求已退回，退回原因會顯示給團主，團主需另建一筆需求。")).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: demandTitle, exact: true })).toHaveCount(0);
 
     const rejectedDemand = await prisma.demandRequest.findUniqueOrThrow({
       where: { id: demand.id },

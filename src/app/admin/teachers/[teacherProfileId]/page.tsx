@@ -8,25 +8,24 @@ import { getTeacherProfileForAdmin } from "@/domain/teacher-profile/service";
 import { formatRelativeTime } from "@/lib/format-relative-time";
 import { requireAdmin } from "@/lib/auth/session";
 
-import { AdminConfirmButton } from "../../_components/AdminConfirmButton";
 import { AdminFlash, type AdminFlashParams } from "../../_components/AdminFlash";
-import { AdminSubmitButton } from "../../_components/AdminSubmitButton";
-import { ReasonTemplateField } from "../../_components/ReasonTemplateField";
+import { AdminReviewPanel } from "../../_components/AdminReviewPanel";
+import { adminDetailHref, safeAdminReturnTo } from "../../_lib/list-context";
 import { teacherRejectionTemplates } from "../../_components/reason-templates";
 import {
   approveTeacherProfileApplicationAction,
   rejectTeacherProfileApplicationAction,
-  restoreTeacherProfileAction,
-  suspendTeacherProfileAction,
 } from "../actions";
 import { adminTeacherStatusLabels, adminTeacherStatusToneClasses } from "../status-labels";
+import { TeacherStatusPanel } from "./TeacherStatusPanel";
 
 type AdminTeacherDetailPageProps = {
   params: Promise<{ teacherProfileId: string }>;
-  searchParams?: Promise<AdminFlashParams>;
+  searchParams?: Promise<AdminFlashParams & { returnTo?: string }>;
 };
 
-// 票 06：老師審核詳情頁。順序：下一步（審核按鈕）→ 聯絡方式 → 老師資料。
+// 第二批票 05：老師詳情頁先閱讀再操作。順序：返回 → 對象／狀態／時間與摘要 → 教學資料 →
+// 聯絡方式 → 其他資料（收合）→ 操作區；頁首有跳到操作區的連結，不重複放整套表單。
 // 已處理過（通過、暫停、退回）的申請，只顯示結果與該狀態下允許的操作，不再顯示審核按鈕。
 export default async function AdminTeacherDetailPage({
   params,
@@ -49,13 +48,24 @@ export default async function AdminTeacherDetailPage({
   }
 
   const name = teacher.displayName ?? "未填顯示名稱";
+  const returnTo = safeAdminReturnTo("teachers", resolvedSearchParams?.returnTo);
+  const hasAction = teacher.status !== "rejected";
+  const summary = [
+    teacher.serviceAreas.length > 0 ? teacher.serviceAreas.join("、") : null,
+    typeof teacher.experienceYears === "number" ? `教學 ${teacher.experienceYears} 年` : null,
+    teacher.teachingFormats.length > 0 ? teacher.teachingFormats.join("、") : null,
+  ].filter(Boolean);
+  const ratingSummary = formatTeacherRatingSummary({
+    averageRating: teacher.averageRating,
+    reviewCount: teacher.reviewCount,
+  });
 
   return (
     <div className="flex flex-col gap-8">
       <header className="border-b border-ink/15 pb-6">
         <Link
           className="text-sm font-medium text-clay underline underline-offset-4"
-          href="/admin/teachers"
+          href={returnTo}
         >
           ← 回老師列表
         </Link>
@@ -73,13 +83,84 @@ export default async function AdminTeacherDetailPage({
           {teacher.status === "submitted" ? "送審於" : "最後更新"}{" "}
           {formatRelativeTime(teacher.updatedAt)}（{formatTaipeiDatetime(teacher.updatedAt)}）
         </p>
+        {summary.length > 0 ? (
+          <p className="mt-2 break-words text-sm leading-6 text-ink">{summary.join("・")}</p>
+        ) : null}
+        {hasAction ? (
+          <a
+            className="mt-4 inline-flex w-full justify-center rounded-full border border-pine/40 px-5 py-2 text-sm font-medium text-pine transition hover:border-pine focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay sm:w-auto"
+            href="#teacher-actions"
+          >
+            {teacher.status === "submitted" ? "前往審核操作" : "前往狀態操作"}
+          </a>
+        ) : null}
       </header>
 
       <AdminFlash message={resolvedSearchParams?.message} result={resolvedSearchParams?.result} />
 
+      {teacher.status === "rejected" ? (
+        <section className="rounded-2xl border border-ink/15 bg-white p-6">
+          <h2 className="text-xl font-semibold text-ink">這份申請已退回</h2>
+          <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-ink-soft">
+            {teacher.rejectionReason
+              ? `退回原因：${teacher.rejectionReason}`
+              : "老師修改後可以重新送審。"}
+          </p>
+        </section>
+      ) : null}
+
+      <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6 sm:grid-cols-2">
+        <h2 className="text-lg font-semibold text-ink sm:col-span-2">教學資料</h2>
+        <Field
+          label="教學年資"
+          value={
+            typeof teacher.experienceYears === "number" ? `${teacher.experienceYears} 年` : null
+          }
+        />
+        {teacher.status === "approved" || teacher.status === "suspended" ? (
+          <Field label="評價" value={ratingSummary} />
+        ) : null}
+        <List label="擅長類型" values={teacher.specialties} />
+        <List label="服務地區" values={teacher.serviceAreas} />
+        <List label="授課形式" values={teacher.teachingFormats} />
+        <Field label="簡介" multiline value={teacher.bio} wide />
+        <Field label="教學風格" multiline value={teacher.teachingStyle} wide />
+      </section>
+
+      <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6 sm:grid-cols-2">
+        <h2 className="text-lg font-semibold text-ink sm:col-span-2">聯絡方式</h2>
+        <Field label="帳號名稱" value={teacher.user.name} />
+        <Field label="Email" value={teacher.user.email} />
+        <Field label="電話" value={teacher.user.phone} />
+      </section>
+
+      <details className="group rounded-2xl border border-ink/15 bg-white p-6">
+        <summary className="cursor-pointer text-lg font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay">
+          其他資料：證照、價格與上課偏好
+        </summary>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <List label="證照" values={teacher.certifications} />
+          <Field label="價格區間" value={teacher.priceRange} />
+          <Field label="照片連結" value={teacher.profilePhotoUrl} wide />
+          <Field
+            label="偏好課程長度"
+            value={
+              typeof teacher.preferredSessionLengthMinutes === "number"
+                ? `${teacher.preferredSessionLengthMinutes} 分鐘`
+                : null
+            }
+          />
+          <Field label="偏好頻率" value={formatMultiChoiceText(teacher.preferredFrequency)} />
+          <Field label="偏好地點類型" value={formatMultiChoiceText(teacher.preferredLocationType)} />
+          <Field label="偏好補充" multiline value={teacher.preferenceNotes} wide />
+        </div>
+      </details>
+
+      {hasAction ? (
       <section
         aria-labelledby="next-step-title"
-        className="grid gap-4 rounded-2xl border border-pine/25 bg-pine-tint p-6"
+        className="grid scroll-mt-6 gap-4 rounded-2xl border border-pine/25 bg-pine-tint p-6"
+        id="teacher-actions"
       >
         {teacher.status === "submitted" ? (
           <>
@@ -88,35 +169,28 @@ export default async function AdminTeacherDetailPage({
                 審核這位老師的申請
               </h2>
               <p className="mt-2 text-sm leading-6 text-ink-soft">
-                看完下方資料後決定。通過後老師可以回應需求、開設自己的課程；退回時，原因會顯示給老師。
+                通過後老師可以回應需求、開設自己的課程；退回時，原因會顯示給老師，老師補充後可以重新送審。
               </p>
             </div>
-            <form action={approveTeacherProfileApplicationAction}>
-              <input name="teacherProfileId" type="hidden" value={teacher.id} />
-              <AdminSubmitButton className="w-full rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto">
-                通過申請
-              </AdminSubmitButton>
-            </form>
-            <form
-              action={rejectTeacherProfileApplicationAction}
-              className="grid gap-3 rounded-xl border border-rose-200 bg-white p-4"
-            >
-              <input name="teacherProfileId" type="hidden" value={teacher.id} />
-              <input name="confirmReject" type="hidden" value="yes" />
-              <ReasonTemplateField
-                hint="此說明會顯示給老師，請具體、溫和地寫出需要修正的方向（10–1000 字）。"
-                id="reject-reason"
-                label="退回原因"
-                maxLength={1000}
-                minLength={10}
-                name="rejectionReason"
-                placeholder="例如：教學經歷需要更具體，請補充帶領團課的實際經驗與時數。"
-                templates={teacherRejectionTemplates}
-              />
-              <AdminSubmitButton className="w-full rounded-full bg-rose-700 px-5 py-2 text-sm font-medium text-white transition hover:bg-rose-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto">
-                退回申請
-              </AdminSubmitButton>
-            </form>
+            <AdminReviewPanel
+              approveAction={approveTeacherProfileApplicationAction}
+              detailHref={adminDetailHref("teachers", teacher.id, returnTo)}
+              id={teacher.id}
+              idField="teacherProfileId"
+              labels={{
+                approve: "通過申請",
+                approvePending: "通過處理中…",
+                approveRetry: "這位老師仍是待審，可以稍後再按一次通過。",
+                rejectOpen: "退回申請",
+                rejectPending: "退回處理中…",
+                backToList: "回老師列表",
+              }}
+              reasonHint="老師會在申請頁看到這段原因，請具體、溫和地寫出需要補充的方向（10–1000 字）。"
+              reasonPlaceholder="可以點上方常用原因帶入，再依這位老師的情況修改。"
+              rejectAction={rejectTeacherProfileApplicationAction}
+              returnTo={returnTo}
+              templates={teacherRejectionTemplates}
+            />
           </>
         ) : null}
 
@@ -127,38 +201,16 @@ export default async function AdminTeacherDetailPage({
                 這位老師已通過審核
               </h2>
               <p className="mt-2 text-sm leading-6 text-ink-soft">
-                {formatTeacherRatingSummary({
-                  averageRating: teacher.averageRating,
-                  reviewCount: teacher.reviewCount,
-                })}
-                。需要時可以暫停這位老師。
+                {ratingSummary}。需要時可以暫停這位老師。
               </p>
             </div>
-            <form
-              action={suspendTeacherProfileAction}
-              className="grid gap-3 rounded-xl border border-rose-200 bg-white p-4"
-            >
-              <input name="teacherProfileId" type="hidden" value={teacher.id} />
-              <input name="confirmSuspend" type="hidden" value="yes" />
-              <ReasonTemplateField
-                hint="此說明會顯示給老師，請具體、溫和地寫出暫停的原因（10–1000 字）。"
-                id="suspend-reason"
-                label="暫停原因"
-                maxLength={1000}
-                minLength={10}
-                name="suspensionReason"
-                placeholder="例如：近期收到多筆課程品質相關反映，需要先暫停接受新需求。"
-                templates={[]}
-              />
-              <div>
-                <AdminConfirmButton
-                  confirmLabel="確認暫停"
-                  description="暫停後，這位老師無法再被團主選定，暫停原因會顯示給老師。已建立的課程不受影響。"
-                  title={`確定要暫停 ${name} 嗎？`}
-                  triggerLabel="暫停這位老師"
-                />
-              </div>
-            </form>
+            <TeacherStatusPanel
+              detailHref={adminDetailHref("teachers", teacher.id, returnTo)}
+              name={name}
+              returnTo={returnTo}
+              status="approved"
+              teacherProfileId={teacher.id}
+            />
           </>
         ) : null}
 
@@ -169,79 +221,25 @@ export default async function AdminTeacherDetailPage({
                 這位老師目前暫停中
               </h2>
               {teacher.suspensionReason ? (
-                <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-ink-soft">
+                <p className="mt-2 whitespace-pre-wrap wrap-anywhere text-sm leading-6 text-ink-soft">
                   暫停原因：{teacher.suspensionReason}
                 </p>
               ) : null}
+              <p className="mt-2 text-sm leading-6 text-ink-soft">
+                恢復後，老師可以再被團主選定。
+              </p>
             </div>
-            <form action={restoreTeacherProfileAction}>
-              <input name="teacherProfileId" type="hidden" value={teacher.id} />
-              <input name="confirmRestore" type="hidden" value="yes" />
-              <AdminSubmitButton className="w-full rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto">
-                恢復這位老師
-              </AdminSubmitButton>
-            </form>
+            <TeacherStatusPanel
+              detailHref={adminDetailHref("teachers", teacher.id, returnTo)}
+              name={name}
+              returnTo={returnTo}
+              status="suspended"
+              teacherProfileId={teacher.id}
+            />
           </>
         ) : null}
-
-        {teacher.status === "rejected" ? (
-          <div>
-            <h2 className="text-xl font-semibold text-ink" id="next-step-title">
-              這份申請已退回
-            </h2>
-            <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-ink-soft">
-              {teacher.rejectionReason
-                ? `退回原因：${teacher.rejectionReason}`
-                : "老師修改後可以重新送審。"}
-            </p>
-          </div>
-        ) : null}
       </section>
-
-      <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6 sm:grid-cols-2">
-        <h2 className="text-lg font-semibold text-ink sm:col-span-2">聯絡方式</h2>
-        <Field label="帳號名稱" value={teacher.user.name} />
-        <Field label="Email" value={teacher.user.email} />
-        <Field label="電話" value={teacher.user.phone} />
-      </section>
-
-      <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6 sm:grid-cols-2">
-        <h2 className="text-lg font-semibold text-ink sm:col-span-2">老師資料</h2>
-        <Field
-          label="教學年資"
-          value={
-            typeof teacher.experienceYears === "number" ? `${teacher.experienceYears} 年` : null
-          }
-        />
-        <Field label="價格區間" value={teacher.priceRange} />
-        {teacher.status === "approved" || teacher.status === "suspended" ? (
-          <Field
-            label="評價"
-            value={formatTeacherRatingSummary({
-              averageRating: teacher.averageRating,
-              reviewCount: teacher.reviewCount,
-            })}
-          />
-        ) : null}
-        <List label="擅長類型" values={teacher.specialties} />
-        <List label="服務地區" values={teacher.serviceAreas} />
-        <List label="授課形式" values={teacher.teachingFormats} />
-        <List label="證照" values={teacher.certifications} />
-        <Field label="簡介" multiline value={teacher.bio} wide />
-        <Field label="教學風格" multiline value={teacher.teachingStyle} wide />
-        <Field label="照片連結" value={teacher.profilePhotoUrl} wide />
-        <Field
-          label="偏好課程長度"
-          value={
-            typeof teacher.preferredSessionLengthMinutes === "number"
-              ? `${teacher.preferredSessionLengthMinutes} 分鐘`
-              : null
-          }
-        />
-        <Field label="偏好頻率" value={formatMultiChoiceText(teacher.preferredFrequency)} />
-        <Field label="偏好地點類型" value={formatMultiChoiceText(teacher.preferredLocationType)} />
-        <Field label="偏好補充" multiline value={teacher.preferenceNotes} wide />
-      </section>
+      ) : null}
     </div>
   );
 }
@@ -261,7 +259,7 @@ function Field({
     <div className={`min-w-0 text-sm ${wide ? "sm:col-span-2" : ""}`}>
       <h3 className="font-medium text-ink">{label}</h3>
       <p
-        className={`mt-1 break-words leading-6 text-ink-soft ${multiline ? "whitespace-pre-wrap" : ""}`}
+        className={`mt-1 wrap-anywhere leading-6 text-ink-soft ${multiline ? "whitespace-pre-wrap" : ""}`}
       >
         {value && value.trim().length > 0 ? value : "尚未填寫"}
       </p>

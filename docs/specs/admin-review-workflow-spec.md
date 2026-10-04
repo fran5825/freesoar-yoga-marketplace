@@ -1,5 +1,13 @@
 # Admin Review Workflow Spec
 
+## 2026-10-03 第二輪設計補充（第一批實作、後續分批）
+
+Q1–Q20 與完整方案已確認，admin 使用流程與資訊架構整理見 `docs/specs/admin-usability-redesign-spec.md`。第一批補上五區導覽、四列表搜尋、需求完整分類、排序與搜尋／分類返回脈絡；詳情重排、操作表單與跨資料入口仍待後續批次。既有 domain 審核資格與狀態轉換不變，不應將下方早期設計敘述視為新能力授權。
+
+第二輪的 UI 設計取代項目：詳情先摘要與資料、再操作；退回展開原因後明確送出，通過／公開／恢復一鍵，暫停與取消保留後果確認；手機與電腦都須完成日常操作；操作後保留原列表條件，單筆報名取消留在名單。原因驗證、admin guard 與 domain state transitions 維持現行已落地規則。
+
+V1 的實際 admin 能力以 `docs/domain/state-machines.md` 的已落地範圍與現有 service 為準：不因下方完整最終設計而新增 AdminNote、代選老師、代建課、泛用狀態變更或代確認報名。需求退回後另建需求；pending／confirmed 報名取消沿用既有資格。新規格記錄了邊界與驗收條件。
+
 ## 目的
 
 Admin review workflow 讓平台能維持老師品質、需求品質、課程資料一致性與基本安全。

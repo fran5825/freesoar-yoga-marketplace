@@ -10,16 +10,21 @@ export function AdminFilterBar({
   basePath,
   tabs,
   activeKey,
+  q = "",
 }: {
   ariaLabel: string;
   basePath: string;
   tabs: AdminFilterTab[];
   activeKey: string;
+  q?: string;
 }) {
   return (
     <nav aria-label={ariaLabel} className="flex flex-wrap gap-2">
       {tabs.map((tab, index) => {
         const isActive = tab.key === activeKey;
+        const params = new URLSearchParams();
+        if (index !== 0) params.set("status", tab.key);
+        if (q) params.set("q", q);
 
         return (
           <Link
@@ -29,7 +34,7 @@ export function AdminFilterBar({
                 ? "border-pine bg-pine-tint font-medium text-pine"
                 : "border-ink/20 text-ink-soft hover:border-ink/40"
             }`}
-            href={index === 0 ? basePath : `${basePath}?status=${tab.key}`}
+            href={params.size ? `${basePath}?${params}` : basePath}
             key={tab.key}
           >
             {tab.label}・{tab.count}

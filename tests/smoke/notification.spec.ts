@@ -169,9 +169,10 @@ test.describe("notification smoke", () => {
     await addAuthSessionCookie(context, adminSession);
     await page.goto("/admin/teachers");
     await page.getByRole("link").filter({ hasText: displayName }).first().click();
+    await page.getByRole("button", { name: "退回申請" }).click();
     const reasonField = page.getByLabel("退回原因");
     await reasonField.fill("資料尚不完整，請補充教學經歷細節。");
-    await page.getByRole("button", { name: "退回申請" }).click();
+    await page.getByRole("button", { name: "送出退回" }).click();
     await expect(page).toHaveURL(/result=/);
 
     const rejectedNotif = await prisma.notification.findFirst({
@@ -293,8 +294,9 @@ test.describe("notification smoke", () => {
     await addAuthSessionCookie(context, adminSession);
     await page.goto("/admin/demands");
     await page.getByRole("link").filter({ hasText: demandTitle }).first().click();
-    await page.getByLabel("退回原因").fill("地點資訊需要再確認，請補充細節。");
     await page.getByRole("button", { name: "退回需求" }).click();
+    await page.getByLabel("退回原因").fill("地點資訊需要再確認，請補充細節。");
+    await page.getByRole("button", { name: "送出退回" }).click();
     await expect(page).toHaveURL(/result=/);
 
     const rejectedNotif = await prisma.notification.findFirst({
