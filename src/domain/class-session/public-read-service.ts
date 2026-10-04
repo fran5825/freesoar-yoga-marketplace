@@ -10,6 +10,7 @@ import type { ClassSessionOrigin, ClassSessionStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getClassAvailability } from "./availability";
 import { taipeiDayOfWeek } from "./recurring-series-dates";
+import { matchesClassDiscoveryTime, type ClassDiscoveryFilters } from "./class-discovery-filters";
 
 export type PublicClassSessionListItem = {
   id: string;
@@ -22,6 +23,8 @@ export type PublicClassSessionListItem = {
   location: string;
   capacity: number;
   activeEnrollmentCount: number;
+  requiresApproval: boolean;
+  canAcceptNewEnrollments: boolean;
   // 只是「誰開的課」的分類標籤，不含任何內部關聯 id。
   origin: ClassSessionOrigin;
   teacherProfile: { displayName: string | null };
@@ -33,6 +36,7 @@ export type PublicClassSessionListFilters = {
   dayOfWeek?: number;
   // 只看還有名額（尚未開始且名額未滿）。
   availableOnly?: boolean;
+  discovery?: ClassDiscoveryFilters;
 };
 
 export type PublicClassSessionDetail = {
@@ -47,6 +51,8 @@ export type PublicClassSessionDetail = {
   location: string;
   capacity: number;
   activeEnrollmentCount: number;
+  requiresApproval: boolean;
+  canAcceptNewEnrollments: boolean;
   origin: ClassSessionOrigin;
   teacherProfile: { displayName: string | null };
 };
@@ -60,11 +66,18 @@ const PUBLIC_STATUS_FILTER: ClassSessionStatus[] = ["open_for_enrollment", "conf
 export async function getPublicClassSessionListItems(
   filters: PublicClassSessionListFilters = {},
 ): Promise<PublicClassSessionListItem[]> {
+  const now = new Date();
+  const discovery = filters.discovery;
   const rows = await prisma.classSession.findMany({
     where: {
       isPublic: true,
       status: { in: PUBLIC_STATUS_FILTER },
       teacherProfile: { status: "approved" },
+      ...(discovery ? {
+        AND: { status: "open_for_enrollment" as const, startAt: { gt: now } },
+        ...(discovery.location ? { location: { contains: discovery.location, mode: "insensitive" as const } } : {}),
+        ...(discovery.yogaStyle ? { yogaStyles: { has: discovery.yogaStyle } } : {}),
+      } : {}),
       // 課程風格可多選：新資料看 serviceTypes，舊資料與團主媒合的課只有單一 serviceType，兩邊都要比對。
       ...(filters.serviceType
         ? {
@@ -85,6 +98,8 @@ export async function getPublicClassSessionListItems(
       endAt: true,
       location: true,
       capacity: true,
+      status: true,
+      requiresApproval: true,
       origin: true,
       teacherProfile: { select: { displayName: true } },
       recurringClassSeries: { select: { dayOfWeek: true } },
@@ -105,16 +120,18 @@ export async function getPublicClassSessionListItems(
           return effectiveDayOfWeek === filters.dayOfWeek;
         });
 
-  const filtered = filters.availableOnly
-    ? byDayOfWeek.filter(
+  const timed = discovery ? byDayOfWeek.filter(row => matchesClassDiscoveryTime(row.startAt, discovery, now)) : byDayOfWeek;
+  const filtered = (discovery ? !discovery.includeFull : filters.availableOnly)
+    ? timed.filter(
         (row) =>
           getClassAvailability({
             capacity: row.capacity,
             activeEnrollmentCount: row._count.enrollments,
             startAt: row.startAt,
+            now,
           }).state === "open",
       )
-    : byDayOfWeek;
+    : timed;
 
   // 明確逐欄位挑選,而不是 destructure 掉 recurringClassSeries 再 spread 剩下的——那個內部
   // 欄位只是用來算 dayOfWeek,回傳給訪客的 DTO 本來就不該含有任何關聯 id 的痕跡。
@@ -129,6 +146,8 @@ export async function getPublicClassSessionListItems(
     location: row.location,
     capacity: row.capacity,
     activeEnrollmentCount: row._count.enrollments,
+    requiresApproval: row.requiresApproval,
+    canAcceptNewEnrollments: row.status === "open_for_enrollment" && getClassAvailability({ capacity: row.capacity, activeEnrollmentCount: row._count.enrollments, startAt: row.startAt, now }).state === "open",
     origin: row.origin,
     teacherProfile: row.teacherProfile,
   }));
@@ -157,6 +176,8 @@ export async function getPublicClassSessionDetail(
       endAt: true,
       location: true,
       capacity: true,
+      status: true,
+      requiresApproval: true,
       origin: true,
       teacherProfile: { select: { displayName: true } },
       _count: {
@@ -171,7 +192,15 @@ export async function getPublicClassSessionDetail(
     return null;
   }
 
-  const { _count, ...fields } = row;
+  const { _count, status, ...fields } = row;
+  return { ...fields, activeEnrollmentCount: _count.enrollments,
+    canAcceptNewEnrollments: status === "open_for_enrollment" && getClassAvailability({ capacity: row.capacity, activeEnrollmentCount: _count.enrollments, startAt: row.startAt }).state === "open" };
+}
 
-  return { ...fields, activeEnrollmentCount: _count.enrollments };
+export async function getPublicClassYogaStyles(): Promise<string[]> {
+  const rows = await prisma.classSession.findMany({
+    where: { isPublic: true, status: "open_for_enrollment", teacherProfile: { status: "approved" }, startAt: { gt: new Date() } },
+    select: { yogaStyles: true },
+  });
+  return [...new Set(rows.flatMap(row => row.yogaStyles))].sort((a, b) => a.localeCompare(b, "zh-Hant"));
 }

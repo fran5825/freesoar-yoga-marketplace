@@ -111,14 +111,15 @@ export default async function MemberEnrollmentsPage({
                 <h3 className="min-w-0 break-words text-lg font-medium text-ink">
                   {/* 標題連結用 after 撐滿整張卡，整張卡都可點進課程詳情；
                       取消與評價的表單另外用 relative z-10 浮在上層，仍可正常操作。 */}
-                  <Link
+                  {enrollment.classSession.status === "cancelled" ? <span>{enrollment.classSession.title}</span> : <Link
                     className="after:absolute after:inset-0 after:rounded-2xl"
                     href={`/classes/${enrollment.classSession.id}`}
                   >
                     {enrollment.classSession.title}
-                  </Link>
+                  </Link>}
                 </h3>
                 <EnrollmentStatusBadge status={enrollment.status} />
+                {enrollment.classSession.status === "cancelled" ? <span className="text-sm text-ink-soft">課程已取消</span> : null}
               </div>
               <p className="text-sm text-ink-soft">
                 {formatTaipeiDatetime(enrollment.classSession.startAt)} 開始・

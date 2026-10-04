@@ -2,6 +2,7 @@ import type { ClassSessionOrigin, ClassSessionStatus, EnrollmentStatus } from "@
 
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { getClassAvailability } from "@/domain/class-session/availability";
 
 export type OwnEnrollment = {
   id: string;
@@ -72,6 +73,8 @@ export type MemberFacingClassSession = {
   organization: { name: string } | null;
   teacherProfile: { displayName: string | null };
   ownEnrollment: { id: string; status: EnrollmentStatus } | null;
+  requiresApproval: boolean;
+  canAcceptNewEnrollments: boolean;
 };
 
 // D4：只回傳 status === "open_for_enrollment" 的 class session，draft 一律回傳 null
@@ -100,10 +103,11 @@ export async function getClassSessionForMember(
       endAt: true,
       location: true,
       capacity: true,
+      requiresApproval: true,
       status: true,
       origin: true,
       organization: { select: { name: true } },
-      teacherProfile: { select: { displayName: true } },
+      teacherProfile: { select: { displayName: true, status: true } },
       _count: {
         select: {
           enrollments: { where: { status: { in: ["pending", "confirmed"] } } },
@@ -116,7 +120,7 @@ export async function getClassSessionForMember(
     return null;
   }
 
-  const { _count, ...classSessionFields } = classSession;
+  const { _count, teacherProfile, ...classSessionFields } = classSession;
   const ownEnrollment = await prisma.enrollment.findUnique({
     where: { classSessionId_userId: { classSessionId, userId: currentUser.id } },
     select: { id: true, status: true },
@@ -124,6 +128,8 @@ export async function getClassSessionForMember(
 
   return {
     ...classSessionFields,
+    teacherProfile: { displayName: teacherProfile.displayName },
+    canAcceptNewEnrollments: teacherProfile.status === "approved" && classSession.status === "open_for_enrollment" && getClassAvailability({ capacity: classSession.capacity, activeEnrollmentCount: _count.enrollments, startAt: classSession.startAt }).state === "open",
     activeEnrollmentCount: _count.enrollments,
     ownEnrollment,
   };

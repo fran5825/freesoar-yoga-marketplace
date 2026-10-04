@@ -245,8 +245,9 @@ test.describe("/member dashboard smoke", () => {
     await page.setViewportSize({ width: 360, height: 800 });
     await page.goto(dashboardPath);
 
-    // 待你處理：2 筆 pending（未來、尚未開始）都在等老師確認；已取消的不列入。
-    const todo = page.getByRole("region", { name: "待你處理" });
+    // 等候區：2 筆 pending；本人待處理區不混入等候事項。
+    await expect(page.getByRole("region", { name: "待你處理" })).toContainText("目前沒有待處理事項");
+    const todo = page.getByRole("region", { name: "等待老師確認" });
     await expect(todo.getByText("等老師確認")).toHaveCount(2);
     await expect(todo).toContainText(`Class ${testRunId}-pending-1`);
     await expect(todo).toContainText(`Class ${testRunId}-pending-2`);

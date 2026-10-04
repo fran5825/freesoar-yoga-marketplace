@@ -1,365 +1,44 @@
 import Link from "next/link";
-import { getClassServiceTypes } from "@/domain/class-session/service-types-display";
 import { notFound } from "next/navigation";
-
 import { getClassSessionForMember } from "@/domain/enrollment/read-service";
-import {
-  getPublicClassSessionDetail,
-  type PublicClassSessionDetail,
-} from "@/domain/class-session/public-read-service";
+import { getPublicClassSessionDetail } from "@/domain/class-session/public-read-service";
 import { getClassAvailability } from "@/domain/class-session/availability";
-import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { getCurrentUser } from "@/lib/auth/session";
-
+import { safeClassReturnPath } from "@/lib/navigation/class-return-path";
+import { SiteShell } from "../../_components/site-shell";
 import { ClassAvailabilityBadge } from "../_components/ClassAvailabilityBadge";
 import { ClassOriginTag } from "../_components/ClassOriginTag";
-import { CancelEnrollmentForm } from "../../member/_components/CancelEnrollmentForm";
-import { EnrollmentStatusBadge } from "../../member/_components/EnrollmentStatusBadge";
-import { MemberShell } from "../../member/_components/MemberShell";
-import { PublicFooter } from "../../_components/public-footer";
-import { PublicHeader } from "../../_components/public-header";
+import { ClassSummary } from "../_components/ClassSummary";
+import { ClassEnrollmentPanel } from "../_components/ClassEnrollmentPanel";
 
-import { cancelEnrollmentFromClassAction, enrollAction } from "./actions";
-
-// teacher-initiated-open-classes 第 8 節（Gate G2/G3）：pending 是三態顯示的第三態，不再是
-// 「非 confirmed 就當作已取消」的二元判斷；狀態標籤與 /member/* 共用 EnrollmentStatusBadge。
-
-type MemberClassSessionPageProps = {
+export default async function MemberClassSessionPage({ params, searchParams }: {
   params: Promise<{ classSessionId: string }>;
-  searchParams?: Promise<{ result?: string; message?: string }>;
-};
-
-export default async function MemberClassSessionPage({
-  params,
-  searchParams,
-}: MemberClassSessionPageProps) {
-  const [{ classSessionId }, resolvedSearchParams, currentUser] = await Promise.all([
-    params,
-    searchParams,
-    getCurrentUser(),
-  ]);
-
-  const feedback =
-    resolvedSearchParams?.result && resolvedSearchParams.message
-      ? {
-          kind:
-            resolvedSearchParams.result === "success"
-              ? ("success" as const)
-              : ("error" as const),
-          message: resolvedSearchParams.message,
-        }
-      : null;
-
-  // teacher-initiated-open-classes 第 9 節（Slice D）：未登入 Visitor 換一條不需要
-  // requireUser() 的資料路徑（getPublicClassSessionDetail），不是單純放寬既有函式的條件——
-  // getClassSessionForMember() 本身無條件要求登入，改不了。未登入且不符合公開條件（含
-  // isPublic=false／狀態不符／老師已被暫停）一律 notFound()，不揭露存在性差異，比照既有
-  // draft class session 對 Visitor 的既有慣例。
-  if (!currentUser) {
-    const publicClassSession = await getPublicClassSessionDetail(classSessionId);
-
-    if (!publicClassSession) {
-      notFound();
-    }
-
-    return (
-      <VisitorClassSessionView classSession={publicClassSession} classSessionId={classSessionId} />
-    );
-  }
-
-  // D4：draft 一律回傳 null（not-found），open_for_enrollment 才會回傳，
-  // 即使 startAt 已過（D14：那時交由下方的時間檢查顯示「目前無法報名」）。
-  const classSession = await getClassSessionForMember(classSessionId);
-
-  if (!classSession) {
-    notFound();
-  }
-
-  const hasStarted = hasClassSessionStarted(classSession.startAt);
-  const availability = getClassAvailability({
-    capacity: classSession.capacity,
-    activeEnrollmentCount: classSession.activeEnrollmentCount,
-    startAt: classSession.startAt,
-  });
-  const canEnroll = !classSession.ownEnrollment && availability.state === "open";
-
-  // signed-in-navigation 票 04：登入後套學員專區外框（導覽列「找課程」），不再掉回公開 header；
-  // 訪客仍走下方 VisitorClassSessionView 與公開 header。
-  return (
-    <MemberShell>
-      <div className="flex flex-col gap-8">
-      <header className="border-b border-ink/15 pb-6">
-        <h1 className="min-w-0 break-words text-2xl font-semibold tracking-tight text-ink">
-          {classSession.title}
-        </h1>
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-3">
-          <ClassOriginTag origin={classSession.origin} />
-          <ClassAvailabilityBadge availability={availability} />
-          {canEnroll ? (
-            <a
-              className="rounded-full bg-pine px-4 py-2 text-sm font-medium text-white transition hover:bg-pine-deep"
-              href="#enroll"
-            >
-              我要報名
-            </a>
-          ) : null}
-        </div>
-      </header>
-
-      {feedback ? (
-        <section
-          aria-live="polite"
-          className={
-            feedback.kind === "success"
-              ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
-              : "rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
-          }
-        >
-          {feedback.message}
-          {feedback.kind === "success" ? (
-            <>
-              {" "}
-              <Link className="font-medium underline" href="/member/enrollments">
-                查看我的報名
-              </Link>
-            </>
-          ) : null}
-        </section>
-      ) : null}
-
-      <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
-        <dl className="grid gap-3 text-sm text-ink-soft sm:grid-cols-2">
-          {/* member-usability 票 07：來源改用標題下方的「團主團課／老師開課」標籤（與課程列表一致），
-              團體只在團主團課時顯示，老師開課不再顯示替代文字。 */}
-          {classSession.organization ? (
-            <div className="min-w-0">
-              <dt className="font-medium text-ink">團體</dt>
-              <dd className="mt-1 break-words">{classSession.organization.name}</dd>
-            </div>
-          ) : null}
-          <div className="min-w-0">
-            <dt className="font-medium text-ink">授課老師</dt>
-            <dd className="mt-1 break-words">
-              {classSession.teacherProfile.displayName ?? "老師"}
-            </dd>
-          </div>
-          {getClassServiceTypes(classSession).length > 0 ? (
-            <div className="min-w-0">
-              <dt className="font-medium text-ink">課程風格</dt>
-              <dd className="mt-1 break-words">
-                {getClassServiceTypes(classSession).join("、")}
-              </dd>
-            </div>
-          ) : null}
-          {classSession.yogaStyles.length > 0 ? (
-            <div className="min-w-0">
-              <dt className="font-medium text-ink">瑜伽類型</dt>
-              <dd className="mt-1 break-words">{classSession.yogaStyles.join("、")}</dd>
-            </div>
-          ) : null}
-          <div className="min-w-0">
-            <dt className="font-medium text-ink">開始時間</dt>
-            <dd className="mt-1">{formatTaipeiDatetime(classSession.startAt)}</dd>
-          </div>
-          <div className="min-w-0">
-            <dt className="font-medium text-ink">結束時間</dt>
-            <dd className="mt-1">{formatTaipeiDatetime(classSession.endAt)}</dd>
-          </div>
-          <div className="min-w-0">
-            <dt className="font-medium text-ink">地點</dt>
-            <dd className="mt-1 break-words">{classSession.location}</dd>
-          </div>
-        </dl>
-        {classSession.description ? (
-          <div className="min-w-0">
-            <p className="font-medium text-ink">課程說明</p>
-            <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-ink-soft">
-              {classSession.description}
-            </p>
-          </div>
-        ) : null}
-      </section>
-
-      {classSession.ownEnrollment ? (
-        <section className="grid gap-3 rounded-2xl border border-ink/15 bg-white p-6">
-          <EnrollmentStatusBadge status={classSession.ownEnrollment.status} />
-          {classSession.ownEnrollment.status === "pending" ? (
-            <p className="text-sm leading-6 text-ink-soft">
-              你的報名已送出，老師確認後才算成立，確認結果會顯示在「通知」。
-            </p>
-          ) : null}
-          {/* 課程開始後就不顯示取消（按了也會被伺服器擋下，見 cancelOwnEnrollment）。 */}
-          {["confirmed", "pending"].includes(classSession.ownEnrollment.status) && !hasStarted ? (
-            <CancelEnrollmentForm
-              action={cancelEnrollmentFromClassAction}
-              classSessionId={classSessionId}
-              enrollmentId={classSession.ownEnrollment.id}
-            />
-          ) : null}
-        </section>
-      ) : hasStarted ? (
-        <section className="rounded-2xl border border-ink/15 bg-white p-6">
-          <p className="text-sm leading-6 text-ink-soft">
-            這堂課程目前無法報名，可能已經開始。
-          </p>
-        </section>
-      ) : availability.state === "full" ? (
-        <section className="rounded-2xl border border-ink/15 bg-white p-6">
-          <p className="text-sm leading-6 text-ink-soft">
-            這堂課名額已滿。你可以回到
-            <Link className="text-clay underline" href="/classes">
-              課程列表
-            </Link>
-            看看其他課程。
-          </p>
-        </section>
-      ) : (
-        <section className="grid gap-5 rounded-2xl border border-ink/15 bg-white p-6" id="enroll">
-          <div>
-            <h2 className="text-lg font-medium text-ink">報名這堂課程</h2>
-          </div>
-
-          <form action={enrollAction} className="grid gap-4">
-            <input name="classSessionId" type="hidden" value={classSessionId} />
-
-            <div>
-              <label className="text-sm font-medium text-ink" htmlFor="notes">
-                備註（選填）
-              </label>
-              <p className="mt-1 text-xs leading-5 text-ink-soft">
-                例如身體狀況提醒，讓老師與團主更了解你的需求。
-              </p>
-              <textarea
-                className="mt-2 min-h-20 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
-                id="notes"
-                maxLength={500}
-                name="notes"
-              />
-            </div>
-
-            <label className="flex items-start gap-2 text-sm leading-6 text-ink-soft">
-              <input
-                className="mt-1 shrink-0"
-                name="basicConsent"
-                required
-                type="checkbox"
-                value="yes"
-              />
-              我了解此課程非醫療行為，會依自身身體狀況參與。
-            </label>
-
-            <button
-              className="w-full rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-pine-deep sm:w-auto"
-              type="submit"
-            >
-              確認報名
-            </button>
-          </form>
-        </section>
-      )}
-      </div>
-    </MemberShell>
-  );
-}
-
-function hasClassSessionStarted(startAt: Date): boolean {
-  return startAt.getTime() <= Date.now();
-}
-
-// 未登入 Visitor 專用的唯讀畫面：顯示課程詳情，不渲染報名表單本身——報名動作最終仍會在
-// createOwnEnrollment 這一層要求登入（Visitor 沒有 identity flow 就不能報名，既有
-// permissions.md 規則不變），這裡只是提早在 UI 層給出明確引導。
-function VisitorClassSessionView({
-  classSession,
-  classSessionId,
-}: {
-  classSession: PublicClassSessionDetail;
-  classSessionId: string;
+  searchParams?: Promise<{ result?: string; message?: string; returnTo?: string }>;
 }) {
-  const availability = getClassAvailability({
-    capacity: classSession.capacity,
-    activeEnrollmentCount: classSession.activeEnrollmentCount,
-    startAt: classSession.startAt,
-  });
-
+  const [{ classSessionId }, query, user] = await Promise.all([params, searchParams, getCurrentUser()]);
+  // 保留 Visitor / Member 各自既有的可見性與權限查詢條件。
+  const classSession = user ? await getClassSessionForMember(classSessionId) : await getPublicClassSessionDetail(classSessionId);
+  if (!classSession) notFound();
+  const returnTo = safeClassReturnPath(query?.returnTo);
+  const feedback = query?.result && query.message ? { success: query.result === "success", message: query.message } : null;
+  const ownEnrollment = "ownEnrollment" in classSession ? classSession.ownEnrollment : null;
+  const canEnroll = classSession.canAcceptNewEnrollments && !ownEnrollment;
+  const availability = getClassAvailability(classSession);
   return (
-    <div className="flex min-h-screen flex-col bg-cream text-ink">
-      <PublicHeader />
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-5 py-10 sm:px-8">
-      <header className="border-b border-ink/15 pb-6">
-        <h1 className="min-w-0 break-words text-2xl font-semibold tracking-tight text-ink">
-          {classSession.title}
-        </h1>
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-3">
-          <ClassOriginTag origin={classSession.origin} />
-          <ClassAvailabilityBadge availability={availability} />
-        </div>
-      </header>
-
-      <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
-        <dl className="grid gap-3 text-sm text-ink-soft sm:grid-cols-2">
-          <div className="min-w-0">
-            <dt className="font-medium text-ink">授課老師</dt>
-            <dd className="mt-1 break-words">
-              {classSession.teacherProfile.displayName ?? "老師"}
-            </dd>
-          </div>
-          {getClassServiceTypes(classSession).length > 0 ? (
-            <div className="min-w-0">
-              <dt className="font-medium text-ink">課程風格</dt>
-              <dd className="mt-1 break-words">
-                {getClassServiceTypes(classSession).join("、")}
-              </dd>
-            </div>
-          ) : null}
-          {classSession.yogaStyles.length > 0 ? (
-            <div className="min-w-0">
-              <dt className="font-medium text-ink">瑜伽類型</dt>
-              <dd className="mt-1 break-words">{classSession.yogaStyles.join("、")}</dd>
-            </div>
-          ) : null}
-          <div className="min-w-0">
-            <dt className="font-medium text-ink">開始時間</dt>
-            <dd className="mt-1">{formatTaipeiDatetime(classSession.startAt)}</dd>
-          </div>
-          <div className="min-w-0">
-            <dt className="font-medium text-ink">結束時間</dt>
-            <dd className="mt-1">{formatTaipeiDatetime(classSession.endAt)}</dd>
-          </div>
-          <div className="min-w-0">
-            <dt className="font-medium text-ink">地點</dt>
-            <dd className="mt-1 break-words">{classSession.location}</dd>
-          </div>
-        </dl>
-        {classSession.description ? (
-          <div className="min-w-0">
-            <p className="font-medium text-ink">課程說明</p>
-            <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-ink-soft">
-              {classSession.description}
-            </p>
-          </div>
-        ) : null}
-      </section>
-
-      <section className="grid gap-3 rounded-2xl border border-ink/15 bg-white p-6">
-        <p className="text-sm leading-6 text-ink-soft">
-          {availability.state === "open"
-            ? "登入後即可直接報名這堂課程。"
-            : "這堂課目前無法報名，登入後可以看看其他課程。"}
-        </p>
-        <Link
-          className="w-fit rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-pine-deep"
-          href={
-            availability.state === "open"
-              ? `/sign-in?callbackUrl=${encodeURIComponent(`/classes/${classSessionId}`)}`
-              : "/classes"
-          }
-        >
-          {availability.state === "open" ? "登入後報名" : "看看其他課程"}
-        </Link>
-      </section>
-      </main>
-      <PublicFooter />
-    </div>
+    <SiteShell signedInArea="member" publicMainClassName="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-5 py-8 sm:px-8" signedInClassName="flex flex-col gap-6">
+      <div className={canEnroll ? "group grid min-w-0 gap-6 pb-24 sm:pb-0" : "grid min-w-0 gap-6"}>
+        <Link className="w-fit py-2 text-sm text-clay underline" href={returnTo}>返回課程列表</Link>
+        <header className="border-b border-ink/15 pb-5">
+          <h1 className="min-w-0 break-words text-2xl font-semibold tracking-tight text-ink">{classSession.title}</h1>
+          <div className="mt-3 flex flex-wrap items-center gap-3"><ClassOriginTag origin={classSession.origin} /><ClassAvailabilityBadge availability={availability} canAcceptNewEnrollments={classSession.canAcceptNewEnrollments} /></div>
+          {canEnroll ? <a className="mt-4 inline-flex min-h-11 items-center rounded-full bg-pine px-5 py-3 text-sm font-medium text-white hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-clay" href="#enroll">{classSession.requiresApproval ? "申請報名" : "我要報名"}</a> : null}
+        </header>
+        {feedback ? <section aria-live="polite" className={feedback.success ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900" : "rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"}>{feedback.message}{feedback.success ? <> <Link className="font-medium underline" href="/member/enrollments">查看我的報名</Link></> : null}</section> : null}
+        <ClassSummary classSession={classSession} />
+        <ClassEnrollmentPanel classSession={classSession} signedIn={Boolean(user)} returnTo={returnTo} />
+        <section aria-labelledby="description-heading" className="min-w-0 rounded-2xl border border-ink/15 bg-white p-5 sm:p-6"><h2 id="description-heading" className="text-lg font-medium text-ink">課程說明</h2><p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-ink-soft">{classSession.description || "尚未提供課程說明。"}</p></section>
+        {canEnroll ? <a href="#enroll" className="fixed inset-x-0 bottom-0 z-20 border-t border-pine/20 bg-cream px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-center text-sm font-medium text-pine underline focus-visible:outline-2 focus-visible:outline-pine group-has-[form:focus-within]:hidden sm:hidden">前往報名</a> : null}
+      </div>
+    </SiteShell>
   );
 }

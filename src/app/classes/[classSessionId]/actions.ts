@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { cancelOwnEnrollment, createOwnEnrollment } from "@/domain/enrollment/service";
+import { classDetailHref, safeClassReturnPath } from "@/lib/navigation/class-return-path";
 
 export async function enrollAction(formData: FormData): Promise<void> {
   const classSessionId = readFormString(formData, "classSessionId");
@@ -20,6 +21,7 @@ export async function enrollAction(formData: FormData): Promise<void> {
       classSessionId,
       "error",
       buildErrorMessage(result.message, result.validationErrors),
+      readFormString(formData, "returnTo"),
     );
   }
 
@@ -28,6 +30,7 @@ export async function enrollAction(formData: FormData): Promise<void> {
     classSessionId,
     "success",
     result.status === "pending" ? "報名已送出，等待老師確認。" : "報名成功。",
+    readFormString(formData, "returnTo"),
   );
 }
 
@@ -42,10 +45,10 @@ export async function cancelEnrollmentFromClassAction(formData: FormData): Promi
   revalidatePath("/member/dashboard");
 
   if (!result.ok) {
-    redirectWithFeedback(classSessionId, "error", result.message);
+    redirectWithFeedback(classSessionId, "error", result.message, readFormString(formData, "returnTo"));
   }
 
-  redirectWithFeedback(classSessionId, "success", "報名已取消。");
+  redirectWithFeedback(classSessionId, "success", "報名已取消。", readFormString(formData, "returnTo"));
 }
 
 function readFormString(formData: FormData, name: string): string {
@@ -69,8 +72,8 @@ function redirectWithFeedback(
   classSessionId: string,
   result: "success" | "error",
   message: string,
+  returnTo?: string,
 ): never {
-  redirect(
-    `/classes/${classSessionId}?result=${result}&message=${encodeURIComponent(message)}`,
-  );
+  const href = classDetailHref(classSessionId, safeClassReturnPath(returnTo));
+  redirect(`${href}${href.includes("?") ? "&" : "?"}result=${result}&message=${encodeURIComponent(message)}`);
 }

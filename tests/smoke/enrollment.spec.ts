@@ -105,6 +105,40 @@ async function seedMember(testRunId: string, suffix: string) {
 }
 
 test.describe("enrollment smoke", () => {
+  test("cancelled classes keep own history without a broken detail link; own cancellation alone keeps the readable link", async ({ page, context }, testInfo) => {
+    const run = normalizeForEmail(`${testInfo.project.name}-cancelled-history-${Date.now()}`);
+    const cancelledClass = await seedClassSession({ testRunId: `${run}-class` });
+    const cancelledOwn = await seedClassSession({ testRunId: `${run}-own` });
+    const { userId, sessionToken } = await seedMember(run, "history");
+    const first = await createEnrollmentForUser(userId, cancelledClass.classSessionId, { notes: null });
+    const second = await createEnrollmentForUser(userId, cancelledOwn.classSessionId, { notes: null });
+    if (!first.ok || !second.ok) throw new Error("unexpected enrollment failure");
+    await prisma.classSession.update({ where: { id: cancelledClass.classSessionId }, data: { status: "cancelled" } });
+    await prisma.enrollment.updateMany({ where: { id: { in: [first.enrollmentId, second.enrollmentId] } }, data: { status: "cancelled" } });
+    await addAuthSessionCookie(context, sessionToken);
+    await page.goto("/member/enrollments");
+    const history = page.locator(`#enrollment-${first.enrollmentId}`);
+    await expect(history).toContainText("課程已取消");
+    await expect(history).toContainText("Test Studio");
+    await expect(history.getByRole("link")).toHaveCount(0);
+    await expect(page.locator(`#enrollment-${second.enrollmentId}`).getByRole("link")).toHaveAttribute("href", `/classes/${cancelledOwn.classSessionId}`);
+  });
+
+  test("a suspended teacher's existing member detail remains readable but offers no enrollment form or internal status", async ({ page, context }, testInfo) => {
+    const run = normalizeForEmail(`${testInfo.project.name}-safe-cta-${Date.now()}`);
+    const { classSessionId } = await seedClassSession({ testRunId: run });
+    const { sessionToken } = await seedMember(run, "safe");
+    const course = await prisma.classSession.findUniqueOrThrow({ where: { id: classSessionId }, select: { teacherProfileId: true } });
+    await prisma.teacherProfile.update({ where: { id: course.teacherProfileId }, data: { status: "suspended" } });
+    await addAuthSessionCookie(context, sessionToken);
+    expect((await page.goto(`/classes/${classSessionId}`))?.status()).toBe(200);
+    await expect(page.getByText("目前不開放報名", { exact: true })).toBeVisible();
+    await expect(page.getByLabel("備註（選填）")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "確認報名" })).toHaveCount(0);
+    await expect(page.locator("main")).not.toContainText("suspended");
+    await expect(page.locator("main")).not.toContainText(course.teacherProfileId);
+  });
+
   test("lets an organizer open enrollment (with a discoverable share link) and a member enroll via it; roster reflects it for both organizer and teacher", async ({
     context,
     page,
@@ -496,8 +530,10 @@ test.describe("enrollment smoke", () => {
     const todo = page.getByRole("region", { name: "待你處理" });
     await expect(todo).toContainText("待評價");
     await expect(todo).toContainText(`Class ${testRunId}-d`);
-    await expect(todo).toContainText("等老師確認");
-    await expect(todo).toContainText(`Class ${testRunId}-p`);
+    await expect(todo).not.toContainText(`Class ${testRunId}-p`);
+    const waiting = page.getByRole("region", { name: "等待老師確認" });
+    await expect(waiting).toContainText("等老師確認");
+    await expect(waiting).toContainText(`Class ${testRunId}-p`);
     await expect(page.getByText("目前沒有待處理事項")).toBeHidden();
     await expect(page.getByRole("heading", { name: "即將上課" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "過去與已取消" })).toBeVisible();

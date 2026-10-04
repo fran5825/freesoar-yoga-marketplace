@@ -100,6 +100,94 @@ test.describe("sanitizeCallbackUrl (direct, no UI)", () => {
 });
 
 test.describe("public classes discovery smoke", () => {
+  test("combined filters survive detail, sign-in, enrollment and cancel; long content remains usable on small screens", async ({ page, context }, testInfo) => {
+    testInfo.setTimeout(90_000);
+    const run = normalizeForEmail(`${testInfo.project.name}-return-flow-${Date.now()}`);
+    const teacher = await seedApprovedTeacher(run);
+    const id = await seedPublicClassSession({ testRunId: run, teacherProfileId: teacher.teacherProfileId, title: `Find ${run}`, startAt: futureDateTime(12, "18:00"), endAt: futureDateTime(12, "19:00") });
+    const title = `舒展與呼吸練習 ${"溫柔感受身體的節奏".repeat(5)}`;
+    const address = `信義區 ${"場地地址與入口說明".repeat(15)}`;
+    await prisma.classSession.update({ where: { id }, data: { title, yogaStyles: ["哈達"], location: address, description: "帶著覺察練習。".repeat(285) } });
+    const email = `member-${run}@${testEmailDomain}`;
+    createdEmails.push(email);
+    const { userId, sessionToken } = await createUserSession({ email });
+    await page.goto("/classes");
+    await page.getByLabel("地點", { exact: true }).fill("  信義區  ");
+    await page.getByLabel("時段", { exact: true }).selectOption("evening");
+    await page.getByLabel("瑜伽類型", { exact: true }).selectOption("哈達");
+    await page.getByRole("button", { name: "套用篩選" }).click();
+    await page.setViewportSize({ width: 375, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath("list-375.png"), fullPage: true });
+    await page.getByRole("link", { name: new RegExp(title) }).click();
+    const returnLink = page.getByRole("link", { name: "返回課程列表", exact: true });
+    const returnTo = await returnLink.getAttribute("href");
+    expect(returnTo).toBe("/classes?timeOfDay=evening&location=%E4%BF%A1%E7%BE%A9%E5%8D%80&yogaStyle=%E5%93%88%E9%81%94");
+    const summary = page.getByRole("region", { name: "課程重點" });
+    const panel = page.getByRole("region", { name: "報名這堂課程" });
+    expect((await summary.boundingBox())!.y).toBeLessThan((await panel.boundingBox())!.y);
+    expect((await panel.boundingBox())!.y).toBeLessThan((await page.getByRole("region", { name: "課程說明" }).boundingBox())!.y);
+    for (const width of [375, 390, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      await page.screenshot({ path: testInfo.outputPath(`visitor-${width}.png`), fullPage: true });
+      if (width === 375 || width === 1280) await page.screenshot({ path: testInfo.outputPath(`visitor-${width}-viewport.png`) });
+    }
+    await page.getByRole("link", { name: "登入後報名" }).click();
+    await addAuthSessionCookie(context, sessionToken);
+    await page.reload();
+    await expect(returnLink).toHaveAttribute("href", returnTo!);
+    expect(await prisma.enrollment.count({ where: { userId, classSessionId: id } })).toBe(0);
+    const consent = page.getByRole("checkbox", { name: /我了解此課程非醫療行為/ });
+    await expect(consent).not.toBeChecked();
+    await page.setViewportSize({ width: 375, height: 900 });
+    await page.getByLabel("備註（選填）").focus();
+    await expect(page.getByRole("link", { name: "前往報名", exact: true })).toBeHidden();
+    await page.keyboard.press("Tab");
+    await expect(consent).toBeFocused();
+    await page.keyboard.press("Space");
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: "確認報名", exact: true })).toBeFocused();
+    await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await page.getByRole("button", { name: "確認報名", exact: true }).scrollIntoViewIfNeeded();
+    await expect(page.getByRole("button", { name: "確認報名", exact: true })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath("member-text-200-percent.png"), fullPage: true });
+    await page.screenshot({ path: testInfo.outputPath("member-text-200-percent-viewport.png") });
+    await page.evaluate(() => { document.documentElement.style.fontSize = ""; });
+    await page.getByRole("button", { name: "確認報名", exact: true }).click();
+    await expect(page.getByText("報名成功。")).toBeVisible();
+    await expect(returnLink).toHaveAttribute("href", returnTo!);
+    await page.getByText("取消報名…", { exact: true }).click();
+    await page.getByRole("checkbox", { name: "我確認要取消這則報名。" }).check();
+    await page.getByRole("button", { name: "確認取消", exact: true }).click();
+    await expect(page.getByText("報名已取消。")).toBeVisible();
+    await expect(returnLink).toHaveAttribute("href", returnTo!);
+    await returnLink.click();
+    await expect(page.getByLabel("地點", { exact: true })).toHaveValue("信義區");
+    await expect(page.getByLabel("瑜伽類型", { exact: true })).toHaveValue("哈達");
+    await expect(page.getByLabel("時段", { exact: true })).toHaveValue("evening");
+  });
+
+  test("custom dates reject reversed bounds and include the entire end date; started courses stay hidden", async ({ page }, testInfo) => {
+    const run = normalizeForEmail(`${testInfo.project.name}-date-filter-${Date.now()}`);
+    const teacher = await seedApprovedTeacher(run);
+    const day = futureDateTime(14, "23:00").slice(0, 10);
+    const id = await seedPublicClassSession({ testRunId: run, teacherProfileId: teacher.teacherProfileId, title: `Date ${run}`, startAt: `${day}T23:00`, endAt: `${day}T23:30` });
+    await page.goto("/classes");
+    await page.getByLabel("日期", { exact: true }).selectOption("custom");
+    await expect(page.getByLabel("開始日期", { exact: true })).toBeVisible();
+    await page.getByLabel("開始日期", { exact: true }).fill(day);
+    await page.getByLabel("結束日期", { exact: true }).fill(day);
+    await page.getByRole("button", { name: "套用篩選" }).click();
+    await expect(page.getByRole("link", { name: new RegExp(`Date ${run}`) })).toBeVisible();
+    await page.goto(`/classes?dateRange=custom&dateFrom=${day}&dateTo=2020-01-01`);
+    await expect(page.getByRole("region", { name: "篩選課程" }).getByRole("alert")).toContainText("結束日期不能早於開始日期");
+    await prisma.classSession.update({ where: { id }, data: { startAt: new Date(Date.now() - 3600_000), endAt: new Date() } });
+    await page.goto("/classes?includeFull=1");
+    await expect(page.getByRole("link", { name: new RegExp(`Date ${run}`) })).toHaveCount(0);
+  });
+
   test("an unauthenticated visitor can view a public, open, approved-teacher class session's detail without an enrollment form, and is offered a login link back to the same page", async ({
     page,
   }, testInfo) => {
@@ -171,11 +259,11 @@ test.describe("public classes discovery smoke", () => {
     await expect(page.getByRole("banner").getByText("學員專區", { exact: true })).toBeVisible();
     expect(await prisma.enrollment.count({ where: { classSessionId, userId } })).toBe(0);
 
-    // 同一畫面完成報名：看到「處理中」與下一步，名額已被佔用。
+    // 同一畫面送出申請：等待老師確認與下一步，名額已被佔用。
     await page.getByRole("checkbox", { name: /我了解此課程非醫療行為/ }).check();
-    await page.getByRole("button", { name: "確認報名" }).click();
+    await page.getByRole("button", { name: "送出報名申請" }).click();
     await expect(page.getByText("報名已送出，等待老師確認。")).toBeVisible();
-    await expect(page.getByText("處理中", { exact: true })).toBeVisible();
+    await expect(page.getByText("等待老師確認", { exact: true })).toBeVisible();
     await expect(page.getByText(/老師確認後才算成立，確認結果會顯示在「通知」/)).toBeVisible();
     await expect(page.getByRole("link", { name: "查看我的報名" })).toHaveAttribute(
       "href",
@@ -335,7 +423,7 @@ test.describe("public classes discovery smoke", () => {
     await expect(page.getByRole("heading", { name: `Hatha Public ${testRunId}` })).toBeVisible();
   });
 
-  test("/classes cards show an origin tag and remaining seats, chips filter without a submit button, and 只看還有名額 hides full classes", async ({
+  test("/classes defaults to available seats, applies filters together, and optionally includes full classes", async ({
     page,
   }, testInfo) => {
     const testRunId = normalizeForEmail(
@@ -371,21 +459,22 @@ test.describe("public classes discovery smoke", () => {
     await expect(openCard).toContainText("老師開課");
     await expect(openCard).toContainText("開放報名");
     await expect(openCard).toContainText("剩 10 個名額");
+    await expect(fullCard).toBeHidden();
+    await page.getByText("更多篩選", { exact: true }).click();
+    await page.getByLabel("包含額滿課程").check();
+    await page.getByRole("button", { name: "套用篩選" }).click();
+    await expect(page).toHaveURL(/includeFull=1/);
+    await expect(openCard).toBeVisible();
     await expect(fullCard).toContainText("已額滿");
 
-    await expect(page.getByRole("button", { name: "套用篩選" })).toHaveCount(0);
-    await page.getByRole("link", { name: "只看還有名額" }).click();
-    await expect(page).toHaveURL(/available=1/);
-    await expect(openCard).toBeVisible();
-    await expect(fullCard).toBeHidden();
-
-    await page.getByRole("link", { name: "冥想與呼吸" }).click();
+    await page.getByLabel("課程風格", { exact: true }).selectOption("冥想與呼吸");
+    await page.getByRole("button", { name: "套用篩選" }).click();
     await expect(page).toHaveURL(/serviceType=/);
-    await expect(page).toHaveURL(/available=1/);
+    await expect(page).toHaveURL(/includeFull=1/);
     await expect(page.getByText("目前沒有符合條件的公開課程")).toBeVisible();
     await page.getByRole("link", { name: "清除篩選" }).first().click();
     await expect(page).toHaveURL(/\/classes$/);
-    await expect(fullCard).toBeVisible();
+    await expect(fullCard).toBeHidden();
   });
 
   test("/classes excludes a suspended teacher's otherwise-qualifying public class", async ({

@@ -12,8 +12,7 @@ import { MemberTodoList } from "../_components/MemberTodoList";
 const RECENT_NOTIFICATIONS_LIMIT = 5;
 const UPCOMING_ENROLLMENTS_LIMIT = 5;
 
-// 學員首頁：先看「待你處理」，再看即將上課的課，最後才是近期通知——順序比照團主、老師總覽
-// （現在輪到我動手的事放最上面）。「待你處理」與「我的報名」頁共用同一份判斷（getMemberTodos）。
+// 學員首頁先呈現即將上課，再呈現本人可操作／等候事項與近期通知。
 export default async function MemberDashboardPage() {
   try {
     await requireUser();
@@ -44,8 +43,6 @@ export default async function MemberDashboardPage() {
           我的總覽
         </h1>
       </header>
-
-      <MemberTodoList todos={todos} />
 
       <section className="rounded-2xl border border-ink/15 bg-white p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -84,12 +81,13 @@ export default async function MemberDashboardPage() {
           </>
         ) : (
           <div className="mt-4 grid gap-3">
-            {upcomingEnrollments.map((enrollment) => (
+            {upcomingEnrollments.map((enrollment, index) => (
               <Link
                 className="grid gap-1 rounded-2xl border border-ink/10 bg-cream p-4 transition hover:border-pine/40 hover:bg-pine-tint/60"
                 href={`/classes/${enrollment.classSession.id}`}
                 key={enrollment.id}
               >
+                {index === 0 ? <span className="text-xs font-medium text-pine">下一堂課</span> : null}
                 <span className="min-w-0 break-words text-sm font-medium text-ink">
                   {enrollment.classSession.title}
                 </span>
@@ -102,6 +100,8 @@ export default async function MemberDashboardPage() {
           </div>
         )}
       </section>
+
+      <MemberTodoList todos={todos} />
 
       <section className="rounded-2xl border border-ink/15 bg-white p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
