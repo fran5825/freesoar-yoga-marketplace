@@ -153,3 +153,14 @@ OAuth 登入目前可同時建立帳號，因此不急著實作完整 `/sign-up`
 - 是否需要 shared header / navigation。
 
 任何影響 Auth provider、account linking、role / permission model、core user flow 的決策，都需要另行 review。
+
+## 7. 目前實際行為（2026-10-05 更新）
+
+上面第 3～6 節是早期最小 Auth entry 階段的紀錄，部分已被後續工作取代（例如已登入開 `/sign-in` 會直接導走，見 `docs/signed-in-navigation-plan.md` 決策 7）。登入入口目前的實際行為如下，來源為 `docs/superpowers/plans/member-flow-redesign/tickets/05-direct-google-sign-in-from-class.md`。
+
+- **兩個登入入口共用同一組按鈕**：`/sign-in` 與課程詳情的報名區都使用 `src/app/_components/sign-in-options.tsx`，依 `src/lib/auth/sign-in-providers.ts` 的「目前開放的登入方式」清單畫按鈕（目前只有 Google）。server action 只接受清單內的登入方式，其他值導到 `/sign-in?error=UnsupportedProvider`。清單必須與 `src/auth.ts` 的 `providers` 一致。
+- **課程頁直接登入**：訪客在課程詳情按「使用 Google 登入並報名」直接進 Google，登入完回到同一堂課（含找課條件），由學員自己確認報名，不自動報名。
+- **callbackUrl 過濾**：`src/lib/auth/callback-url.ts` 只接受站內路徑；拒絕反斜線、控制字元，並在解析與正規化後再確認仍是同源、不是 `//` 開頭。
+- **登入返回 cookie**：每次送出登入都把這次的目的地寫進 `fsy_sign_in_return`（只存過濾後的站內路徑，20 分鐘），因為 Auth.js 失敗時只帶錯誤代碼回來、不帶 callbackUrl。
+- **取消或失敗**：`src/auth.ts` 設定 `pages.signIn` 與 `pages.error` 都是 `/sign-in`。Google 取消屬於 signIn 類錯誤、其他屬於 error 類，兩種都回到 `/sign-in?error=…`，顯示固定文案「登入沒有完成，沒有送出任何報名」與重試；目的地是課程時另有「回到課程」。錯誤代碼不顯示給使用者。
+- **之後新增登入方式**（LINE、Facebook、Email、簡訊驗證碼）與帳號合併的注意事項見 `docs/backlog.md` 第 4 項。

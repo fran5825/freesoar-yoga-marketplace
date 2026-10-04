@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
 import { createClassSessionForTeacher } from "../../src/domain/class-session/__internal__/create-teacher-class-session-core";
 import { generateOccurrencesForSeries } from "../../src/domain/class-session/__internal__/generate-recurring-occurrences-core";
@@ -99,6 +99,23 @@ test.describe("sanitizeCallbackUrl (direct, no UI)", () => {
   });
 });
 
+// member-flow-redesign 票 05：課程頁直接開始 Google 登入。測試不連 Google：擋下瀏覽器往 Google 的導向，
+// 讀 Auth.js 記下的回程網址（authjs.callback-url），再用 session cookie 模擬登入完成、前往該網址。
+async function startGoogleSignInFromClass(page: Page, context: BrowserContext): Promise<string> {
+  await page.route("https://accounts.google.com/**", (route) =>
+    route.fulfill({ status: 200, contentType: "text/html", body: "<p>google stub</p>" }),
+  );
+  const googleRequest = page.waitForRequest((request) => request.url().startsWith("https://accounts.google.com/"));
+  await page.getByRole("button", { name: "使用 Google 登入並報名" }).click();
+  await googleRequest;
+  await page.waitForURL(/^https:\/\/accounts\.google\.com\//);
+  const callbackCookie = (await context.cookies()).find((cookie) => cookie.name.endsWith("authjs.callback-url"));
+  expect(callbackCookie).toBeDefined();
+  const callbackUrl = new URL(decodeURIComponent(callbackCookie!.value));
+  expect(["127.0.0.1", "localhost"]).toContain(callbackUrl.hostname);
+  return `${callbackUrl.pathname}${callbackUrl.search}`;
+}
+
 test.describe("public classes discovery smoke", () => {
   test("combined filters survive detail, sign-in, enrollment and cancel; long content remains usable on small screens", async ({ page, context }, testInfo) => {
     testInfo.setTimeout(90_000);
@@ -133,9 +150,10 @@ test.describe("public classes discovery smoke", () => {
       await page.screenshot({ path: testInfo.outputPath(`visitor-${width}.png`), fullPage: true });
       if (width === 375 || width === 1280) await page.screenshot({ path: testInfo.outputPath(`visitor-${width}-viewport.png`) });
     }
-    await page.getByRole("link", { name: "登入後報名" }).click();
+    const signInDestination = await startGoogleSignInFromClass(page, context);
+    expect(signInDestination).toBe(`/classes/${id}?returnTo=${encodeURIComponent(returnTo!)}`);
     await addAuthSessionCookie(context, sessionToken);
-    await page.reload();
+    await page.goto(signInDestination);
     await expect(returnLink).toHaveAttribute("href", returnTo!);
     expect(await prisma.enrollment.count({ where: { userId, classSessionId: id } })).toBe(0);
     const consent = page.getByRole("checkbox", { name: /我了解此課程非醫療行為/ });
@@ -208,18 +226,14 @@ test.describe("public classes discovery smoke", () => {
     await expect(page.getByRole("button", { name: "確認報名" })).toBeHidden();
     await expect(page.getByLabel("備註（選填）")).toBeHidden();
 
-    const loginLink = page.getByRole("link", { name: "登入後報名" });
-    await expect(loginLink).toBeVisible();
-    await expect(loginLink).toHaveAttribute(
-      "href",
-      `/sign-in?callbackUrl=${encodeURIComponent(`/classes/${classSessionId}`)}`,
-    );
+    await expect(page.getByRole("button", { name: "使用 Google 登入並報名" })).toBeVisible();
+    await expect(page.getByText(/第一次使用會自動建立帳號/)).toBeVisible();
   });
 
   // member-usability 票 07：把「分享連結 → 詳情 → 登入 → 回原頁 → 自己按報名 → 看到下一步」串成一次走完。
-  // Google 登入本身無法在測試裡操作，用「在登入頁加上 session cookie 後重新整理」模擬 Google 登入完成：
-  // 已登入的人開登入頁會被導回 callbackUrl（signed-in-navigation 決策 7），跟 Google 登入完成後的導向一致。
-  test("share link to enrolled: visitor detail → sign-in with callbackUrl → back on the same class (not auto-enrolled) → enroll → pending next step", async ({
+  // Google 登入本身無法在測試裡操作：票 05 起由課程頁直接進 Google，用 startGoogleSignInFromClass 讀出
+  // Auth.js 記下的回程網址，再加上 session cookie 前往該網址，模擬 Google 登入完成。
+  test("share link to enrolled: visitor detail → direct Google sign-in → back on the same class (not auto-enrolled) → enroll → pending next step", async ({
     context,
     page,
   }, testInfo) => {
@@ -246,15 +260,13 @@ test.describe("public classes discovery smoke", () => {
     await page.goto(`/classes/${classSessionId}`);
     await expect(page.getByText("剩 10 個名額")).toBeVisible();
     await expect(page.getByText("老師開課", { exact: true })).toBeVisible();
-    await page.getByRole("link", { name: "登入後報名" }).click();
-
-    // 畫面 2：登入頁（接著是 Google 自己的畫面）。
-    await expect(page).toHaveURL(/\/sign-in\?callbackUrl=/);
-    await expect(page.getByRole("button", { name: "使用 Google 帳號繼續" })).toBeVisible();
+    // 畫面 2：直接進 Google（票 05，不再經過站內登入頁）。Auth.js 記下的回程網址是同一堂課。
+    const signInDestination = await startGoogleSignInFromClass(page, context);
+    expect(signInDestination).toBe(`/classes/${classSessionId}`);
 
     // 模擬 Google 登入完成 → 畫面 3：回到同一堂課，已是學員專區，但不會自動報名。
     await addAuthSessionCookie(context, sessionToken);
-    await page.reload();
+    await page.goto(signInDestination);
     await expect(page).toHaveURL(new RegExp(`/classes/${classSessionId}$`));
     await expect(page.getByRole("banner").getByText("學員專區", { exact: true })).toBeVisible();
     expect(await prisma.enrollment.count({ where: { classSessionId, userId } })).toBe(0);
@@ -342,7 +354,7 @@ test.describe("public classes discovery smoke", () => {
     expect(response?.status()).toBe(200);
     await expect(page.getByRole("heading", { name: `Member Class ${testRunId}` })).toBeVisible();
     await expect(page.getByRole("button", { name: "確認報名" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "登入後報名" })).toBeHidden();
+    await expect(page.getByRole("button", { name: "使用 Google 登入並報名" })).toBeHidden();
   });
 
   test("/classes public list only shows qualifying sessions, and the serviceType/dayOfWeek filters narrow correctly for both single classes and recurring-series occurrences", async ({

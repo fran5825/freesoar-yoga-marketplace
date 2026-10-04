@@ -3,8 +3,28 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { signIn } from "@/auth";
 import { cancelOwnEnrollment, createOwnEnrollment } from "@/domain/enrollment/service";
+import { parseSignInProvider } from "@/lib/auth/sign-in-providers";
+import { rememberSignInReturn } from "@/lib/auth/sign-in-return";
 import { classDetailHref, safeClassReturnPath } from "@/lib/navigation/class-return-path";
+
+// member-flow-redesign 票 05：訪客在課程頁直接開始登入，不先經過 /sign-in。登入完回到同一堂課
+// （含找課條件），由學員自己確認報名；這裡不建立任何報名。
+export async function signInToEnrollAction(formData: FormData): Promise<void> {
+  const destination = classDetailHref(
+    readFormString(formData, "classSessionId"),
+    safeClassReturnPath(readFormString(formData, "returnTo")),
+  );
+  const provider = parseSignInProvider(formData.get("provider"));
+
+  if (!provider) {
+    redirect(`/sign-in?error=UnsupportedProvider&callbackUrl=${encodeURIComponent(destination)}`);
+  }
+
+  await rememberSignInReturn(destination);
+  await signIn(provider, { redirectTo: destination });
+}
 
 export async function enrollAction(formData: FormData): Promise<void> {
   const classSessionId = readFormString(formData, "classSessionId");
