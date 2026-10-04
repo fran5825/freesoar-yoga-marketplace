@@ -65,6 +65,15 @@ export async function cleanupDemandResponseFixtures(emails: string[]) {
     return;
   }
 
+  // organizer-usability-redesign 票 05：合作邀請對團體與老師是 Restrict，要先刪。
+  await prisma.organizerClassProposal.deleteMany({
+    where: {
+      OR: [
+        { organizerProfile: { user: { email: { in: emails } } } },
+        { teacherProfile: { user: { email: { in: emails } } } },
+      ],
+    },
+  });
   await prisma.demandResponse.deleteMany({
     where: { teacherProfile: { user: { email: { in: emails } } } },
   });

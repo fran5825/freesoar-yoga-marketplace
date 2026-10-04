@@ -343,7 +343,7 @@ Phase 2 schema notes：
 
 ## OrganizerClassProposal
 
-**已核准・未實作**（organizer-usability-redesign，Q18：A；票 05–09）。代表團主對平台上已通過審核的老師提出的單堂合作邀請，也保存直接開團的草稿。老師確認前不建立正式 `ClassSession`；團主開放報名時才在同一個 transaction 轉成正式課程。完整 Prisma 形狀見 `docs/specs/organizer-usability-redesign-spec.md` 第 13.2 節。
+**Schema 已落地（票 05，migration `20261005000000_organizer_class_proposal`）**；草稿存檔、送出邀請、團主與受邀老師的唯讀已落地（`src/domain/organizer-class-proposal/`），確認／婉拒、修改／撤回、本人授課、開放報名仍是已核准・未實作（票 06–09）（organizer-usability-redesign，Q18：A）。代表團主對平台上已通過審核的老師提出的單堂合作邀請，也保存直接開團的草稿。老師確認前不建立正式 `ClassSession`；團主開放報名時才在同一個 transaction 轉成正式課程。完整 Prisma 形狀見 `docs/specs/organizer-usability-redesign-spec.md` 第 13.2 節。
 
 Fields:
 

@@ -1,0 +1,473 @@
+import type { OrganizerClassProposalStatus, OrganizationType } from "@prisma/client";
+
+import { formatTaipeiDatetimeLocal } from "@/domain/class-session/timezone";
+import { validateClassSessionCreate } from "@/domain/class-session/validation";
+import { isOrganizationContactComplete } from "@/domain/demand-request/validation";
+import { getCurrentUser, requireUser } from "@/lib/auth/session";
+import { prisma } from "@/lib/prisma";
+
+import {
+  type ProposalFormInput,
+  type ProposalValidationError,
+  validateProposalDraft,
+} from "./validation";
+
+// organizer-usability-redesign 票 05（spec 13.2–13.4）：合作邀請的草稿與送出。
+// 所有讀寫都由 server 從登入者解析身分：團主看 organizerProfileId，受邀老師看 teacherProfile.userId；
+// 不是自己的一律回 proposal_not_found，不揭露存在性。送出邀請不建立正式課程、不占老師時段。
+
+export type ProposalErrorCode =
+  | "authentication_required"
+  | "organizer_profile_required"
+  | "proposal_not_found"
+  | "organization_not_found"
+  | "organization_contact_incomplete"
+  | "teacher_not_approved"
+  | "proposal_incomplete"
+  | "proposal_starts_in_past"
+  | "proposal_version_stale"
+  | "proposal_invalid_status"
+  | "validation_failed"
+  | "proposal_save_failed";
+
+export type ProposalFailure = {
+  ok: false;
+  code: ProposalErrorCode;
+  message: string;
+  validationErrors?: ProposalValidationError[];
+};
+
+export type ProposalTeacherCard = {
+  teacherProfileId: string;
+  displayName: string;
+  specialties: string[];
+  serviceAreas: string[];
+  profilePhotoUrl: string | null;
+};
+
+export type ProposalDetail = {
+  id: string;
+  status: OrganizerClassProposalStatus;
+  version: number;
+  organization: {
+    id: string;
+    name: string;
+    type: OrganizationType;
+    contactName: string | null;
+    contactEmail: string | null;
+    contactPhone: string | null;
+  };
+  teacher: ProposalTeacherCard | null;
+  title: string | null;
+  description: string | null;
+  serviceTypes: string[];
+  startAt: Date | null;
+  endAt: Date | null;
+  location: string | null;
+  capacity: number | null;
+  isPublic: boolean;
+  submittedAt: Date | null;
+  declineReason: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+const teacherCardSelect = {
+  id: true,
+  displayName: true,
+  specialties: true,
+  serviceAreas: true,
+  profilePhotoUrl: true,
+} as const;
+
+const proposalDetailSelect = {
+  id: true,
+  status: true,
+  version: true,
+  title: true,
+  description: true,
+  serviceTypes: true,
+  startAt: true,
+  endAt: true,
+  location: true,
+  capacity: true,
+  isPublic: true,
+  submittedAt: true,
+  declineReason: true,
+  createdAt: true,
+  updatedAt: true,
+  organization: {
+    select: {
+      id: true,
+      name: true,
+      type: true,
+      contactName: true,
+      contactEmail: true,
+      contactPhone: true,
+    },
+  },
+  teacherProfile: { select: teacherCardSelect },
+} as const;
+
+type TeacherCardRow = {
+  id: string;
+  displayName: string | null;
+  specialties: string[];
+  serviceAreas: string[];
+  profilePhotoUrl: string | null;
+};
+
+function toTeacherCard(row: TeacherCardRow): ProposalTeacherCard {
+  return {
+    teacherProfileId: row.id,
+    displayName: row.displayName ?? "（未命名老師）",
+    specialties: row.specialties,
+    serviceAreas: row.serviceAreas,
+    profilePhotoUrl: row.profilePhotoUrl,
+  };
+}
+
+function toDetail(row: {
+  id: string;
+  status: OrganizerClassProposalStatus;
+  version: number;
+  title: string | null;
+  description: string | null;
+  serviceTypes: string[];
+  startAt: Date | null;
+  endAt: Date | null;
+  location: string | null;
+  capacity: number | null;
+  isPublic: boolean;
+  submittedAt: Date | null;
+  declineReason: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  organization: ProposalDetail["organization"];
+  teacherProfile: TeacherCardRow | null;
+}): ProposalDetail {
+  const { teacherProfile, ...rest } = row;
+  return { ...rest, teacher: teacherProfile ? toTeacherCard(teacherProfile) : null };
+}
+
+function isAuthenticationRequiredError(error: unknown): boolean {
+  return error instanceof Error && error.message === "Authentication required";
+}
+
+function failure(code: ProposalErrorCode, message: string, validationErrors?: ProposalValidationError[]): ProposalFailure {
+  return validationErrors ? { ok: false, code, message, validationErrors } : { ok: false, code, message };
+}
+
+const NOT_FOUND = () => failure("proposal_not_found", "找不到這份合作邀請，或你沒有權限查看。");
+
+async function getOwnOrganizerProfileId(userId: string): Promise<string | null> {
+  const profile = await prisma.organizerProfile.findUnique({
+    where: { userId },
+    select: { id: true },
+  });
+  return profile?.id ?? null;
+}
+
+// ---------- 讀取 ----------
+
+export async function getOwnProposalForOrganizer(proposalId: string): Promise<ProposalDetail | null> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    return null;
+  }
+  const organizerProfileId = await getOwnOrganizerProfileId(currentUser.id);
+  if (!organizerProfileId) {
+    return null;
+  }
+  const row = await prisma.organizerClassProposal.findFirst({
+    where: { id: proposalId, organizerProfileId },
+    select: proposalDetailSelect,
+  });
+  return row ? toDetail(row) : null;
+}
+
+// 受邀老師只看得到已送出過的邀請（草稿不給老師看）；不需要 approved 也能看自己收到的既有邀請。
+export async function getProposalForTeacher(proposalId: string): Promise<ProposalDetail | null> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    return null;
+  }
+  const row = await prisma.organizerClassProposal.findFirst({
+    where: {
+      id: proposalId,
+      teacherProfile: { userId: currentUser.id },
+      status: { not: "draft" },
+    },
+    select: proposalDetailSelect,
+  });
+  return row ? toDetail(row) : null;
+}
+
+// 只查 approved 老師的公開名片欄位，不使用 admin 查詢，不回傳 email、電話或審核資料。
+export async function searchApprovedTeacherCards(query: string): Promise<ProposalTeacherCard[]> {
+  await requireUser();
+  const trimmed = query.trim().slice(0, 50);
+  const rows = await prisma.teacherProfile.findMany({
+    where: {
+      status: "approved",
+      ...(trimmed ? { displayName: { contains: trimmed, mode: "insensitive" as const } } : {}),
+    },
+    select: teacherCardSelect,
+    orderBy: { displayName: "asc" },
+    take: 20,
+  });
+  return rows.map(toTeacherCard);
+}
+
+export async function getApprovedTeacherCard(teacherProfileId: string): Promise<ProposalTeacherCard | null> {
+  const row = await prisma.teacherProfile.findFirst({
+    where: { id: teacherProfileId, status: "approved" },
+    select: teacherCardSelect,
+  });
+  return row ? toTeacherCard(row) : null;
+}
+
+// 表單初始值：把存好的資料轉回表單欄位（時間轉成 Asia/Taipei 的 datetime-local 字串）。
+export function toProposalFormInput(detail: ProposalDetail): ProposalFormInput {
+  return {
+    organizationId: detail.organization.id,
+    teacherProfileId: detail.teacher?.teacherProfileId ?? null,
+    title: detail.title ?? "",
+    description: detail.description ?? "",
+    serviceTypes: detail.serviceTypes,
+    startAt: detail.startAt ? formatTaipeiDatetimeLocal(detail.startAt) : "",
+    endAt: detail.endAt ? formatTaipeiDatetimeLocal(detail.endAt) : "",
+    location: detail.location ?? "",
+    capacity: detail.capacity === null ? "" : String(detail.capacity),
+    isPublic: detail.isPublic,
+  };
+}
+
+// ---------- 草稿存檔 ----------
+
+export type SaveProposalResult = { ok: true; proposalId: string; version: number } | ProposalFailure;
+
+export async function saveOwnProposalDraft(
+  input: ProposalFormInput,
+  proposalId?: string,
+  expectedVersion?: number,
+): Promise<SaveProposalResult> {
+  const validation = validateProposalDraft(input);
+  if (!validation.valid) {
+    return failure("validation_failed", "有些欄位需要調整後才能儲存。", validation.errors);
+  }
+
+  try {
+    const currentUser = await requireUser();
+    const organizerProfileId = await getOwnOrganizerProfileId(currentUser.id);
+    if (!organizerProfileId) {
+      return failure("organizer_profile_required", "請先建立團主資料，再安排課程。");
+    }
+
+    const organization = await prisma.organization.findFirst({
+      where: { id: input.organizationId, ownerOrganizerProfileId: organizerProfileId },
+      select: { id: true },
+    });
+    if (!organization) {
+      return failure("organization_not_found", "找不到這個團體，或你沒有權限使用。");
+    }
+
+    if (input.teacherProfileId && !(await getApprovedTeacherCard(input.teacherProfileId))) {
+      return failure("teacher_not_approved", "這位老師目前無法接受邀請，請選擇其他老師。");
+    }
+
+    const data = {
+      ...validation.normalized,
+      organizationId: organization.id,
+      teacherProfileId: input.teacherProfileId,
+    };
+
+    if (!proposalId) {
+      // owner 一律由 server 寫入；第一次寫入也算一次成功寫入（transitionSeq = 1）。
+      const created = await prisma.organizerClassProposal.create({
+        data: { ...data, organizerProfileId, transitionSeq: 1 },
+        select: { id: true, version: true },
+      });
+      return { ok: true, proposalId: created.id, version: created.version };
+    }
+
+    const current = await prisma.organizerClassProposal.findFirst({
+      where: { id: proposalId, organizerProfileId },
+      select: { status: true, version: true, organizationId: true, submittedAt: true },
+    });
+    if (!current) {
+      return NOT_FOUND();
+    }
+    if (current.status !== "draft") {
+      return failure("proposal_invalid_status", "這份邀請已經送出，目前不能在這裡修改。");
+    }
+    // 修改既有邀請一定要帶上畫面上看到的 version；沒帶或不一致都不寫入，避免舊內容覆蓋新內容。
+    if (expectedVersion === undefined || expectedVersion !== current.version) {
+      return failure("proposal_version_stale", "這份邀請剛剛在別處被修改過，請重新整理後再編輯。");
+    }
+    // spec 13.3：換團體看 submittedAt（第一次送出後永遠不清空），不是看目前狀態。
+    if (current.submittedAt && current.organizationId !== organization.id) {
+      return failure("proposal_invalid_status", "已送出過的邀請不能更換團體，請撤回後另外建立。");
+    }
+
+    // version 寫進 WHERE：兩個分頁同時存檔時，只有一個會成功，另一個得到 version 過期的提示。
+    const updated = await prisma.organizerClassProposal.updateMany({
+      where: { id: proposalId, organizerProfileId, status: "draft", version: expectedVersion },
+      data: { ...data, version: { increment: 1 }, transitionSeq: { increment: 1 } },
+    });
+    if (updated.count === 0) {
+      return failure("proposal_version_stale", "這份邀請剛剛在別處被修改過，請重新整理後再編輯。");
+    }
+    return { ok: true, proposalId, version: current.version + 1 };
+  } catch (error) {
+    if (isAuthenticationRequiredError(error)) {
+      return failure("authentication_required", "請先登入後再安排課程。");
+    }
+    return failure("proposal_save_failed", "課程安排暫時無法儲存，請稍後再試。");
+  }
+}
+
+// ---------- 送出資格 ----------
+
+// 送出前的完整度與未來時間檢查，規則與正式建課一致（瑜伽類型對團主課程不強制）。
+// 送出時使用；編輯頁在「送出失敗後換頁」時也用它重建可定位的欄位錯誤。
+export function getProposalSubmitIssues(proposal: {
+  teacherProfileId: string | null;
+  title: string | null;
+  description: string | null;
+  serviceTypes: string[];
+  startAt: Date | null;
+  endAt: Date | null;
+  location: string | null;
+  capacity: number | null;
+  isPublic: boolean;
+}): { startsInPast: boolean; errors: ProposalValidationError[] } {
+  const errors: ProposalValidationError[] = [];
+  if (!proposal.teacherProfileId) {
+    errors.push({ field: "teacherProfileId", message: "請選擇授課老師。" });
+  }
+  const completeness = validateClassSessionCreate({
+    title: proposal.title,
+    description: proposal.description,
+    serviceTypes: proposal.serviceTypes,
+    startAt: proposal.startAt ? formatTaipeiDatetimeLocal(proposal.startAt) : null,
+    endAt: proposal.endAt ? formatTaipeiDatetimeLocal(proposal.endAt) : null,
+    location: proposal.location,
+    capacity: proposal.capacity,
+    isPublic: proposal.isPublic,
+  });
+  if (completeness.valid) {
+    return { startsInPast: false, errors };
+  }
+  return {
+    startsInPast: completeness.errors.some((error) => error.code === "start_at_in_past"),
+    errors: [
+      ...errors,
+      ...completeness.errors.map((error) => ({
+        field: (error.field === "serviceType" ? "serviceTypes" : error.field) as ProposalValidationError["field"],
+        message: error.message,
+      })),
+    ],
+  };
+}
+
+export function getProposalSubmitIssuesForDetail(detail: ProposalDetail) {
+  return getProposalSubmitIssues({
+    teacherProfileId: detail.teacher?.teacherProfileId ?? null,
+    title: detail.title,
+    description: detail.description,
+    serviceTypes: detail.serviceTypes,
+    startAt: detail.startAt,
+    endAt: detail.endAt,
+    location: detail.location,
+    capacity: detail.capacity,
+    isPublic: detail.isPublic,
+  });
+}
+
+// ---------- 送出邀請 ----------
+
+export type SubmitProposalResult = { ok: true; proposalId: string } | ProposalFailure;
+
+export async function submitOwnProposal(
+  proposalId: string,
+  expectedVersion: number,
+): Promise<SubmitProposalResult> {
+  try {
+    const currentUser = await requireUser();
+    const organizerProfileId = await getOwnOrganizerProfileId(currentUser.id);
+    if (!organizerProfileId) {
+      return failure("organizer_profile_required", "請先建立團主資料，再安排課程。");
+    }
+
+    const proposal = await prisma.organizerClassProposal.findFirst({
+      where: { id: proposalId, organizerProfileId },
+      select: {
+        status: true,
+        version: true,
+        submittedAt: true,
+        teacherProfileId: true,
+        title: true,
+        description: true,
+        serviceTypes: true,
+        startAt: true,
+        endAt: true,
+        location: true,
+        capacity: true,
+        isPublic: true,
+        organization: {
+          select: {
+            ownerOrganizerProfileId: true,
+            contactName: true,
+            contactEmail: true,
+            contactPhone: true,
+          },
+        },
+      },
+    });
+    if (!proposal) {
+      return NOT_FOUND();
+    }
+    if (proposal.status !== "draft") {
+      return failure("proposal_invalid_status", "這份邀請目前的狀態不能送出，請重新整理確認。");
+    }
+    if (proposal.version !== expectedVersion) {
+      return failure("proposal_version_stale", "這份邀請剛剛在別處被修改過，請重新整理後再送出。");
+    }
+    if (proposal.organization.ownerOrganizerProfileId !== organizerProfileId) {
+      return failure("organization_not_found", "找不到這個團體，或你沒有權限使用。");
+    }
+    if (!isOrganizationContactComplete(proposal.organization)) {
+      return failure("organization_contact_incomplete", "這個團體的聯絡資料還沒補齊，請先補齊聯絡資料再送出邀請。");
+    }
+    const issues = getProposalSubmitIssues(proposal);
+    if (issues.errors.length > 0) {
+      return issues.startsInPast
+        ? failure("proposal_starts_in_past", "開始時間已經過了，請修改時間後再送出。", issues.errors)
+        : failure("proposal_incomplete", "送出邀請前，請先補齊以下欄位。", issues.errors);
+    }
+    if (!(await getApprovedTeacherCard(proposal.teacherProfileId as string))) {
+      return failure("teacher_not_approved", "這位老師目前無法接受邀請，請選擇其他老師。");
+    }
+
+    const updated = await prisma.organizerClassProposal.updateMany({
+      where: { id: proposalId, organizerProfileId, status: "draft", version: expectedVersion },
+      data: {
+        status: "pending_confirmation",
+        // 第一次送出時寫入、之後永遠不清空（spec 13.3 換團體規則的依據）。
+        ...(proposal.submittedAt ? {} : { submittedAt: new Date() }),
+        declineReason: null,
+        transitionSeq: { increment: 1 },
+      },
+    });
+    if (updated.count === 0) {
+      return failure("proposal_version_stale", "這份邀請剛剛在別處被修改過，請重新整理後再送出。");
+    }
+    return { ok: true, proposalId };
+  } catch (error) {
+    if (isAuthenticationRequiredError(error)) {
+      return failure("authentication_required", "請先登入後再送出邀請。");
+    }
+    return failure("proposal_save_failed", "邀請暫時無法送出，請稍後再試。");
+  }
+}

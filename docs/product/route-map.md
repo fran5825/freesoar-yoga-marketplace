@@ -40,7 +40,7 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 | `/teacher/classes/[classSessionId]` | 單堂詳情（own-scoped，別人的課 404）。票 03：頂端課程重點＋下一步操作，婉拒／取消先在確認視窗說明影響。票 04：返回上下文只收白名單參數 `from=list&tab=…&status=cancelled` 或 `from=series&series=<這堂課自己的系列 id>`，不接受任意 return URL；操作後回到同一堂並保留上下文 |
 | `/teacher/classes/new` | **新增**（`teacher-initiated-open-classes` 已確認）：approved 老師建立單堂、常規（每週固定星期）或固定期課程；僅 `approved` 老師可建立，其餘狀態顯示引導文案 |
 | `/teacher/classes/series/[recurringClassSeriesId]` | **新增**（`teacher-initiated-open-classes` 已確認）：管理單一常規/固定期課程系列——列出已生成場次、手動生成更多（僅常規模式）、取消整個系列 |
-| `/teacher/class-proposals/[proposalId]` | **已核准・未實作**（organizer-usability-redesign 票 05–06）：受邀老師查看自己收到的合作邀請最新內容，確認授課或附原因婉拒；不是自己的邀請一律 not-found。未確認的邀請不會出現在「我的課程」 |
+| `/teacher/class-proposals/[proposalId]` | **唯讀已落地（票 05）**，確認／婉拒在票 06（organizer-usability-redesign）：受邀老師查看自己收到的合作邀請最新內容，確認授課或附原因婉拒；不是自己的邀請一律 not-found。未確認的邀請不會出現在「我的課程」 |
 
 ## Organizer Routes
 
@@ -64,8 +64,8 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 | `/organizer/organizations` | **已落地（票 03）**：自己擁有的團體列表與聯絡資料完整度，首屏可新增；`/organizer/organizations/new` 新增團體（聯絡資料可先不完整） | 03 |
 | `/organizer/organizations/[organizationId]` | **已落地（票 03）**：單一自有團體的編輯，他人或孤立團體 404；從流程進來時「儲存並回到剛剛的頁面」，`returnTo` 只接受 `/organizer/` 底下的站內路徑 | 03 |
 | `/organizer/demands/new`、`/[demandRequestId]/edit` | **已落地（票 04）**：需求表單明確選自己的團體（`?organizationId=` 從新增團體返回時預選，仍驗 owner）；第一次存檔後網址換成含 ID 的 edit 頁；「儲存草稿並補齊聯絡資料／新增其他團體」先存檔再前往；未儲存離開有保護；送審成功前往 `/organizer/demands/[id]?submitted=1` | 04 |
-| `/organizer/class-proposals/new`、`/[proposalId]/edit`（新增） | 已有合作老師的單頁課程安排與草稿；本人授課的明確確認 | 05、08 |
-| `/organizer/class-proposals/[proposalId]`（新增） | 單筆邀請：目前狀態、老師確認／婉拒原因、修改／撤回／開放報名 | 05–09 |
+| `/organizer/class-proposals/new`、`/[proposalId]/edit` | **已落地（票 05，尚未公開入口）**：已有合作老師的單頁課程安排與草稿（第一次存檔換到含 ID 的 edit 頁、送出前確認、只有 draft 可編輯）；本人授課的明確確認是票 08 | 05、08 |
+| `/organizer/class-proposals/[proposalId]` | **部分落地（票 05）**：單筆邀請的狀態、下一位處理者與完整安排；老師確認／婉拒原因、修改／撤回／開放報名在票 06–09 | 05–09 |
 | `/organizer/classes`、`/organizer/classes/[classSessionId]` | 列表另外列出直接開團的草稿與合作進度；開放後的課程詳情主要動作是複製完整報名連結 | 09、12、13 |
 
 他人的團體、需求、邀請或課程 ID 一律 not-found；所有 owner 由 server 判斷。

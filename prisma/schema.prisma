@@ -8,22 +8,24 @@ datasource db {
 }
 
 model User {
-  id               String            @id @default(cuid())
-  name             String?
-  email            String?           @unique
-  emailVerified    DateTime?
-  image            String?
-  phone            String?
-  isAdmin          Boolean           @default(false)
-  accounts         Account[]
-  sessions         Session[]
-  teacherProfile   TeacherProfile?
-  organizerProfile OrganizerProfile?
-  enrollments      Enrollment[]
-  notifications    Notification[]
-  reviews          Review[]
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  id                      String                   @id @default(cuid())
+  name                    String?
+  email                   String?                  @unique
+  emailVerified           DateTime?
+  image                   String?
+  phone                   String?
+  isAdmin                 Boolean                  @default(false)
+  accounts                Account[]
+  sessions                Session[]
+  teacherProfile          TeacherProfile?
+  organizerProfile        OrganizerProfile?
+  enrollments             Enrollment[]
+  notifications           Notification[]
+  reviews                 Review[]
+  // organizer-usability-redesign 票 05：確認過的合作邀請（確認者）
+  confirmedClassProposals OrganizerClassProposal[]
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
 }
 
 model Account {
@@ -83,12 +85,13 @@ model TeacherProfile {
   createdAt                     DateTime             @default(now())
   updatedAt                     DateTime             @updatedAt
 
-  user                   User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                   User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   demandResponses        DemandResponse[]
   classSessions          ClassSession[]
   teacherAvailabilities  TeacherAvailability[]
   availabilityExceptions AvailabilityException[]
   recurringClassSeries   RecurringClassSeries[]
+  classProposals         OrganizerClassProposal[]
 }
 
 // teacher-availability D2/D11：不含原始草稿的 isRecurring 欄位——這個 model 本身就是
@@ -141,12 +144,13 @@ model OrganizerProfile {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  user               User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user               User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   // organizer-usability-redesign 票 02：legacy pointer（舊單團體畫面的預設團體），授權改看 Organization.ownerOrganizerProfileId；票 15 移除
-  organization       Organization?   @relation("OrganizerLegacyOrganization", fields: [organizationId], references: [id], onDelete: SetNull)
-  ownedOrganizations Organization[]  @relation("OrganizationOwner")
+  organization       Organization?            @relation("OrganizerLegacyOrganization", fields: [organizationId], references: [id], onDelete: SetNull)
+  ownedOrganizations Organization[]           @relation("OrganizationOwner")
   demandRequests     DemandRequest[]
   classSessions      ClassSession[]
+  classProposals     OrganizerClassProposal[]
 }
 
 model Organization {
@@ -161,10 +165,11 @@ model Organization {
   createdAt               DateTime         @default(now())
   updatedAt               DateTime         @updatedAt
 
-  ownerOrganizerProfile OrganizerProfile?  @relation("OrganizationOwner", fields: [ownerOrganizerProfileId], references: [id], onDelete: SetNull)
-  organizerProfiles     OrganizerProfile[] @relation("OrganizerLegacyOrganization")
+  ownerOrganizerProfile OrganizerProfile?        @relation("OrganizationOwner", fields: [ownerOrganizerProfileId], references: [id], onDelete: SetNull)
+  organizerProfiles     OrganizerProfile[]       @relation("OrganizerLegacyOrganization")
   demandRequests        DemandRequest[]
   classSessions         ClassSession[]
+  classProposals        OrganizerClassProposal[]
 
   @@index([ownerOrganizerProfileId])
 }
@@ -279,19 +284,71 @@ model ClassSession {
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
 
-  demandRequest        DemandRequest?        @relation(fields: [demandRequestId], references: [id], onDelete: Restrict)
-  teacherProfile       TeacherProfile        @relation(fields: [teacherProfileId], references: [id], onDelete: Restrict)
-  organizerProfile     OrganizerProfile?     @relation(fields: [organizerProfileId], references: [id], onDelete: Restrict)
-  organization         Organization?         @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  recurringClassSeries RecurringClassSeries? @relation(fields: [recurringClassSeriesId], references: [id], onDelete: SetNull)
-  enrollments          Enrollment[]
-  reviews              Review[]
+  demandRequest          DemandRequest?          @relation(fields: [demandRequestId], references: [id], onDelete: Restrict)
+  teacherProfile         TeacherProfile          @relation(fields: [teacherProfileId], references: [id], onDelete: Restrict)
+  organizerProfile       OrganizerProfile?       @relation(fields: [organizerProfileId], references: [id], onDelete: Restrict)
+  organization           Organization?           @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  recurringClassSeries   RecurringClassSeries?   @relation(fields: [recurringClassSeriesId], references: [id], onDelete: SetNull)
+  enrollments            Enrollment[]
+  reviews                Review[]
+  // organizer-usability-redesign：直接開團（organizer_direct，票 09）由這筆合作邀請轉成
+  organizerClassProposal OrganizerClassProposal?
 
   @@index([teacherProfileId])
   @@index([organizerProfileId])
   @@index([status])
   @@index([recurringClassSeriesId])
   @@index([origin])
+}
+
+// organizer-usability-redesign 票 05（spec 13.2）：團主對平台已審核老師提出的單堂合作邀請，
+// 也保存直接開團的草稿。老師確認前不建立正式課程；只有 confirmed 且尚未轉課的邀請占用老師時段。
+enum OrganizerClassProposalStatus {
+  draft
+  pending_confirmation
+  confirmed
+  declined
+  withdrawn
+  converted
+}
+
+model OrganizerClassProposal {
+  id                 String                       @id @default(cuid())
+  organizerProfileId String // owner，server 從登入者解析
+  organizationId     String // 必須是 owner 自己的團體；送出後（submittedAt 不為 null）不可改
+  teacherProfileId   String? // 草稿可以還沒選老師
+  title              String?
+  description        String?
+  serviceType        String? // 主要課程風格＝serviceTypes 第一個
+  serviceTypes       String[]                     @default([])
+  yogaStyles         String[]                     @default([])
+  startAt            DateTime?
+  endAt              DateTime?
+  location           String?
+  capacity           Int?
+  isPublic           Boolean                      @default(false) // 預設僅透過連結招募
+  status             OrganizerClassProposalStatus @default(draft)
+  version            Int                          @default(1) // 內容每次存檔 +1，老師確認時必須符合
+  transitionSeq      Int                          @default(0) // 每次成功寫入 +1，供通知去重（spec 13.7）
+  declineReason      String?
+  withdrawReason     String?
+  submittedAt        DateTime? // 第一次送出時寫入、之後不清空
+  confirmedVersion   Int?
+  confirmedAt        DateTime?
+  confirmedByUserId  String?
+  classSessionId     String?                      @unique // converted 後指向正式課程
+  createdAt          DateTime                     @default(now())
+  updatedAt          DateTime                     @updatedAt
+
+  organizerProfile OrganizerProfile @relation(fields: [organizerProfileId], references: [id], onDelete: Cascade)
+  organization     Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  teacherProfile   TeacherProfile?  @relation(fields: [teacherProfileId], references: [id], onDelete: Restrict)
+  confirmedByUser  User?            @relation(fields: [confirmedByUserId], references: [id], onDelete: SetNull)
+  classSession     ClassSession?    @relation(fields: [classSessionId], references: [id], onDelete: Restrict)
+
+  @@index([organizerProfileId])
+  @@index([teacherProfileId, status])
+  @@index([status])
 }
 
 model Enrollment {

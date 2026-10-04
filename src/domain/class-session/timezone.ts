@@ -43,6 +43,14 @@ export function parseTaipeiDatetimeLocal(value: string): Date | null {
   return date;
 }
 
+// organizer-usability-redesign 票 05：把存好的時間轉回 <input type="datetime-local"> 用的
+// Asia/Taipei 字串（YYYY-MM-DDTHH:mm），與 parseTaipeiDatetimeLocal 互為反向。
+export function formatTaipeiDatetimeLocal(date: Date): string {
+  const parts = taipeiPartsFormatter.formatToParts(date);
+  const getPart = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
+  return `${getPart("year")}-${getPart("month")}-${getPart("day")}T${getPart("hour")}:${getPart("minute")}`;
+}
+
 const taipeiDisplayFormatter = new Intl.DateTimeFormat("zh-TW", {
   timeZone: "Asia/Taipei",
   year: "numeric",
