@@ -80,6 +80,12 @@ export async function createOrganizerProfileWithOrganization({
     select: { id: true },
   });
 
+  // organizer-usability-redesign 票 02：比照正式 bootstrap，第一個團體同時寫入 owner。
+  await prisma.organization.update({
+    where: { id: organization.id },
+    data: { ownerOrganizerProfileId: organizerProfile.id },
+  });
+
   return {
     userId,
     sessionToken,
@@ -157,9 +163,13 @@ export async function cleanupOrganizerDemandFixtures(emails: string[]) {
   await prisma.demandRequest.deleteMany({
     where: { organizerProfile: { user: { email: { in: emails } } } },
   });
+  // organizer-usability-redesign 票 02：同時清掉以 legacy pointer 或 owner 關聯到測試帳號的團體。
   await prisma.organization.deleteMany({
     where: {
-      organizerProfiles: { some: { user: { email: { in: emails } } } },
+      OR: [
+        { organizerProfiles: { some: { user: { email: { in: emails } } } } },
+        { ownerOrganizerProfile: { user: { email: { in: emails } } } },
+      ],
     },
   });
   await prisma.organizerProfile.deleteMany({

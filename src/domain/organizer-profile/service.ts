@@ -71,7 +71,9 @@ export async function getOwnOrganizerContext(): Promise<OwnOrganizerContext | nu
     where: { userId: currentUser.id },
     select: {
       ...organizerProfileSelect,
-      organization: { select: organizationSelect },
+      organization: {
+        select: { ...organizationSelect, ownerOrganizerProfileId: true },
+      },
     },
   });
 
@@ -81,9 +83,18 @@ export async function getOwnOrganizerContext(): Promise<OwnOrganizerContext | nu
 
   const { organization, ...profile } = organizerProfile;
 
+  // organizer-usability-redesign 票 02：legacy pointer 只決定「預設團體」，能不能讀到團體資料看 owner。
+  // owner 不是本人（含 owner 為 null 的孤立團體）時一律不回傳，避免洩漏他人聯絡資料。
+  if (!organization || organization.ownerOrganizerProfileId !== profile.id) {
+    return { organizerProfile: profile, organization: null };
+  }
+
+  const { ownerOrganizerProfileId: _owner, ...ownedOrganization } = organization;
+  void _owner;
+
   return {
     organizerProfile: profile,
-    organization: organization ?? null,
+    organization: ownedOrganization,
   };
 }
 
@@ -158,6 +169,13 @@ export async function createOwnOrganizerProfileWithOrganization(
           select: organizerProfileSelect,
         });
 
+        // organizer-usability-redesign 票 02：第一個團體同時寫入 owner 與 legacy pointer，
+        // 之後的授權一律看 owner；同一個 transaction 內完成，失敗不留半筆。
+        await tx.organization.update({
+          where: { id: organization.id },
+          data: { ownerOrganizerProfileId: organizerProfile.id },
+        });
+
         return { organizerProfile, organization };
       },
     );
@@ -229,7 +247,7 @@ export async function updateOwnOrganization(
 
     const organizerProfile = await prisma.organizerProfile.findUnique({
       where: { userId: currentUser.id },
-      select: { organizationId: true },
+      select: { id: true, organizationId: true },
     });
 
     if (!organizerProfile || !organizerProfile.organizationId) {
@@ -241,11 +259,12 @@ export async function updateOwnOrganization(
     }
 
     // 雙重 own-scope 限制：organizationId 已由 server 從自己的 OrganizerProfile 解析，
-    // 這裡再加一層 organizerProfiles.some(userId) 條件防止任何情境下誤用他人 id。
+    // 這裡再要求團體的 owner 是本人（organizer-usability-redesign 票 02：授權改看 owner），
+    // 防止任何情境下誤用他人 id。
     const updateResult = await prisma.organization.updateMany({
       where: {
         id: organizerProfile.organizationId,
-        organizerProfiles: { some: { userId: currentUser.id } },
+        ownerOrganizerProfileId: organizerProfile.id,
       },
       data: {
         name: input.name as string,

@@ -63,6 +63,10 @@ async function seedTeacherWithCompletedClassSession({
     data: { userId: organizer.userId, organizationId: organization.id, displayName: "Organizer" },
     select: { id: true },
   });
+  await prisma.organization.update({
+    where: { id: organization.id },
+    data: { ownerOrganizerProfileId: organizerProfile.id },
+  });
   const demand = await prisma.demandRequest.create({
     data: {
       organizerProfileId: organizerProfile.id,

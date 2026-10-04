@@ -39,12 +39,17 @@ test("a teacher who is also an organizer stays in the teacher area when opening 
     data: { name: `Dual Org ${testRunId}`, type: "company" },
     select: { id: true },
   });
-  await prisma.organizerProfile.create({
+  const organizerProfile = await prisma.organizerProfile.create({
     data: {
       userId: teacher.userId,
       displayName: `Dual Organizer ${testRunId}`,
       organizationId: organization.id,
     },
+    select: { id: true },
+  });
+  await prisma.organization.update({
+    where: { id: organization.id },
+    data: { ownerOrganizerProfileId: organizerProfile.id },
   });
 
   await addAuthSessionCookie(context, teacher.sessionToken);

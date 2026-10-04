@@ -166,6 +166,21 @@ export async function saveOwnDemandRequestDraft(
     const organizerProfileId = organizerContext.organizerProfile.id;
     const organizationId = organizerContext.organizerProfile.organizationId;
 
+    // organizer-usability-redesign 票 02：相容期仍用 legacy pointer 當預設團體，
+    // 但授權改看 owner，團體不是本人擁有的就不能拿來建需求。
+    const ownedOrganization = await prisma.organization.findFirst({
+      where: { id: organizationId, ownerOrganizerProfileId: organizerProfileId },
+      select: { id: true },
+    });
+
+    if (!ownedOrganization) {
+      return {
+        ok: false,
+        code: "organizer_profile_required",
+        message: "請先建立團主資料後再建立需求。",
+      };
+    }
+
     if (!demandRequestId) {
       const demandRequest = await prisma.demandRequest.create({
         data: {
@@ -189,6 +204,8 @@ export async function saveOwnDemandRequestDraft(
         id: demandRequestId,
         organizerProfileId,
         status: "draft",
+        // 票 02：需求自己所屬的團體也必須是本人擁有的。
+        organization: { ownerOrganizerProfileId: organizerProfileId },
       },
       data: toDemandRequestData(input),
     });
@@ -246,12 +263,20 @@ export async function submitOwnDemandRequest(
 
     const organizerProfileId = organizerContext.organizerProfile.id;
 
+    // 票 02：需求自己所屬的團體必須是本人擁有的；聯絡資料完整度也以這個團體為準，
+    // 不看 legacy pointer 指向的預設團體。
     const existingDemand = await prisma.demandRequest.findFirst({
       where: {
         id: demandRequestId,
         organizerProfileId,
+        organization: { ownerOrganizerProfileId: organizerProfileId },
       },
-      select: demandRequestSelect,
+      select: {
+        ...demandRequestSelect,
+        organization: {
+          select: { contactName: true, contactEmail: true, contactPhone: true },
+        },
+      },
     });
 
     if (!existingDemand) {
@@ -286,10 +311,7 @@ export async function submitOwnDemandRequest(
 
     // D4：submit 前必須驗證所連 Organization 的必填 contact 完整
     // （contact 欄位在 schema 為 nullable，這是 application-layer 的權威把關）。
-    if (
-      !organizerContext.organization ||
-      !isOrganizationContactComplete(organizerContext.organization)
-    ) {
+    if (!isOrganizationContactComplete(existingDemand.organization)) {
       return {
         ok: false,
         code: "organization_contact_incomplete",
@@ -303,6 +325,7 @@ export async function submitOwnDemandRequest(
         id: demandRequestId,
         organizerProfileId,
         status: "draft",
+        organization: { ownerOrganizerProfileId: organizerProfileId },
       },
       data: {
         ...toDemandRequestData(input),

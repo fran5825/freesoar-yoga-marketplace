@@ -123,13 +123,13 @@ Phase 1 schema notes（`organizer-demand-request-foundation` D4 已確認）：
 - `area` / `address` 為 V1 optional / deferred 欄位，可留空，不阻擋任何流程。
 - `contactEmail` 只做「非空 + 基本 email 形狀」驗證，不做寄送驗證；`contactPhone` 只做「非空 + 長度界線」驗證，不做電信驗證。
 
-**已核准・未實作（organizer-usability-redesign，Q18：A）：多團體 owner**。完整 contract 見 `docs/specs/organizer-usability-redesign-spec.md` 第 13.1 節。
+**多團體 owner（organizer-usability-redesign，Q18：A）**：schema 與回填**已落地（票 02，migration `20261004000000_organization_owner_expand`）**；我的團體管理畫面與多團體選擇仍是已核准・未實作（票 03–05）。完整 contract 見 `docs/specs/organizer-usability-redesign-spec.md` 第 13.1 節。
 
 - 一位團主可以擁有多個團體：新增 `Organization.ownerOrganizerProfileId`（nullable FK、`onDelete: SetNull`、有 index），反向集合為 `OrganizerProfile.ownedOrganizations`。Prisma relation name 用 `OrganizationOwner`；既有 legacy 關聯改名為 `OrganizerLegacyOrganization`，只是 Prisma 層的命名，資料庫不變。
 - 不做多人共管、移交或團體刪除；新建團體一律由 server 寫入 owner，client 不能指定或修改。
 - 第一個團體在首次建立團主資料時要填完整聯絡資料；之後新增的團體可以先存未完整的資料，但需求送審或合作邀請送出前必須補齊。
 - 舊資料回填 owner 時，如果有一個團體對應到兩位以上的團主，migration 會整個失敗並回報，不挑第一人；找不到 owner 的團體保持 null，只有 admin 看得到。
-- 相容期：授權一律看 owner；`OrganizerProfile.organizationId` 只當舊畫面的預設團體，等所有呼叫點遷移完（票 15）才移除。
+- 相容期：授權一律看 owner；`OrganizerProfile.organizationId` 只當舊畫面的預設團體，等所有呼叫點遷移完（票 15）才移除。票 02 已把首次建立團主資料改成同時寫入 owner，團體更新與需求草稿存檔改用 owner 判斷權限。
 - 不新增歷史聯絡資料 snapshot：需求與課程繼續引用團體目前的名稱與聯絡資料。
 
 ## ServiceType
