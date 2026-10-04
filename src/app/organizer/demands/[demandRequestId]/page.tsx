@@ -28,7 +28,7 @@ import { getDemandLocationItems } from "@/domain/demand-request/location";
 
 type DemandRequestDetailPageProps = {
   params: Promise<{ demandRequestId: string }>;
-  searchParams?: Promise<{ result?: string; message?: string }>;
+  searchParams?: Promise<{ result?: string; message?: string; submitted?: string }>;
 };
 
 export default async function DemandRequestDetailPage({
@@ -64,6 +64,9 @@ export default async function DemandRequestDetailPage({
   }
 
   const responses = (await listResponsesForOwnDemandRequest(demandRequestId)) ?? [];
+  // organizer-usability-redesign 票 04：從表單送審成功後導到這裡，顯示已收到的確認。
+  const justSubmitted =
+    resolvedSearchParams?.submitted === "1" && demandRequest.status === "submitted";
 
   return (
     <div className="flex flex-col gap-8">
@@ -93,6 +96,15 @@ export default async function DemandRequestDetailPage({
           }
         >
           {feedback.message}
+        </section>
+      ) : null}
+
+      {justSubmitted ? (
+        <section
+          aria-live="polite"
+          className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
+        >
+          需求已收到，待平台審核後才會公開給合適的老師。
         </section>
       ) : null}
 

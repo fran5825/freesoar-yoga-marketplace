@@ -16,12 +16,17 @@ type OrganizationPageProps = {
 // 從需求表單等流程被帶來補資料時，returnTo 記住要回去的站內頁面，儲存成功後直接回去。
 export default async function OrganizationPage({ params, searchParams }: OrganizationPageProps) {
   const currentUser = await getCurrentUser();
+  const [{ organizationId }, resolvedSearchParams] = await Promise.all([params, searchParams]);
 
   if (!currentUser) {
-    redirect("/sign-in");
+    // 票 04：登入後回到同一個團體編輯頁，並保留流程的返回路徑。
+    const returnToParam = sanitizeOrganizerReturnPath(resolvedSearchParams?.returnTo);
+    const here = returnToParam
+      ? `/organizer/organizations/${organizationId}?returnTo=${encodeURIComponent(returnToParam)}`
+      : `/organizer/organizations/${organizationId}`;
+    redirect(`/sign-in?callbackUrl=${encodeURIComponent(here)}`);
   }
 
-  const [{ organizationId }, resolvedSearchParams] = await Promise.all([params, searchParams]);
   const organization = await getOwnOrganization(organizationId);
 
   if (!organization) {

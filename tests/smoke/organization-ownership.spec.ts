@@ -114,18 +114,27 @@ test.describe("organization ownership smoke", () => {
     });
     expect(organization.contactName).toBe("聯絡人 A");
 
-    // 建立需求草稿：被拒絕，不會產生任何需求。
+    // 建立需求：A 沒有自己擁有的團體，新需求頁先帶去新增團體，不會產生任何需求。
     await page.goto("/organizer/demands/new");
-    await page.getByLabel("需求標題").fill(`不該建立 ${testRunId}`);
-    await page.getByRole("button", { name: "儲存草稿" }).first().click();
-    await expect(page.getByText("請先建立團主資料，才能建立需求草稿。").first()).toBeVisible();
+    await expect(page).toHaveURL(/\/organizer\/organizations\/new\?returnTo=/);
 
     const demandCount = await prisma.demandRequest.count({
       where: { organizerProfileId: organizerA.organizerProfileId },
     });
     expect(demandCount).toBe(1);
 
-    // 既有草稿直接送審：被拒絕，狀態維持 draft。
+    // 既有草稿直接送審：A 另有一個自己的團體，所以編輯頁會出現表單；
+    // 但這筆草稿目前掛在不屬於 A 的團體上，送審被伺服器拒絕，狀態維持 draft。
+    await prisma.organization.create({
+      data: {
+        name: `A 自己的團體 ${testRunId}`,
+        type: "company",
+        contactName: "A2 聯絡人",
+        contactEmail: `a2-${testRunId}@example.com`,
+        contactPhone: "0900000003",
+        ownerOrganizerProfileId: organizerA.organizerProfileId,
+      },
+    });
     await page.goto(`/organizer/demands/${existingDraft.id}/edit`);
     await page.getByRole("button", { name: "送出審核" }).first().click();
     await expect(page.getByText("確認送出需求").first()).toBeVisible();

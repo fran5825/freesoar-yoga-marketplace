@@ -63,7 +63,7 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 | `/organizer/profile` | **已落地（票 03）**：首次一頁建立本人＋第一個團體（同一個 transaction）；建立後只編輯本人稱呼並列出我的團體摘要。舊的 `?next=` 連結轉到預設團體的編輯頁（`returnTo`） | 03 |
 | `/organizer/organizations` | **已落地（票 03）**：自己擁有的團體列表與聯絡資料完整度，首屏可新增；`/organizer/organizations/new` 新增團體（聯絡資料可先不完整） | 03 |
 | `/organizer/organizations/[organizationId]` | **已落地（票 03）**：單一自有團體的編輯，他人或孤立團體 404；從流程進來時「儲存並回到剛剛的頁面」，`returnTo` 只接受 `/organizer/` 底下的站內路徑 | 03 |
-| `/organizer/demands/new`、`/[demandRequestId]/edit` | 需求表單明確選自己的團體；第一次存檔後轉到含 ID 的 edit 頁 | 04 |
+| `/organizer/demands/new`、`/[demandRequestId]/edit` | **已落地（票 04）**：需求表單明確選自己的團體（`?organizationId=` 從新增團體返回時預選，仍驗 owner）；第一次存檔後網址換成含 ID 的 edit 頁；「儲存草稿並補齊聯絡資料／新增其他團體」先存檔再前往；未儲存離開有保護；送審成功前往 `/organizer/demands/[id]?submitted=1` | 04 |
 | `/organizer/class-proposals/new`、`/[proposalId]/edit`（新增） | 已有合作老師的單頁課程安排與草稿；本人授課的明確確認 | 05、08 |
 | `/organizer/class-proposals/[proposalId]`（新增） | 單筆邀請：目前狀態、老師確認／婉拒原因、修改／撤回／開放報名 | 05–09 |
 | `/organizer/classes`、`/organizer/classes/[classSessionId]` | 列表另外列出直接開團的草稿與合作進度；開放後的課程詳情主要動作是複製完整報名連結 | 09、12、13 |

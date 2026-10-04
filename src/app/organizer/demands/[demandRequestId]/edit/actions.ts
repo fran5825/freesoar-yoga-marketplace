@@ -38,11 +38,14 @@ export type SubmitDemandRequestActionResult =
       code: DemandRequestSubmitErrorCode;
       message: string;
       validationErrors?: DemandRequestValidationError[];
+      // 票 04：新需求送出時會先建立草稿；送出失敗也回傳這筆草稿，表單之後沿用同一筆。
+      demandRequestId?: string;
     };
 
 export async function saveEditDemandRequestDraftAction(
   input: DemandRequestFormInput,
   demandRequestId?: string,
+  organizationId?: string,
 ): Promise<SaveDemandRequestDraftActionResult> {
   if (!demandRequestId) {
     return {
@@ -57,6 +60,7 @@ export async function saveEditDemandRequestDraftAction(
     const result = await saveOwnDemandRequestDraft(
       normalizedInput,
       demandRequestId,
+      organizationId,
     );
 
     if (!result.ok) {
@@ -79,6 +83,7 @@ export async function saveEditDemandRequestDraftAction(
 export async function submitEditDemandRequestAction(
   input: DemandRequestFormInput,
   demandRequestId?: string,
+  organizationId?: string,
 ): Promise<SubmitDemandRequestActionResult> {
   if (!demandRequestId) {
     return {
@@ -93,6 +98,7 @@ export async function submitEditDemandRequestAction(
     const result = await submitOwnDemandRequest(
       normalizedInput,
       demandRequestId,
+      organizationId,
     );
 
     if (!result.ok) {

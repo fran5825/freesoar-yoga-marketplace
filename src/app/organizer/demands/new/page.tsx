@@ -1,25 +1,51 @@
 import { redirect } from "next/navigation";
 
-import { isOrganizationContactComplete } from "@/domain/demand-request/validation";
+import { listOwnOrganizations } from "@/domain/organization/service";
 import { getOwnOrganizerContext } from "@/domain/organizer-profile/service";
 import { requireUser } from "@/lib/auth/session";
 
-import { ContactIncompleteBanner } from "../_components/ContactIncompleteBanner";
 import { blankDemandRequestFormValues } from "../_components/form-values";
 import { DemandRequestForm } from "../_components/DemandRequestForm";
+import {
+  pickInitialOrganizationId,
+  toDemandRequestOrganizationOptions,
+  withOrganizationParam,
+} from "../_components/organization-options";
 import { saveNewDemandRequestDraftAction, submitNewDemandRequestAction } from "./actions";
 
-export default async function NewDemandRequestPage() {
+type NewDemandRequestPageProps = {
+  searchParams?: Promise<{ organizationId?: string }>;
+};
+
+// organizer-usability-redesign 票 04：新需求先選自己的團體（只有一個時預選）。第一次儲存草稿後，
+// 網址會換成這筆草稿的編輯頁；聯絡資料的提醒與「儲存並補齊」都在表單裡依所選團體顯示。
+export default async function NewDemandRequestPage({ searchParams }: NewDemandRequestPageProps) {
+  const resolvedSearchParams = await searchParams;
+
   try {
     await requireUser();
   } catch {
-    redirect("/sign-in");
+    // 票 04：登入後回到同一個新需求表單；保留從新增團體返回的預選（登入後仍會以 owner 驗證）。
+    redirect(
+      `/sign-in?callbackUrl=${encodeURIComponent(withOrganizationParam("/organizer/demands/new", resolvedSearchParams?.organizationId))}`,
+    );
   }
 
   const organizerContext = await getOwnOrganizerContext();
 
   if (!organizerContext) {
     redirect("/organizer/profile");
+  }
+
+  const organizations = await listOwnOrganizations();
+  const initialOrganizationId = pickInitialOrganizationId(
+    organizations,
+    resolvedSearchParams?.organizationId,
+    null,
+  );
+
+  if (!initialOrganizationId) {
+    redirect(`/organizer/organizations/new?returnTo=${encodeURIComponent("/organizer/demands/new")}`);
   }
 
   return (
@@ -33,19 +59,14 @@ export default async function NewDemandRequestPage() {
         </p>
       </header>
 
-      {organizerContext.organization !== null &&
-      isOrganizationContactComplete(organizerContext.organization) ? null : (
-        <ContactIncompleteBanner
-          organizationId={organizerContext.organization?.id ?? null}
-          returnPath="/organizer/demands/new"
-        />
-      )}
-
       <DemandRequestForm
         initialDemandRequestId={null}
+        initialOrganizationId={initialOrganizationId}
         initialValues={blankDemandRequestFormValues}
         onSaveDraft={saveNewDemandRequestDraftAction}
         onSubmit={submitNewDemandRequestAction}
+        organizations={toDemandRequestOrganizationOptions(organizations)}
+        savedOrganizationId={null}
       />
     </div>
   );

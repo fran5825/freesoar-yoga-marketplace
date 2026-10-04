@@ -15,9 +15,14 @@ type NewOrganizationPageProps = {
 // 還沒有團主資料的人先走 /organizer/profile 的一頁式首次建立。
 export default async function NewOrganizationPage({ searchParams }: NewOrganizationPageProps) {
   const currentUser = await getCurrentUser();
+  const returnTo = sanitizeOrganizerReturnPath((await searchParams)?.returnTo);
 
   if (!currentUser) {
-    redirect("/sign-in");
+    // 票 04：登入後回到同一個新增團體頁，並保留流程的返回路徑。
+    const here = returnTo
+      ? `/organizer/organizations/new?returnTo=${encodeURIComponent(returnTo)}`
+      : "/organizer/organizations/new";
+    redirect(`/sign-in?callbackUrl=${encodeURIComponent(here)}`);
   }
 
   const organizerContext = await getOwnOrganizerContext();
@@ -25,8 +30,6 @@ export default async function NewOrganizationPage({ searchParams }: NewOrganizat
   if (!organizerContext) {
     redirect("/organizer/profile");
   }
-
-  const returnTo = sanitizeOrganizerReturnPath((await searchParams)?.returnTo);
 
   return (
     <div className="flex flex-col gap-8">

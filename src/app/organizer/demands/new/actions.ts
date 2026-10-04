@@ -38,17 +38,21 @@ export type SubmitDemandRequestActionResult =
       code: DemandRequestSubmitErrorCode;
       message: string;
       validationErrors?: DemandRequestValidationError[];
+      // 票 04：新需求送出時會先建立草稿；送出失敗也回傳這筆草稿，表單之後沿用同一筆。
+      demandRequestId?: string;
     };
 
 export async function saveNewDemandRequestDraftAction(
   input: DemandRequestFormInput,
   demandRequestId?: string,
+  organizationId?: string,
 ): Promise<SaveDemandRequestDraftActionResult> {
   try {
     const normalizedInput = normalizeDemandRequestInput(input);
     const result = await saveOwnDemandRequestDraft(
       normalizedInput,
       demandRequestId,
+      organizationId,
     );
 
     if (!result.ok) {
@@ -71,6 +75,7 @@ export async function saveNewDemandRequestDraftAction(
 export async function submitNewDemandRequestAction(
   input: DemandRequestFormInput,
   demandRequestId?: string,
+  organizationId?: string,
 ): Promise<SubmitDemandRequestActionResult> {
   try {
     const normalizedInput = normalizeDemandRequestInput(input);
@@ -78,12 +83,17 @@ export async function submitNewDemandRequestAction(
     let targetId = demandRequestId;
 
     if (!targetId) {
-      const draftResult = await saveOwnDemandRequestDraft(normalizedInput);
+      const draftResult = await saveOwnDemandRequestDraft(
+        normalizedInput,
+        undefined,
+        organizationId,
+      );
 
       if (!draftResult.ok) {
         if (
           draftResult.code === "authentication_required" ||
-          draftResult.code === "organizer_profile_required"
+          draftResult.code === "organizer_profile_required" ||
+          draftResult.code === "organization_not_found"
         ) {
           return {
             ok: false,
@@ -102,10 +112,10 @@ export async function submitNewDemandRequestAction(
       targetId = draftResult.demandRequest.id;
     }
 
-    const result = await submitOwnDemandRequest(normalizedInput, targetId);
+    const result = await submitOwnDemandRequest(normalizedInput, targetId, organizationId);
 
     if (!result.ok) {
-      return result;
+      return { ...result, demandRequestId: targetId };
     }
 
     return {

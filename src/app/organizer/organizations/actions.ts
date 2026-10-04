@@ -47,6 +47,12 @@ export async function saveOrganizationAction(
   revalidatePath("/organizer/organizations");
   revalidatePath("/organizer/profile");
 
+  // 票 04：從需求表單來新增團體時，回去後預選剛建立的團體（目的頁仍會以 owner 驗證這個 id）。
+  if (returnTo && !organizationId) {
+    const separator = returnTo.includes("?") ? "&" : "?";
+    redirect(`${returnTo}${separator}organizationId=${encodeURIComponent(result.organizationId)}`);
+  }
+
   redirect(returnTo ?? `/organizer/organizations?saved=${encodeURIComponent(result.organizationId)}`);
 }
 

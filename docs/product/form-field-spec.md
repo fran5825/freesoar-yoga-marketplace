@@ -114,7 +114,7 @@ Exception 欄位：
 | `frequency` | `DemandRequest.frequency` |
 | `budgetRange` | `DemandRequest.budgetRange` |
 
-### 已核准・未實作：多團體與需求表單（organizer-usability-redesign 票 03–04）
+### 多團體與需求表單（organizer-usability-redesign 票 03–04，已落地）
 
 - **首次建立**（`/organizer/profile`）：同一頁分「你是誰」「第一個團體」「聯絡方式」三區，姓名與 email 預填；顯示名稱與聯絡窗口預設同步，手動改聯絡人後停止同步。第一個團體的 `contactName`／`contactEmail`／`contactPhone` 必填，與團主資料在同一個 transaction 建立。
 - **我的團體**（`/organizer/organizations`）：欄位同上方 `organization*` 與 `contact*`。之後新增的團體可以先存未完整的資料，但用它送出需求或合作邀請前必須補齊。

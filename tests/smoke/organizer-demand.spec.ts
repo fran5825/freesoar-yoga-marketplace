@@ -50,7 +50,7 @@ test.describe("organizer demand smoke", () => {
     // 送出後直接進新需求表單，而且聯絡資料已齊，不會出現補資料提醒。
     await expect(page).toHaveURL(/\/organizer\/demands\/new$/);
     await expect(page.getByRole("heading", { name: "建立新的團課需求" })).toBeVisible();
-    await expect(page.getByText("送出需求審核前，需要先補齊組織聯絡資料")).toHaveCount(0);
+    await expect(page.getByText(/送出需求審核前，需要先補齊「.*」的聯絡資料/)).toHaveCount(0);
 
     const created = await prisma.organizerProfile.findFirstOrThrow({
       where: { user: { email } },
@@ -147,9 +147,11 @@ test.describe("organizer demand smoke", () => {
     await addAuthSessionCookie(context, sessionToken);
 
     await page.goto("/organizer/demands/new");
-    await expect(page.getByText("送出需求審核前，需要先補齊組織聯絡資料")).toBeVisible();
+    await expect(page.getByText(`送出需求審核前，需要先補齊「Banner Org ${testRunId}」的聯絡資料`, { exact: false })).toBeVisible();
 
-    await page.getByRole("link", { name: "前往補齊聯絡資料" }).click();
+    // 票 04：先存草稿再前往補資料，回來是同一筆草稿的編輯頁。
+    await page.getByLabel("需求標題").fill(`補資料前的標題 ${testRunId}`);
+    await page.getByRole("button", { name: "儲存草稿並補齊聯絡資料" }).click();
     // organizer-usability-redesign 票 03：補資料改到這筆需求所屬團體的編輯頁。
     await expect(page).toHaveURL(/\/organizer\/organizations\/[^/?]+\?returnTo=/);
     await expect(page.getByText("還缺 2 項聯絡資料")).toBeVisible();
@@ -158,8 +160,11 @@ test.describe("organizer demand smoke", () => {
     await page.getByLabel("聯絡電話").fill("0911222333");
     await page.getByRole("button", { name: "儲存並回到剛剛的頁面" }).click();
 
-    await expect(page).toHaveURL(/\/organizer\/demands\/new$/);
-    await expect(page.getByText("送出需求審核前，需要先補齊組織聯絡資料")).toHaveCount(0);
+    await expect(page).toHaveURL(/\/organizer\/demands\/[^/]+\/edit$/);
+    await expect(page.getByLabel("需求標題")).toHaveValue(`補資料前的標題 ${testRunId}`);
+    await expect(page.getByText(/送出需求審核前，需要先補齊「.*」的聯絡資料/)).toHaveCount(0);
+    const drafts = await prisma.demandRequest.count({ where: { organizerProfile: { user: { email } } } });
+    expect(drafts).toBe(1);
   });
 
   test("ignores an external returnTo parameter on the organization page", async ({
@@ -322,15 +327,10 @@ test.describe("organizer demand smoke", () => {
     });
 
     await page.goto(`/organizer/demands/${demand.id}/edit`);
-    await page.getByRole("button", { name: "送出審核" }).first().click();
-    await expect(page.getByText("確認送出需求").first()).toBeVisible();
-    await page.getByRole("button", { name: "確認送出" }).first().click();
-
-    await expect(
-      page.getByText(
-        "請先至團主資料頁補齊組織聯絡資訊，才能送出需求。",
-      ).first(),
-    ).toBeVisible();
+    // 票 04：送審準備狀態已包含團體聯絡資料，表單在送出前就擋下並指出缺什麼；
+    // 伺服器端的重新檢查由 organizer-demand-organizations.spec.ts 驗證。
+    await expect(page.getByRole("button", { name: "送出審核" }).first()).toBeDisabled();
+    await expect(page.getByRole("button", { name: "團體聯絡資料" }).first()).toBeVisible();
 
     const stillDraft = await prisma.demandRequest.findUniqueOrThrow({
       where: { id: demand.id },

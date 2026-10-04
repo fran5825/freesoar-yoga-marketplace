@@ -69,6 +69,7 @@ export type DemandRequestDraftSaveErrorCode =
   | "organizer_profile_required"
   | "draft_validation_failed"
   | "demand_request_not_found"
+  | "organization_not_found"
   | "draft_save_failed";
 
 export type DemandRequestDraftSaveResult =
@@ -87,6 +88,7 @@ export type DemandRequestSubmitErrorCode =
   | "authentication_required"
   | "organizer_profile_required"
   | "demand_request_not_found"
+  | "organization_not_found"
   | "organization_contact_incomplete"
   | DemandRequestSubmitTransitionErrorCode
   | "demand_request_submit_failed";
@@ -135,9 +137,13 @@ export async function getOwnDemandRequestDetail(
   });
 }
 
+// organizer-usability-redesign 票 04：requestedOrganizationId 是團主在表單選的團體；
+// 沒有提供時沿用預設團體（legacy pointer）。不論哪一種，都必須是本人擁有的團體。
+// 草稿可以換團體；已送出的需求不會走到這裡（更新只允許 draft）。
 export async function saveOwnDemandRequestDraft(
   input: DemandRequestApplicationInput,
   demandRequestId?: string,
+  requestedOrganizationId?: string,
 ): Promise<DemandRequestDraftSaveResult> {
   const validation = validateDemandRequestDraft(input);
 
@@ -164,21 +170,27 @@ export async function saveOwnDemandRequestDraft(
     }
 
     const organizerProfileId = organizerContext.organizerProfile.id;
-    const organizationId = organizerContext.organizerProfile.organizationId;
+    const organizationId =
+      requestedOrganizationId ?? organizerContext.organizerProfile.organizationId;
 
-    // organizer-usability-redesign 票 02：相容期仍用 legacy pointer 當預設團體，
-    // 但授權改看 owner，團體不是本人擁有的就不能拿來建需求。
+    // organizer-usability-redesign 票 02／04：授權看 owner，團體不是本人擁有的就不能拿來建需求。
     const ownedOrganization = await prisma.organization.findFirst({
       where: { id: organizationId, ownerOrganizerProfileId: organizerProfileId },
       select: { id: true },
     });
 
     if (!ownedOrganization) {
-      return {
-        ok: false,
-        code: "organizer_profile_required",
-        message: "請先建立團主資料後再建立需求。",
-      };
+      return requestedOrganizationId
+        ? {
+            ok: false,
+            code: "organization_not_found",
+            message: "找不到這個團體，或你沒有權限使用。",
+          }
+        : {
+            ok: false,
+            code: "organizer_profile_required",
+            message: "請先建立團主資料後再建立需求。",
+          };
     }
 
     if (!demandRequestId) {
@@ -207,7 +219,11 @@ export async function saveOwnDemandRequestDraft(
         // 票 02：需求自己所屬的團體也必須是本人擁有的。
         organization: { ownerOrganizerProfileId: organizerProfileId },
       },
-      data: toDemandRequestData(input),
+      data: {
+        ...toDemandRequestData(input),
+        // 票 04：草稿可以換成另一個自己擁有的團體（上面已驗證 owner）。
+        ...(requestedOrganizationId ? { organizationId: ownedOrganization.id } : {}),
+      },
     });
 
     if (updateResult.count === 0) {
@@ -247,6 +263,7 @@ export async function saveOwnDemandRequestDraft(
 export async function submitOwnDemandRequest(
   input: DemandRequestApplicationInput,
   demandRequestId: string,
+  requestedOrganizationId?: string,
 ): Promise<DemandRequestSubmitResult> {
   try {
     await requireUser();
@@ -309,9 +326,32 @@ export async function submitOwnDemandRequest(
       };
     }
 
+    // 票 04：送出時可以同時換成另一個自己擁有的團體（仍是 draft 才能換）；
+    // 聯絡資料完整度以送出後實際所屬的團體為準。
+    let targetOrganization = existingDemand.organization;
+    let targetOrganizationId = existingDemand.organizationId;
+
+    if (requestedOrganizationId && requestedOrganizationId !== existingDemand.organizationId) {
+      const requestedOrganization = await prisma.organization.findFirst({
+        where: { id: requestedOrganizationId, ownerOrganizerProfileId: organizerProfileId },
+        select: { id: true, contactName: true, contactEmail: true, contactPhone: true },
+      });
+
+      if (!requestedOrganization) {
+        return {
+          ok: false,
+          code: "organization_not_found",
+          message: "找不到這個團體，或你沒有權限使用。",
+        };
+      }
+
+      targetOrganization = requestedOrganization;
+      targetOrganizationId = requestedOrganization.id;
+    }
+
     // D4：submit 前必須驗證所連 Organization 的必填 contact 完整
     // （contact 欄位在 schema 為 nullable，這是 application-layer 的權威把關）。
-    if (!isOrganizationContactComplete(existingDemand.organization)) {
+    if (!isOrganizationContactComplete(targetOrganization)) {
       return {
         ok: false,
         code: "organization_contact_incomplete",
@@ -329,6 +369,7 @@ export async function submitOwnDemandRequest(
       },
       data: {
         ...toDemandRequestData(input),
+        organizationId: targetOrganizationId,
         status: "submitted",
       },
     });
