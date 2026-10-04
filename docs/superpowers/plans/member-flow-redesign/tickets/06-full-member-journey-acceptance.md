@@ -14,6 +14,8 @@
 
 **Source:** `docs/member-flow-redesign-plan.md` Q14、「收斂後的共同理解」。
 
+**範圍說明（2026-10-04）：** 期班的整期報名、請假、退出整期與期班卡片，屬於老師排課計畫（`docs/specs/teacher-class-scheduling-spec.md`），由該計畫的票 13 驗收，不在本票。本票只驗收單堂報名的學員旅程；若驗收時期班功能已上線，確認單堂旅程不受影響即可。
+
 ## Acceptance criteria
 
 - [ ] 團主團課與老師開課各走一次完整旅程
@@ -26,4 +28,6 @@
 - [ ] 報告區分自動化 smoke、手動畫面檢查，以及未驗收項目（如真實裝置鍵盤）
 - [ ] 票 05 的真實 Google OAuth 手動驗收未完成時，本票不得宣稱完整旅程已通過
 
-<!-- codex-peer-reviewed: 2026-10-03T21:19:08Z rounds=3 verdict=approved (reviewed as one unit with ../ticket-breakdown.md) -->
+
+<!-- review note: member-flow × teacher-scheduling reconciliation, reviewed as one unit with member-flow-redesign/ticket-breakdown.md -->
+<!-- codex-peer-reviewed: 2026-10-04T13:42:57Z rounds=2 verdict=approved -->

@@ -599,3 +599,10 @@ Output：繁體中文，Verdict（APPROVE / REQUEST CHANGES / REJECT）、Scope�
 - 角色返回失敗已由票 01 修正並 commit（`85bba16`）。根因是學員導覽列的 `/member/*` 被背景預先載入，舊 proxy 把它當成進入學員專區；HEAD 已存在，第一批只是讓它穩定浮現。詳見 `docs/superpowers/plans/member-flow-redesign/tickets/01-fix-last-role-prefetch.md`。
 - 票 02 在 main `85bba16`＋第一批 patch 上完成 diff review 與一次完整 smoke：120/120 通過（第一次一次執行 118/2，兩支失敗為共用 DB 忙碌時的逾時與 `create_failed`，單獨重跑皆過）。詳見 `docs/superpowers/plans/member-flow-redesign/tickets/02-batch-one-review-and-close.md`。
 - 第一批 22 檔仍未 commit；第二批（票 03、04）與第三批（票 05）未開始。
+
+### Q11 修訂 — 2026-10-04
+
+產品主人選 A：`suitableFor`／`preparationNotes` 改為「內容類欄位」。建立後可改，規則同課程介紹（隨時可改、不通知）；修改功能由 `docs/specs/teacher-class-scheduling-spec.md` 的改課票（單堂 04、系列 05）與本輪票 03／04 之中後做的一方補齊。系列公開設定、期班與整期報名由該計畫負責，本輪不再把「系列一律不公開」「只能逐場報名」當成本計畫要保護的規則。銜接細節見 `docs/superpowers/plans/member-flow-redesign/ticket-breakdown.md`。
+
+<!-- review note: member-flow × teacher-scheduling reconciliation, reviewed as one unit with member-flow-redesign/ticket-breakdown.md -->
+<!-- codex-peer-reviewed: 2026-10-04T13:42:57Z rounds=2 verdict=approved -->
