@@ -6,6 +6,7 @@ const links = [
   { href: "/organizer/dashboard", label: "總覽" },
   { href: "/organizer/demands", label: "我的需求" },
   { href: "/organizer/classes", label: "我的課程" },
+  { href: "/organizer/organizations", label: "我的團體" },
   { href: "/organizer/profile", label: "團主資料" },
   { href: "/organizer/notifications", label: "通知" },
 ];

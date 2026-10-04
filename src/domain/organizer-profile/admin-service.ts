@@ -28,6 +28,11 @@ export async function listOrganizationsForAdmin(): Promise<AdminOrganizationSumm
       contactEmail: true,
       contactPhone: true,
       updatedAt: true,
+      // organizer-usability-redesign 票 03：一位團主可以有多個團體，之後新增的團體只有 owner、
+      // 沒有 legacy pointer。相容期顯示 owner 加上仍以 legacy pointer 連到這個團體的團主（去重）。
+      ownerOrganizerProfile: {
+        select: { id: true, displayName: true, user: { select: { email: true } } },
+      },
       organizerProfiles: {
         select: { id: true, displayName: true, user: { select: { email: true } } },
       },
@@ -44,7 +49,12 @@ export async function listOrganizationsForAdmin(): Promise<AdminOrganizationSumm
     contactEmail: organization.contactEmail,
     contactPhone: organization.contactPhone,
     updatedAt: organization.updatedAt,
-    organizers: organization.organizerProfiles.map((profile) => ({
+    organizers: [
+      ...(organization.ownerOrganizerProfile ? [organization.ownerOrganizerProfile] : []),
+      ...organization.organizerProfiles.filter(
+        (profile) => profile.id !== organization.ownerOrganizerProfile?.id,
+      ),
+    ].map((profile) => ({
       id: profile.id,
       displayName: profile.displayName,
       email: profile.user.email,

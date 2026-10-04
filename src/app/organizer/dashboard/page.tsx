@@ -114,9 +114,13 @@ export default async function OrganizerDashboardPage() {
           送出需求前需要先補齊組織聯絡資訊（聯絡窗口、電話、信箱）。{" "}
           <Link
             className="font-medium underline underline-offset-4"
-            href="/organizer/profile"
+            href={
+              organizerContext.organization
+                ? `/organizer/organizations/${organizerContext.organization.id}`
+                : "/organizer/organizations"
+            }
           >
-            前往團主資料補齊
+            前往我的團體補齊
           </Link>
         </div>
       )}

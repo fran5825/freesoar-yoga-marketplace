@@ -5,29 +5,46 @@ import { redirect } from "next/navigation";
 
 import {
   normalizeCreateOrganizerProfileInput,
-  normalizeUpdateOwnOrganizationInput,
   normalizeUpdateOwnOrganizerProfileInput,
 } from "@/domain/organizer-profile/input";
 import { sanitizeOrganizerReturnPath } from "@/domain/organizer-profile/return-path";
 import {
   createOwnOrganizerProfileWithOrganization,
-  updateOwnOrganization,
   updateOwnOrganizerProfile,
 } from "@/domain/organizer-profile/service";
 
+// organizer-usability-redesign 票 03：表單改用 useActionState。失敗時回傳錯誤與使用者剛填的值，
+// 留在原頁、不清空輸入；成功才導頁。
+export type OrganizerFormState = {
+  status: "idle" | "error" | "success";
+  message: string | null;
+  values: Record<string, string>;
+};
+
+const SIGNUP_FIELDS = [
+  "displayName",
+  "organizationName",
+  "organizationType",
+  "contactName",
+  "contactEmail",
+  "contactPhone",
+] as const;
+
 // 票 04：一頁式註冊，聯絡資料一起填；成功後直接進新需求表單（或 next 指定的頁面）。
 export async function createOrganizerProfileAction(
+  _previousState: OrganizerFormState,
   formData: FormData,
-): Promise<void> {
+): Promise<OrganizerFormState> {
   const next = sanitizeOrganizerReturnPath(getStringField(formData, "next"));
+  const values = pickValues(formData, SIGNUP_FIELDS);
 
   const normalizedInput = normalizeCreateOrganizerProfileInput({
-    displayName: getStringField(formData, "displayName"),
-    organizationName: getStringField(formData, "organizationName"),
-    organizationType: getStringField(formData, "organizationType"),
-    contactName: getStringField(formData, "contactName"),
-    contactEmail: getStringField(formData, "contactEmail"),
-    contactPhone: getStringField(formData, "contactPhone"),
+    displayName: values.displayName,
+    organizationName: values.organizationName,
+    organizationType: values.organizationType,
+    contactName: values.contactName,
+    contactEmail: values.contactEmail,
+    contactPhone: values.contactPhone,
   });
 
   const result = await createOwnOrganizerProfileWithOrganization(
@@ -35,70 +52,53 @@ export async function createOrganizerProfileAction(
   );
 
   if (!result.ok) {
-    redirectWithFeedback(
-      "error",
-      buildErrorMessage(result.message, result.validationErrors),
-      next,
-    );
+    return {
+      status: "error",
+      message: buildErrorMessage(result.message, result.validationErrors),
+      values,
+    };
   }
 
   revalidatePath("/organizer/profile");
   redirect(next ?? "/organizer/demands/new");
 }
 
-// 票 05：資料頁單一「儲存」，顯示名稱與組織資訊一次存。
-// 先確認顯示名稱不是空的，再存組織，避免「組織存了、名稱沒存」的一半狀態。
+// 票 03：團主資料頁只管理團主本人的顯示名稱；團體資料移到「我的團體」。
 export async function saveOrganizerProfileAction(
+  _previousState: OrganizerFormState,
   formData: FormData,
-): Promise<void> {
-  const next = sanitizeOrganizerReturnPath(getStringField(formData, "next"));
-
+): Promise<OrganizerFormState> {
+  const values = pickValues(formData, ["displayName"] as const);
   const profileInput = normalizeUpdateOwnOrganizerProfileInput({
-    displayName: getStringField(formData, "displayName"),
+    displayName: values.displayName,
   });
 
   if (!profileInput.displayName) {
-    redirectWithFeedback("error", "團主顯示名稱為必填欄位。", next);
-  }
-
-  const organizationInput = normalizeUpdateOwnOrganizationInput({
-    name: getStringField(formData, "name"),
-    type: getStringField(formData, "type"),
-    contactName: getStringField(formData, "contactName"),
-    contactEmail: getStringField(formData, "contactEmail"),
-    contactPhone: getStringField(formData, "contactPhone"),
-  });
-
-  const organizationResult = await updateOwnOrganization(organizationInput);
-
-  if (!organizationResult.ok) {
-    redirectWithFeedback(
-      "error",
-      buildErrorMessage(
-        organizationResult.message,
-        organizationResult.validationErrors,
-      ),
-      next,
-    );
+    return { status: "error", message: "團主顯示名稱為必填欄位。", values };
   }
 
   const profileResult = await updateOwnOrganizerProfile(profileInput);
 
   if (!profileResult.ok) {
-    redirectWithFeedback(
-      "error",
-      buildErrorMessage(profileResult.message, profileResult.validationErrors),
-      next,
-    );
+    return {
+      status: "error",
+      message: buildErrorMessage(profileResult.message, profileResult.validationErrors),
+      values,
+    };
   }
 
   revalidatePath("/organizer/profile");
 
-  if (next) {
-    redirect(next);
-  }
+  return { status: "success", message: "團主資料已儲存。", values };
+}
 
-  redirectWithFeedback("success", "團主資料已儲存。", null);
+function pickValues<const T extends readonly string[]>(
+  formData: FormData,
+  fields: T,
+): Record<T[number], string> {
+  return Object.fromEntries(
+    fields.map((field) => [field, getStringField(formData, field)]),
+  ) as Record<T[number], string>;
 }
 
 function getStringField(formData: FormData, name: string): string {
@@ -115,16 +115,4 @@ function buildErrorMessage(
   }
 
   return [message, ...validationErrors.map((error) => error.message)].join(" ");
-}
-
-function redirectWithFeedback(
-  result: "success" | "error",
-  message: string,
-  next: string | null,
-): never {
-  const nextParam = next ? `&next=${encodeURIComponent(next)}` : "";
-
-  redirect(
-    `/organizer/profile?result=${result}&message=${encodeURIComponent(message)}${nextParam}`,
-  );
 }

@@ -134,7 +134,7 @@ test.describe("/organizers/request states", () => {
     const email = `incomplete-${testRunId}@${testEmailDomain}`;
     createdEmails.push(email);
 
-    const { sessionToken } = await createOrganizerProfileWithOrganization({
+    const { sessionToken, organizationId } = await createOrganizerProfileWithOrganization({
       email,
       displayName: `Incomplete Organizer ${testRunId}`,
       organizationName: `Incomplete Org ${testRunId}`,
@@ -149,9 +149,10 @@ test.describe("/organizers/request states", () => {
 
     await page.goto("/organizer/dashboard");
     await expect(page.getByText("送出需求前需要先補齊組織聯絡資訊")).toBeVisible();
-    await expect(page.getByRole("link", { name: "前往團主資料補齊" })).toHaveAttribute(
+    // organizer-usability-redesign 票 03：團體聯絡資料改在「我的團體」補。
+    await expect(page.getByRole("link", { name: "前往我的團體補齊" })).toHaveAttribute(
       "href",
-      "/organizer/profile",
+      `/organizer/organizations/${organizationId}`,
     );
   });
 });

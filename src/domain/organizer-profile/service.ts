@@ -6,12 +6,9 @@ import { prisma } from "@/lib/prisma";
 import {
   type CreateOrganizerProfileInput,
   type CreateOrganizerProfileValidationError,
-  type UpdateOwnOrganizationInput,
-  type UpdateOwnOrganizationValidationError,
   type UpdateOwnOrganizerProfileInput,
   type UpdateOwnOrganizerProfileValidationError,
   validateCreateOrganizerProfileInput,
-  validateUpdateOwnOrganizationInput,
   validateUpdateOwnOrganizerProfileInput,
 } from "./validation";
 
@@ -206,105 +203,6 @@ export async function createOwnOrganizerProfileWithOrganization(
       ok: false,
       code: "organizer_profile_create_failed",
       message: "團主資料暫時無法建立，請稍後再試。",
-    };
-  }
-}
-
-export type UpdateOwnOrganizationErrorCode =
-  | "authentication_required"
-  | "organizer_profile_required"
-  | "validation_failed"
-  | "organization_update_failed";
-
-export type UpdateOwnOrganizationResult =
-  | {
-      ok: true;
-      organization: OrganizerContextOrganization;
-    }
-  | {
-      ok: false;
-      code: UpdateOwnOrganizationErrorCode;
-      message: string;
-      validationErrors?: UpdateOwnOrganizationValidationError[];
-    };
-
-export async function updateOwnOrganization(
-  input: UpdateOwnOrganizationInput,
-): Promise<UpdateOwnOrganizationResult> {
-  const validation = validateUpdateOwnOrganizationInput(input);
-
-  if (!validation.valid) {
-    return {
-      ok: false,
-      code: "validation_failed",
-      message: "組織資料格式需要調整後才能儲存。",
-      validationErrors: validation.errors,
-    };
-  }
-
-  try {
-    const currentUser = await requireUser();
-
-    const organizerProfile = await prisma.organizerProfile.findUnique({
-      where: { userId: currentUser.id },
-      select: { id: true, organizationId: true },
-    });
-
-    if (!organizerProfile || !organizerProfile.organizationId) {
-      return {
-        ok: false,
-        code: "organizer_profile_required",
-        message: "請先建立團主資料後再編輯組織資訊。",
-      };
-    }
-
-    // 雙重 own-scope 限制：organizationId 已由 server 從自己的 OrganizerProfile 解析，
-    // 這裡再要求團體的 owner 是本人（organizer-usability-redesign 票 02：授權改看 owner），
-    // 防止任何情境下誤用他人 id。
-    const updateResult = await prisma.organization.updateMany({
-      where: {
-        id: organizerProfile.organizationId,
-        ownerOrganizerProfileId: organizerProfile.id,
-      },
-      data: {
-        name: input.name as string,
-        type: input.type as OrganizationType,
-        contactName: input.contactName ?? null,
-        contactEmail: input.contactEmail ?? null,
-        contactPhone: input.contactPhone ?? null,
-      },
-    });
-
-    if (updateResult.count === 0) {
-      return {
-        ok: false,
-        code: "organizer_profile_required",
-        message: "請先建立團主資料後再編輯組織資訊。",
-      };
-    }
-
-    const organization = await prisma.organization.findUniqueOrThrow({
-      where: { id: organizerProfile.organizationId },
-      select: organizationSelect,
-    });
-
-    return {
-      ok: true,
-      organization,
-    };
-  } catch (error) {
-    if (isAuthenticationRequiredError(error)) {
-      return {
-        ok: false,
-        code: "authentication_required",
-        message: "請先登入後再編輯組織資訊。",
-      };
-    }
-
-    return {
-      ok: false,
-      code: "organization_update_failed",
-      message: "組織資訊暫時無法更新，請稍後再試。",
     };
   }
 }

@@ -102,7 +102,7 @@ Teacher 只有在 published demand 或 matched class 需要時，才可看到必
 
 **V1 落地範圍（`organizer-profile-edit` 已確認）**：`Edit organizer profile` 這一列的 `Own`（Organizer）已落地——只有 `displayName` 這一個欄位，沒有狀態機也沒有狀態閘門（`OrganizerProfile` 不像 `TeacherProfile` 有 draft/approve/suspend，建立當下就是可用狀態），任何已建立 `OrganizerProfile` 的使用者都能隨時編輯。`Admin` 欄位仍是完整未來設計，V1 未開放（沒有任何頁面讓 Admin 代編輯 Organizer 的 `displayName`）。
 
-**多團體 own（organizer-usability-redesign，Q18：A）**：owner 判斷**已落地於團體更新與需求草稿存檔（票 02）**；多團體建立與選擇仍是已核准・未實作（票 03）。一位團主可以建立並管理多個自己的團體；表中 Organization 各列的 `Own` 改以 `Organization.ownerOrganizerProfileId` 判斷，查詢 `WHERE` 同時帶團體 id 與 owner。選取團體的 ID 一律由 server 驗證，他人的 ID 回 not-found；找不到 owner 的歷史團體只有 Admin 看得到。老師可以用同一個帳號建立團主資料與團體（沿用上方 bootstrap 例外），approved 資格只限制授課、不限制建團；切換身分不會讓老師取得額外的團體管理權。不新增多人共管、移交或刪除。
+**多團體 own（organizer-usability-redesign，Q18：A）**：owner 判斷**已落地於團體讀寫與需求草稿存檔、送審（票 02），以及我的團體新增／編輯（票 03）**；需求與邀請選擇團體仍是已核准・未實作（票 04–05）。一位團主可以建立並管理多個自己的團體；表中 Organization 各列的 `Own` 改以 `Organization.ownerOrganizerProfileId` 判斷，查詢 `WHERE` 同時帶團體 id 與 owner。選取團體的 ID 一律由 server 驗證，他人的 ID 回 not-found；找不到 owner 的歷史團體只有 Admin 看得到。老師可以用同一個帳號建立團主資料與團體（沿用上方 bootstrap 例外），approved 資格只限制授課、不限制建團；切換身分不會讓老師取得額外的團體管理權。不新增多人共管、移交或刪除。
 
 **V1 落地範圍（`admin-organizations` 已確認）**：`View organization` 這一列的 `Admin` 已落地，但只是**唯讀**——`/admin/organizations` 讓 Admin 查看全平台所有 organization（名稱、類型、聯絡資訊、所屬 organizer 清單、需求與課程數量），依名稱字母排序。`Edit organization` 這一列的 `Admin` 仍是明確 Non-goal，V1 未開放（沒有任何頁面讓 Admin 編輯或代管 organization 資料）。
 

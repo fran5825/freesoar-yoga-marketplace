@@ -150,7 +150,8 @@ test.describe("organizer demand smoke", () => {
     await expect(page.getByText("送出需求審核前，需要先補齊組織聯絡資料")).toBeVisible();
 
     await page.getByRole("link", { name: "前往補齊聯絡資料" }).click();
-    await expect(page).toHaveURL(/\/organizer\/profile\?next=/);
+    // organizer-usability-redesign 票 03：補資料改到這筆需求所屬團體的編輯頁。
+    await expect(page).toHaveURL(/\/organizer\/organizations\/[^/?]+\?returnTo=/);
     await expect(page.getByText("還缺 2 項聯絡資料")).toBeVisible();
 
     await page.getByLabel("聯絡信箱").fill(`banner-${testRunId}@example.com`);
@@ -161,7 +162,7 @@ test.describe("organizer demand smoke", () => {
     await expect(page.getByText("送出需求審核前，需要先補齊組織聯絡資料")).toHaveCount(0);
   });
 
-  test("ignores an external next parameter on the profile page", async ({
+  test("ignores an external returnTo parameter on the organization page", async ({
     context,
     page,
   }, testInfo) => {
@@ -171,7 +172,7 @@ test.describe("organizer demand smoke", () => {
     const email = `next-${testRunId}@${testEmailDomain}`;
     createdEmails.push(email);
 
-    const { sessionToken } = await createOrganizerProfileWithOrganization({
+    const { sessionToken, organizationId } = await createOrganizerProfileWithOrganization({
       email,
       displayName: `Next Organizer ${testRunId}`,
       organizationName: `Next Org ${testRunId}`,
@@ -182,12 +183,13 @@ test.describe("organizer demand smoke", () => {
     await addAuthSessionCookie(context, sessionToken);
 
     await page.goto(
-      `/organizer/profile?next=${encodeURIComponent("https://example.com/evil")}`,
+      `/organizer/organizations/${organizationId}?returnTo=${encodeURIComponent("https://example.com/evil")}`,
     );
     await page.getByRole("button", { name: "儲存", exact: true }).click();
 
-    await expect(page).toHaveURL(/\/organizer\/profile\?result=success/);
-    await expect(page.getByText("團主資料已儲存。")).toBeVisible();
+    // 外站 returnTo 被忽略：儲存後回到我的團體列表，而不是外部網址。
+    await expect(page).toHaveURL(/\/organizer\/organizations\?saved=/);
+    await expect(page.getByText(`已儲存「Next Org ${testRunId}」。`)).toBeVisible();
   });
 
   test("lets an organizer create a draft, reopen it, and submit; submitted content matches exactly what was filled", async ({
@@ -580,9 +582,8 @@ test.describe("organizer demand smoke", () => {
     expect(detailResponse?.status()).toBe(404);
 
     await page.goto("/organizer/profile");
-    await expect(
-      page.getByRole("heading", { name: `Other B ${testRunId}` }),
-    ).toBeVisible();
+    // 票 03：團主資料頁的名稱改在輸入框裡顯示。
+    await expect(page.getByLabel("團主顯示名稱")).toHaveValue(`Other B ${testRunId}`);
     await expect(page.getByText(`Owner A Org ${testRunId}`)).toBeHidden();
 
     await page.goto("/organizer/demands");

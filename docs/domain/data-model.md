@@ -123,7 +123,7 @@ Phase 1 schema notes（`organizer-demand-request-foundation` D4 已確認）：
 - `area` / `address` 為 V1 optional / deferred 欄位，可留空，不阻擋任何流程。
 - `contactEmail` 只做「非空 + 基本 email 形狀」驗證，不做寄送驗證；`contactPhone` 只做「非空 + 長度界線」驗證，不做電信驗證。
 
-**多團體 owner（organizer-usability-redesign，Q18：A）**：schema 與回填**已落地（票 02，migration `20261004000000_organization_owner_expand`）**；我的團體管理畫面與多團體選擇仍是已核准・未實作（票 03–05）。完整 contract 見 `docs/specs/organizer-usability-redesign-spec.md` 第 13.1 節。
+**多團體 owner（organizer-usability-redesign，Q18：A）**：schema 與回填**已落地（票 02，migration `20261004000000_organization_owner_expand`）**；我的團體新增／編輯**已落地（票 03，`src/domain/organization/service.ts`）**；需求與邀請選擇團體仍是已核准・未實作（票 04–05）。完整 contract 見 `docs/specs/organizer-usability-redesign-spec.md` 第 13.1 節。
 
 - 一位團主可以擁有多個團體：新增 `Organization.ownerOrganizerProfileId`（nullable FK、`onDelete: SetNull`、有 index），反向集合為 `OrganizerProfile.ownedOrganizations`。Prisma relation name 用 `OrganizationOwner`；既有 legacy 關聯改名為 `OrganizerLegacyOrganization`，只是 Prisma 層的命名，資料庫不變。
 - 不做多人共管、移交或團體刪除；新建團體一律由 server 寫入 owner，client 不能指定或修改。

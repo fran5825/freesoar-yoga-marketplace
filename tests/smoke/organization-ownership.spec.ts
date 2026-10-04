@@ -96,19 +96,17 @@ test.describe("organization ownership smoke", () => {
 
     await addAuthSessionCookie(context, organizerA.sessionToken);
 
-    // 讀取：團主資料頁不會顯示不屬於自己的團體聯絡資料。
+    // 讀取：團主資料頁與我的團體都不會列出不屬於自己的團體或它的聯絡資料。
     await page.goto("/organizer/profile");
+    await expect(page.getByText(`Org A ${testRunId}`)).toHaveCount(0);
     await expect(page.getByText(`contact-a-${testRunId}@example.com`)).toHaveCount(0);
-    await expect(page.getByLabel("聯絡信箱")).not.toHaveValue(`contact-a-${testRunId}@example.com`);
+    await page.goto("/organizer/organizations");
+    await expect(page.getByText(`Org A ${testRunId}`)).toHaveCount(0);
 
-    // 改團體聯絡資料：被拒絕，資料不變。
-    // 團體欄位是空白的（讀不到他人資料），補上必填欄位，讓請求通過表單驗證、確實走到 owner 檢查。
-    await page.getByLabel("組織名稱").fill("不該寫入");
-    await page.getByLabel("組織類型").selectOption("company");
-    await page.getByLabel("聯絡窗口姓名").fill("不該寫入");
-    await page.getByRole("button", { name: "儲存", exact: true }).click();
-    await expect(page.getByText("請先建立團主資料後再編輯組織資訊。").first()).toBeVisible();
-    await expect(page.getByText("團主資料已儲存。")).toHaveCount(0);
+    // 直接開團體編輯頁：不是自己的團體一律 404，看不到也改不到。
+    const editResponse = await page.goto(`/organizer/organizations/${organizerA.organizationId}`);
+    expect(editResponse?.status()).toBe(404);
+    await expect(page.getByText(`contact-a-${testRunId}@example.com`)).toHaveCount(0);
 
     const organization = await prisma.organization.findUniqueOrThrow({
       where: { id: organizerA.organizationId },
@@ -139,5 +137,56 @@ test.describe("organization ownership smoke", () => {
       select: { status: true },
     });
     expect(afterSubmit.status).toBe("draft");
+  });
+  test("tampering with the organization id on a valid edit form cannot update someone else's organization", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(
+      `${testInfo.project.name}-${testInfo.workerIndex}-owner-forge-${Date.now()}`,
+    );
+    const emailA = `owner-forge-a-${testRunId}@${testEmailDomain}`;
+    const emailB = `owner-forge-b-${testRunId}@${testEmailDomain}`;
+    createdEmails.push(emailA, emailB);
+
+    const organizerA = await createOrganizerProfileWithOrganization({
+      email: emailA,
+      displayName: `Forger A ${testRunId}`,
+      organizationName: `Forger Org A ${testRunId}`,
+    });
+    const organizerB = await createOrganizerProfileWithOrganization({
+      email: emailB,
+      displayName: `Victim B ${testRunId}`,
+      organizationName: `Victim Org B ${testRunId}`,
+      contactName: "B 的聯絡人",
+    });
+
+    await addAuthSessionCookie(context, organizerA.sessionToken);
+    await page.goto(`/organizer/organizations/${organizerA.organizationId}`);
+
+    // 從自己合法的編輯表單送出，但把隱藏的 organizationId 改成 B 的團體。
+    await page
+      .locator('input[name="organizationId"]')
+      .evaluate((input: HTMLInputElement, forgedId: string) => {
+        input.value = forgedId;
+      }, organizerB.organizationId);
+    await page.getByLabel("組織名稱").fill(`Hijacked ${testRunId}`);
+    await page.getByLabel("聯絡窗口姓名").fill("不該寫入");
+    await page.getByRole("button", { name: "儲存", exact: true }).click();
+
+    await expect(page.getByText("找不到這個團體，或你沒有權限編輯。").first()).toBeVisible();
+
+    const [victim, own] = await Promise.all([
+      prisma.organization.findUniqueOrThrow({
+        where: { id: organizerB.organizationId },
+        select: { name: true, contactName: true },
+      }),
+      prisma.organization.findUniqueOrThrow({
+        where: { id: organizerA.organizationId },
+        select: { name: true },
+      }),
+    ]);
+    expect(victim).toEqual({ name: `Victim Org B ${testRunId}`, contactName: "B 的聯絡人" });
+    expect(own.name).toBe(`Forger Org A ${testRunId}`);
   });
 });

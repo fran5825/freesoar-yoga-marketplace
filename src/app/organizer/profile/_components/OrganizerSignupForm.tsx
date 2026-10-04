@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useState } from "react";
 
 import { ORGANIZATION_TYPE_OPTIONS } from "@/domain/organizer-profile/organization-type-labels";
 
-import { createOrganizerProfileAction } from "../actions";
+import { createOrganizerProfileAction, type OrganizerFormState } from "../actions";
 import { OrganizerField, organizerInputClassName } from "./organizer-fields";
 
 // 票 04：一頁式團主註冊。信箱與姓名預填登入資料；「團主顯示名稱」與「聯絡窗口姓名」
@@ -18,13 +18,29 @@ export function OrganizerSignupForm({
   defaultEmail: string;
   next: string | null;
 }) {
+  const [state, formAction, isPending] = useActionState<OrganizerFormState, FormData>(
+    createOrganizerProfileAction,
+    { status: "idle", message: null, values: {} },
+  );
   const [displayName, setDisplayName] = useState(defaultName);
   const [contactName, setContactName] = useState(defaultName);
   const [isContactNameEdited, setIsContactNameEdited] = useState(false);
+  // 票 03：伺服器驗證失敗時留在原頁，未受控欄位用回傳的值當預設值，不清空使用者的輸入。
+  const values = state.values;
 
   return (
-    <form action={createOrganizerProfileAction} className="grid gap-6">
+    <form action={formAction} className="grid gap-6">
       {next ? <input name="next" type="hidden" value={next} /> : null}
+
+      {state.status === "error" && state.message ? (
+        <p
+          aria-live="polite"
+          className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
+          role="alert"
+        >
+          {state.message}
+        </p>
+      ) : null}
 
       <fieldset className="grid gap-4">
         <legend className="text-base font-semibold text-ink">你是誰</legend>
@@ -60,6 +76,7 @@ export function OrganizerSignupForm({
         >
           <input
             className={organizerInputClassName}
+            defaultValue={values.organizationName ?? ""}
             name="organizationName"
             placeholder="例如：陽光科技股份有限公司"
             required
@@ -69,7 +86,8 @@ export function OrganizerSignupForm({
         <OrganizerField hint="幫助平台理解這個團體的性質。" label="組織類型">
           <select
             className={organizerInputClassName}
-            defaultValue=""
+            defaultValue={values.organizationType ?? ""}
+            key={`organizationType-${values.organizationType ?? ""}`}
             name="organizationType"
             required
           >
@@ -107,7 +125,7 @@ export function OrganizerSignupForm({
         <OrganizerField label="聯絡信箱">
           <input
             className={organizerInputClassName}
-            defaultValue={defaultEmail}
+            defaultValue={values.contactEmail ?? defaultEmail}
             name="contactEmail"
             placeholder="例如：organizer@example.com"
             required
@@ -117,6 +135,7 @@ export function OrganizerSignupForm({
         <OrganizerField label="聯絡電話">
           <input
             className={organizerInputClassName}
+            defaultValue={values.contactPhone ?? ""}
             name="contactPhone"
             placeholder="例如：0912-345-678"
             required
@@ -126,7 +145,8 @@ export function OrganizerSignupForm({
       </fieldset>
 
       <button
-        className="w-full rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-pine-deep sm:w-auto sm:justify-self-start"
+        className="w-full rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-pine-deep disabled:opacity-60 sm:w-auto sm:justify-self-start"
+        disabled={isPending}
         type="submit"
       >
         建立團主資料並開始整理需求

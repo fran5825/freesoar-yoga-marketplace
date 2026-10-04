@@ -35,7 +35,10 @@ export default async function NewDemandRequestPage() {
 
       {organizerContext.organization !== null &&
       isOrganizationContactComplete(organizerContext.organization) ? null : (
-        <ContactIncompleteBanner returnPath="/organizer/demands/new" />
+        <ContactIncompleteBanner
+          organizationId={organizerContext.organization?.id ?? null}
+          returnPath="/organizer/demands/new"
+        />
       )}
 
       <DemandRequestForm

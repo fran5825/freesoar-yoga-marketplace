@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 
 import { getOwnDemandRequestDetail } from "@/domain/demand-request/service";
-import { isOrganizationContactComplete } from "@/domain/demand-request/validation";
+import { getOwnOrganization } from "@/domain/organization/service";
 import { getOwnOrganizerContext } from "@/domain/organizer-profile/service";
 import { requireUser } from "@/lib/auth/session";
 
@@ -43,6 +43,10 @@ export default async function EditDemandRequestPage({
     redirect(`/organizer/demands/${demandRequestId}`);
   }
 
+  // organizer-usability-redesign 票 03：聯絡資料完整度看這筆需求自己的團體（經 owner 驗證），
+  // 與送審時的檢查、補資料連結指向同一個團體。
+  const demandOrganization = await getOwnOrganization(demandRequest.organizationId);
+
   return (
     <div className="flex flex-col gap-8">
       <header className="border-b border-ink/15 pb-6">
@@ -54,9 +58,9 @@ export default async function EditDemandRequestPage({
         </p>
       </header>
 
-      {organizerContext.organization !== null &&
-      isOrganizationContactComplete(organizerContext.organization) ? null : (
+      {demandOrganization?.isContactComplete ? null : (
         <ContactIncompleteBanner
+          organizationId={demandOrganization?.id ?? null}
           returnPath={`/organizer/demands/${demandRequestId}/edit`}
         />
       )}

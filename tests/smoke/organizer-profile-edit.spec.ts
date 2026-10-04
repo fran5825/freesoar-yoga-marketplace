@@ -84,9 +84,7 @@ test.describe("organizer profile edit smoke", () => {
     await page.getByRole("button", { name: "儲存", exact: true }).click();
 
     await expect(page.getByText("團主資料已儲存。")).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: `Organizer A ${testRunId} Updated` }),
-    ).toBeVisible();
+    await expect(page.getByLabel("團主顯示名稱")).toHaveValue(`Organizer A ${testRunId} Updated`);
 
     const updatedA = await prisma.organizerProfile.findUniqueOrThrow({
       where: { id: organizerA.organizerProfileId },
@@ -101,7 +99,7 @@ test.describe("organizer profile edit smoke", () => {
     expect(untouchedB.displayName).toBe(`Organizer B ${testRunId}`);
   });
 
-  test("keeps the existing Organization contact-info form working on the same page (regression check)", async ({
+  test("edits the organization contact info on its own page under 我的團體 (regression check)", async ({
     context,
     page,
   }, testInfo) => {
@@ -118,12 +116,16 @@ test.describe("organizer profile edit smoke", () => {
     });
 
     await addAuthSessionCookie(context, organizer.sessionToken);
+    // organizer-usability-redesign 票 03：團體資料從團主資料頁移到「我的團體」。
     await page.goto("/organizer/profile");
+    await page.getByRole("link", { name: `Org ${testRunId}` }).click();
+    await expect(page).toHaveURL(new RegExp(`/organizer/organizations/${organizer.organizationId}$`));
 
     await page.getByLabel("聯絡窗口姓名").fill("王小明");
     await page.getByRole("button", { name: "儲存", exact: true }).click();
 
-    await expect(page.getByText("團主資料已儲存。")).toBeVisible();
+    await expect(page).toHaveURL(/\/organizer\/organizations\?saved=/);
+    await expect(page.getByText(`已儲存「Org ${testRunId}」。`)).toBeVisible();
 
     const organization = await prisma.organization.findUniqueOrThrow({
       where: { id: organizer.organizationId },
@@ -162,7 +164,7 @@ test.describe("organizer profile edit smoke", () => {
 
     await page.getByRole("button", { name: "儲存", exact: true }).click();
 
-    await expect(page.getByText("請先建立團主資料後再編輯組織資訊。")).toBeVisible();
+    await expect(page.getByText("請先建立團主資料後再編輯顯示名稱。")).toBeVisible();
 
     const profileCount = await prisma.organizerProfile.count({
       where: { user: { email } },

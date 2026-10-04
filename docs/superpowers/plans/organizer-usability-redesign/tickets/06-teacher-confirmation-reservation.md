@@ -20,3 +20,7 @@
 - [ ] 老師確認不授予團主的開放、取消、完成或名單管理能力；未確認、婉拒與衝突各有明確下一步。
 - [ ] 驗證角色／version／資格／過期、跨來源及 recurring 衝突、並發與不重複確認；更新 state／permission／排課文件。
 
+
+## 開工前必須處理（2026-10-04 發現）
+
+- **跨任務鎖順序衝突**：老師排課工作（`docs/specs/teacher-class-scheduling-spec.md` 第 6 節、`docs/domain/state-machines.md` 2026-10-04 新增段落）規定「系列 → 場次 → 老師」；團主 contract（spec 13.5）規定「TeacherProfile 最先」。目前團主路徑不會鎖 `RecurringClassSeries`，所以還不會形成互相等待；但只要有任何路徑「先鎖老師、再鎖系列」就會 deadlock。本票開始前要以兩份文件的最新內容統一規則（建議：系列鎖可以排在老師之前，但任何路徑都不得在鎖老師之後再鎖系列），並確認老師排課的實作；需要改動對方規格時先請產品主人確認。
