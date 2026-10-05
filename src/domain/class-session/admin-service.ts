@@ -103,7 +103,6 @@ export type AdminClassSessionRosterEntry = {
 };
 
 export type AdminClassSessionDetail = {
-  origin: ClassSessionOrigin;
   id: string;
   title: string;
   description: string | null;
@@ -161,7 +160,6 @@ export async function getClassSessionDetailForAdmin(
       capacity: true,
       isPublic: true,
       status: true,
-      origin: true,
       createdAt: true,
       demandRequest: { select: { id: true, status: true, targetLevel: true } },
       organizerProfile: {
