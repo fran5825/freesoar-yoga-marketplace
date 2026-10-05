@@ -6,6 +6,10 @@ import { getCurrentUser, requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
 import {
+  openDirectClassFromProposalCore,
+  type OpenDirectClassErrorCode,
+} from "./__internal__/open-direct-class-core";
+import {
   reviseProposalCore,
   withdrawProposalCore,
   WITHDRAW_REASON_MAX_LENGTH,
@@ -614,5 +618,42 @@ export async function selfConfirmOwnProposal(
       return failure("authentication_required", "請先登入後再操作。");
     }
     return failure("proposal_save_failed", RESPOND_MESSAGES.respond_failed);
+  }
+}
+
+// ---------- 開放報名（票 09）----------
+
+const OPEN_MESSAGES: Record<OpenDirectClassErrorCode, string> = {
+  proposal_not_found: "找不到這份合作邀請，或你沒有權限操作。",
+  proposal_invalid_status: "只有老師已確認的邀請才能開放報名，請重新整理查看最新狀態。",
+  proposal_version_stale: "這份邀請剛剛被修改過，老師確認的內容和目前不同，請重新整理確認。",
+  teacher_not_approved: "授課老師目前不是已通過審核的狀態，暫時不能開放報名。",
+  proposal_starts_in_past: "開始時間已經過了，請修改時間並請老師重新確認。",
+  proposal_incomplete: "課程內容不完整，請修改後請老師重新確認。",
+  schedule_conflict: "老師在這個時段已經有其他課程，無法開放報名。請修改時間並請老師重新確認。",
+  open_failed: "暫時無法開放報名，請稍後再試。",
+};
+
+export type OpenDirectClassServiceResult =
+  | { ok: true; classSessionId: string }
+  | { ok: false; code: OpenDirectClassErrorCode | "authentication_required"; message: string };
+
+export async function openOwnDirectClass(
+  proposalId: string,
+  expectedVersion: number,
+): Promise<OpenDirectClassServiceResult> {
+  try {
+    const currentUser = await requireUser();
+    const organizerProfileId = await getOwnOrganizerProfileId(currentUser.id);
+    if (!organizerProfileId) {
+      return { ok: false, code: "proposal_not_found", message: OPEN_MESSAGES.proposal_not_found };
+    }
+    const result = await openDirectClassFromProposalCore(organizerProfileId, proposalId, expectedVersion);
+    return result.ok ? result : { ok: false, code: result.code, message: OPEN_MESSAGES[result.code] };
+  } catch (error) {
+    if (isAuthenticationRequiredError(error)) {
+      return { ok: false, code: "authentication_required", message: "請先登入後再操作。" };
+    }
+    return { ok: false, code: "open_failed", message: OPEN_MESSAGES.open_failed };
   }
 }

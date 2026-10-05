@@ -4,6 +4,8 @@ import type { ClassSessionOrigin } from "@prisma/client";
 const originLabels: Record<ClassSessionOrigin, string> = {
   organizer_matched: "團主團課",
   teacher_initiated: "老師開課",
+  // organizer-usability-redesign 票 09：團主直接邀請合作老師開的課，對學員來說同樣是團主團課。
+  organizer_direct: "團主團課",
 };
 
 export function ClassOriginTag({ origin }: { origin: ClassSessionOrigin }) {

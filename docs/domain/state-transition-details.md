@@ -317,7 +317,7 @@ organizer-usability-redesign（Q18：A）。每個轉換的 actor、guard、時�
 - 未 approved（含 suspended）的老師不能確認或本人授課；Admin 不能代為確認。
 - 開放報名不能分成兩個 transaction（先建 draft 再開放）；重試只能回傳同一堂課。
 
-### ClassSession：`(none) → open_for_enrollment`（organizer_direct）
+### ClassSession：`(none) → open_for_enrollment`（organizer_direct，已落地：`openDirectClassFromProposalCore`，票 09）
 
 - Actor：團主 own。
 - 前置：對應的邀請是 `confirmed`、`confirmedVersion = version = expectedVersion`、老師仍是 `approved`、`startAt` 在未來、排課無衝突（只排除這筆邀請自己的占用）。

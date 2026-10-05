@@ -3,8 +3,10 @@
 import { revalidatePath } from "next/cache";
 
 import {
+  openOwnDirectClass,
   saveOwnProposalDraft,
   selfConfirmOwnProposal,
+  type OpenDirectClassServiceResult,
   withdrawOwnProposal,
   searchApprovedTeacherCards,
   submitOwnProposal,
@@ -98,6 +100,19 @@ export async function resubmitProposalAction(
   const result = await submitOwnProposal(proposalId, expectedVersion);
   if (result.ok) {
     revalidatePath(`/organizer/class-proposals/${proposalId}`);
+  }
+  return result;
+}
+
+// 票 09：老師確認後，一次建立正式課程並開放報名；重試會回到同一堂課。
+export async function openDirectClassAction(
+  proposalId: string,
+  expectedVersion: number,
+): Promise<OpenDirectClassServiceResult> {
+  const result = await openOwnDirectClass(proposalId, expectedVersion);
+  if (result.ok) {
+    revalidatePath(`/organizer/class-proposals/${proposalId}`);
+    revalidatePath("/organizer/classes");
   }
   return result;
 }

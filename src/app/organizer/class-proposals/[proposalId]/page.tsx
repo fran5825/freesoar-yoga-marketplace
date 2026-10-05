@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { getOwnProposalForOrganizer } from "@/domain/organizer-class-proposal/service";
 import { getCurrentUser } from "@/lib/auth/session";
 
-import { resubmitProposalAction, withdrawProposalAction } from "../actions";
+import { openDirectClassAction, resubmitProposalAction, withdrawProposalAction } from "../actions";
 import { ProposalManageActions } from "../_components/ProposalManageActions";
 import { ProposalSummary } from "../_components/ProposalSummary";
 import { proposalStatusLabels, proposalStatusToneClasses } from "../_components/page-helpers";
@@ -46,8 +46,8 @@ export default async function ProposalDetailPage({ params, searchParams }: Propo
           ? {
               actor: "你",
               text: isSelfTaught
-                ? "你已確認由自己授課，這個時段已保留給這堂課。開放報名的功能會在下一步提供。"
-                : `${proposal.teacher?.displayName ?? "老師"} 已確認授課，這個時段已保留給這堂課。開放報名的功能會在下一步提供。`,
+                ? "你已確認由自己授課，這個時段已保留給這堂課。現在可以開放報名。"
+                : `${proposal.teacher?.displayName ?? "老師"} 已確認授課，這個時段已保留給這堂課。現在可以開放報名。`,
             }
           : proposal.status === "declined"
             ? {
@@ -100,6 +100,7 @@ export default async function ProposalDetailPage({ params, searchParams }: Propo
         proposal.status === "declined" ||
         proposal.status === "confirmed" ? (
           <ProposalManageActions
+            onOpen={openDirectClassAction}
             onResubmit={resubmitProposalAction}
             onWithdraw={withdrawProposalAction}
             proposalId={proposal.id}

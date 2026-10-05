@@ -91,7 +91,7 @@ Cannot:
 - Approve self
 - Access admin dashboard
 - Create class sessions while own `TeacherProfile.status` is not `approved`（含 `suspended`）——資格檢查與既有 demand-response 資格檢查同等嚴格
-- **已核准・未實作（organizer-usability-redesign 票 09）**：Open / cancel / complete class sessions whose `origin` is not `teacher_initiated` through teacher-side services——目前只靠 UI 隱藏按鈕，票 09 在 server 端補上 origin 檢查
+- **organizer-usability-redesign 票 09**：Open / cancel / complete class sessions whose `origin` is not `teacher_initiated` through teacher-side services——complete 已在 server 端檢查 origin（已落地）；open 與 cancel 目前仍只靠 UI 隱藏按鈕，等老師排課工作 commit 後補上
 
 ## Admin
 

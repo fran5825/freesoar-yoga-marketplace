@@ -51,6 +51,7 @@ const nextStepToneClasses = {
   info: "border-pine/15 bg-pine-tint text-pine-deep",
 } as const;
 
+  organizer_direct: "團主合作開課",
 const primaryButtonClassName =
   "min-h-11 rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep";
 const secondaryButtonClassName =

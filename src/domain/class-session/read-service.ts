@@ -21,9 +21,9 @@ export type OrganizerFacingClassSession = {
   isPublic: boolean;
   status: ClassSessionStatus;
   createdAt: Date;
-  // teacher-initiated-open-classes：demandRequest 改為 nullable（老師自建課程沒有對應
-  // DemandRequest），但 Organizer 自己建立的課程一律有 demandRequest；own-scoped 查詢仍只會
-  // 回傳 organizer_matched 來源的課程，型別上放寬是為了配合 schema 變更，不代表這裡真的會出現 null。
+  // organizer-usability-redesign 票 09：團主的課程有兩種來源（找老師媒合、直接邀請合作老師），依 origin 辨識。
+  origin: ClassSessionOrigin;
+  // 直接開團（organizer_direct）沒有需求，demandRequest 會是 null；適合對象顯示未指定，不猜測。
   demandRequest: { targetLevel: string | null } | null;
   teacherProfile: { displayName: string | null };
 };
@@ -44,6 +44,7 @@ const organizerFacingClassSessionSelect = {
   teacherProfile: { select: { displayName: true } },
 } as const;
 
+  origin: true,
 export async function listOwnClassSessionsForOrganizer(): Promise<
   OrganizerFacingClassSession[]
 > {

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { listOwnClassSessionsForOrganizer } from "@/domain/class-session/read-service";
+import { classOriginLabelsForOrganizer } from "@/domain/class-session/origin-labels";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { requireUser } from "@/lib/auth/session";
 
@@ -26,7 +27,7 @@ export default async function OrganizerClassesPage() {
           我的課程
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
-          這裡列出從已媒合需求建立的所有課程。
+          這裡列出你的團主課程，包含找老師媒合成立的，以及直接邀請合作老師開放報名的課程。
         </p>
       </header>
 
@@ -62,6 +63,9 @@ export default async function OrganizerClassesPage() {
                   className={`w-fit rounded-full px-3 py-1 text-xs font-medium ${classSessionStatusToneClasses[classSession.status]}`}
                 >
                   {classSessionStatusLabels[classSession.status]}
+                </span>
+                <span className="w-fit rounded-full border border-ink/15 px-3 py-1 text-xs text-ink-soft">
+                  {classOriginLabelsForOrganizer[classSession.origin]}
                 </span>
               </div>
               <p className="text-sm text-ink-faint">

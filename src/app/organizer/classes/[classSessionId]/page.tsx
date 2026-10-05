@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 
 import { getOwnClassSessionDetailForOrganizer } from "@/domain/class-session/read-service";
+import { classOriginLabelsForOrganizer } from "@/domain/class-session/origin-labels";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { listConfirmedEnrollmentsForClassSession } from "@/domain/enrollment/read-service";
 import { listReviewsForClassSession } from "@/domain/review/read-service";
@@ -19,7 +20,7 @@ import {
 
 type OrganizerClassSessionDetailPageProps = {
   params: Promise<{ classSessionId: string }>;
-  searchParams?: Promise<{ result?: string; message?: string }>;
+  searchParams?: Promise<{ result?: string; message?: string; flash?: string }>;
 };
 
 export default async function OrganizerClassSessionDetailPage({
@@ -37,8 +38,11 @@ export default async function OrganizerClassSessionDetailPage({
     searchParams,
   ]);
 
+  // organizer-usability-redesign 票 09：從合作邀請開放報名後導到這裡（固定代碼，不顯示網址上的文字）。
   const feedback =
-    resolvedSearchParams?.result && resolvedSearchParams.message
+    resolvedSearchParams?.flash === "opened"
+      ? { kind: "success" as const, message: "已開放報名，現在可以把課程連結分享給團員。" }
+      : resolvedSearchParams?.result && resolvedSearchParams.message
       ? {
           kind:
             resolvedSearchParams.result === "success"
@@ -71,6 +75,9 @@ export default async function OrganizerClassSessionDetailPage({
             className={`w-fit rounded-full px-3 py-1 text-xs font-medium ${classSessionStatusToneClasses[classSession.status]}`}
           >
             {classSessionStatusLabels[classSession.status]}
+          </span>
+          <span className="w-fit rounded-full border border-ink/15 px-3 py-1 text-xs text-ink-soft">
+            {classOriginLabelsForOrganizer[classSession.origin]}
           </span>
         </div>
         <h1 className="mt-2 min-w-0 break-words text-3xl font-semibold tracking-tight text-ink">

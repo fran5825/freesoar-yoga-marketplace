@@ -160,11 +160,11 @@ Teacher 可查看自己的 class session；下方「V1 落地範圍」對 Comple
 
 **V1 落地範圍（`teacher-initiated-open-classes` 已確認）**：新增 `Create own class session directly` 這一列——approved 老師可以自己開單堂、常規（每週固定星期）或固定期課程，不需要團主媒合，own-scoped，Admin 不介入（沒有 Admin 專用的老師建課入口）；建立時檢查自己的 `TeacherProfile.status = 'approved'`，並套用跨 origin 共用的雙重預約衝突檢查（見 `data-model.md` 的 `ClassSession` 說明）。`Open for enrollment`／`Cancel class session`／`Complete class session` 這三列的 **Teacher 欄位從 No 改為 Own**——但只對自己 `origin = teacher_initiated` 的課程有實際 UI 入口（`/teacher/classes` 只在來源是老師自建時才顯示對應按鈕），底層 own-scoped 函式本身不分來源（用 `teacherProfileId` 過濾，即使誤呼叫也不會動到別人或團主媒合的課程，只是刻意不在 UI 上對團主媒合課程顯示這些按鈕，避免混淆兩種來源的操作邊界）。老師自建課程額外支援「需要老師確認才算報名成功」（`requiresApproval`），見下方 `Enrollment` 表的 `Confirm enrollment`／`Decline enrollment` 兩列。
 
-**已核准・未實作（organizer-usability-redesign 票 09）：`organizer_direct` 與老師端 origin guard**。團主可以從自己已確認的合作邀請直接開團（見下方 OrganizerClassProposal 表的 `Open direct class from proposal`）。上表 `Open for enrollment`／`Cancel class session`／`Complete class session` 的 Teacher `Own` 會在 server 端限定 `origin = teacher_initiated`：目前的老師端核心只用 `teacherProfileId` 過濾、只靠 UI 隱藏按鈕，票 09 補上這個檢查。受邀老師確認授課，不會因此取得團主課程的開放、取消、完成或名單管理權；團主端核心同時適用 `organizer_matched` 與 `organizer_direct`。Admin 維持既有的查看與取消，不新增代確認或直接開團。
+**`organizer_direct` 與老師端 origin guard（organizer-usability-redesign 票 09）**：團主從已確認的邀請直接開團**已落地**；老師端 `Complete class session` 的 origin 檢查**已落地**；`Open for enrollment`、`Cancel class session` 的 origin 檢查**尚未落地**（對應程式正被老師排課工作改寫且未 commit，等該工作 commit 後補上）。團主可以從自己已確認的合作邀請直接開團（見下方 OrganizerClassProposal 表的 `Open direct class from proposal`）。上表 `Open for enrollment`／`Cancel class session`／`Complete class session` 的 Teacher `Own` 會在 server 端限定 `origin = teacher_initiated`：目前的老師端核心只用 `teacherProfileId` 過濾、只靠 UI 隱藏按鈕，票 09 補上這個檢查。受邀老師確認授課，不會因此取得團主課程的開放、取消、完成或名單管理權；團主端核心同時適用 `organizer_matched` 與 `organizer_direct`。Admin 維持既有的查看與取消，不新增代確認或直接開團。
 
 ## OrganizerClassProposal
 
-**部分落地**（organizer-usability-redesign，Q18：A）：`Create / save proposal draft`、`Submit proposal to teacher`、`View proposal`、`Search approved teacher cards` 已落地（票 05），`Confirm proposal`、`Decline proposal` 已落地（票 06），`Revise proposal`、`Withdraw proposal` 已落地（票 07），`Self-confirm（本人授課）` 已落地（票 08）；`Open direct class from proposal` 仍是已核准・未實作（票 09）。
+**部分落地**（organizer-usability-redesign，Q18：A）：`Create / save proposal draft`、`Submit proposal to teacher`、`View proposal`、`Search approved teacher cards` 已落地（票 05），`Confirm proposal`、`Decline proposal` 已落地（票 06），`Revise proposal`、`Withdraw proposal` 已落地（票 07），`Self-confirm（本人授課）` 已落地（票 08），`Open direct class from proposal` 已落地（票 09）。
 
 | Action | Visitor | Member | Organizer | Teacher | Admin |
 |---|---|---|---|---|---|
@@ -176,7 +176,7 @@ Teacher 可查看自己的 class session；下方「V1 落地範圍」對 Comple
 | Self-confirm（本人授課） | No | No | Own＋approved Teacher（同一 User） | — | No |
 | Revise proposal | No | No | Own | No | No |
 | Withdraw proposal | No | No | Own | No | No |
-| Open direct class from proposal | No | No | Own | No | No |
+| Open direct class from proposal（已落地，票 09） | No | No | Own | No | No |
 | Search approved teacher cards | No | No | Own（僅公開名片欄位） | No | No |
 
 - 所有 Own 都由 server 判斷：團主看邀請的 `organizerProfileId`，老師看邀請的 `teacherProfileId`；不符回 not-found。團體必須是團主自己擁有的團體。

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { demandRequestTargetLevelLabels } from "@/app/organizer/demands/_components/status-labels";
+import { classOriginLabelsForAdmin } from "@/domain/class-session/origin-labels";
 import {
   classSessionStatusLabels,
   classSessionStatusToneClasses,
@@ -72,6 +73,9 @@ export default async function AdminClassSessionDetailPage({
             className={`w-fit rounded-full px-3 py-1 text-xs font-medium ${classSessionStatusToneClasses[classSession.status]}`}
           >
             {classSessionStatusLabels[classSession.status]}
+          </span>
+          <span className="w-fit rounded-full border border-ink/15 px-3 py-1 text-xs text-ink-soft">
+            {classOriginLabelsForAdmin[classSession.origin]}
           </span>
         </div>
         <h1 className="mt-2 min-w-0 break-words text-3xl font-semibold tracking-tight text-ink">

@@ -304,7 +304,7 @@ Fields:
 
 - organizer_matched（既有路徑：由已媒合的 `DemandRequest` 轉換產生）
 - teacher_initiated（新路徑：老師直接建課，不需要團主媒合）
-- organizer_direct（**已核准・未實作**，organizer-usability-redesign 票 09）：團主邀請已合作的老師、老師確認後由團主直接開團。沒有 `DemandRequest`，必有 organizer／organization，且有一筆 `converted` 的 `OrganizerClassProposal` 指向這堂課。建立時直接是 `open_for_enrollment`、`requiresApproval = false`。三種來源的不變量見 `docs/specs/organizer-usability-redesign-spec.md` 第 13.6 節。
+- organizer_direct（**已落地**，organizer-usability-redesign 票 09，migration `20261005100000_class_origin_organizer_direct`；三種來源的組合由 `20261005100100_class_origin_invariants` 的 CHECK 約束保證）：團主邀請已合作的老師、老師確認後由團主直接開團。沒有 `DemandRequest`，必有 organizer／organization，且有一筆 `converted` 的 `OrganizerClassProposal` 指向這堂課。建立時直接是 `open_for_enrollment`、`requiresApproval = false`。三種來源的不變量見 `docs/specs/organizer-usability-redesign-spec.md` 第 13.6 節。
 
 Phase 2 schema notes（`teacher-initiated-open-classes` 已確認）：
 
@@ -343,7 +343,7 @@ Phase 2 schema notes：
 
 ## OrganizerClassProposal
 
-**Schema 已落地（票 05，migration `20261005000000_organizer_class_proposal`）**；草稿存檔、送出邀請、團主與受邀老師的唯讀已落地（`src/domain/organizer-class-proposal/`），受邀老師確認／婉拒與已確認邀請占用時段已落地（票 06），修改／撤回已落地（票 07），本人授課已落地（票 08），開放報名仍是已核准・未實作（票 09）（organizer-usability-redesign，Q18：A）。代表團主對平台上已通過審核的老師提出的單堂合作邀請，也保存直接開團的草稿。老師確認前不建立正式 `ClassSession`；團主開放報名時才在同一個 transaction 轉成正式課程。完整 Prisma 形狀見 `docs/specs/organizer-usability-redesign-spec.md` 第 13.2 節。
+**Schema 已落地（票 05，migration `20261005000000_organizer_class_proposal`）**；草稿存檔、送出邀請、團主與受邀老師的唯讀已落地（`src/domain/organizer-class-proposal/`），受邀老師確認／婉拒與已確認邀請占用時段已落地（票 06），修改／撤回已落地（票 07），本人授課已落地（票 08），開放報名已落地（票 09，`openDirectClassFromProposalCore`）（organizer-usability-redesign，Q18：A）。代表團主對平台上已通過審核的老師提出的單堂合作邀請，也保存直接開團的草稿。老師確認前不建立正式 `ClassSession`；團主開放報名時才在同一個 transaction 轉成正式課程。完整 Prisma 形狀見 `docs/specs/organizer-usability-redesign-spec.md` 第 13.2 節。
 
 Fields:
 

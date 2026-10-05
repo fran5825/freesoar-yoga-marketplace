@@ -1,4 +1,5 @@
 import type {
+  ClassSessionOrigin,
   ClassSessionStatus,
   EnrollmentStatus,
   OrganizationType,
@@ -16,6 +17,8 @@ import {
 // session（不像 admin/demands 那樣只顯示單一「待處理」狀態——ClassSession 從來不需要
 // Admin 核准才能推進，沒有天然的待處理子集），頁面自己依狀態分組顯示。
 export type AdminClassSessionSummary = {
+  // organizer-usability-redesign 票 09：管理員依 origin 辨識三種課程來源。
+  origin: ClassSessionOrigin;
   id: string;
   title: string;
   status: ClassSessionStatus;
@@ -39,6 +42,7 @@ export async function listAllClassSessionsForAdmin(): Promise<AdminClassSessionS
     select: {
       id: true,
       title: true,
+      origin: true,
       status: true,
       startAt: true,
       endAt: true,
@@ -56,6 +60,7 @@ export async function listAllClassSessionsForAdmin(): Promise<AdminClassSessionS
   return classSessions.map((classSession) => ({
     id: classSession.id,
     title: classSession.title,
+    origin: classSession.origin,
     status: classSession.status,
     startAt: classSession.startAt,
     endAt: classSession.endAt,
@@ -80,6 +85,7 @@ export type AdminClassSessionRosterEntry = {
 };
 
 export type AdminClassSessionDetail = {
+  origin: ClassSessionOrigin;
   id: string;
   title: string;
   description: string | null;
@@ -126,6 +132,7 @@ export async function getClassSessionDetailForAdmin(
       capacity: true,
       isPublic: true,
       status: true,
+      origin: true,
       createdAt: true,
       demandRequest: { select: { targetLevel: true } },
       organizerProfile: {
