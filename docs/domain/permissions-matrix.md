@@ -164,7 +164,7 @@ Teacher 可查看自己的 class session；下方「V1 落地範圍」對 Comple
 
 ## OrganizerClassProposal
 
-**部分落地**（organizer-usability-redesign，Q18：A）：`Create / save proposal draft`、`Submit proposal to teacher`、`View proposal`、`Search approved teacher cards` 已落地（票 05），`Confirm proposal`、`Decline proposal` 已落地（票 06）；其餘列為已核准・未實作（票 07–09）。
+**部分落地**（organizer-usability-redesign，Q18：A）：`Create / save proposal draft`、`Submit proposal to teacher`、`View proposal`、`Search approved teacher cards` 已落地（票 05），`Confirm proposal`、`Decline proposal` 已落地（票 06），`Revise proposal`、`Withdraw proposal` 已落地（票 07）；其餘列為已核准・未實作（票 08–09）。
 
 | Action | Visitor | Member | Organizer | Teacher | Admin |
 |---|---|---|---|---|---|

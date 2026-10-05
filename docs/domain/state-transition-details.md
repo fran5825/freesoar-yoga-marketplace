@@ -298,6 +298,7 @@ organizer-usability-redesign（Q18：A）。每個轉換的 actor、guard、時�
 - 鎖順序（全站）：RecurringClassSeries → ClassSession（依 id）→ TeacherProfile（兩位老師時依 id 由小到大）→ OrganizerClassProposal → DemandRequest。
 - **已落地（票 06）**：`pending_confirmation → confirmed`（受邀老師，`confirmProposalCore`：鎖老師並檢查撞課 → 鎖邀請 → 重驗 version、狀態、老師 approved、未來時間與完整度，寫入 confirmedVersion／confirmedAt／確認者）與 `pending_confirmation → declined`（受邀老師，`declineProposalCore`：原因必填 1–500 字，狀態與 version 寫在 WHERE）。
 
+- **已落地（票 07）**：團主修改（`reviseProposalCore`：先鎖目前與新老師〔依 id 排序〕再鎖邀請，鎖內重驗老師、version、狀態與團體鎖定；pending 維持 pending 且必須仍完整，declined／confirmed 回到 draft，confirmed 同時清除確認資料並釋放時段）與撤回（`withdrawProposalCore`：draft／pending／declined／confirmed → withdrawn，原因選填 ≤500 字；從 draft 撤回時清掉受邀老師，讓沒收過目前版本的老師讀不到）；`declined → pending_confirmation` 不修改直接重送（`submitOwnProposal`，version 不變、清除婉拒原因）。
 ### 時段占用
 
 | 狀態 | 是否占用老師時段 |

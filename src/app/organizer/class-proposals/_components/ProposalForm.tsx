@@ -25,6 +25,7 @@ import type { ProposalTeacherCard } from "@/domain/organizer-class-proposal/serv
 import type { ProposalFormInput, ProposalValidationError } from "@/domain/organizer-class-proposal/validation";
 
 import type {
+  EditableProposalStatus,
   ProposalActionFailure,
   SaveProposalActionResult,
   SubmitProposalActionResult,
@@ -39,6 +40,10 @@ export type ProposalOrganizationOption = {
 
 type ProposalFormProps = {
   initialProposalId: string | null;
+  // 票 07：可以修改的狀態；預設 draft（新建或草稿）。
+  initialStatus?: EditableProposalStatus;
+  // 老師婉拒時留下的原因，修改時給團主參考。
+  declineReason?: string | null;
   initialVersion: number | null;
   initialValues: ProposalFormInput;
   initialTeacher: ProposalTeacherCard | null;
@@ -119,6 +124,8 @@ function formatLocalDatetime(value: string): string {
 // 第一次存檔後網址換成這筆的編輯頁、未儲存離開有保護。送出邀請不會開放報名，也不保留老師時段。
 export function ProposalForm({
   initialProposalId,
+  initialStatus = "draft",
+  declineReason = null,
   initialVersion,
   initialValues,
   initialTeacher,
@@ -133,6 +140,7 @@ export function ProposalForm({
   const router = useRouter();
   const [proposalId, setProposalId] = useState(initialProposalId);
   const [version, setVersion] = useState(initialVersion);
+  const [status, setStatus] = useState<EditableProposalStatus>(initialStatus);
   const [values, setValues] = useState<ProposalFormInput>(initialValues);
   const [teacher, setTeacher] = useState<ProposalTeacherCard | null>(initialTeacher);
   const [savedSnapshot, setSavedSnapshot] = useState(() =>
@@ -320,8 +328,15 @@ export function ProposalForm({
       }
       setProposalId(result.proposalId);
       setVersion(result.version);
+      setStatus(result.status);
       setSavedSnapshot(JSON.stringify(values));
-      setFeedback({ kind: "success", message: "草稿已儲存。" });
+      setFeedback({
+        kind: "success",
+        message:
+          result.status === "pending_confirmation"
+            ? "已更新邀請內容，老師會看到最新的安排並重新確認。"
+            : "草稿已儲存。",
+      });
       if (thenGoTo) {
         window.history.replaceState(
           window.history.state,
@@ -357,9 +372,10 @@ export function ProposalForm({
         setContactIncompleteIds((current) => [...current, values.organizationId]);
       }
       if (failed.proposalId) {
-        // 送出前已存成草稿：沿用這一筆，避免下一次送出又建一筆。
+        // 送出前已存成草稿：沿用這一筆，避免下一次送出又建一筆（已婉拒／已確認的邀請此時也已回到草稿）。
         setProposalId(failed.proposalId);
         setVersion(failed.version ?? null);
+        setStatus("draft");
         setSavedSnapshot(JSON.stringify(values));
         if (!proposalId) {
           adoptProposalUrl(failed.proposalId, failed.code);
@@ -465,32 +481,62 @@ export function ProposalForm({
     </div>
   ) : null;
 
+  // 票 07：依狀態顯示對應的操作。pending 修改後仍等老師確認；declined／confirmed 修改會回到草稿。
+  const statusPill: Record<EditableProposalStatus, string> = {
+    draft: "草稿",
+    pending_confirmation: "等待老師確認",
+    declined: "老師已婉拒",
+    confirmed: "老師已確認",
+  };
+  const saveLabel: Record<EditableProposalStatus, string> = {
+    draft: "儲存草稿",
+    pending_confirmation: "儲存並更新邀請",
+    declined: "儲存為草稿",
+    confirmed: "儲存為草稿（確認失效）",
+  };
   const actionBar = (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-full border border-ink/12 bg-white px-4 py-2.5">
-      <span className="w-fit rounded-full bg-sage px-3 py-1 text-xs font-medium text-pine">草稿</span>
+      <span className="w-fit rounded-full bg-sage px-3 py-1 text-xs font-medium text-pine">{statusPill[status]}</span>
       <div className="flex flex-wrap items-center gap-2">
         <button
           className="rounded-full border border-pine/40 px-4 py-2 text-sm font-medium text-pine disabled:cursor-not-allowed disabled:border-ink/15 disabled:text-ink-faint"
-          disabled={isBusy}
+          disabled={isBusy || (status === "pending_confirmation" && !isReadyToSubmit)}
           onClick={() => handleSave()}
           type="button"
         >
-          {isSaving ? "正在儲存..." : "儲存草稿"}
+          {isSaving ? "正在儲存..." : saveLabel[status]}
         </button>
-        <button
-          className="rounded-full bg-pine px-5 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-ink/15 disabled:text-ink-soft"
-          disabled={isBusy || !isReadyToSubmit}
-          onClick={() => {
-            setFeedback(null);
-            setIsConfirming(true);
-          }}
-          type="button"
-        >
-          {isSubmitting ? "正在送出..." : "送出邀請"}
-        </button>
+        {status === "pending_confirmation" ? null : (
+          <button
+            className="rounded-full bg-pine px-5 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-ink/15 disabled:text-ink-soft"
+            disabled={isBusy || !isReadyToSubmit}
+            onClick={() => {
+              setFeedback(null);
+              setIsConfirming(true);
+            }}
+            type="button"
+          >
+            {isSubmitting ? "正在送出..." : status === "draft" ? "送出邀請" : "修改並重新邀請"}
+          </button>
+        )}
       </div>
     </div>
   );
+
+  const statusNotice =
+    status === "pending_confirmation" ? (
+      <p className="rounded-xl border border-ink/12 bg-white px-4 py-3 text-sm leading-6 text-ink-soft">
+        老師正在確認這份邀請。儲存修改後，老師會看到最新的內容並需要重新確認；老師之前開著的舊頁面無法再確認舊內容。
+      </p>
+    ) : status === "confirmed" ? (
+      <p className="rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep">
+        老師已確認這份安排。修改內容會讓老師的確認失效、釋放已保留的時段，邀請回到草稿，需要再送出給老師確認一次。
+      </p>
+    ) : status === "declined" ? (
+      <p className="rounded-xl border border-ink/12 bg-white px-4 py-3 text-sm leading-6 text-ink-soft [overflow-wrap:anywhere]">
+        老師婉拒了這份邀請{declineReason ? `，原因：${declineReason}` : ""}。調整內容後可以重新邀請，或撤回後另外安排。
+      </p>
+    ) : null;
 
   const statusArea = isConfirming ? confirmation : (
     <>
@@ -502,6 +548,7 @@ export function ProposalForm({
   return (
     <div className="grid gap-6">
       {actionBar}
+      {statusNotice}
       {statusArea}
 
       <Section legend="團體與老師">

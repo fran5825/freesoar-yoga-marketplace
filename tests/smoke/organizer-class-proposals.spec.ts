@@ -111,7 +111,7 @@ test.describe("organizer class proposals smoke", () => {
     await prisma.organizerClassProposal.update({ where: { id: proposalId }, data: { version: { increment: 1 } } });
     await page.getByLabel("課程名稱").fill(`草稿課程 ${id} 修改`);
     await page.getByRole("button", { name: "儲存草稿", exact: true }).first().click();
-    await expect(page.getByText("這份邀請剛剛在別處被修改過，請重新整理後再編輯。").first()).toBeVisible();
+    await expect(page.getByText("這份邀請剛剛在別處被修改或被老師回覆了，請重新整理後再操作。").first()).toBeVisible();
 
     await page.reload();
     await expect(page.getByLabel("課程名稱")).toHaveValue(`草稿課程 ${id}`);
@@ -153,9 +153,10 @@ test.describe("organizer class proposals smoke", () => {
     // 送出邀請不建立正式課程。
     expect(await prisma.classSession.count({ where: { teacherProfileId: teacher.teacherProfileId } })).toBe(0);
 
-    // 送出後不能再進編輯頁，導回詳情。
+    // 票 07：送出後仍可修改，編輯頁改成「儲存並更新邀請」，不再顯示送出按鈕。
     await page.goto(`/organizer/class-proposals/${proposalId}/edit`);
-    await expect(page).toHaveURL(new RegExp(`/organizer/class-proposals/${proposalId}$`));
+    await expect(page.getByRole("button", { name: "儲存並更新邀請" }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "送出邀請" })).toHaveCount(0);
   });
 
   test("teacher lookup lists only approved teachers and only public card fields", async ({ context, page }, testInfo) => {

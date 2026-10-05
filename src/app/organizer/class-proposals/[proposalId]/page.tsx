@@ -1,9 +1,10 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { getOwnProposalForOrganizer } from "@/domain/organizer-class-proposal/service";
 import { getCurrentUser } from "@/lib/auth/session";
 
+import { resubmitProposalAction, withdrawProposalAction } from "../actions";
+import { ProposalManageActions } from "../_components/ProposalManageActions";
 import { ProposalSummary } from "../_components/ProposalSummary";
 import { proposalStatusLabels, proposalStatusToneClasses } from "../_components/page-helpers";
 
@@ -37,7 +38,7 @@ export default async function ProposalDetailPage({ params, searchParams }: Propo
       : proposal.status === "pending_confirmation"
         ? {
             actor: "老師",
-            text: `等待 ${proposal.teacher?.displayName ?? "老師"} 確認這份安排。老師確認前還不會保留老師的時間，也還不能開放報名。`,
+            text: `等待 ${proposal.teacher?.displayName ?? "老師"} 確認這份安排。老師確認前還不會保留老師的時間，也還不能開放報名。需要調整可以修改內容，老師會看到最新版本。`,
           }
         : proposal.status === "confirmed"
           ? {
@@ -47,9 +48,14 @@ export default async function ProposalDetailPage({ params, searchParams }: Propo
           : proposal.status === "declined"
             ? {
                 actor: "你",
-                text: `${proposal.teacher?.displayName ?? "老師"} 婉拒了這份邀請。原因：${proposal.declineReason ?? "（未填寫）"}。你可以另外安排其他老師；修改後重新邀請的功能會在下一步提供。`,
+                text: `${proposal.teacher?.displayName ?? "老師"} 婉拒了這份邀請。原因：${proposal.declineReason ?? "（未填寫）"}。你可以調整內容後重新邀請（也可以換老師），或撤回這份邀請。`,
               }
-            : { actor: "—", text: "這份邀請已結束，不需要再處理。" };
+            : proposal.status === "withdrawn"
+              ? {
+                  actor: "—",
+                  text: `你已撤回這份邀請${proposal.withdrawReason ? `（原因：${proposal.withdrawReason}）` : ""}，不需要再處理。需要時可以另外建立新的安排。`,
+                }
+              : { actor: "—", text: "這份邀請已結束，不需要再處理。" };
 
   return (
     <div className="flex flex-col gap-8">
@@ -76,13 +82,17 @@ export default async function ProposalDetailPage({ params, searchParams }: Propo
       <section aria-label="下一步" className="rounded-2xl border border-pine/20 bg-pine-tint p-5">
         <p className="text-xs font-medium text-pine">下一步：{nextStep.actor}</p>
         <p className="mt-1 text-sm leading-6 text-ink [overflow-wrap:anywhere]">{nextStep.text}</p>
-        {proposal.status === "draft" ? (
-          <Link
-            className="mt-3 inline-flex rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep"
-            href={`/organizer/class-proposals/${proposal.id}/edit`}
-          >
-            繼續編輯
-          </Link>
+        {proposal.status === "draft" ||
+        proposal.status === "pending_confirmation" ||
+        proposal.status === "declined" ||
+        proposal.status === "confirmed" ? (
+          <ProposalManageActions
+            onResubmit={resubmitProposalAction}
+            onWithdraw={withdrawProposalAction}
+            proposalId={proposal.id}
+            status={proposal.status}
+            version={proposal.version}
+          />
         ) : null}
       </section>
 

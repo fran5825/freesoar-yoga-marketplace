@@ -72,7 +72,10 @@ export default async function TeacherProposalPage({ params }: TeacherProposalPag
               。如果團主調整後再邀請你，會看到新的內容。
             </p>
           ) : proposal.status === "withdrawn" ? (
-            <p>團主已撤回這份邀請，不需要再處理。</p>
+            <p>
+              團主已撤回這份邀請，不需要再處理。
+              {proposal.withdrawReason ? `撤回原因：${proposal.withdrawReason}` : ""}
+            </p>
           ) : (
             <p>這堂課已經開放報名。</p>
           )}

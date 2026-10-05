@@ -6,6 +6,12 @@ import { getCurrentUser, requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
 import {
+  reviseProposalCore,
+  withdrawProposalCore,
+  WITHDRAW_REASON_MAX_LENGTH,
+  type ReviseProposalErrorCode,
+} from "./__internal__/revise-core";
+import {
   confirmProposalCore,
   declineProposalCore,
   DECLINE_REASON_MAX_LENGTH,
@@ -36,6 +42,8 @@ export type ProposalErrorCode =
   | "proposal_version_stale"
   | "proposal_invalid_status"
   | "validation_failed"
+  | "organization_locked"
+  | "withdraw_reason_invalid"
   | "proposal_save_failed";
 
 export type ProposalFailure = {
@@ -76,6 +84,7 @@ export type ProposalDetail = {
   isPublic: boolean;
   submittedAt: Date | null;
   declineReason: string | null;
+  withdrawReason: string | null;
   confirmedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -103,6 +112,7 @@ const proposalDetailSelect = {
   isPublic: true,
   submittedAt: true,
   declineReason: true,
+  withdrawReason: true,
   confirmedAt: true,
   createdAt: true,
   updatedAt: true,
@@ -151,6 +161,7 @@ function toDetail(row: {
   isPublic: boolean;
   submittedAt: Date | null;
   declineReason: string | null;
+  withdrawReason: string | null;
   confirmedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -256,7 +267,9 @@ export function toProposalFormInput(detail: ProposalDetail): ProposalFormInput {
 
 // ---------- 草稿存檔 ----------
 
-export type SaveProposalResult = { ok: true; proposalId: string; version: number } | ProposalFailure;
+export type SaveProposalResult =
+  | { ok: true; proposalId: string; version: number; status: OrganizerClassProposalStatus }
+  | ProposalFailure;
 
 export async function saveOwnProposalDraft(
   input: ProposalFormInput,
@@ -297,39 +310,21 @@ export async function saveOwnProposalDraft(
       // owner 一律由 server 寫入；第一次寫入也算一次成功寫入（transitionSeq = 1）。
       const created = await prisma.organizerClassProposal.create({
         data: { ...data, organizerProfileId, transitionSeq: 1 },
-        select: { id: true, version: true },
+        select: { id: true, version: true, status: true },
       });
-      return { ok: true, proposalId: created.id, version: created.version };
+      return { ok: true, proposalId: created.id, version: created.version, status: created.status };
     }
 
-    const current = await prisma.organizerClassProposal.findFirst({
-      where: { id: proposalId, organizerProfileId },
-      select: { status: true, version: true, organizationId: true, submittedAt: true },
-    });
-    if (!current) {
-      return NOT_FOUND();
+    // 修改既有邀請一定要帶上畫面上看到的 version；沒帶就不寫入，避免舊內容覆蓋新內容。
+    if (expectedVersion === undefined) {
+      return failure("proposal_version_stale", REVISE_MESSAGES.proposal_version_stale);
     }
-    if (current.status !== "draft") {
-      return failure("proposal_invalid_status", "這份邀請已經送出，目前不能在這裡修改。");
+    // 票 07：draft／pending／declined／confirmed 都可以修改，依狀態套用 spec 13.3 的規則（見 revise-core）。
+    const revised = await reviseProposalCore(organizerProfileId, proposalId, expectedVersion, data);
+    if (!revised.ok) {
+      return failure(revised.code === "revise_failed" ? "proposal_save_failed" : revised.code, REVISE_MESSAGES[revised.code], revised.validationErrors);
     }
-    // 修改既有邀請一定要帶上畫面上看到的 version；沒帶或不一致都不寫入，避免舊內容覆蓋新內容。
-    if (expectedVersion === undefined || expectedVersion !== current.version) {
-      return failure("proposal_version_stale", "這份邀請剛剛在別處被修改過，請重新整理後再編輯。");
-    }
-    // spec 13.3：換團體看 submittedAt（第一次送出後永遠不清空），不是看目前狀態。
-    if (current.submittedAt && current.organizationId !== organization.id) {
-      return failure("proposal_invalid_status", "已送出過的邀請不能更換團體，請撤回後另外建立。");
-    }
-
-    // version 寫進 WHERE：兩個分頁同時存檔時，只有一個會成功，另一個得到 version 過期的提示。
-    const updated = await prisma.organizerClassProposal.updateMany({
-      where: { id: proposalId, organizerProfileId, status: "draft", version: expectedVersion },
-      data: { ...data, version: { increment: 1 }, transitionSeq: { increment: 1 } },
-    });
-    if (updated.count === 0) {
-      return failure("proposal_version_stale", "這份邀請剛剛在別處被修改過，請重新整理後再編輯。");
-    }
-    return { ok: true, proposalId, version: current.version + 1 };
+    return { ok: true, proposalId, version: revised.version, status: revised.status };
   } catch (error) {
     if (isAuthenticationRequiredError(error)) {
       return failure("authentication_required", "請先登入後再安排課程。");
@@ -397,7 +392,8 @@ export async function submitOwnProposal(
     if (!proposal) {
       return NOT_FOUND();
     }
-    if (proposal.status !== "draft") {
+    // 草稿送出；或老師婉拒後「不修改直接重送」（spec 13.3：declined → pending_confirmation，version 不變）。
+    if (proposal.status !== "draft" && proposal.status !== "declined") {
       return failure("proposal_invalid_status", "這份邀請目前的狀態不能送出，請重新整理確認。");
     }
     if (proposal.version !== expectedVersion) {
@@ -420,7 +416,12 @@ export async function submitOwnProposal(
     }
 
     const updated = await prisma.organizerClassProposal.updateMany({
-      where: { id: proposalId, organizerProfileId, status: "draft", version: expectedVersion },
+      where: {
+        id: proposalId,
+        organizerProfileId,
+        status: { in: ["draft", "declined"] },
+        version: expectedVersion,
+      },
       data: {
         status: "pending_confirmation",
         // 第一次送出時寫入、之後永遠不清空（spec 13.3 換團體規則的依據）。
@@ -510,5 +511,45 @@ export async function declineProposalAsTeacher(
       return { ok: false, code: "authentication_required", message: "請先登入後再處理邀請。" };
     }
     return { ok: false, code: "respond_failed", message: RESPOND_MESSAGES.respond_failed };
+  }
+}
+
+// ---------- 團主修改／撤回（票 07）----------
+
+const REVISE_MESSAGES: Record<ReviseProposalErrorCode, string> = {
+  proposal_not_found: "找不到這份合作邀請，或你沒有權限查看。",
+  proposal_version_stale: "這份邀請剛剛在別處被修改或被老師回覆了，請重新整理後再操作。",
+  proposal_invalid_status: "這份邀請目前的狀態不能修改或撤回（可能已撤回或已開放報名），請重新整理查看。",
+  organization_locked: "已送出過的邀請不能更換團體，請撤回後另外建立。",
+  teacher_not_approved: "這位老師目前無法接受邀請，請選擇其他老師。",
+  proposal_incomplete: "老師正在確認這份邀請，修改後的內容仍需完整，請補齊以下欄位。",
+  proposal_starts_in_past: "開始時間已經過了，請修改時間。",
+  withdraw_reason_invalid: `撤回原因請在 ${WITHDRAW_REASON_MAX_LENGTH} 字以內。`,
+  revise_failed: "暫時無法處理，請稍後再試。",
+};
+
+export type WithdrawProposalResult = { ok: true } | ProposalFailure;
+
+export async function withdrawOwnProposal(
+  proposalId: string,
+  expectedVersion: number,
+  reason: string,
+): Promise<WithdrawProposalResult> {
+  try {
+    const currentUser = await requireUser();
+    const organizerProfileId = await getOwnOrganizerProfileId(currentUser.id);
+    if (!organizerProfileId) {
+      return NOT_FOUND();
+    }
+    const result = await withdrawProposalCore(organizerProfileId, proposalId, expectedVersion, reason);
+    if (!result.ok) {
+      return failure(result.code === "revise_failed" ? "proposal_save_failed" : result.code, REVISE_MESSAGES[result.code]);
+    }
+    return { ok: true };
+  } catch (error) {
+    if (isAuthenticationRequiredError(error)) {
+      return failure("authentication_required", "請先登入後再操作。");
+    }
+    return failure("proposal_save_failed", REVISE_MESSAGES.revise_failed);
   }
 }
