@@ -164,7 +164,7 @@ Teacher 可查看自己的 class session；下方「V1 落地範圍」對 Comple
 
 **已落地（`teacher-class-scheduling` 票 05，2026-10-05）：系列改課**。老師對自己系列中的場次也是 `Own`：「只改這場」條件同單堂改課；「改這場和之後所有場次」先鎖自己的系列，再逐場確認條件，並同步更新系列設定。Organizer 與 Admin 欄位不變。
 
-**`organizer_direct` 與老師端 origin guard（organizer-usability-redesign 票 09）**：團主從已確認的邀請直接開團**已落地**；老師端 `Complete class session` 的 origin 檢查**已落地**；`Open for enrollment`、`Cancel class session` 的 origin 檢查**尚未落地**（對應程式正被老師排課工作改寫且未 commit，等該工作 commit 後補上）。團主可以從自己已確認的合作邀請直接開團（見下方 OrganizerClassProposal 表的 `Open direct class from proposal`）。上表 `Open for enrollment`／`Cancel class session`／`Complete class session` 的 Teacher `Own` 會在 server 端限定 `origin = teacher_initiated`：目前的老師端核心只用 `teacherProfileId` 過濾、只靠 UI 隱藏按鈕，票 09 補上這個檢查。受邀老師確認授課，不會因此取得團主課程的開放、取消、完成或名單管理權；團主端核心同時適用 `organizer_matched` 與 `organizer_direct`。Admin 維持既有的查看與取消，不新增代確認或直接開團。
+**`organizer_direct` 與老師端 origin guard（organizer-usability-redesign 票 09）**：團主從已確認的邀請直接開團**已落地**；老師端 `Open for enrollment`、`Cancel class session`、`Complete class session` 的 origin 檢查**都已落地**（2026-10-05）。團主可以從自己已確認的合作邀請直接開團（見下方 OrganizerClassProposal 表的 `Open direct class from proposal`）。上表 `Open for enrollment`／`Cancel class session`／`Complete class session` 的 Teacher `Own` 在 server 端限定 `origin = teacher_initiated`（原本只用 `teacherProfileId` 過濾、只靠 UI 隱藏按鈕，票 09 補上）。受邀老師確認授課，不會因此取得團主課程的開放、取消、完成或名單管理權；團主端核心同時適用 `organizer_matched` 與 `organizer_direct`。Admin 維持既有的查看與取消，不新增代確認或直接開團。
 
 ## OrganizerClassProposal
 

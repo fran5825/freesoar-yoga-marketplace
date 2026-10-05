@@ -59,14 +59,14 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 
 | Route | 規劃責任 | 票 |
 |---|---|---|
-| `/organizers/request` | **部分落地（票 10）**：訪客品牌說明＋「我需要找老師」「我已有合作老師」兩張情境卡（第二張卡等票 09 老師端 origin guards 後才公開，`DIRECT_CLASS_ENTRY_PUBLIC`）；已有團主顯示精簡選擇（團主專區外框），不一律 redirect。`?intent=` 只接受 `find_teacher`／`direct_class`：訪客點卡片先登入並帶 intent 回這頁；已登入時直接分流（已有團主→對應表單，還沒有團主資料→`/organizer/profile?next=<表單>`，建立後回表單）。未知 intent 照常顯示入口 | 10 |
+| `/organizers/request` | **已落地（票 10）**：訪客品牌說明＋「我需要找老師」「我已有合作老師」兩張情境卡；已有團主顯示精簡選擇（團主專區外框），不一律 redirect。`?intent=` 只接受 `find_teacher`／`direct_class`：訪客點卡片先登入並帶 intent 回這頁；已登入時直接分流（已有團主→對應表單，還沒有團主資料→`/organizer/profile?next=<表單>`，建立後回表單）。未知 intent 照常顯示入口 | 10 |
 | `/organizer/profile` | **已落地（票 03）**：首次一頁建立本人＋第一個團體（同一個 transaction）；建立後只編輯本人稱呼並列出我的團體摘要。舊的 `?next=` 連結轉到預設團體的編輯頁（`returnTo`）。票 10：還沒有團主資料時 `next` 是建立後要前往的流程（新表單頁沒有團主資料會帶 `next` 導來），未登入時登入後保留 `next`；`next`／`returnTo` 先套登入 callback 同一套檢查，再要求正規化後在 `/organizer/` 底下 | 03、10 |
 | `/organizer/organizations` | **已落地（票 03）**：自己擁有的團體列表與聯絡資料完整度，首屏可新增；`/organizer/organizations/new` 新增團體（聯絡資料可先不完整） | 03 |
 | `/organizer/organizations/[organizationId]` | **已落地（票 03）**：單一自有團體的編輯，他人或孤立團體 404；從流程進來時「儲存並回到剛剛的頁面」，`returnTo` 只接受 `/organizer/` 底下的站內路徑 | 03 |
 | `/organizer/demands/new`、`/[demandRequestId]/edit` | **已落地（票 04）**：需求表單明確選自己的團體（`?organizationId=` 從新增團體返回時預選，仍驗 owner）；第一次存檔後網址換成含 ID 的 edit 頁；「儲存草稿並補齊聯絡資料／新增其他團體」先存檔再前往；未儲存離開有保護；送審成功前往 `/organizer/demands/[id]?submitted=1` | 04 |
-| `/organizer/class-proposals/new`、`/[proposalId]/edit` | **已落地（票 05；入口頁、總覽與我的課程的捷徑已做好但暫不公開，等票 09 老師端 origin guards）**：已有合作老師的單頁課程安排與草稿（第一次存檔換到含 ID 的 edit 頁、送出前確認；票 07 起等待確認／已婉拒／已確認也可修改，撤回或已開放報名導回詳情）；本人授課的明確確認是票 08 | 05、08 |
+| `/organizer/class-proposals/new`、`/[proposalId]/edit` | **已落地（票 05；票 10 公開入口：入口頁、總覽與我的課程首屏捷徑）**：已有合作老師的單頁課程安排與草稿（第一次存檔換到含 ID 的 edit 頁、送出前確認；票 07 起等待確認／已婉拒／已確認也可修改，撤回或已開放報名導回詳情）；本人授課的明確確認是票 08 | 05、08 |
 | `/organizer/class-proposals/[proposalId]` | **部分落地（票 05）**：單筆邀請的狀態、下一位處理者與完整安排，老師確認／婉拒結果（票 06），修改／撤回（票 07）；開放報名在票 09 | 05–09 |
-| `/organizer/classes`、`/organizer/classes/[classSessionId]` | **部分落地（票 10）**：列表首屏的「已有合作老師，直接開團」捷徑暫不公開（同上）；正式課程上方列出還沒開放報名的直接開團（草稿／等待確認／已確認／被婉拒，連到單筆邀請）；待我處理與等待對方的細分在票 12。開放後的課程詳情主要動作是複製完整報名連結（票 13） | 09、10、12、13 |
+| `/organizer/classes`、`/organizer/classes/[classSessionId]` | **部分落地（票 10）**：列表首屏有「已有合作老師，直接開團」捷徑；正式課程上方列出還沒開放報名的直接開團（草稿／等待確認／已確認／被婉拒，連到單筆邀請）；待我處理與等待對方的細分在票 12。開放後的課程詳情主要動作是複製完整報名連結（票 13） | 09、10、12、13 |
 
 他人的團體、需求、邀請或課程 ID 一律 not-found；所有 owner 由 server 判斷。
 

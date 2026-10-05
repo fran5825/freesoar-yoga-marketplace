@@ -8,6 +8,10 @@
 //
 // Slice C：連帶取消的 Enrollment 涵蓋 status IN (confirmed, pending)，與既有 Organizer 版本
 // （cancel-class-session-core.ts）的同一處放寬同步完成。
+//
+// organizer-usability-redesign 票 09（spec §8／13.6）：老師端只能取消 origin = teacher_initiated
+// 的課。團主媒合／團主直接開團的課即使授課老師是同一人，也由團主（或管理員）取消；鎖查詢直接
+// 加上 origin 條件，非本人開的課回 class_session_not_found，不透露存在與否。
 
 import type { Prisma } from "@prisma/client";
 
@@ -61,7 +65,9 @@ export async function cancelClassSessionForTeacherInTransaction(
   >`
       SELECT "id", "status", "startAt", "title"
       FROM "ClassSession"
-      WHERE "id" = ${classSessionId} AND "teacherProfileId" = ${teacherProfileId}
+      WHERE "id" = ${classSessionId}
+        AND "teacherProfileId" = ${teacherProfileId}
+        AND "origin" = 'teacher_initiated'
       FOR UPDATE
     `;
 

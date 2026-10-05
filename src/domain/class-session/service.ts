@@ -4,6 +4,10 @@ import { prisma } from "@/lib/prisma";
 
 import { cancelClassSessionForOrganizer } from "./__internal__/cancel-class-session-core";
 import { cancelClassSessionForTeacher } from "./__internal__/cancel-class-session-core-for-teacher";
+import {
+  openClassSessionForEnrollmentForTeacher,
+  type OpenClassSessionForTeacherErrorCode,
+} from "./__internal__/open-class-session-core-for-teacher";
 import { completeClassSessionForTeacher } from "./__internal__/complete-class-session-core-for-teacher";
 import { createClassSessionForOrganizer } from "./__internal__/create-class-session-core";
 import {
@@ -642,8 +646,16 @@ export type OpenOwnClassSessionForEnrollmentForTeacherResult =
       message: string;
     };
 
+const openClassSessionForTeacherErrorMessages: Record<OpenClassSessionForTeacherErrorCode, string> = {
+  class_session_not_found: "找不到這堂課程，或你沒有權限操作。",
+  teacher_not_approved: "老師資格暫停期間不能開放報名。",
+  class_session_already_started: "這堂課程已經開始，無法開放報名。",
+  class_session_not_draft: "這堂課程目前狀態不允許開放報名。",
+};
+
 // 比照既有 openOwnClassSessionForEnrollment：own-scope 判斷改成 teacherProfileId 的單一
-// updateMany + 分類錯誤，沒有多方競爭同一資源的併發場景，不需要 __internal__ 核心。
+// updateMany + 分類錯誤。organizer-usability-redesign 票 09：判斷與寫入抽到 __internal__ 核心
+// （只允許 teacher_initiated），這裡只由登入身分找出 teacherProfileId。
 export async function openOwnClassSessionForEnrollmentForTeacher(
   classSessionId: string,
 ): Promise<OpenOwnClassSessionForEnrollmentForTeacherResult> {
@@ -678,56 +690,16 @@ export async function openOwnClassSessionForEnrollmentForTeacher(
     throw error;
   }
 
-  // teacher-class-scheduling 票 04（推導規則 11）：老師須為 approved 才能開放報名。條件寫進同一個
-  // updateMany，判斷與寫入一次完成，暫停中的老師無法開放。
-  const updateResult = await prisma.classSession.updateMany({
-    where: {
-      id: classSessionId,
-      teacherProfileId,
-      status: "draft",
-      startAt: { gt: new Date() },
-      teacherProfile: { status: "approved" },
-    },
-    data: { status: "open_for_enrollment" },
-  });
+  const result = await openClassSessionForEnrollmentForTeacher(teacherProfileId, classSessionId);
 
-  if (updateResult.count > 0) {
+  if (result.ok) {
     return { ok: true };
-  }
-
-  const classSession = await prisma.classSession.findFirst({
-    where: { id: classSessionId, teacherProfileId },
-    select: { status: true, startAt: true, teacherProfile: { select: { status: true } } },
-  });
-
-  if (!classSession) {
-    return {
-      ok: false,
-      code: "class_session_not_found",
-      message: "找不到這堂課程，或你沒有權限操作。",
-    };
-  }
-
-  if (classSession.teacherProfile.status !== "approved") {
-    return {
-      ok: false,
-      code: "teacher_not_approved",
-      message: "老師資格暫停期間不能開放報名。",
-    };
-  }
-
-  if (classSession.startAt.getTime() <= Date.now()) {
-    return {
-      ok: false,
-      code: "class_session_already_started",
-      message: "這堂課程已經開始，無法開放報名。",
-    };
   }
 
   return {
     ok: false,
-    code: "class_session_not_draft",
-    message: "這堂課程目前狀態不允許開放報名。",
+    code: result.code,
+    message: openClassSessionForTeacherErrorMessages[result.code],
   };
 }
 

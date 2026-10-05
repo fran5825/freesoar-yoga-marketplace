@@ -20,8 +20,7 @@ type NewProposalPageProps = {
 };
 
 // organizer-usability-redesign 票 05：「我已有合作老師」的新課程安排。
-// 票 10：入口頁、總覽與「我的課程」的「已有合作老師」捷徑由 DIRECT_CLASS_ENTRY_PUBLIC 控制，
-// 目前尚未公開（等票 09 老師端 origin guards）；intent=direct_class 與直接開網址仍可用。
+// 票 10：入口頁、總覽與「我的課程」都有「已有合作老師」的捷徑（票 09 老師端 origin guards 落地後公開）。
 export default async function NewProposalPage({ searchParams }: NewProposalPageProps) {
   const [currentUser, resolvedSearchParams] = await Promise.all([getCurrentUser(), searchParams]);
 

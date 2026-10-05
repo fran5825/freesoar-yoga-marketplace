@@ -95,7 +95,7 @@ Cannot:
 - Create class sessions while own `TeacherProfile.status` is not `approved`（含 `suspended`）——資格檢查與既有 demand-response 資格檢查同等嚴格
 - **已落地（`teacher-class-scheduling` 票 04，推導規則 11）**：Open own class sessions for enrollment while own `TeacherProfile.status` is not `approved`——老師端單場「開放報名」的 `updateMany` 條件已帶老師 `approved`，暫停中的老師無法開放。（系列的「全部開放報名」在票 01 已檢查。）
 - **已落地（`teacher-class-scheduling` 票 04）**：Edit class sessions that are not own `teacher_initiated`, have started, are `completed`／`cancelled`, or change `requiresApproval`
-- **organizer-usability-redesign 票 09**：Open / cancel / complete class sessions whose `origin` is not `teacher_initiated` through teacher-side services——complete 已在 server 端檢查 origin（已落地）；open 與 cancel 目前仍只靠 UI 隱藏按鈕，等老師排課工作 commit 後補上
+- **organizer-usability-redesign 票 09**：Open / cancel / complete class sessions whose `origin` is not `teacher_initiated` through teacher-side services——open、cancel、complete 都已在 server 端檢查 origin（已落地，系列的全部開放與從這場起取消也一併限定）
 
 ## Admin
 

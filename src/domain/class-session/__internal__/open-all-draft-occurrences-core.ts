@@ -54,6 +54,9 @@ export async function openAllDraftOccurrencesForTeacherProfile(
       where: {
         recurringClassSeriesId,
         teacherProfileId,
+        // organizer-usability-redesign 票 09：老師端只動自己開的課（系列場次本來就是 teacher_initiated，
+        // 這裡再明確限定，與單堂開放／取消一致）。
+        origin: "teacher_initiated",
         status: "draft",
         startAt: { gt: new Date() },
       },

@@ -2,7 +2,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { getDemandNextStep } from "@/domain/demand-request/next-step";
-import { DIRECT_CLASS_ENTRY_PUBLIC } from "@/domain/organizer-profile/intent";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import {
   getOwnDemandRequestList,
@@ -118,14 +117,12 @@ export default async function OrganizerDashboardPage() {
           >
             找老師開課
           </Link>
-          {DIRECT_CLASS_ENTRY_PUBLIC ? (
-            <Link
-              className="inline-flex rounded-full border border-pine/40 px-5 py-2 text-sm font-medium text-pine transition hover:bg-pine-tint"
-              href="/organizer/class-proposals/new"
-            >
-              已有合作老師，直接開團
-            </Link>
-          ) : null}
+          <Link
+            className="inline-flex rounded-full border border-pine/40 px-5 py-2 text-sm font-medium text-pine transition hover:bg-pine-tint"
+            href="/organizer/class-proposals/new"
+          >
+            已有合作老師，直接開團
+          </Link>
         </div>
       </header>
 
