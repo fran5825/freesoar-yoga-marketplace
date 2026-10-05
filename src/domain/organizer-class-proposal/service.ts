@@ -14,6 +14,7 @@ import {
 import {
   confirmProposalCore,
   declineProposalCore,
+  selfConfirmProposalCore,
   DECLINE_REASON_MAX_LENGTH,
   type RespondToProposalErrorCode,
 } from "./__internal__/respond-core";
@@ -44,6 +45,9 @@ export type ProposalErrorCode =
   | "validation_failed"
   | "organization_locked"
   | "withdraw_reason_invalid"
+  | "not_self_teacher"
+  | "self_invitation_not_allowed"
+  | "schedule_conflict"
   | "proposal_save_failed";
 
 export type ProposalFailure = {
@@ -86,6 +90,7 @@ export type ProposalDetail = {
   declineReason: string | null;
   withdrawReason: string | null;
   confirmedAt: Date | null;
+  confirmedByUserId: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -114,6 +119,7 @@ const proposalDetailSelect = {
   declineReason: true,
   withdrawReason: true,
   confirmedAt: true,
+  confirmedByUserId: true,
   createdAt: true,
   updatedAt: true,
   organization: {
@@ -163,6 +169,7 @@ function toDetail(row: {
   declineReason: string | null;
   withdrawReason: string | null;
   confirmedAt: Date | null;
+  confirmedByUserId: string | null;
   createdAt: Date;
   updatedAt: Date;
   organization: ProposalDetail["organization"];
@@ -414,6 +421,14 @@ export async function submitOwnProposal(
     if (!(await getApprovedTeacherCard(proposal.teacherProfileId as string))) {
       return failure("teacher_not_approved", "這位老師目前無法接受邀請，請選擇其他老師。");
     }
+    // 票 08：選的老師就是自己時不寄邀請給自己，改用「由我授課並確認」。
+    const teacherOwner = await prisma.teacherProfile.findUnique({
+      where: { id: proposal.teacherProfileId as string },
+      select: { userId: true },
+    });
+    if (teacherOwner?.userId === currentUser.id) {
+      return failure("self_invitation_not_allowed", "授課老師是你自己時，請使用「由我授課並確認」，不需要寄邀請給自己。");
+    }
 
     const updated = await prisma.organizerClassProposal.updateMany({
       where: {
@@ -453,6 +468,8 @@ const RESPOND_MESSAGES: Record<RespondToProposalErrorCode, string> = {
   proposal_incomplete: "這份邀請的內容還不完整，無法確認。可以請團主補齊後再邀請你。",
   schedule_conflict: "這個時段你已經有其他課程或已確認的合作，無法確認。可以請團主調整時間。",
   decline_reason_invalid: `請填寫婉拒原因（${DECLINE_REASON_MAX_LENGTH} 字以內），讓團主知道怎麼調整。`,
+  not_self_teacher: "只有選擇自己的老師資料時，才能確認由自己授課。",
+  organization_contact_incomplete: "這個團體的聯絡資料還沒補齊，請先補齊聯絡資料。",
   respond_failed: "暫時無法處理，請稍後再試。",
 };
 
@@ -551,5 +568,51 @@ export async function withdrawOwnProposal(
       return failure("authentication_required", "請先登入後再操作。");
     }
     return failure("proposal_save_failed", REVISE_MESSAGES.revise_failed);
+  }
+}
+
+// ---------- 團主本人授課（票 08）----------
+
+// 登入者自己的 TeacherProfile id（不論審核狀態），用來在表單標示「你自己」。
+export async function getOwnTeacherProfileId(): Promise<string | null> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    return null;
+  }
+  const teacherProfile = await prisma.teacherProfile.findUnique({
+    where: { userId: currentUser.id },
+    select: { id: true },
+  });
+  return teacherProfile?.id ?? null;
+}
+
+export async function selfConfirmOwnProposal(
+  proposalId: string,
+  expectedVersion: number,
+): Promise<SubmitProposalResult> {
+  try {
+    const currentUser = await requireUser();
+    const organizerProfileId = await getOwnOrganizerProfileId(currentUser.id);
+    if (!organizerProfileId) {
+      return NOT_FOUND();
+    }
+    const result = await selfConfirmProposalCore(organizerProfileId, currentUser.id, proposalId, expectedVersion);
+    if (!result.ok) {
+      const code = result.code === "respond_failed" || result.code === "decline_reason_invalid" ? "proposal_save_failed" : result.code;
+      // 本人授課時，訊息以團主的角度描述（例如時間衝突請自己調整時間）。
+      const message =
+        result.code === "proposal_version_stale"
+          ? REVISE_MESSAGES.proposal_version_stale
+          : result.code === "schedule_conflict"
+            ? "這個時段你已經有其他課程或已確認的合作，請調整時間後再確認。"
+            : RESPOND_MESSAGES[result.code];
+      return failure(code, message);
+    }
+    return { ok: true, proposalId };
+  } catch (error) {
+    if (isAuthenticationRequiredError(error)) {
+      return failure("authentication_required", "請先登入後再操作。");
+    }
+    return failure("proposal_save_failed", RESPOND_MESSAGES.respond_failed);
   }
 }

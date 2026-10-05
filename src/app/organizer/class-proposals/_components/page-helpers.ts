@@ -29,6 +29,16 @@ export function toProposalFlash(flash: string | undefined): { kind: "success" | 
       return { kind: "error", message: "草稿已儲存，但這位老師目前無法接受邀請，請選擇其他老師。" };
     case "proposal_starts_in_past":
       return { kind: "error", message: "草稿已儲存，但開始時間已經過了，請修改時間後再送出。" };
+    // 票 08：本人授課失敗的原因。
+    case "schedule_conflict":
+      return {
+        kind: "error",
+        message: "草稿已儲存，但這個時段你已經有其他課程或已確認的合作，請調整時間後再確認由你授課。",
+      };
+    case "not_self_teacher":
+      return { kind: "error", message: "草稿已儲存，但授課老師不是你自己，請改用送出邀請。" };
+    case "proposal_version_stale":
+      return { kind: "error", message: "草稿已儲存，但內容剛剛在別處被修改，請確認最新內容後再試一次。" };
     default:
       return { kind: "error", message: "草稿已儲存，但邀請暫時無法送出，請確認內容後再試一次。" };
   }

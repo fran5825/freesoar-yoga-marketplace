@@ -8,6 +8,8 @@
 import { prisma } from "@/lib/prisma";
 import { lockTeacherScheduleAndCheckConflict, type ConflictLockHooks } from "@/domain/class-session/conflict-check";
 
+import { isOrganizationContactComplete } from "@/domain/demand-request/validation";
+
 import { getProposalSubmitIssues } from "../submit-issues";
 
 export const DECLINE_REASON_MAX_LENGTH = 500;
@@ -21,6 +23,8 @@ export type RespondToProposalErrorCode =
   | "proposal_incomplete"
   | "schedule_conflict"
   | "decline_reason_invalid"
+  | "not_self_teacher"
+  | "organization_contact_incomplete"
   | "respond_failed";
 
 export type RespondToProposalResult =
@@ -186,6 +190,150 @@ export async function declineProposalCore(
     }
     return { ok: false, code: "proposal_version_stale" };
   } catch {
+    return { ok: false, code: "respond_failed" };
+  }
+}
+
+// organizer-usability-redesign 票 08（spec 3.2、13.3）：approved 老師兼團主在團主表單明確確認由自己授課，
+// 不必先邀請再用老師身分接受自己的邀請。資格、版本、完整度與撞課檢查與受邀老師確認相同；
+// 鎖順序同樣是老師 → 邀請。成功時同時寫入 submittedAt（之後不能換團體）。
+export async function selfConfirmProposalCore(
+  organizerProfileId: string,
+  userId: string,
+  proposalId: string,
+  expectedVersion: number,
+  hooks?: ConflictLockHooks,
+): Promise<RespondToProposalResult> {
+  try {
+    await prisma.$transaction(async (tx) => {
+      const preview = await tx.organizerClassProposal.findFirst({
+        where: { id: proposalId, organizerProfileId },
+        select: { startAt: true, endAt: true, teacherProfileId: true },
+      });
+      if (!preview) {
+        throw new RespondError("proposal_not_found");
+      }
+      if (!preview.teacherProfileId) {
+        throw new RespondError("not_self_teacher");
+      }
+      const teacherOwner = await tx.teacherProfile.findUnique({
+        where: { id: preview.teacherProfileId },
+        select: { userId: true },
+      });
+      // 只看 teacherProfileId 不能代表同意：必須是團主本人的老師資料。
+      if (teacherOwner?.userId !== userId) {
+        throw new RespondError("not_self_teacher");
+      }
+      if (!preview.startAt || !preview.endAt) {
+        throw new RespondError("proposal_incomplete");
+      }
+
+      let conflict = await lockTeacherScheduleAndCheckConflict(
+        tx,
+        preview.teacherProfileId,
+        preview.startAt,
+        preview.endAt,
+        undefined,
+        hooks,
+        { excludeProposalId: proposalId },
+      );
+
+      const locked = await tx.$queryRaw<{ id: string }[]>`
+        SELECT "id" FROM "OrganizerClassProposal"
+        WHERE "id" = ${proposalId} AND "organizerProfileId" = ${organizerProfileId}
+        FOR UPDATE
+      `;
+      if (locked.length === 0) {
+        throw new RespondError("proposal_not_found");
+      }
+
+      const proposal = await tx.organizerClassProposal.findUniqueOrThrow({
+        where: { id: proposalId },
+        select: {
+          status: true,
+          version: true,
+          submittedAt: true,
+          teacherProfileId: true,
+          title: true,
+          description: true,
+          serviceTypes: true,
+          startAt: true,
+          endAt: true,
+          location: true,
+          capacity: true,
+          isPublic: true,
+          organization: {
+            select: { ownerOrganizerProfileId: true, contactName: true, contactEmail: true, contactPhone: true },
+          },
+        },
+      });
+      if (proposal.status !== "draft") {
+        throw new RespondError("proposal_invalid_status");
+      }
+      if (proposal.version !== expectedVersion) {
+        throw new RespondError("proposal_version_stale");
+      }
+      if (proposal.teacherProfileId !== preview.teacherProfileId) {
+        throw new RespondError("proposal_version_stale");
+      }
+      if (proposal.organization.ownerOrganizerProfileId !== organizerProfileId) {
+        throw new RespondError("proposal_not_found");
+      }
+      if (!isOrganizationContactComplete(proposal.organization)) {
+        throw new RespondError("organization_contact_incomplete");
+      }
+
+      const teacher = await tx.teacherProfile.findUniqueOrThrow({
+        where: { id: preview.teacherProfileId },
+        select: { status: true },
+      });
+      if (teacher.status !== "approved") {
+        throw new RespondError("teacher_not_approved");
+      }
+
+      const issues = getProposalSubmitIssues(proposal);
+      if (issues.errors.length > 0) {
+        throw new RespondError(issues.startsInPast ? "proposal_starts_in_past" : "proposal_incomplete");
+      }
+      if (
+        proposal.startAt &&
+        proposal.endAt &&
+        (proposal.startAt.getTime() !== preview.startAt.getTime() ||
+          proposal.endAt.getTime() !== preview.endAt.getTime())
+      ) {
+        conflict = await lockTeacherScheduleAndCheckConflict(
+          tx,
+          preview.teacherProfileId,
+          proposal.startAt,
+          proposal.endAt,
+          undefined,
+          undefined,
+          { excludeProposalId: proposalId },
+        );
+      }
+      if (conflict) {
+        throw new RespondError("schedule_conflict");
+      }
+
+      const now = new Date();
+      await tx.organizerClassProposal.update({
+        where: { id: proposalId },
+        data: {
+          status: "confirmed",
+          ...(proposal.submittedAt ? {} : { submittedAt: now }),
+          declineReason: null,
+          confirmedVersion: proposal.version,
+          confirmedAt: now,
+          confirmedByUserId: userId,
+          transitionSeq: { increment: 1 },
+        },
+      });
+    });
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof RespondError) {
+      return { ok: false, code: error.code };
+    }
     return { ok: false, code: "respond_failed" };
   }
 }

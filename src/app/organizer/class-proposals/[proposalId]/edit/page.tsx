@@ -4,12 +4,18 @@ import { pickInitialOrganizationId } from "@/app/organizer/demands/_components/o
 import { listOwnOrganizations } from "@/domain/organization/service";
 import {
   getOwnProposalForOrganizer,
+  getOwnTeacherProfileId,
   getProposalSubmitIssuesForDetail,
   toProposalFormInput,
 } from "@/domain/organizer-class-proposal/service";
 import { getCurrentUser } from "@/lib/auth/session";
 
-import { saveAndSubmitProposalAction, saveProposalDraftAction, searchTeacherCardsAction } from "../../actions";
+import {
+  saveAndSelfConfirmProposalAction,
+  saveAndSubmitProposalAction,
+  saveProposalDraftAction,
+  searchTeacherCardsAction,
+} from "../../actions";
 import { ProposalForm } from "../../_components/ProposalForm";
 import {
   toProposalFlash,
@@ -47,7 +53,7 @@ export default async function EditProposalPage({ params, searchParams }: EditPro
     redirect(`/organizer/class-proposals/${proposalId}`);
   }
 
-  const organizations = await listOwnOrganizations();
+  const [organizations, selfTeacherProfileId] = await Promise.all([listOwnOrganizations(), getOwnTeacherProfileId()]);
   const organizationLocked = proposal.submittedAt !== null;
   const initialOrganizationId = organizationLocked
     ? proposal.organization.id
@@ -83,8 +89,10 @@ export default async function EditProposalPage({ params, searchParams }: EditPro
         initialVersion={proposal.version}
         onSaveDraft={saveProposalDraftAction}
         onSearchTeachers={searchTeacherCardsAction}
+        onSelfConfirm={saveAndSelfConfirmProposalAction}
         onSubmit={saveAndSubmitProposalAction}
         organizationLocked={organizationLocked}
+        selfTeacherProfileId={selfTeacherProfileId}
         organizations={organizationOptions}
         savedOrganizationId={proposal.organization.id}
       />

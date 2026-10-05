@@ -316,12 +316,14 @@ model OrganizerClassProposal {
 | draft → confirmed（本人授課） | 同一 User 的團主＋老師 | 上一列全部 guard，加上明確的本人確認操作 | **開始占用** | 團主 | 無（不通知自己） |
 | pending_confirmation → declined | 受邀老師 own | 是受邀老師本人；`expectedVersion` 一致；`declineReason` 有效 | 不占 | 團主（修改重送或撤回） | 團主：老師婉拒（含原因） |
 | pending_confirmation → pending_confirmation（修改） | 團主 own | owner；`version` +1；不可換團體；可換老師，新老師必須 `approved` | 不占 | 受邀老師（換老師時是新老師） | 沒換老師：受邀老師收到「內容已更新」；換老師：見 13.7 |
+| pending_confirmation → draft（改成由團主本人授課） | 團主 own | owner；新老師是團主本人且 approved；`version` +1；不可換團體（`submittedAt` 保留）；內容可暫時不完整（沒有寄給任何人） | 不占（仍需之後明確本人確認才占用） | 團主（由我授課並確認） | 原受邀老師：邀請已撤回（票 12） |
 | declined → draft（修改內容） | 團主 own | owner；`version` +1；不可換團體；`declineReason` 保留給團主參考，下次送出時清空 | 不占 | 團主（重新送出） | 無 |
 | confirmed → draft（修改內容） | 團主 own | owner；未轉課；`version` +1；不可換團體；清除 `confirmedVersion`／`confirmedAt`／`confirmedByUserId` | **釋放** | 團主（重新送出） | 原受邀老師：安排已變更、需要重新確認（本人授課不通知；換老師時見 13.7） |
 | draft／pending／declined／confirmed → withdrawn | 團主 own | owner；未轉課 | confirmed 時**釋放** | 無 | 老師曾看到的（pending／confirmed）：邀請已撤回 |
 | confirmed → converted（開放報名） | 團主 own | 見 13.5 | 占用移交給新課程 | 學員報名 | 沿用 `class_session_created` 通知老師（本人授課不通知） |
 
 - **換團體的判斷依據是 `submittedAt`，不是目前狀態**：`submittedAt` 在第一次送出時寫入、之後永遠不清空。所以即使「送出 → 確認 → 修改退回 draft」或「婉拒 → 修改退回 draft」，也不能換團體，要撤回後另建。驗收要涵蓋這兩條路徑。
+- **不會自己邀請自己**（票 08）：等待確認中的邀請改成團主本人授課時退回草稿，原受邀老師不再看得到；`submittedAt` 與團體鎖定保留；時段要等團主明確「由我授課並確認」才占用。`submitOwnProposal` 也拒絕把邀請寄給自己。
 - 婉拒後的完整流程是：婉拒 → 團主修改並存檔（回到 draft，version +1）→ 重新送出（清空 `declineReason`）→ 老師確認。團主也可以不修改直接重送（`declined → pending_confirmation`）。
 - `withdrawn`、`converted` 是終局狀態，不能再回到其他狀態。
 - 已過 `startAt` 的邀請不能送出、確認或開放，畫面顯示「已過期，需要修改時間」；不新增 cron 或 `expired` 狀態。

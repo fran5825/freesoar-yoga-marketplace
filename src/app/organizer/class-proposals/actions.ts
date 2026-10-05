@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import {
   saveOwnProposalDraft,
+  selfConfirmOwnProposal,
   withdrawOwnProposal,
   searchApprovedTeacherCards,
   submitOwnProposal,
@@ -70,6 +71,23 @@ export async function saveAndSubmitProposalAction(
     return { ...submitted, proposalId: saved.proposalId, version: saved.version };
   }
   return submitted;
+}
+
+// 票 08：授課老師是自己時，先存檔再明確確認由自己授課（不寄邀請給自己）。
+export async function saveAndSelfConfirmProposalAction(
+  input: ProposalFormInput,
+  proposalId?: string,
+  expectedVersion?: number,
+): Promise<SubmitProposalActionResult> {
+  const saved = await saveOwnProposalDraft(input, proposalId, expectedVersion);
+  if (!saved.ok) {
+    return saved;
+  }
+  const confirmed = await selfConfirmOwnProposal(saved.proposalId, saved.version);
+  if (!confirmed.ok) {
+    return { ...confirmed, proposalId: saved.proposalId, version: saved.version };
+  }
+  return confirmed;
 }
 
 // 票 07：老師婉拒後不修改內容、直接再邀請一次（version 不變）。

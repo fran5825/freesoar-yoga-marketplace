@@ -32,6 +32,8 @@ export default async function ProposalDetailPage({ params, searchParams }: Propo
   }
 
   const justSubmitted = resolvedSearchParams?.flash === "submitted" && proposal.status === "pending_confirmation";
+  // 票 08：確認者就是團主本人（同一個帳號）時，是本人授課。
+  const isSelfTaught = proposal.confirmedByUserId === currentUser.id;
   const nextStep =
     proposal.status === "draft"
       ? { actor: "你", text: "繼續完成課程安排，準備好後送出邀請給老師確認。" }
@@ -43,7 +45,9 @@ export default async function ProposalDetailPage({ params, searchParams }: Propo
         : proposal.status === "confirmed"
           ? {
               actor: "你",
-              text: `${proposal.teacher?.displayName ?? "老師"} 已確認授課，這個時段已保留給這堂課。開放報名的功能會在下一步提供。`,
+              text: isSelfTaught
+                ? "你已確認由自己授課，這個時段已保留給這堂課。開放報名的功能會在下一步提供。"
+                : `${proposal.teacher?.displayName ?? "老師"} 已確認授課，這個時段已保留給這堂課。開放報名的功能會在下一步提供。`,
             }
           : proposal.status === "declined"
             ? {
@@ -76,6 +80,15 @@ export default async function ProposalDetailPage({ params, searchParams }: Propo
           className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
         >
           邀請已送出，老師確認後你就能開放報名。
+        </p>
+      ) : null}
+
+      {resolvedSearchParams?.flash === "self_confirmed" && proposal.status === "confirmed" && isSelfTaught ? (
+        <p
+          aria-live="polite"
+          className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
+        >
+          已確認由你自己授課，這個時段已保留給這堂課。
         </p>
       ) : null}
 

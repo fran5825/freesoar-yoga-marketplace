@@ -299,6 +299,8 @@ organizer-usability-redesign（Q18：A）。每個轉換的 actor、guard、時�
 - **已落地（票 06）**：`pending_confirmation → confirmed`（受邀老師，`confirmProposalCore`：鎖老師並檢查撞課 → 鎖邀請 → 重驗 version、狀態、老師 approved、未來時間與完整度，寫入 confirmedVersion／confirmedAt／確認者）與 `pending_confirmation → declined`（受邀老師，`declineProposalCore`：原因必填 1–500 字，狀態與 version 寫在 WHERE）。
 
 - **已落地（票 07）**：團主修改（`reviseProposalCore`：先鎖目前與新老師〔依 id 排序〕再鎖邀請，鎖內重驗老師、version、狀態與團體鎖定；pending 維持 pending 且必須仍完整，declined／confirmed 回到 draft，confirmed 同時清除確認資料並釋放時段）與撤回（`withdrawProposalCore`：draft／pending／declined／confirmed → withdrawn，原因選填 ≤500 字；從 draft 撤回時清掉受邀老師，讓沒收過目前版本的老師讀不到）；`declined → pending_confirmation` 不修改直接重送（`submitOwnProposal`，version 不變、清除婉拒原因）。
+- **已落地（票 08）**：`draft → confirmed`（本人授課，`selfConfirmProposalCore`：邀請選的老師必須是團主本人的 TeacherProfile；與受邀老師確認相同的鎖順序與資格、版本、完整度、撞課檢查，另檢查團體 owner 與聯絡資料，成功時寫入確認資料與 submittedAt）。`submitOwnProposal` 拒絕把邀請寄給自己；等待確認中的邀請改選團主本人時，修改會退回 draft（不再是 pending、可暫時不完整、原受邀老師看不到；submittedAt 與團體鎖定保留；仍需之後明確本人確認才占用時段）。
+
 ### 時段占用
 
 | 狀態 | 是否占用老師時段 |

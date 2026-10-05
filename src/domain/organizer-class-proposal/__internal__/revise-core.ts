@@ -114,18 +114,26 @@ export async function reviseProposalCore(
         throw new ReviseError("organization_locked");
       }
 
+      let switchedToSelf = false;
       if (revision.teacherProfileId && revision.teacherProfileId !== current.teacherProfileId) {
         const teacher = await tx.teacherProfile.findUnique({
           where: { id: revision.teacherProfileId },
-          select: { status: true },
+          select: { status: true, userId: true },
         });
         if (teacher?.status !== "approved") {
           throw new ReviseError("teacher_not_approved");
         }
+        const organizer = await tx.organizerProfile.findUniqueOrThrow({
+          where: { id: organizerProfileId },
+          select: { userId: true },
+        });
+        // 票 08：改成由團主自己授課時不寄邀請給自己。等待確認中的邀請退回草稿，
+        // 原本的受邀老師不再看得到，團主接著用「由我授課並確認」。
+        switchedToSelf = teacher.userId === organizer.userId;
       }
 
       // 等待老師確認中的邀請：修改後老師看到的就是新內容，所以必須仍然完整、時間在未來。
-      if (current.status === "pending_confirmation") {
+      if (current.status === "pending_confirmation" && !switchedToSelf) {
         const issues = getProposalSubmitIssues(revision);
         if (issues.errors.length > 0) {
           throw new ReviseError(
@@ -137,7 +145,7 @@ export async function reviseProposalCore(
 
       // spec 13.3：pending 修改維持 pending；declined 與 confirmed 修改回 draft（confirmed 的確認失效、時段釋放）。
       const nextStatus: OrganizerClassProposalStatus =
-        current.status === "pending_confirmation" ? "pending_confirmation" : "draft";
+        current.status === "pending_confirmation" && !switchedToSelf ? "pending_confirmation" : "draft";
 
       const updated = await tx.organizerClassProposal.update({
         where: { id: proposalId },

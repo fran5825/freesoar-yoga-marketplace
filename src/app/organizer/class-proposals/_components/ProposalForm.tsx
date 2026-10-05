@@ -68,6 +68,13 @@ type ProposalFormProps = {
     expectedVersion?: number,
   ) => Promise<SubmitProposalActionResult>;
   onSearchTeachers: (query: string) => Promise<ProposalTeacherCard[]>;
+  // 票 08：登入者自己的老師資料 id；選到自己時改用「由我授課並確認」。
+  selfTeacherProfileId?: string | null;
+  onSelfConfirm?: (
+    input: ProposalFormInput,
+    proposalId?: string,
+    expectedVersion?: number,
+  ) => Promise<SubmitProposalActionResult>;
 };
 
 const UNSAVED_CHANGES_MESSAGE = "還有尚未儲存的修改，確定要離開這一頁嗎？";
@@ -136,6 +143,8 @@ export function ProposalForm({
   onSaveDraft,
   onSubmit,
   onSearchTeachers,
+  selfTeacherProfileId = null,
+  onSelfConfirm,
 }: ProposalFormProps) {
   const router = useRouter();
   const [proposalId, setProposalId] = useState(initialProposalId);
@@ -168,6 +177,8 @@ export function ProposalForm({
   const nowTaipeiLocal = useSyncExternalStore(subscribeToNothing, currentTaipeiLocal, () => null);
 
   const isBusy = isSaving || isSubmitting || isNavigating;
+  const isSelfTeaching =
+    Boolean(selfTeacherProfileId) && values.teacherProfileId === selfTeacherProfileId && Boolean(onSelfConfirm);
   const selectedOrganizationOption =
     organizations.find((organization) => organization.id === values.organizationId) ?? null;
   const selectedOrganization = selectedOrganizationOption
@@ -361,10 +372,13 @@ export function ProposalForm({
     setIsSubmitting(true);
     setFeedback(null);
     try {
-      const result = await onSubmit(values, proposalId ?? undefined, version ?? undefined);
+      const action = isSelfTeaching && onSelfConfirm ? onSelfConfirm : onSubmit;
+      const result = await action(values, proposalId ?? undefined, version ?? undefined);
       if (result.ok) {
         setSavedSnapshot(JSON.stringify(values));
-        navigateAway(`/organizer/class-proposals/${result.proposalId}?flash=submitted`);
+        navigateAway(
+          `/organizer/class-proposals/${result.proposalId}?flash=${isSelfTeaching ? "self_confirmed" : "submitted"}`,
+        );
         return;
       }
       const failed = result as ProposalActionFailure;
@@ -440,7 +454,7 @@ export function ProposalForm({
 
   const confirmation = isConfirming ? (
     <div className="rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep">
-      <p className="font-medium text-ink">確認送出合作邀請</p>
+      <p className="font-medium text-ink">{isSelfTeaching ? "確認由你自己授課" : "確認送出合作邀請"}</p>
       <dl className="mt-2 grid gap-1 text-ink [overflow-wrap:anywhere]">
         <div className="flex flex-wrap gap-x-2">
           <dt className="text-ink-soft">團體</dt>
@@ -458,7 +472,9 @@ export function ProposalForm({
         </div>
       </dl>
       <p className="mt-2">
-        送出後會請老師確認這份安排；老師確認前還不會保留老師的時間，也還不能開放報名。
+        {isSelfTeaching
+          ? "確認後這個時段會保留給這堂課（會檢查你自己的課表是否衝突），接著就能開放報名。"
+          : "送出後會請老師確認這份安排；老師確認前還不會保留老師的時間，也還不能開放報名。"}
       </p>
       <div className="mt-4 flex flex-col gap-3 sm:flex-row">
         <button
@@ -467,7 +483,7 @@ export function ProposalForm({
           onClick={handleSubmit}
           type="button"
         >
-          {isSubmitting ? "正在送出..." : "確認送出邀請"}
+          {isSubmitting ? "正在送出..." : isSelfTeaching ? "確認由我授課" : "確認送出邀請"}
         </button>
         <button
           className="rounded-full border border-clay/40 bg-white px-4 py-2 text-sm font-medium text-ink disabled:cursor-not-allowed disabled:text-ink-faint"
@@ -500,11 +516,15 @@ export function ProposalForm({
       <div className="flex flex-wrap items-center gap-2">
         <button
           className="rounded-full border border-pine/40 px-4 py-2 text-sm font-medium text-pine disabled:cursor-not-allowed disabled:border-ink/15 disabled:text-ink-faint"
-          disabled={isBusy || (status === "pending_confirmation" && !isReadyToSubmit)}
+          disabled={isBusy || (status === "pending_confirmation" && !isSelfTeaching && !isReadyToSubmit)}
           onClick={() => handleSave()}
           type="button"
         >
-          {isSaving ? "正在儲存..." : saveLabel[status]}
+          {isSaving
+            ? "正在儲存..."
+            : status === "pending_confirmation" && isSelfTeaching
+              ? "儲存並改由我授課"
+              : saveLabel[status]}
         </button>
         {status === "pending_confirmation" ? null : (
           <button
@@ -516,7 +536,13 @@ export function ProposalForm({
             }}
             type="button"
           >
-            {isSubmitting ? "正在送出..." : status === "draft" ? "送出邀請" : "修改並重新邀請"}
+            {isSubmitting
+              ? "正在送出..."
+              : isSelfTeaching
+                ? "由我授課並確認"
+                : status === "draft"
+                  ? "送出邀請"
+                  : "修改並重新邀請"}
           </button>
         )}
       </div>
@@ -620,7 +646,7 @@ export function ProposalForm({
           </p>
           {teacher ? (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-pine/30 bg-pine-tint px-4 py-3">
-              <TeacherCardSummary card={teacher} />
+              <TeacherCardSummary card={teacher} isSelf={teacher.teacherProfileId === selfTeacherProfileId} />
               <button
                 className="text-sm font-medium text-pine underline underline-offset-4 disabled:text-ink-faint"
                 disabled={isBusy}
@@ -680,7 +706,7 @@ export function ProposalForm({
                           }}
                           type="button"
                         >
-                          <TeacherCardSummary card={card} />
+                          <TeacherCardSummary card={card} isSelf={card.teacherProfileId === selfTeacherProfileId} />
                           <span className="mt-1 block text-xs font-medium text-pine">選擇這位老師</span>
                         </button>
                       </li>
@@ -801,10 +827,13 @@ export function ProposalForm({
   );
 }
 
-function TeacherCardSummary({ card }: { card: ProposalTeacherCard }) {
+function TeacherCardSummary({ card, isSelf = false }: { card: ProposalTeacherCard; isSelf?: boolean }) {
   return (
     <span className="block min-w-0 [overflow-wrap:anywhere]">
-      <span className="block text-sm font-medium text-ink">{card.displayName}</span>
+      <span className="block text-sm font-medium text-ink">
+        {card.displayName}
+        {isSelf ? <span className="ml-2 rounded-full bg-sage px-2 py-0.5 text-xs text-pine">你自己</span> : null}
+      </span>
       <span className="mt-0.5 block text-xs leading-5 text-ink-soft">
         {[card.specialties.slice(0, 3).join("、"), card.serviceAreas.slice(0, 3).join("、")]
           .filter(Boolean)

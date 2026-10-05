@@ -2,10 +2,16 @@ import { redirect } from "next/navigation";
 
 import { pickInitialOrganizationId } from "@/app/organizer/demands/_components/organization-options";
 import { listOwnOrganizations } from "@/domain/organization/service";
+import { getOwnTeacherProfileId } from "@/domain/organizer-class-proposal/service";
 import { getOwnOrganizerContext } from "@/domain/organizer-profile/service";
 import { getCurrentUser } from "@/lib/auth/session";
 
-import { saveAndSubmitProposalAction, saveProposalDraftAction, searchTeacherCardsAction } from "../actions";
+import {
+  saveAndSelfConfirmProposalAction,
+  saveAndSubmitProposalAction,
+  saveProposalDraftAction,
+  searchTeacherCardsAction,
+} from "../actions";
 import { ProposalForm } from "../_components/ProposalForm";
 import { toProposalOrganizationOptions, withOrganizationParam } from "../_components/page-helpers";
 
@@ -29,7 +35,7 @@ export default async function NewProposalPage({ searchParams }: NewProposalPageP
     redirect("/organizer/profile");
   }
 
-  const organizations = await listOwnOrganizations();
+  const [organizations, selfTeacherProfileId] = await Promise.all([listOwnOrganizations(), getOwnTeacherProfileId()]);
   const initialOrganizationId = pickInitialOrganizationId(
     organizations,
     resolvedSearchParams?.organizationId,
@@ -66,8 +72,10 @@ export default async function NewProposalPage({ searchParams }: NewProposalPageP
         initialVersion={null}
         onSaveDraft={saveProposalDraftAction}
         onSearchTeachers={searchTeacherCardsAction}
+        onSelfConfirm={saveAndSelfConfirmProposalAction}
         onSubmit={saveAndSubmitProposalAction}
         organizationLocked={false}
+        selfTeacherProfileId={selfTeacherProfileId}
         organizations={toProposalOrganizationOptions(organizations)}
       />
     </div>

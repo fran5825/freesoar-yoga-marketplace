@@ -167,6 +167,7 @@ pending_confirmation
 declined
   → pending_confirmation（直接重送）
   → draft（團主修改內容，version +1）
+  → draft（改成由團主本人授課；不寄邀請給自己，之後再本人確認）
 
 confirmed
   → draft（團主修改內容：確認失效、釋放時段）
