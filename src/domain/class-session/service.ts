@@ -14,10 +14,25 @@ import {
   generateOccurrencesForSeries,
   type OccurrenceSkip,
 } from "./__internal__/generate-recurring-occurrences-core";
+import { cancelSeriesFromOccurrenceForTeacherProfile } from "./__internal__/cancel-series-from-occurrence-core";
+import {
+  editSeriesFromOccurrenceForTeacher,
+  type EditSeriesFromOccurrenceInput,
+} from "./__internal__/edit-series-from-occurrence-core";
+import {
+  editClassSessionForTeacher,
+  type EditClassSessionForTeacherErrorCode,
+  type EditClassSessionForTeacherInput,
+} from "./__internal__/edit-class-session-core-for-teacher";
+import {
+  openAllDraftOccurrencesForTeacherProfile,
+  type OpenAllDraftOccurrencesForTeacherResult,
+} from "./__internal__/open-all-draft-occurrences-core";
 import {
   computeNextWeeklyOccurrenceDates,
   weeklyAfterDateForStartDate,
 } from "./recurring-series-dates";
+import { formatTaipeiShortDatetime } from "./timezone";
 import {
   WEEKLY_GENERATE_COUNT_MAX,
   WEEKLY_GENERATE_COUNT_MIN,
@@ -616,7 +631,8 @@ export type OpenOwnClassSessionForEnrollmentForTeacherErrorCode =
   | "teacher_profile_required"
   | "class_session_not_found"
   | "class_session_not_draft"
-  | "class_session_already_started";
+  | "class_session_already_started"
+  | "teacher_not_approved";
 
 export type OpenOwnClassSessionForEnrollmentForTeacherResult =
   | { ok: true }
@@ -662,12 +678,15 @@ export async function openOwnClassSessionForEnrollmentForTeacher(
     throw error;
   }
 
+  // teacher-class-scheduling 票 04（推導規則 11）：老師須為 approved 才能開放報名。條件寫進同一個
+  // updateMany，判斷與寫入一次完成，暫停中的老師無法開放。
   const updateResult = await prisma.classSession.updateMany({
     where: {
       id: classSessionId,
       teacherProfileId,
       status: "draft",
       startAt: { gt: new Date() },
+      teacherProfile: { status: "approved" },
     },
     data: { status: "open_for_enrollment" },
   });
@@ -678,7 +697,7 @@ export async function openOwnClassSessionForEnrollmentForTeacher(
 
   const classSession = await prisma.classSession.findFirst({
     where: { id: classSessionId, teacherProfileId },
-    select: { status: true, startAt: true },
+    select: { status: true, startAt: true, teacherProfile: { select: { status: true } } },
   });
 
   if (!classSession) {
@@ -686,6 +705,14 @@ export async function openOwnClassSessionForEnrollmentForTeacher(
       ok: false,
       code: "class_session_not_found",
       message: "找不到這堂課程，或你沒有權限操作。",
+    };
+  }
+
+  if (classSession.teacherProfile.status !== "approved") {
+    return {
+      ok: false,
+      code: "teacher_not_approved",
+      message: "老師資格暫停期間不能開放報名。",
     };
   }
 
@@ -702,6 +729,136 @@ export async function openOwnClassSessionForEnrollmentForTeacher(
     code: "class_session_not_draft",
     message: "這堂課程目前狀態不允許開放報名。",
   };
+}
+
+export type EditOwnClassSessionForTeacherResult =
+  | { ok: true; notifiedMemberCount: number }
+  | {
+      ok: false;
+      code: EditClassSessionForTeacherErrorCode | "authentication_required" | "teacher_profile_required";
+      message: string;
+      validationErrors?: ClassSessionValidationError[];
+    };
+
+const editErrorMessages: Record<EditClassSessionForTeacherErrorCode, string> = {
+  class_session_not_found: "找不到這堂課程，或你沒有權限操作。",
+  class_session_not_editable: "這堂課目前不能修改。只有你自己開的單堂課，在草稿或開放報名中才能修改。",
+  class_session_already_started: "這堂課已經開始，不能再修改。",
+  teacher_not_approved: "老師資格暫停期間不能修改課程。",
+  validation_failed: "修改前，請先補齊必填欄位。",
+  teacher_schedule_conflict: "這個時段跟你的其他課程重疊，請換一個時間。",
+  capacity_below_enrolled: "人數上限不能少於目前已報名的人數。",
+};
+
+// teacher-class-scheduling 票 04：老師改課（單堂）。核心在 __internal__/edit-class-session-core-for-teacher.ts。
+export async function editOwnClassSessionForTeacher(
+  classSessionId: string,
+  input: EditClassSessionForTeacherInput,
+): Promise<EditOwnClassSessionForTeacherResult> {
+  let teacherProfileId: string;
+
+  try {
+    const currentUser = await requireUser();
+
+    const teacherProfile = await prisma.teacherProfile.findUnique({
+      where: { userId: currentUser.id },
+      select: { id: true },
+    });
+
+    if (!teacherProfile) {
+      return { ok: false, code: "teacher_profile_required", message: "找不到你的老師資料。" };
+    }
+
+    teacherProfileId = teacherProfile.id;
+  } catch (error) {
+    if (isAuthenticationRequiredError(error)) {
+      return { ok: false, code: "authentication_required", message: "請先登入後再修改課程。" };
+    }
+
+    throw error;
+  }
+
+  const result = await editClassSessionForTeacher(teacherProfileId, classSessionId, input);
+
+  if (result.ok) {
+    return { ok: true, notifiedMemberCount: result.notifiedMemberCount };
+  }
+
+  return {
+    ok: false,
+    code: result.code,
+    message:
+      result.code === "capacity_below_enrolled" && result.enrolledCount !== undefined
+        ? `目前已報名（含待確認）${result.enrolledCount} 人，人數上限不能少於 ${result.enrolledCount}。`
+        : editErrorMessages[result.code],
+    validationErrors: result.validationErrors,
+  };
+}
+
+export type EditOwnSeriesFromOccurrenceForTeacherResult =
+  | { ok: true; updatedCount: number; notifiedMemberCount: number }
+  | {
+      ok: false;
+      code: string;
+      message: string;
+      validationErrors?: ClassSessionValidationError[];
+    };
+
+// teacher-class-scheduling 票 05：系列改課「改這場和之後所有場次」。核心在
+// __internal__/edit-series-from-occurrence-core.ts（鎖系列 → 場次 → 老師，整批成功或整批不改）。
+export async function editOwnSeriesFromOccurrenceForTeacher(
+  recurringClassSeriesId: string,
+  fromClassSessionId: string,
+  input: EditSeriesFromOccurrenceInput,
+): Promise<EditOwnSeriesFromOccurrenceForTeacherResult> {
+  let teacherProfileId: string;
+
+  try {
+    const currentUser = await requireUser();
+
+    const teacherProfile = await prisma.teacherProfile.findUnique({
+      where: { userId: currentUser.id },
+      select: { id: true },
+    });
+
+    if (!teacherProfile) {
+      return { ok: false, code: "teacher_profile_required", message: "找不到你的老師資料。" };
+    }
+
+    teacherProfileId = teacherProfile.id;
+  } catch (error) {
+    if (isAuthenticationRequiredError(error)) {
+      return { ok: false, code: "authentication_required", message: "請先登入後再修改課程。" };
+    }
+
+    throw error;
+  }
+
+  const result = await editSeriesFromOccurrenceForTeacher(
+    teacherProfileId,
+    recurringClassSeriesId,
+    fromClassSessionId,
+    input,
+  );
+
+  if (result.ok) {
+    return result;
+  }
+
+  // 整批不改時指出是哪一天，老師才知道要調整哪裡。
+  const day = result.failedStartAt ? formatTaipeiShortDatetime(result.failedStartAt) : null;
+  const message =
+    result.code === "teacher_schedule_conflict" && day
+      ? `${day} 那一場會跟你的其他課程時段重疊，這次所有場次都沒有修改。`
+      : result.code === "capacity_below_enrolled" && day
+        ? `${day} 那一場已報名（含待確認）${result.enrolledCount ?? 0} 人，人數上限不能少於這個數字，這次所有場次都沒有修改。`
+        : result.code === "series_not_found"
+          ? "找不到這個課程系列，或你沒有權限操作。"
+          : result.code === "class_session_not_found"
+            ? "找不到這一場課程，或它不屬於這個系列。"
+            : editErrorMessages[result.code as EditClassSessionForTeacherErrorCode] ?? "這次沒有修改任何場次。";
+
+  return { ok: false, code: result.code, message, validationErrors: result.validationErrors };
 }
 
 export type CancelOwnClassSessionForTeacherErrorCode =
@@ -878,8 +1035,10 @@ export type CreateOwnRecurringClassSeriesForTeacherResult =
       validationErrors?: RecurringSeriesValidationError[];
     };
 
+// teacher-class-scheduling 票 01：options.openForEnrollment 為 true 時，生成的場次建立後直接開放報名。
 export async function createOwnRecurringClassSeriesForTeacher(
   input: RecurringSeriesInput,
+  options: { openForEnrollment?: boolean } = {},
 ): Promise<CreateOwnRecurringClassSeriesForTeacherResult> {
   const validation = validateRecurringSeriesInput(input);
 
@@ -960,7 +1119,9 @@ export async function createOwnRecurringClassSeriesForTeacher(
         )
       : validation.schedule.dates;
 
-  const generateResult = await generateOccurrencesForSeries(teacherProfileId, series.id, dates);
+  const generateResult = await generateOccurrencesForSeries(teacherProfileId, series.id, dates, {
+    openForEnrollment: options.openForEnrollment === true,
+  });
 
   if (!generateResult.ok) {
     // series 本身已經建立成功，即使第一批生成失敗（例如老師剛好在這個瞬間被 suspend）也
@@ -999,9 +1160,13 @@ export type GenerateMoreOccurrencesForTeacherResult =
 // 「生成更多」只對常規（dayOfWeek 不是 null）系列有意義——固定期課程的日期清單在建立當下
 // 就已經一次到位，沒有「延伸」的概念。從該系列目前已生成的最晚一場 startAt 之後開始算，
 // 確保新生成的日期一律晚於既有場次，不會跟已生成的（即使已取消的）日期重複。
+//
+// teacher-class-scheduling 票 01：「最晚一場」的讀取與日期計算移進系列鎖內（resolver），
+// 兩次同時按「生成更多」時，第二次會等第一次 commit 後才讀到新的最晚一場，不會產生重複日期。
 export async function generateMoreOccurrencesForTeacher(
   recurringClassSeriesId: string,
   count: number,
+  options: { openForEnrollment?: boolean } = {},
 ): Promise<GenerateMoreOccurrencesForTeacherResult> {
   if (
     !Number.isInteger(count) ||
@@ -1066,19 +1231,22 @@ export async function generateMoreOccurrencesForTeacher(
     };
   }
 
-  const latestOccurrence = await prisma.classSession.findFirst({
-    where: { recurringClassSeriesId },
-    orderBy: { startAt: "desc" },
-    select: { startAt: true },
-  });
+  const dayOfWeek = series.dayOfWeek;
 
-  const dates = computeNextWeeklyOccurrenceDates(
-    series.dayOfWeek,
-    count,
-    latestOccurrence?.startAt,
+  const result = await generateOccurrencesForSeries(
+    teacherProfileId,
+    recurringClassSeriesId,
+    async (tx) => {
+      const latestOccurrence = await tx.classSession.findFirst({
+        where: { recurringClassSeriesId },
+        orderBy: { startAt: "desc" },
+        select: { startAt: true },
+      });
+
+      return computeNextWeeklyOccurrenceDates(dayOfWeek, count, latestOccurrence?.startAt);
+    },
+    { openForEnrollment: options.openForEnrollment === true },
   );
-
-  const result = await generateOccurrencesForSeries(teacherProfileId, recurringClassSeriesId, dates);
 
   if (!result.ok) {
     return {
@@ -1092,6 +1260,119 @@ export async function generateMoreOccurrencesForTeacher(
   }
 
   return { ok: true, createdClassSessionIds: result.createdClassSessionIds, skipped: result.skipped };
+}
+
+export type {
+  OpenAllDraftOccurrencesForTeacherErrorCode,
+  OpenAllDraftOccurrencesForTeacherResult,
+} from "./__internal__/open-all-draft-occurrences-core";
+
+// teacher-class-scheduling 票 01：系列頁「全部開放報名」。把本人系列底下所有尚未開始的草稿
+// 場次一次改成 open_for_enrollment；已開始、已取消、已開放的場次不受影響。
+// 資格：只有已通過審核的老師可以開放（不能沿用現行單場開放——它沒有檢查老師狀態，補強在票 04）。
+// 鎖定：先鎖系列列（序列化邊界，見規格第 6 節），鎖內再確認老師狀態，然後 updateMany。
+export async function openAllDraftOccurrencesForTeacher(
+  recurringClassSeriesId: string,
+): Promise<OpenAllDraftOccurrencesForTeacherResult> {
+  let teacherProfileId: string;
+
+  try {
+    const currentUser = await requireUser();
+
+    const teacherProfile = await prisma.teacherProfile.findUnique({
+      where: { userId: currentUser.id },
+      select: { id: true },
+    });
+
+    if (!teacherProfile) {
+      return {
+        ok: false,
+        code: "teacher_profile_required",
+        message: "找不到你的老師資料。",
+      };
+    }
+
+    teacherProfileId = teacherProfile.id;
+  } catch (error) {
+    if (isAuthenticationRequiredError(error)) {
+      return {
+        ok: false,
+        code: "authentication_required",
+        message: "請先登入後再開放報名。",
+      };
+    }
+
+    throw error;
+  }
+
+  return openAllDraftOccurrencesForTeacherProfile(teacherProfileId, recurringClassSeriesId);
+}
+
+export type CancelSeriesFromOccurrenceForTeacherErrorCode =
+  | "authentication_required"
+  | "teacher_profile_required"
+  | "series_not_found"
+  | "class_session_not_found";
+
+export type CancelSeriesFromOccurrenceForTeacherResult =
+  | { ok: true; cancelledCount: number }
+  | { ok: false; code: CancelSeriesFromOccurrenceForTeacherErrorCode; message: string };
+
+// teacher-class-scheduling 票 03：「從這場以後全部取消」。核心在
+// __internal__/cancel-series-from-occurrence-core.ts（鎖系列、鎖內重讀、同一 transaction 逐場取消）。
+export async function cancelSeriesFromOccurrenceForTeacher(
+  recurringClassSeriesId: string,
+  fromClassSessionId: string,
+): Promise<CancelSeriesFromOccurrenceForTeacherResult> {
+  let teacherProfileId: string;
+
+  try {
+    const currentUser = await requireUser();
+
+    const teacherProfile = await prisma.teacherProfile.findUnique({
+      where: { userId: currentUser.id },
+      select: { id: true },
+    });
+
+    if (!teacherProfile) {
+      return {
+        ok: false,
+        code: "teacher_profile_required",
+        message: "找不到你的老師資料。",
+      };
+    }
+
+    teacherProfileId = teacherProfile.id;
+  } catch (error) {
+    if (isAuthenticationRequiredError(error)) {
+      return {
+        ok: false,
+        code: "authentication_required",
+        message: "請先登入後再取消課程。",
+      };
+    }
+
+    throw error;
+  }
+
+  const result = await cancelSeriesFromOccurrenceForTeacherProfile(
+    teacherProfileId,
+    recurringClassSeriesId,
+    fromClassSessionId,
+  );
+
+  if (!result.ok) {
+    return {
+      ok: false,
+      code: result.code,
+      message:
+        result.code === "series_not_found"
+          ? "找不到這個課程系列，或你沒有權限操作。"
+          : "找不到這一場課程，或它不屬於這個系列。",
+    };
+  }
+
+  return result;
 }
 
 export type CancelRecurringClassSeriesForTeacherErrorCode =

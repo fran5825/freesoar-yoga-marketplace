@@ -338,8 +338,10 @@ test.describe("teacher series management (ticket 05)", () => {
     await expect(page.locator(`#class-${doneId}`)).toContainText("已完成");
     await expect(page.locator(`#class-${doneId}`)).toContainText("已報名 1 / 8 人");
     // 開放報名的場次可以複製報名連結；草稿、已完成的場次沒有。
+    // teacher-class-scheduling 票 03：尚未開始的草稿多了「從這場以後全部取消」；已完成的場次沒有任何按鈕。
     await expect(page.locator(`#class-${openId}`).getByRole("button", { name: /的報名連結$/ })).toBeVisible();
-    await expect(page.locator(`#class-${draftId}`).getByRole("button")).toHaveCount(0);
+    await expect(page.locator(`#class-${draftId}`).getByRole("button", { name: /的報名連結$/ })).toHaveCount(0);
+    await expect(page.locator(`#class-${draftId}`).getByRole("button", { name: /這一場以後全部取消$/ })).toHaveCount(1);
     await expect(page.locator(`#class-${doneId}`).getByRole("button")).toHaveCount(0);
 
     // 系列 → 場次 A → 確認一筆 → 返回系列，人數已更新。

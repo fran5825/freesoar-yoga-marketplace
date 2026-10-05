@@ -51,7 +51,10 @@
 - 目的：Google 品牌設定必填；首頁文案規劃也寫明「正式上線前，依實際存在的頁面加入，沒有頁面時不要放無效連結」。
 - 前置：條款內容涉及個資，正式上線前建議請熟悉台灣個資法的專業人士看過（規劃文件 `teacher-review-standard.md` 有同樣提醒）。
 
-### 5. 登入後頁面缺少 header，需要設計「登入後專用」的簡化版（團主部分已完成 2026-09-25，含通知頁）
+### 5. 登入後頁面缺少 header，需要設計「登入後專用」的簡化版（已完成，2026-10-04 核對）
+
+- 2026-10-04 核對：團主、老師、學員、管理員都已有各自的導覽列（`OrganizerShell`／`TeacherShell`／`MemberShell`／`AdminShell`，各角色 `layout.tsx` 套用），通知頁用 `LastRoleShell`（依上次身分顯示導覽），`/teachers/join` 用 `SiteShell` 的登入後導覽；`/account` 已移除（見第 13 項）。導覽列「通知」未讀數仍未做，移到第 10 項追蹤。以下為歷史紀錄。
+
 
 - 2026-09-25：團主 `/organizer/*` 已有專用導覽列與統一頁寬（`src/app/organizer/layout.tsx`）。老師、管理員、學員、帳戶頁仍沒有，照舊待做。導覽列「通知」沒有未讀數，因為 `Notification` 沒有已讀欄位。
 
@@ -75,13 +78,18 @@
 - 做法方向（沿用 `docs/organizer-flow-redesign-plan.md` 決策一）：`Organization` 新增 `organizerProfileId`、`OrganizerProfile` 移除 `organizationId`；開需求第一格改成「選組織／＋新增組織」；新組織不用審核。
 - 需要先取得明確確認（動 Prisma schema、需更新 `docs/domain/data-model.md`）；前一次整理時，畫面要預留之後加「組織切換」的位置，避免重做。
 
-### 9. 老師端的身分狀態路徑（2026-09-25，已併入 `docs/teacher-usability-plan.md` 決策 11／第 10 票）
+### 9. 老師端的身分狀態路徑（已完成，2026-10-04 核對）
+
+- 2026-10-04 核對：`src/app/teachers/join/page.tsx` 已依決策 11 實作——已通過或已暫停的老師導到 `/teacher/dashboard`；草稿、審核中、被退回、沒有老師資料的人留在申請頁。以下為歷史紀錄。
+
 
 - 現況：已有老師身分的人按 header「老師合作」，看到的仍是申請表單（`/teachers/join`），沒有導向 `/teacher/dashboard`。
 - 做法方向：比照團主，已有老師身分 → redirect 到老師總覽；沒有則維持申請流程。連同老師申請中／審核中／被退回等狀態該走哪，需另外規劃。
 - 前置：團主流程第 2 批完成後再做，可沿用 `/account` 入口中心（見 `docs/organizer-usability-plan.md` 決策 15）。
 
 ### 11. 老師編輯課程內容（2026-09-25，從老師流程整理中拆出）
+
+- 2026-10-04：已併入 [老師開課排程規格](specs/teacher-class-scheduling-spec.md)（改課，Q5、Q7–Q10、Q12）；以下為歷史紀錄。
 
 - 現況：老師建課後只能發布、取消、標記完成、確認／婉拒報名，不能改標題、時間、地點、人數上限。
 - 要先決定：已有人報名後哪些欄位還能改、改時間要不要通知學員、是否要重跑衝突檢查。會動 `ClassSession` 規則與 `docs/domain/state-machines.md`，需先規劃再做。

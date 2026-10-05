@@ -6,12 +6,20 @@ import {
   classSessionStatusLabels,
   classSessionStatusToneClasses,
 } from "@/app/organizer/classes/_components/status-labels";
-import { getOwnClassSessionDetailForTeacher } from "@/domain/class-session/read-service";
+import {
+  getOwnClassSessionDetailForTeacher,
+  getOwnRecurringClassSeriesDetailForTeacher,
+} from "@/domain/class-session/read-service";
 import { getClassServiceTypes } from "@/domain/class-session/service-types-display";
 import { getTeacherClassNextStep } from "@/domain/class-session/teacher-next-step";
+import { getOwnTeacherProfileApplicationSnapshot } from "@/domain/teacher-profile/service";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { requireUser } from "@/lib/auth/session";
 
+import {
+  CancelFromHereDialog,
+  occurrencesFromHere,
+} from "../_components/CancelFromHereDialog";
 import { ConfirmActionDialog } from "../_components/ConfirmActionDialog";
 import { CopyEnrollLinkButton } from "../_components/CopyEnrollLinkButton";
 import { PendingSubmitButton } from "../_components/PendingSubmitButton";
@@ -43,6 +51,7 @@ type TeacherClassSessionDetailPageProps = {
 const originLabels: Record<string, string> = {
   organizer_matched: "團主媒合",
   teacher_initiated: "自己開的課",
+  organizer_direct: "團主合作開課",
 };
 
 const nextStepToneClasses = {
@@ -51,7 +60,6 @@ const nextStepToneClasses = {
   info: "border-pine/15 bg-pine-tint text-pine-deep",
 } as const;
 
-  organizer_direct: "團主合作開課",
 const primaryButtonClassName =
   "min-h-11 rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep";
 const secondaryButtonClassName =
@@ -78,7 +86,10 @@ export default async function TeacherClassSessionDetailPage({
     searchParams,
   ]);
 
-  const classSession = await getOwnClassSessionDetailForTeacher(classSessionId);
+  const [classSession, teacherProfile] = await Promise.all([
+    getOwnClassSessionDetailForTeacher(classSessionId),
+    getOwnTeacherProfileApplicationSnapshot(),
+  ]);
 
   if (!classSession) {
     notFound();
@@ -116,6 +127,12 @@ export default async function TeacherClassSessionDetailPage({
   const canCancel =
     isOwnClass && ["draft", "open_for_enrollment"].includes(classSession.status);
   const canComplete = isOwnClass && classSession.status === "open_for_enrollment";
+  // teacher-class-scheduling 票 04：可以改課的條件（與 domain 鎖內檢查一致；真正的檢查在 server）。
+  const canEdit =
+    isOwnClass &&
+    teacherProfile?.status === "approved" &&
+    ["draft", "open_for_enrollment"].includes(classSession.status) &&
+    classSession.startAt.getTime() > new Date().getTime();
   // 票 04：從列表／系列進來時記得從哪裡來；系列只接受這堂課自己的系列。操作表單也帶著，做完仍保留。
   const returnContext = parseReturnContext(
     resolvedSearchParams ?? {},
@@ -127,6 +144,14 @@ export default async function TeacherClassSessionDetailPage({
   ));
   const backLink = teacherClassBackLink(returnContext, classSession.id);
   const timeText = `${formatTaipeiDatetime(classSession.startAt)}–${formatTaipeiDatetime(classSession.endAt)}`;
+  // teacher-class-scheduling 票 03：系列中的場次可以「從這場以後全部取消」，需要列出之後的場次。
+  const series =
+    canCancel && classSession.recurringClassSeriesId
+      ? await getOwnRecurringClassSeriesDetailForTeacher(classSession.recurringClassSeriesId)
+      : null;
+  const cancelFromHere = series
+    ? occurrencesFromHere(series.occurrences, classSession, new Date().getTime())
+    : [];
 
   const contentSection = (
     <section
@@ -168,11 +193,7 @@ export default async function TeacherClassSessionDetailPage({
           {classSession.description}
         </p>
       ) : null}
-      {isOwnClass ? (
-        <p className="text-xs leading-5 text-ink-faint">
-          課程內容建立後目前無法修改；需要調整的話，請取消後重新建立。
-        </p>
-      ) : null}
+
     </section>
   );
 
@@ -358,7 +379,7 @@ export default async function TeacherClassSessionDetailPage({
             </h3>
             <p className="mt-1 text-base leading-7">{nextStep.message}</p>
           </div>
-          {canOpen || canComplete || pendingEnrollments.length > 0 ? (
+          {canOpen || canComplete || canEdit || pendingEnrollments.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {canOpen ? (
                 <form action={openOwnClassSessionForEnrollmentAction}>
@@ -382,6 +403,14 @@ export default async function TeacherClassSessionDetailPage({
                     標記完成
                   </PendingSubmitButton>
                 </form>
+              ) : null}
+              {canEdit ? (
+                <a
+                  className={`inline-flex items-center ${secondaryButtonClassName}`}
+                  href={`/teacher/classes/${classSession.id}/edit`}
+                >
+                  修改課程
+                </a>
               ) : null}
             </div>
           ) : null}
@@ -488,6 +517,22 @@ export default async function TeacherClassSessionDetailPage({
               <p>取消後無法復原，這堂課也不能再開放報名。</p>
             </ConfirmActionDialog>
           </div>
+          {series && cancelFromHere.length > 1 ? (
+            <div className="grid gap-1 border-t border-ink/10 pt-3">
+              <p className="text-sm leading-6 text-ink-soft">
+                這堂課屬於系列「{series.title}」。如果之後都不上了，可以把這一場和之後的 {cancelFromHere.length - 1} 場一起取消。
+              </p>
+              <div>
+                <CancelFromHereDialog
+                  affected={cancelFromHere}
+                  canGenerateMore={series.dayOfWeek !== null}
+                  fromClassSessionId={classSession.id}
+                  recurringClassSeriesId={series.id}
+                  seriesTitle={series.title}
+                />
+              </div>
+            </div>
+          ) : null}
         </section>
       ) : null}
     </div>

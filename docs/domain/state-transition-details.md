@@ -224,6 +224,7 @@ suspended
 | `draft`／`open_for_enrollment` | `cancelled` | Organizer / Admin | Organizer own-scoped 或 Admin（不檢查擁有權），且 `startAt` 尚未到達（`class-session-cancellation` D2，與 D14 同一精神；Admin 版由 `admin-class-enrollment-management` D1/D5 新增，資格條件完全相同） | 該 ClassSession 底下所有 `confirmed` Enrollment 在同一 transaction 內一併轉成 `cancelled`（連帶取消，D4）；Organizer/Teacher/受影響 Member 收到 `class_session_cancelled` 通知（D7），不論觸發者是 Organizer 還是 Admin，收件人解析邏輯完全相同 |
 | `open_for_enrollment` | `completed` | Organizer | own-scoped，且 `endAt` 已經過去（`class-session-completion` D2，與 D14/D2 的時間方向相反——完成需要「已經發生」，取消/開放需要「尚未發生」） | 標記課程已完成；不連帶處理 `Enrollment`（D3，`attended`/`no_show` 仍不接線）；不觸發新的 Notification（D5） |
 
+- **改課（`teacher-class-scheduling` 票 04，已落地 2026-10-05）**：老師自己開的單堂課在 `draft`／`open_for_enrollment` 且 `startAt` 未到時可改內容、時間、地點、人數上限；不改變任何狀態，見 `state-machines.md`。下一條「無編輯」仍適用於團主媒合的課。
 - **一次到位建立，無編輯**：`title`/`description`（選填）/`serviceType`/`startAt`/`endAt`/`location`/`capacity`/`isPublic` 皆於建立當下一次填齊並通過驗證，建立後不提供編輯（D2）；因此不存在「資料不完整的 draft」，`draft` 語意純粹是「已建立、尚未開放報名」。
 - **`draft → open_for_enrollment` 不經過 `pending_confirmation`**：對齊 D2 的一次到位建立，沒有需要「初步完整」與「必要欄位完整」分兩階段確認的理由。
 - **`pending_confirmation`/`confirmed` 不接線**：`open_for_enrollment → confirmed` 沒有明確、機械式的觸發條件（不像 capacity 那樣可自動判斷），`enrollment` 沿用 `class-session-creation` D9 的判斷不提前接線；`open_for_enrollment` 本身已足以讓 Member 報名到滿額為止。

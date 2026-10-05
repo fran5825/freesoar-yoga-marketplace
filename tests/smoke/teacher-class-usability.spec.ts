@@ -192,7 +192,7 @@ test.describe("teacher single-class creation usability (ticket 01)", () => {
     await expect(summary(page)).toContainText("8 人");
     await expect(summary(page)).toContainText("列在公開課程列表");
     await expect(summary(page)).toContainText("需要你確認才算報名成功");
-    await expect(summary(page)).toContainText("建立後目前無法修改課程內容");
+    await expect(summary(page)).toContainText("建立後，開課前都還可以在課程頁修改內容、時間、地點與名額。");
     await expect(summary(page)).toContainText("不會立即開放報名");
 
     // 成功建立的導向不該跳出離頁提醒。
@@ -324,7 +324,7 @@ test.describe("teacher single-class creation usability (ticket 01)", () => {
     const listedDates = (await summaryDates.allTextContents()).map((text) => text.slice(0, 10));
 
     await page.getByRole("button", { name: "建立課程系列" }).click();
-    await expect(page.getByText(/課程系列已建立，共生成 3 場。每一場目前都是草稿，請逐堂開放報名/)).toBeVisible();
+    await expect(page.getByText(/課程系列已建立，共生成 3 場。每一場目前都是草稿，確認沒問題後按「全部開放報名」/)).toBeVisible();
 
     const sessions = await prisma.classSession.findMany({
       where: { teacherProfileId: teacher.teacherProfileId, recurringClassSeriesId: { not: null } },

@@ -35,9 +35,11 @@ export async function lockTeacherScheduleAndCheckConflict(
   // organizer-usability-redesign 票 06：轉課時只排除呼叫端自己那筆已確認的合作邀請。
   options?: { excludeProposalId?: string },
 ): Promise<ConflictingClassSession | null> {
-  // 步驟 1：鎖住這位老師的 TeacherProfile row。必須是這個函式的第一個資料庫操作，
-  // 呼叫端（Organizer 路徑、Teacher 路徑）不得在呼叫本函式之前，於同一 transaction 內
-  // 先取得其他鎖，否則會破壞「一律先鎖 TeacherProfile」的順序規則、產生死鎖風險。
+  // 步驟 1：鎖住這位老師的 TeacherProfile row。必須是這個函式的第一個資料庫操作。
+  // 呼叫端在同一 transaction 內先取得的鎖，只能是全站順序排在老師之前的鎖：
+  // RecurringClassSeries → ClassSession（依 id 排序）→ TeacherProfile
+  // （docs/specs/teacher-class-scheduling-spec.md 第 6 節；例如系列生成先鎖系列列）。
+  // 不得在持有老師鎖之後再去鎖系列或場次，否則會與單場報名（場次 → 老師）形成死鎖。
   await hooks?.onBeforeLock?.();
 
   await tx.$queryRaw`

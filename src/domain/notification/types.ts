@@ -22,4 +22,6 @@ export type NotificationPayload = {
   reason?: string;
   demandTitle?: string;
   classSessionTitle?: string;
+  // teacher-class-scheduling 票 04：改課時「改了什麼」的一句話摘要（只列有改的時間／地點）。
+  changeSummary?: string;
 };

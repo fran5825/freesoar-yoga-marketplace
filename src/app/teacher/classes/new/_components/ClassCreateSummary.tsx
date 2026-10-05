@@ -10,7 +10,12 @@ export function ClassCreateSummary({
   dates,
   datesPlaceholder,
   notes,
+  heading = "建立前核對",
+  datesAriaLabel = "會建立的上課日期",
 }: {
+  datesAriaLabel?: string;
+  // 改課時是「儲存前核對」（teacher-class-scheduling 票 04）。
+  heading?: string;
   rows: SummaryRow[];
   dates?: string[];
   datesPlaceholder?: string;
@@ -22,7 +27,7 @@ export function ClassCreateSummary({
       className="grid gap-3 rounded-2xl border border-pine/25 bg-pine-tint/40 p-4 sm:p-5"
     >
       <h2 className="text-base font-medium text-ink" id="create-summary-heading">
-        建立前核對
+        {heading}
       </h2>
       <dl className="grid gap-x-4 gap-y-2 text-sm leading-6 sm:grid-cols-[7rem_1fr]">
         {rows.map((row) => (
@@ -41,7 +46,7 @@ export function ClassCreateSummary({
             <dd className="min-w-0">
               {dates.length > 0 ? (
                 <ul
-                  aria-label="會建立的上課日期"
+                  aria-label={datesAriaLabel}
                   className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap"
                 >
                   {dates.map((date) => (

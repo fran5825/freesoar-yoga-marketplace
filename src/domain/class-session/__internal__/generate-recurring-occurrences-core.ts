@@ -1,17 +1,24 @@
 // teacher-initiated-open-classes 第 7 節：接受一個已存在的 RecurringClassSeries 與一份
-// Taipei 日曆日字串清單（"YYYY-MM-DD"），逐筆呼叫 createClassSessionForTeacher 建立獨立
-// ClassSession row（G1 = A，materialize）。常規週期的日期本身在呼叫端用
-// recurring-series-dates.ts 算好；固定期課程的日期清單則直接來自使用者輸入——這個函式不關心
-// 兩者差異，只負責「逐筆建立 + 衝突跳過」。
+// Taipei 日曆日字串清單（"YYYY-MM-DD"），逐筆建立獨立 ClassSession row（G1 = A，materialize）。
+// 常規週期的日期在呼叫端用 recurring-series-dates.ts 算；固定期課程的日期清單直接來自使用者輸入。
 //
-// 刻意逐筆序列處理（不平行）：數量受 Gate G4 限制在個位數~數十場，序列處理讓「某一場衝突，
-// 其餘照常生成」的邏輯單純、可預期，不需要額外的批次交易設計。若某一場撞到 conflict-check，
-// 該場跳過並列在回傳結果的 skipped 裡，不讓整批生成因為一場衝突而全部失敗——但若失敗原因
-// 不是衝突（理論上不該發生，因為呼叫者已經是 series 擁有者、series 已存在），視為非預期錯誤
-// 直接中止整批，不悄悄吞掉。
+// teacher-class-scheduling 票 01：整批生成改在「同一個 transaction」內完成，並先鎖住系列列，
+// 作為所有改動系列場次集合的序列化邊界（docs/specs/teacher-class-scheduling-spec.md 第 6 節）：
+//   1. `FOR UPDATE` 鎖本人系列列（own-scope 寫在 WHERE）。
+//   2. 鎖內重新讀取系列設定與老師狀態。
+//   3. 日期可以是固定陣列，也可以是「鎖內才計算」的 resolver（生成更多要在鎖內讀最後一場）。
+//   4. 逐場在同一 transaction 內建立；撞課的那場跳過、其餘照常。
+//   5. commit 之後才發通知；rollback 時不發。
+// 鎖定順序：系列 → 老師（撞課檢查鎖 TeacherProfile），符合全站順序。
+
+import type { Prisma, RecurringClassSeries } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
-import { createClassSessionForTeacher } from "./create-teacher-class-session-core";
+import {
+  createClassSessionForTeacherInTransaction,
+  notifyClassSessionsCreated,
+  type CreatedClassSessionNotice,
+} from "./create-teacher-class-session-core";
 import { parseTaipeiDatetimeLocal } from "../timezone";
 
 export type OccurrenceSkip = { date: string; reason: "teacher_schedule_conflict" };
@@ -20,77 +27,138 @@ export type GenerateOccurrencesResult =
   | { ok: true; createdClassSessionIds: string[]; skipped: OccurrenceSkip[] }
   | { ok: false; code: "series_not_found" | "teacher_not_approved" };
 
+export type OccurrenceDatesResolver = (
+  tx: Prisma.TransactionClient,
+  series: RecurringClassSeries,
+) => Promise<string[]>;
+
+export type GenerateOccurrencesOptions = {
+  // 建立後直接開放報名（票 01 的「建立後全部開放報名」勾選框）。
+  openForEnrollment?: boolean;
+  // 供 Playwright 併發測試在「已取得系列鎖」之後插入同步點。
+  onSeriesLockAcquired?: () => void | Promise<void>;
+  // 供測試在「場次都已寫入、transaction 尚未 commit」時插入動作（例如拋錯驗證 rollback 不發通知）。
+  onOccurrencesWritten?: () => void | Promise<void>;
+};
+
+// 最多 26 場、每場都要鎖老師、查重疊、寫入；預設 5 秒的互動式 transaction 上限不夠保險。
+const GENERATE_TRANSACTION_TIMEOUT_MS = 30_000;
+
+class SeriesNotFoundError extends Error {}
+
+type GenerateInTransactionOutcome =
+  | {
+      ok: true;
+      created: CreatedClassSessionNotice[];
+      skipped: OccurrenceSkip[];
+    }
+  | { ok: false; code: "series_not_found" | "teacher_not_approved" };
+
 export async function generateOccurrencesForSeries(
   teacherProfileId: string,
   recurringClassSeriesId: string,
-  dates: string[],
+  dates: string[] | OccurrenceDatesResolver,
+  options: GenerateOccurrencesOptions = {},
 ): Promise<GenerateOccurrencesResult> {
-  const series = await prisma.recurringClassSeries.findFirst({
-    where: { id: recurringClassSeriesId, teacherProfileId },
-    include: { teacherProfile: { select: { status: true } } },
-  });
+  let outcome: GenerateInTransactionOutcome;
 
-  if (!series) {
-    return { ok: false, code: "series_not_found" };
-  }
+  try {
+    outcome = await prisma.$transaction(
+      async (tx): Promise<GenerateInTransactionOutcome> => {
+        const locked = await tx.$queryRaw<{ id: string }[]>`
+          SELECT "id" FROM "RecurringClassSeries"
+          WHERE "id" = ${recurringClassSeriesId} AND "teacherProfileId" = ${teacherProfileId}
+          FOR UPDATE
+        `;
 
-  // 資格檢查在這裡先做一次（比照單堂建課的既有慣例），失敗就整批不生成——避免下面的迴圈把
-  // 「老師未通過審核」誤判成逐場的 unexpected error 而拋例外。跟單堂建課核心一致，這裡刻意
-  // 不額外加鎖防護建立中途才變成 suspended 的極端競態（見 create-teacher-class-session-core.ts
-  // 的同一份說明）。
-  if (series.teacherProfile.status !== "approved") {
-    return { ok: false, code: "teacher_not_approved" };
-  }
+        if (locked.length === 0) {
+          throw new SeriesNotFoundError();
+        }
 
-  const createdClassSessionIds: string[] = [];
-  const skipped: OccurrenceSkip[] = [];
+        await options.onSeriesLockAcquired?.();
 
-  for (const date of dates) {
-    const startAt = parseTaipeiDatetimeLocal(`${date}T${series.startTime}`);
-    const endAt = parseTaipeiDatetimeLocal(`${date}T${series.endTime}`);
+        const series = await tx.recurringClassSeries.findUniqueOrThrow({
+          where: { id: recurringClassSeriesId },
+          include: { teacherProfile: { select: { status: true } } },
+        });
 
-    // 理論上不會發生——startTime/endTime/日期格式都已經在建立 series（或固定期輸入）時
-    // 驗證過——但防禦性地把它當成「這一場跳過」而不是讓整批中止，行為上跟衝突跳過一致。
-    if (!startAt || !endAt) {
-      skipped.push({ date, reason: "teacher_schedule_conflict" });
-      continue;
+        if (series.teacherProfile.status !== "approved") {
+          return { ok: false, code: "teacher_not_approved" };
+        }
+
+        const resolvedDates =
+          typeof dates === "function" ? await dates(tx, series) : dates;
+
+        const created: CreatedClassSessionNotice[] = [];
+        const skipped: OccurrenceSkip[] = [];
+
+        for (const date of resolvedDates) {
+          const startAt = parseTaipeiDatetimeLocal(`${date}T${series.startTime}`);
+          const endAt = parseTaipeiDatetimeLocal(`${date}T${series.endTime}`);
+
+          // 理論上不會發生（格式在建立 series 或輸入時已驗證），防禦性地當成這一場跳過。
+          if (!startAt || !endAt) {
+            skipped.push({ date, reason: "teacher_schedule_conflict" });
+            continue;
+          }
+
+          const result = await createClassSessionForTeacherInTransaction(tx, teacherProfileId, {
+            title: series.title,
+            description: series.description,
+            // schema 上 nullable，但 validateRecurringSeriesInput 列為必填，實際不會是 null。
+            serviceType: series.serviceType as string,
+            serviceTypes: series.serviceTypes,
+            yogaStyles: series.yogaStyles,
+            startAt,
+            endAt,
+            location: series.location,
+            capacity: series.capacity,
+            // RecurringClassSeries 目前沒有 isPublic 欄位（票 06 才新增），系列場次維持不公開。
+            isPublic: false,
+            requiresApproval: series.requiresApproval,
+            recurringClassSeriesId: series.id,
+            openForEnrollment: options.openForEnrollment === true,
+          });
+
+          if (result.ok) {
+            created.push(result.created);
+          } else if (result.code === "teacher_schedule_conflict") {
+            skipped.push({ date, reason: "teacher_schedule_conflict" });
+          } else if (result.code === "teacher_not_approved" && created.length === 0) {
+            return { ok: false, code: "teacher_not_approved" };
+          } else if (result.code === "teacher_not_approved") {
+            // 極端競態：鎖住老師之前狀態被改。已建立的場次維持有效，剩餘日期不再生成。
+            break;
+          } else {
+            throw new Error(
+              `unexpected error generating occurrence for series ${recurringClassSeriesId} on ${date}: ${result.code}`,
+            );
+          }
+        }
+
+        await options.onOccurrencesWritten?.();
+
+        return { ok: true, created, skipped };
+      },
+      { timeout: GENERATE_TRANSACTION_TIMEOUT_MS },
+    );
+  } catch (error) {
+    if (error instanceof SeriesNotFoundError) {
+      return { ok: false, code: "series_not_found" };
     }
 
-    const result = await createClassSessionForTeacher(teacherProfileId, {
-      title: series.title,
-      description: series.description,
-      // RecurringClassSeries.serviceType 在 schema 上是 nullable（第 5 節資料模型），但
-      // validateRecurringSeriesInput 把它列為必填，建立 series 時一律會寫入非 null 值，
-      // 這裡讀回來只是型別上允許 null，實際上不會發生。
-      serviceType: series.serviceType as string,
-      serviceTypes: series.serviceTypes,
-      yogaStyles: series.yogaStyles,
-      startAt,
-      endAt,
-      location: series.location,
-      capacity: series.capacity,
-      // 老師自建課程的公開瀏覽（Slice D）與常規課程目前沒有交集：RecurringClassSeries
-      // 資料模型（第 5 節，已 Codex 核准）沒有 isPublic 欄位，且 ClassSession 建立後無法
-      // 事後修改可見性，因此這裡刻意保守預設為 false（私人），不擅自幫尚未核准的欄位做決定。
-      isPublic: false,
-      requiresApproval: series.requiresApproval,
-      recurringClassSeriesId: series.id,
-    });
-
-    if (result.ok) {
-      createdClassSessionIds.push(result.classSessionId);
-    } else if (result.code === "teacher_schedule_conflict") {
-      skipped.push({ date, reason: "teacher_schedule_conflict" });
-    } else if (result.code === "teacher_not_approved") {
-      // 極端競態：老師在迴圈執行中途被 suspend（上面的資格檢查是迴圈開始前的單次讀取，
-      // 沒有加鎖）。已經成功生成的場次維持有效，不回溯撤銷，剩餘日期不再繼續生成。
-      break;
-    } else {
-      throw new Error(
-        `unexpected error generating occurrence for series ${recurringClassSeriesId} on ${date}: ${result.code}`,
-      );
-    }
+    throw error;
   }
 
-  return { ok: true, createdClassSessionIds, skipped };
+  if (!outcome.ok) {
+    return outcome;
+  }
+
+  await notifyClassSessionsCreated(outcome.created);
+
+  return {
+    ok: true,
+    createdClassSessionIds: outcome.created.map((created) => created.classSessionId),
+    skipped: outcome.skipped,
+  };
 }

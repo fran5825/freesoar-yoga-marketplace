@@ -339,6 +339,8 @@ Phase 2 schema notes：
 - 2026-09-26：每週固定模式可選填「起始日期」（不存欄位，只影響首次生成）：起始日期須晚於今天，且必須剛好是選定的 `dayOfWeek`（前後端都檢查，錯誤碼 `start_date_weekday_mismatch`），第一場就是這一天；不填則沿用原本「從明天起最近的一個」。固定期模式改用三個月月曆直接點選多天（最多 26 天，今天與過去不能選），送出格式不變。
 - 固定期課程（例如連續 4 週的特定日期組合）不在這個 model 記錄每一個具體日期——生成時由呼叫端直接提供明確日期清單，逐筆寫入對應 `ClassSession.startAt`/`endAt`，系列本身只保留 `startTime`/`endTime` 這組共用的時鐘時間。
 - 沒有 `status`／`isPublic` 欄位：「取消系列」等同於「取消它底下所有還來得及取消的場次」，series 這一列本身仍會保留，之後仍可用「生成更多」再生成新的未來場次（僅限每週固定模式）；`isPublic` 只存在於每一筆獨立 `ClassSession`，系列生成的每一場目前一律預設 `isPublic = false`（V1 的刻意簡化，系列本身沒有能設定公開性的欄位/UI，且 `ClassSession` 建立後無法事後修改可見性）。
+- **已核准・未實作（`teacher-class-scheduling` 票 06）**：新增 `isPublic Boolean @default(false)`——系列的公開設定（「公開列在找課程」或「僅透過連結招募」），建立系列時選，之後生成或追加的場次沿用；既有系列 migration 後一律為 `false`，行為不變。取代下方「系列本身沒有能設定公開性的欄位／`ClassSession` 建立後無法事後修改可見性」的限制：單堂與系列場次建立後都可以改 `isPublic`（持續開課依改課範圍；期班整期一致在票 07）。
+- **已落地（`teacher-class-scheduling` 票 05，2026-10-05）**：系列改課選「改這場和之後所有場次」時，會同步更新這個 model 的 `title`／`description`／`serviceType(s)`／`yogaStyles`／`startTime`／`endTime`／`location`／`capacity`，之後生成或追加的場次沿用；`dayOfWeek` 不可改。不新增欄位。各場的人數上限可能因「只改這場」而與系列不同，畫面上每一場的名額分母一律讀該場自己的 `capacity`。
 - `onDelete: Cascade` 從 `TeacherProfile` 指向這個 model；`onDelete: SetNull` 從這個 model 指向底下生成的 `ClassSession`（見上方 `ClassSession.recurringClassSeriesId`）。
 
 ## OrganizerClassProposal
