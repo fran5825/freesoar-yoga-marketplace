@@ -72,6 +72,16 @@
 
 候選檔案：admin dashboard／四列表／三詳情／共用上下文與名單元件；admin dashboard、老師、需求、課程、團體讀取服務；相關 smoke tests。禁止改 enrollment／class cancellation 核心、state 或 schema。
 
+已確認票券切分（2026-10-05 產品主人確認，完整條件見 [票單](admin-usability-redesign/tickets/README.md)）：
+
+- 09：團體／老師的關聯限定列表，擴充 `list-context.ts` 關聯條件；第三批內無票券依賴。
+- 10：需求、課程詳情之間的關聯入口與團體限定；依賴 09。
+- 11：課程詳情摘要優先與完整課程資料；第三批內無票券依賴。
+- 12：報名名單姓名＋email、搜尋分類與 pending 取消入口；依賴 11。
+- 13：工作總覽 KPI 精準入口與「即將開始」課程條件；依賴 09。
+
+五票均為 STANDARD、Human Gate yes。產品主人已放行 Builder 從 09 開始，依 09 → 10 → 11 → 12 → 13 施工，每票完成回報後再接下一票。
+
 完成條件：有關聯時一次點擊到精準目的；老師自建課無需求／團體時不產生死連結；同名資料仍依 id 正確限定；KPI 與結果條件相同；pending／confirmed 取消、不可重報、跨開始時間與連帶效果不變；名單輸入只在 admin 邊界呈現。
 
 ### 第四批：整體回歸與畫面驗收
@@ -108,7 +118,7 @@
 | 完整方案共同理解 | 已確認，產品主人回覆「1」選擇現有 task 執行。 |
 | 第一批 | [四張票](admin-usability-redesign/tickets/README.md) 已實作；typecheck／lint／build／diff check 通過，88 項 smoke 覆蓋最終皆通過；desktop／390px mobile 截圖已檢查；2026-10-04 產品主人回覆「第一批通過，開始做 05」，畫面驗收完成。 |
 | 第二批 | [05–08](admin-usability-redesign/tickets/README.md) 已實作，各票經 Codex peer review 核准；typecheck／lint／build／diff check 通過，admin smoke 與受影響回歸通過（高負載下的長流程逾時已單獨重跑通過並記錄於票券）。2026-10-05 產品主人回覆「第二批畫面看過了，通過」，畫面驗收完成。 |
-| 第三批 | 未啟動。 |
+| 第三批 | 2026-10-05 已切 [09–13](admin-usability-redesign/tickets/README.md) 五張票（Codex peer review 核准）。同日產品主人回覆「第三批切票確認，開始做 09」，確認粒度與依賴並放行 Builder 從 09 開始；10–13 待 09 完成並回報後依序接續，整批完成後仍需產品主人看畫面。 |
 | 第四批 | 未啟動。 |
 | Commit／push／部署 | 未授權、未執行。 |
 
@@ -160,3 +170,5 @@ Output Report Requirement:
 ```
 
 <!-- codex-peer-reviewed: 2026-10-04T21:27:48Z rounds=1 verdict=approved -->
+
+<!-- codex-peer-reviewed: 2026-10-05T03:25:05Z rounds=2 verdict=approved -->

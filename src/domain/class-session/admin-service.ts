@@ -30,7 +30,17 @@ export type AdminClassSessionSummary = {
   teacherDisplayName: string | null;
   organizationName: string | null;
   confirmedEnrollmentCount: number;
+  // 第三批票 09：只用來在「只看這個團體／老師」時依 id 篩選，不是授權依據。
+  organizationId: string | null;
+  teacherProfileId: string;
 };
+
+// 第三批票 09：老師詳情「這位老師的課程」入口顯示的數量，與課程列表限定後的「全部」一致。
+export async function countClassSessionsForTeacherForAdmin(teacherProfileId: string): Promise<number> {
+  await requireAdmin();
+
+  return prisma.classSession.count({ where: { teacherProfileId } });
+}
 
 export async function listAllClassSessionsForAdmin(): Promise<AdminClassSessionSummary[]> {
   await requireAdmin();
@@ -45,6 +55,8 @@ export async function listAllClassSessionsForAdmin(): Promise<AdminClassSessionS
       location: true,
       capacity: true,
       updatedAt: true,
+      organizationId: true,
+      teacherProfileId: true,
       organizerProfile: { select: { displayName: true } },
       teacherProfile: { select: { displayName: true } },
       organization: { select: { name: true } },
@@ -66,6 +78,8 @@ export async function listAllClassSessionsForAdmin(): Promise<AdminClassSessionS
     teacherDisplayName: classSession.teacherProfile.displayName,
     organizationName: classSession.organization?.name ?? null,
     confirmedEnrollmentCount: classSession._count.enrollments,
+    organizationId: classSession.organizationId,
+    teacherProfileId: classSession.teacherProfileId,
   }));
 }
 

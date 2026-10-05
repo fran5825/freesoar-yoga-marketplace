@@ -40,3 +40,31 @@
 - 只改既有 admin 閱讀、表單、pending／錯誤與確認回饋；既有 service、server-side guard、原因驗證、取消資格與狀態轉換不變。原因不進 URL，不新增持久化草稿。
 - 不改 Auth、schema、permissions、state machine、package/env/deploy 或通知能力；不做 backlog 17 的管理員指派／權限配置。若需越過邊界，另提影響與產品主人確認。
 - 第二批完成後交產品主人看畫面，不自動啟動第三批，不 commit／push／部署。draft 與工程勾選均不是畫面驗收。
+
+## 第三批：跨資料、課程、名單與總覽
+
+2026-10-05 切票；同日產品主人回覆「第三批切票確認，開始做 09」，確認 09–13 粒度與依賴並放行第三批 Builder 從 09 開始。只授權開始 09；10–13 須在 09 完成並回報後依序接續，整批完成後仍要產品主人看畫面。所有票均為 STANDARD，無 HEAVY 票；共同 risk flags 為 ADMIN_FLOW、SCOPE_DRIFT_RISK，另依票標示 PERMISSION_BOUNDARY、PRIVACY_RISK、COMPAT_RISK。五票均經 Codex peer review 核准（2 輪）。
+
+| 票 | 完整流程 | Blocked by | Mode | Human Gate | Status |
+| --- | --- | --- | --- | --- | --- |
+| [09](09-related-filter-lists.md) | 團體→需求／課程、老師→課程的限定列表，可組合搜尋與分類並保留返回 | None | STANDARD | yes，已放行 | 已實作，2026-10-05 畫面驗收通過 |
+| [10](10-detail-cross-links.md) | 需求→課程、課程→老師／來源需求／所屬團體，無關聯不出現死連結 | 09 | STANDARD | yes，已放行 | in-progress |
+| [11](11-class-detail-summary-and-fields.md) | 課程詳情摘要優先，補課程風格、瑜伽類型、來源、報名方式、公開狀態與報名摘要 | None | STANDARD | yes | draft |
+| [12](12-roster-search-and-pending-cancel.md) | 名單姓名＋email、搜尋與分類數量、待確認報名取消，取消後留在名單 | 11 | STANDARD | yes | draft |
+| [13](13-dashboard-kpi-entries.md) | KPI 點擊到精準分類與「即將開始」課程條件，已確認報名只作統計 | 09 | STANDARD | yes | draft |
+
+### 依賴與執行順序
+
+09 建立關聯條件機制，10、13 沿用；11 建立課程詳情順序與報名摘要（一律用完整名單），12 的名單分類數量在未搜尋時須與其一致、搜尋時只反映搜尋結果。09／10 與 11／12 兩條線彼此無技術依賴。10、11、12 都改課程詳情頁，為避免衝突建議依 09 → 10 → 11 → 12 → 13 逐票施工；共用 `list-context.ts` 後續修改須回歸已完成票。
+
+### 共同 security self review 重點
+
+- Admin-only：每個新讀取、DTO 欄位與頁面仍各自 `requireAdmin()`；非 admin 頁面維持 404，action 維持既有錯誤碼。
+- 草稿不可見：老師／需求草稿不因關聯限定、計數或詳情間連結出現；團體需求數與需求限定列表數量都只算 non-draft（課程草稿本來就是 admin 可見的分類，課程計數不套用此排除）。
+- 關聯 id 不作為授權依據：`organizationId`／`teacherProfileId`／名單條件只是 UI 篩選，經白名單 normalize，竄改只會得到 admin 本來可見的資料或安全回退。
+- 報名姓名／email 只在 admin 專用 DTO：不進公開、老師、團主或學員共用的型別或 helper；回饋訊息與定位參數不放 email（管理員自行輸入的名單搜尋詞例外，見票 12）。
+- 不改 Auth、Prisma schema、permissions、state machine、取消／報名核心或通知；不做 backlog 17 管理員指派。
+
+<!-- codex-peer-reviewed: 2026-10-05T02:34:39Z rounds=1 verdict=approved -->
+
+<!-- codex-peer-reviewed: 2026-10-05T03:25:05Z rounds=2 verdict=approved -->

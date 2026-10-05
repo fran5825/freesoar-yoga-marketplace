@@ -124,12 +124,15 @@ export async function listSubmittedDemandRequestsForAdmin(): Promise<
 export type DemandRequestDetailForAdmin = SubmittedDemandRequestForAdmin & {
   status: DemandRequestStatus;
   rejectionReason: string | null;
+  // 第三批票 09：只用來在「只看這個團體」時依 id 篩選，不是授權依據。
+  organizationId: string;
 };
 
 const demandRequestDetailSelect = {
   ...submittedDemandRequestSelect,
   status: true,
   rejectionReason: true,
+  organizationId: true,
 } as const;
 
 // admin-usability 票 07：需求審核列表。除了待審（submitted），也列出已公開、已退回等，讓篩選列

@@ -16,6 +16,18 @@ export type AdminOrganizationSummary = {
   classSessionCount: number;
 };
 
+// admin-usability 第三批票 09：需求／課程列表「只看這個團體」時顯示的名稱。只取名稱，查無資料回 null。
+export async function getOrganizationNameForAdmin(organizationId: string): Promise<string | null> {
+  await requireAdmin();
+
+  const organization = await prisma.organization.findUnique({
+    where: { id: organizationId },
+    select: { name: true },
+  });
+
+  return organization?.name ?? null;
+}
+
 export async function listOrganizationsForAdmin(): Promise<AdminOrganizationSummary[]> {
   await requireAdmin();
 

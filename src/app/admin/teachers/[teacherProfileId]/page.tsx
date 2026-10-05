@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { formatMultiChoiceText } from "@/app/teachers/join/_lib/application-fields";
+import { countClassSessionsForTeacherForAdmin } from "@/domain/class-session/admin-service";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { formatTeacherRatingSummary } from "@/domain/review/rating-summary";
 import { getTeacherProfileForAdmin } from "@/domain/teacher-profile/service";
@@ -10,7 +11,7 @@ import { requireAdmin } from "@/lib/auth/session";
 
 import { AdminFlash, type AdminFlashParams } from "../../_components/AdminFlash";
 import { AdminReviewPanel } from "../../_components/AdminReviewPanel";
-import { adminDetailHref, safeAdminReturnTo } from "../../_lib/list-context";
+import { adminDetailHref, adminListHref, safeAdminReturnTo } from "../../_lib/list-context";
 import { teacherRejectionTemplates } from "../../_components/reason-templates";
 import {
   approveTeacherProfileApplicationAction,
@@ -38,9 +39,10 @@ export default async function AdminTeacherDetailPage({
   }
 
   const { teacherProfileId } = await params;
-  const [teacher, resolvedSearchParams] = await Promise.all([
+  const [teacher, resolvedSearchParams, classSessionCount] = await Promise.all([
     getTeacherProfileForAdmin(teacherProfileId),
     searchParams,
+    countClassSessionsForTeacherForAdmin(teacherProfileId),
   ]);
 
   if (!teacher) {
@@ -120,6 +122,20 @@ export default async function AdminTeacherDetailPage({
         {teacher.status === "approved" || teacher.status === "suspended" ? (
           <Field label="評價" value={ratingSummary} />
         ) : null}
+        {/* 第三批票 09：有課程才給入口，數量與課程列表限定後的「全部」一致。 */}
+        <div className="grid gap-1">
+          <p className="text-sm font-medium text-ink">課程</p>
+          {classSessionCount > 0 ? (
+            <Link
+              className="w-fit text-sm font-medium text-clay underline underline-offset-4"
+              href={adminListHref("classes", { teacherProfileId: teacher.id })}
+            >
+              這位老師的課程（{classSessionCount}）
+            </Link>
+          ) : (
+            <p className="text-sm text-ink-soft">尚無課程</p>
+          )}
+        </div>
         <List label="擅長類型" values={teacher.specialties} />
         <List label="服務地區" values={teacher.serviceAreas} />
         <List label="授課形式" values={teacher.teachingFormats} />

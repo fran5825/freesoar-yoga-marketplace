@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { listDemandRequestsForAdmin } from "@/domain/demand-request/admin-service";
+import { getOrganizationNameForAdmin } from "@/domain/organizer-profile/admin-service";
 import { getDemandServiceTypes } from "@/domain/demand-request/service-types";
 import { formatRelativeTime } from "@/lib/format-relative-time";
 import { requireAdmin } from "@/lib/auth/session";
@@ -8,8 +9,8 @@ import { requireAdmin } from "@/lib/auth/session";
 import { AdminFilterBar, resolveActiveTab } from "../_components/AdminFilterBar";
 import { AdminFlash, type AdminFlashParams } from "../_components/AdminFlash";
 import { AdminListCard } from "../_components/AdminListCard";
-import { AdminSearchForm, AdminListResults } from "../_components/AdminSearchForm";
-import { adminDetailHref, adminListHref, matchesAdminSearch, normalizeAdminListQuery } from "../_lib/list-context";
+import { AdminSearchForm, AdminListResults, AdminRelationNotice } from "../_components/AdminSearchForm";
+import { adminDetailHref, adminListHref, adminRelationParams, hasAdminRelation, matchesAdminSearch, normalizeAdminListQuery, type AdminListQuery } from "../_lib/list-context";
 import { adminDemandStatusLabel, adminDemandStatusToneClass } from "./status-labels";
 
 type DemandStatus = Awaited<ReturnType<typeof listDemandRequestsForAdmin>>[number]["status"];
@@ -37,7 +38,7 @@ const emptyMessages: Record<string, string> = {
 };
 
 type AdminDemandsPageProps = {
-  searchParams?: Promise<AdminFlashParams & { status?: string; q?: string }>;
+  searchParams?: Promise<AdminFlashParams & AdminListQuery>;
 };
 
 export default async function AdminDemandsPage({ searchParams }: AdminDemandsPageProps) {
@@ -54,7 +55,9 @@ export default async function AdminDemandsPage({ searchParams }: AdminDemandsPag
   const now = new Date();
   const query = normalizeAdminListQuery("demands", resolvedSearchParams);
   const returnTo = adminListHref("demands", query);
-  const searchedDemands = demandRequests.filter((demand) => matchesAdminSearch(query.q, [demand.title, demand.organization.name, demand.organizerProfile.displayName, demand.organization.contactName, demand.organization.contactEmail]));
+  // 第三批票 09：「只看這個團體」依 organizationId 精準篩選；草稿本來就不在 listDemandRequestsForAdmin 裡。
+  const organizationName = query.organizationId ? await getOrganizationNameForAdmin(query.organizationId) : null;
+  const searchedDemands = demandRequests.filter((demand) => (!query.organizationId || demand.organizationId === query.organizationId) && matchesAdminSearch(query.q, [demand.title, demand.organization.name, demand.organizerProfile.displayName, demand.organization.contactName, demand.organization.contactEmail]));
   const processedDemand = demandRequests.find((demand) => demand.id === resolvedSearchParams?.item);
 
   const tabs = statusTabs.map((tab) => ({
@@ -87,6 +90,7 @@ export default async function AdminDemandsPage({ searchParams }: AdminDemandsPag
       <AdminFlash message={resolvedSearchParams?.message} result={resolvedSearchParams?.result} detailHref={processedDemand ? adminDetailHref("demands", processedDemand.id, returnTo) : undefined} detailLabel={processedDemand ? `查看 ${processedDemand.title ?? "剛處理的需求"}` : undefined} />
 
       <AdminSearchForm kind="demands" query={query} label="搜尋需求" hint="標題、團體、團主、聯絡人或聯絡 email" />
+      <AdminRelationNotice kind="demands" query={query} label={organizationName ? `只看團體「${organizationName}」的需求` : null} />
 
       <AdminFilterBar
         activeKey={activeTab.key}
@@ -94,12 +98,13 @@ export default async function AdminDemandsPage({ searchParams }: AdminDemandsPag
         basePath="/admin/demands"
         tabs={tabs}
         q={query.q}
+        relation={adminRelationParams(query)}
       />
       <AdminListResults count={visibleDemandRequests.length} query={query} />
 
       {visibleDemandRequests.length === 0 ? (
         <section className="rounded-2xl border border-ink/15 bg-white p-6">
-          <h2 className="text-lg font-medium text-ink">{query.q ? "這個分類沒有符合搜尋條件的需求。" : emptyMessages[activeTab.key]}</h2>
+          <h2 className="text-lg font-medium text-ink">{query.q || hasAdminRelation(query) ? "這個分類沒有符合條件的需求。" : emptyMessages[activeTab.key]}</h2>
         </section>
       ) : (
         <section className="grid gap-3">
