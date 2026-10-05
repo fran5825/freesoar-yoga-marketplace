@@ -519,7 +519,8 @@ test.describe("admin class session management smoke", () => {
     await row.locator('input[name="enrollmentId"]').evaluate((el: HTMLInputElement) => { el.value = "does-not-exist"; });
     await rowTrigger.click();
     await page.getByRole("dialog").getByRole("button", { name: "確認取消報名" }).click();
-    await expect(page.getByText(/「.*retry-a.*」的報名沒有取消：/)).toBeVisible();
+    // 第三批票 12：學員名稱改由頁面依 item 對照名單補上；item 被竄改成不存在的報名時，只顯示通用文字。
+    await expect(page.getByText(/^這筆報名沒有取消：/)).toBeVisible();
     await expect(rowTrigger).toBeEnabled();
     await rowTrigger.click();
     await page.getByRole("dialog").getByRole("button", { name: "確認取消報名" }).click();

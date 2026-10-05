@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 
 import { cancelClassSessionForAdmin } from "@/domain/class-session/admin-service";
 import { cancelEnrollmentForAdmin } from "@/domain/enrollment/admin-service";
-import { adminDetailHref, adminFeedbackHref } from "../../_lib/list-context";
+import { adminClassRosterHref, adminFeedbackHref, normalizeAdminRosterQuery } from "../../_lib/list-context";
 
 function revalidateClassSessionPaths(classSessionId: string): void {
   revalidatePath(`/admin/classes/${classSessionId}`);
@@ -48,14 +48,16 @@ export async function cancelEnrollmentAdminAction(formData: FormData): Promise<v
 
   revalidateClassSessionPaths(classSessionId);
 
-  // 學員識別只用來寫結果提示，取消資格仍由 service 依 enrollmentId 與當下狀態判斷。
-  const memberLabel = readFormString(formData, "memberLabel").slice(0, 100) || "這位學員";
+  // 取消資格仍由 service 依 enrollmentId 與當下狀態判斷。
+  // 第三批票 12：結果提示會進網址，所以這裡不帶任何學員姓名或 email，只帶通用文字與格式合法的
+  // enrollment id（item）；頁面再用 item 對照自己讀到的名單，把學員名稱補進提示。
+  const item = /^[A-Za-z0-9_-]{1,64}$/.test(enrollmentId) ? enrollmentId : undefined;
 
   if (!result.ok) {
-    redirectWithFeedback(classSessionId, "error", `「${memberLabel}」的報名沒有取消：${result.message}${failureNextStep}`, formData);
+    redirectWithFeedback(classSessionId, "error", `這筆報名沒有取消：${result.message}${failureNextStep}`, formData, item);
   }
 
-  redirectWithFeedback(classSessionId, "success", `已取消「${memberLabel}」的報名，同一位學員不能再報名這堂課。`, formData);
+  redirectWithFeedback(classSessionId, "success", "已取消這筆報名，同一位學員不能再報名這堂課。", formData, item);
 }
 
 // 第二批票 08：失敗會回到同一堂課的詳情並重新載入，畫面只會出現當下仍合法的取消操作。
@@ -86,9 +88,18 @@ function redirectWithFeedback(
   result: "success" | "error",
   message: string,
   formData: FormData,
+  item?: string,
 ): never {
-  const url = new URL(adminDetailHref("classes", classSessionId, readFormString(formData, "returnTo")), "https://admin.invalid");
+  // 第三批票 12：回到同一堂課時保留名單的搜尋與分類（rq／rstatus）與原本的 returnTo。
+  const url = new URL(
+    adminClassRosterHref(classSessionId, readFormString(formData, "returnTo"), {
+      rq: readFormString(formData, "rq"),
+      rstatus: normalizeAdminRosterQuery({ rstatus: formData.get("rstatus") }).rstatus,
+    }),
+    "https://admin.invalid",
+  );
   url.searchParams.set("result", result);
   url.searchParams.set("message", message);
+  if (item) url.searchParams.set("item", item);
   redirect(`${url.pathname}?${url.searchParams}`);
 }

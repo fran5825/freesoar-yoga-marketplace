@@ -50,7 +50,7 @@
 | [09](09-related-filter-lists.md) | 團體→需求／課程、老師→課程的限定列表，可組合搜尋與分類並保留返回 | None | STANDARD | yes，已放行 | 已實作，2026-10-05 畫面驗收通過 |
 | [10](10-detail-cross-links.md) | 需求→課程、課程→老師／來源需求／所屬團體，無關聯不出現死連結 | 09 | STANDARD | yes，已放行 | 已實作，2026-10-05 畫面驗收通過 |
 | [11](11-class-detail-summary-and-fields.md) | 課程詳情摘要優先，補課程風格、瑜伽類型、來源、報名方式、公開狀態與報名摘要 | None | STANDARD | yes，已放行 | 已實作，2026-10-05 畫面驗收通過 |
-| [12](12-roster-search-and-pending-cancel.md) | 名單姓名＋email、搜尋與分類數量、待確認報名取消，取消後留在名單 | 11 | STANDARD | yes | draft |
+| [12](12-roster-search-and-pending-cancel.md) | 名單姓名＋email、搜尋與分類數量、待確認報名取消，取消後留在名單 | 11 | STANDARD | yes，已放行 | 已實作，2026-10-05 畫面驗收通過 |
 | [13](13-dashboard-kpi-entries.md) | KPI 點擊到精準分類與「即將開始」課程條件，已確認報名只作統計 | 09 | STANDARD | yes | draft |
 
 ### 依賴與執行順序
@@ -72,3 +72,5 @@
 <!-- codex-peer-reviewed: 2026-10-05T08:01:49Z rounds=2 verdict=approved -->
 
 <!-- codex-peer-reviewed: 2026-10-05T08:50:21Z rounds=2 verdict=approved -->
+
+<!-- codex-peer-reviewed: 2026-10-05T13:52:50Z rounds=3 verdict=approved -->

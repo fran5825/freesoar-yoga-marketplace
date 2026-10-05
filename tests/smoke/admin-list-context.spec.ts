@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { adminClassOriginLabel } from "../../src/app/admin/classes/origin-labels";
-import { adminDetailHref, adminFeedbackHref, matchesAdminSearch, normalizeAdminListQuery, safeAdminReturnTo, sortAdminClasses } from "../../src/app/admin/_lib/list-context";
+import { adminClassRosterHref, adminDetailHref, adminFeedbackHref, matchesAdminSearch, normalizeAdminListQuery, normalizeAdminRosterQuery, safeAdminReturnTo, sortAdminClasses } from "../../src/app/admin/_lib/list-context";
 
 test("return context rejects external, cross-role and malformed paths, and removes unrelated parameters", () => {
   for (const value of ["https://evil.example", "//evil.example", "/\\evil.example", "/member/enrollments", "/admin/classes", "/admin/teachers/abc", "/admin/teachers%2f..%2fclasses", null]) {
@@ -43,6 +43,19 @@ test("relation filters are only accepted where supported, must look like ids, an
   const feedback = new URL(adminFeedbackHref("classes", classContext, "success", "完成", "id"), "https://admin.invalid");
   expect(feedback.searchParams.get("teacherProfileId")).toBe("t1");
   expect(feedback.searchParams.get("status")).toBe("open");
+});
+
+test("roster conditions are whitelisted and coexist with the class list return context", () => {
+  expect(normalizeAdminRosterQuery({ rq: "  Alice  ", rstatus: "pending" })).toEqual({ rq: "Alice", rstatus: "pending" });
+  for (const bad of ["bogus", "attended", "", null, ["pending"]]) expect(normalizeAdminRosterQuery({ rstatus: bad }).rstatus).toBe("all");
+  expect(normalizeAdminRosterQuery({ rq: "a".repeat(300) }).rq).toHaveLength(200);
+  const href = new URL(adminClassRosterHref("c1", "/admin/classes?q=A%26B&status=open", { rq: "x@y.z", rstatus: "cancelled" }, "enrollment-e1"), "https://admin.invalid");
+  expect(href.pathname).toBe("/admin/classes/c1");
+  expect(href.searchParams.get("returnTo")).toBe("/admin/classes?status=open&q=A%26B");
+  expect(href.searchParams.get("rq")).toBe("x@y.z");
+  expect(href.searchParams.get("rstatus")).toBe("cancelled");
+  expect(href.hash).toBe("#enrollment-e1");
+  expect(adminClassRosterHref("c1", "https://evil.example", {})).toBe("/admin/classes/c1");
 });
 
 test("class origin wording matches the public pages and falls back for origins the admin page does not know yet", () => {
