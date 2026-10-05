@@ -25,6 +25,7 @@ import {
 import { NextStepCard } from "../_components/NextStepCard";
 import { ResponseList } from "./_components/ResponseList";
 import { getDemandLocationItems } from "@/domain/demand-request/location";
+import { getClassPrefillFromDemand } from "@/domain/demand-request/class-prefill";
 
 type DemandRequestDetailPageProps = {
   params: Promise<{ demandRequestId: string }>;
@@ -64,6 +65,11 @@ export default async function DemandRequestDetailPage({
   }
 
   const responses = (await listResponsesForOwnDemandRequest(demandRequestId)) ?? [];
+  // 票 11：只帶入需求裡確定的欄位；時間、頻率只當參考文字，不猜成開始時間。
+  const classPrefill = getClassPrefillFromDemand(demandRequest, {
+    formatDate: formatDemandRequestDate,
+    frequencyLabels: demandRequestFrequencyLabels,
+  });
   // organizer-usability-redesign 票 04：從表單送審成功後導到這裡，顯示已收到的確認。
   const justSubmitted =
     resolvedSearchParams?.submitted === "1" && demandRequest.status === "submitted";
@@ -122,10 +128,7 @@ export default async function DemandRequestDetailPage({
         </section>
       ) : null}
 
-      <NextStepCard
-        demandRequest={demandRequest}
-        responseCount={responses.length}
-      />
+      <NextStepCard demandRequest={demandRequest} />
 
       <ResponseList
         demandRequestId={demandRequestId}
@@ -134,11 +137,15 @@ export default async function DemandRequestDetailPage({
       />
 
       {demandRequest.status === "matched" ? (
-        <section className="grid gap-5 rounded-2xl border border-ink/15 bg-white p-6">
+        <section
+          className="grid scroll-mt-24 gap-5 rounded-2xl border border-ink/15 bg-white p-6"
+          id="create-class"
+        >
           <div>
             <h2 className="text-lg font-medium text-ink">建立課程</h2>
             <p className="mt-2 text-sm leading-6 text-ink-soft">
               這會把這則需求轉為正式課程，之後無法修改，請確認資訊無誤後再送出。
+              地點、名額與說明已先帶入需求內容，可以依和老師討論的結果調整。
             </p>
           </div>
 
@@ -210,6 +217,11 @@ export default async function DemandRequestDetailPage({
                   type="datetime-local"
                 />
               </div>
+              {classPrefill.scheduleHint ? (
+                <p className="text-xs leading-5 text-ink-soft sm:col-span-2">
+                  需求填寫的偏好：{classPrefill.scheduleHint}。這些只是參考，請填和老師確認後的實際時間。
+                </p>
+              ) : null}
             </div>
 
             <div>
@@ -218,6 +230,7 @@ export default async function DemandRequestDetailPage({
               </label>
               <input
                 className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
+                defaultValue={classPrefill.location}
                 id="location"
                 maxLength={200}
                 name="location"
@@ -233,6 +246,7 @@ export default async function DemandRequestDetailPage({
               </label>
               <input
                 className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
+                defaultValue={classPrefill.capacity ?? undefined}
                 id="capacity"
                 max={500}
                 min={1}
@@ -251,6 +265,7 @@ export default async function DemandRequestDetailPage({
               </label>
               <textarea
                 className="mt-2 min-h-24 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
+                defaultValue={classPrefill.description}
                 id="description"
                 maxLength={2000}
                 name="description"
@@ -260,7 +275,12 @@ export default async function DemandRequestDetailPage({
 
             <label className="flex items-start gap-2 text-sm leading-6 text-ink-soft">
               <input className="mt-1 shrink-0" name="isPublic" type="checkbox" value="yes" />
-              允許公開課程詳情頁與分享連結（未來功能，本輪送出後暫不生效）
+              <span>
+                同時公開在課程列表
+                <span className="mt-1 block text-xs leading-5 text-ink-soft">
+                  勾選後，這堂課開放報名時會出現在公開的課程列表，任何人都看得到。不勾選就不會出現在公開列表。
+                </span>
+              </span>
             </label>
 
             <label className="flex items-start gap-2 text-sm leading-6 text-ink-soft">

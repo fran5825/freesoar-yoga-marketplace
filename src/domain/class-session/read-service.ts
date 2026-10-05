@@ -25,6 +25,8 @@ export type OrganizerFacingClassSession = {
   origin: ClassSessionOrigin;
   // 直接開團（organizer_direct）沒有需求，demandRequest 會是 null；適合對象顯示未指定，不猜測。
   demandRequest: { targetLevel: string | null } | null;
+  // 票 11：找老師媒合的課程可以連回來源需求；直接開團沒有需求，為 null。
+  demandRequestId: string | null;
   teacherProfile: { displayName: string | null };
 };
 
@@ -41,6 +43,7 @@ const organizerFacingClassSessionSelect = {
   status: true,
   createdAt: true,
   demandRequest: { select: { targetLevel: true } },
+  demandRequestId: true,
   teacherProfile: { select: { displayName: true } },
 } as const;
 

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { getOwnClassSessionDetailForOrganizer } from "@/domain/class-session/read-service";
@@ -83,6 +84,16 @@ export default async function OrganizerClassSessionDetailPage({
         <h1 className="mt-2 min-w-0 break-words text-3xl font-semibold tracking-tight text-ink">
           {classSession.title}
         </h1>
+        {classSession.demandRequestId ? (
+          <p className="mt-3 text-sm">
+            <Link
+              className="font-medium text-clay underline-offset-4 hover:underline"
+              href={`/organizer/demands/${classSession.demandRequestId}`}
+            >
+              查看來源需求
+            </Link>
+          </p>
+        ) : null}
       </header>
 
       {feedback ? (

@@ -146,6 +146,7 @@ export default async function OrganizerDemandsPage({
               {visibleDemandRequests.map((demandRequest) => {
                 const nextStep = getDemandNextStep({
                   status: demandRequest.status,
+                  effectiveResponseCount: demandRequest.effectiveResponseCount,
                 });
 
                 return (

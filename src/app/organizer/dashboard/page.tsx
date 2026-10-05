@@ -73,7 +73,10 @@ export default async function OrganizerDashboardPage() {
   const pendingActions = demandRequests
     .map((demandRequest) => ({
       demandRequest,
-      nextStep: getDemandNextStep({ status: demandRequest.status }),
+      nextStep: getDemandNextStep({
+        status: demandRequest.status,
+        effectiveResponseCount: demandRequest.effectiveResponseCount,
+      }),
     }))
     .filter(({ nextStep }) => nextStep.kind === "action");
   // 草稿可能有好幾筆，而且下方「我的需求」已經逐筆列出，所以這裡只放一行摘要。
