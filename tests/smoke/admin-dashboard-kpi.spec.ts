@@ -43,6 +43,8 @@ async function listTabCount(page: Page, href: string, tabLabel: string): Promise
 }
 
 test("dashboard keeps pending work first and every KPI opens a list with exactly the same condition", async ({ context, page }, testInfo) => {
+  // 長流程（多次換頁＋共用資料庫重試比對），高負載時超過預設 30 秒。
+  test.slow();
   const runId = normalizeForEmail(`${testInfo.project.name}-${testInfo.workerIndex}-${Date.now()}`);
   const adminEmail = `admin-${runId}@${testEmailDomain}`;
   const teacherEmail = `teacher-${runId}@${testEmailDomain}`;
@@ -130,6 +132,8 @@ test("dashboard keeps pending work first and every KPI opens a list with exactly
 });
 
 test("the upcoming condition survives detail return, single-enrolment cancellation and partial clears together with other conditions", async ({ context, page }, testInfo) => {
+  // 長流程（多次換頁＋共用資料庫重試比對），高負載時超過預設 30 秒。
+  test.slow();
   const runId = normalizeForEmail(`${testInfo.project.name}-${testInfo.workerIndex}-combo-${Date.now()}`);
   const adminEmail = `admin-combo-${runId}@${testEmailDomain}`;
   const teacherEmail = `teacher-combo-${runId}@${testEmailDomain}`;
@@ -183,6 +187,8 @@ test("the upcoming condition survives detail return, single-enrolment cancellati
 });
 
 test("pending work lists the five oldest teacher applications and demands with exact totals, and KPI cards stack on mobile", async ({ context, page }, testInfo) => {
+  // 長流程（多次換頁＋共用資料庫重試比對），高負載時超過預設 30 秒。
+  test.slow();
   const runId = normalizeForEmail(`${testInfo.project.name}-${testInfo.workerIndex}-pending-${Date.now()}`);
   const adminEmail = `admin-pending-${runId}@${testEmailDomain}`;
   createdEmails.push(adminEmail);
