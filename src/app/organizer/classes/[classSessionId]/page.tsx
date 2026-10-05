@@ -28,16 +28,17 @@ export default async function OrganizerClassSessionDetailPage({
   params,
   searchParams,
 }: OrganizerClassSessionDetailPageProps) {
-  try {
-    await requireUser();
-  } catch {
-    redirect("/sign-in");
-  }
-
   const [{ classSessionId }, resolvedSearchParams] = await Promise.all([
     params,
     searchParams,
   ]);
+
+  // 票 10：未登入打開單筆課程網址，登入後回到同一堂課。
+  try {
+    await requireUser();
+  } catch {
+    redirect(`/sign-in?callbackUrl=${encodeURIComponent(`/organizer/classes/${classSessionId}`)}`);
+  }
 
   // organizer-usability-redesign 票 09：從合作邀請開放報名後導到這裡（固定代碼，不顯示網址上的文字）。
   const feedback =

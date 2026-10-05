@@ -8,8 +8,9 @@ import {
   normalizeForEmail,
 } from "./_helpers/organizer-demand-fixtures";
 
-// organizer-usability 第 1 批：/organizers/request 只給非團主看，已是團主直接導向總覽。
-// 「沒登入」的情況由 public-trust-pages.spec.ts 涵蓋。
+// organizer-usability 第 1 批：/organizers/request 的各種身分。
+// organizer-usability-redesign 票 10：改成兩張情境卡；已是團主看精簡選擇，不再一律導向需求表單。
+// 「沒登入」的情況由 public-trust-pages.spec.ts 涵蓋，intent 返回流程見 organizer-entry-intent.spec.ts。
 const testEmailDomain = "organizers-request-smoke.local";
 const createdEmails: string[] = [];
 
@@ -18,7 +19,7 @@ test.afterAll(async () => {
 });
 
 test.describe("/organizers/request states", () => {
-  test("a signed-in user without an organizer profile sees the pitch with a create-profile button", async ({
+  test("a signed-in user without an organizer profile sees the pitch with two intent cards that go through profile creation", async ({
     context,
     page,
   }, testInfo) => {
@@ -36,14 +37,15 @@ test.describe("/organizers/request states", () => {
     await expect(
       page.getByRole("heading", { name: "為公司社團與社區，找到適合的瑜伽老師" }),
     ).toBeVisible();
-    await expect(page.getByRole("link", { name: "建立團主資料" })).toHaveAttribute(
+    await expect(page.getByRole("link", { name: /我需要找老師/ })).toHaveAttribute(
       "href",
-      "/organizer/profile",
+      `/organizer/profile?next=${encodeURIComponent("/organizer/demands/new")}`,
     );
-    await expect(page.getByRole("link", { name: "登入／建立帳號並開始" })).toHaveCount(0);
+    // 「我已有合作老師」入口暫不公開（DIRECT_CLASS_ENTRY_PUBLIC，等票 09 老師端 origin guards）。
+    await expect(page.getByRole("link", { name: /我已有合作老師/ })).toHaveCount(0);
   });
 
-  test("an existing organizer is redirected to the new demand form instead of seeing the pitch", async ({
+  test("an existing organizer sees a compact choice of the two paths instead of the pitch", async ({
     context,
     page,
   }, testInfo) => {
@@ -65,10 +67,20 @@ test.describe("/organizers/request states", () => {
 
     await page.goto("/organizers/request");
 
-    await expect(page).toHaveURL(/\/organizer\/demands\/new$/);
+    await expect(page).toHaveURL(/\/organizers\/request$/);
     // 桌機導覽列直接顯示，手機收成選單，所以這裡只確認團主專區的 header 出現。
     await expect(page.getByRole("banner").getByText("團主專區")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "建立新的團課需求" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "這次要怎麼開始？" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "為公司社團與社區，找到適合的瑜伽老師" }),
+    ).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /我需要找老師/ })).toHaveAttribute(
+      "href",
+      "/organizer/demands/new",
+    );
+    await expect(page.getByRole("link", { name: /我已有合作老師/ })).toHaveCount(0);
+    await page.getByRole("link", { name: /我需要找老師/ }).click();
+    await expect(page).toHaveURL(/\/organizer\/demands\/new$/);
   });
 
   test("the home page sends a visitor to the pitch, and a signed-in organizer to their last-used area's dashboard", async ({
@@ -106,7 +118,7 @@ test.describe("/organizers/request states", () => {
     await expect(page).toHaveURL(/\/organizer\/dashboard$/);
   });
 
-  test("a signed-in user without an organizer profile who opens the new demand form lands on profile creation", async ({
+  test("a signed-in user without an organizer profile who opens the new demand form lands on profile creation that returns to the form", async ({
     context,
     page,
   }, testInfo) => {
@@ -121,7 +133,9 @@ test.describe("/organizers/request states", () => {
 
     await page.goto("/organizer/demands/new");
 
-    await expect(page).toHaveURL(/\/organizer\/profile$/);
+    await expect(page).toHaveURL(
+      `/organizer/profile?next=${encodeURIComponent("/organizer/demands/new")}`,
+    );
   });
 
   test("an organizer with incomplete contact info still reaches the form, and is warned on the dashboard", async ({
@@ -144,7 +158,7 @@ test.describe("/organizers/request states", () => {
     });
     await addAuthSessionCookie(context, sessionToken);
 
-    await page.goto("/organizers/request");
+    await page.goto("/organizers/request?intent=find_teacher");
     await expect(page).toHaveURL(/\/organizer\/demands\/new$/);
 
     await page.goto("/organizer/dashboard");

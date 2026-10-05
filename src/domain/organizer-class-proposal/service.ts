@@ -219,6 +219,55 @@ export async function getOwnProposalForOrganizer(proposalId: string): Promise<Pr
   return row ? toDetail(row) : null;
 }
 
+// 票 10：「我的課程」上方列出還在進行中的直接開團（草稿、等待確認、已確認待開放、被婉拒待修改），
+// 讓團主從入口建立後找得回來。已開放報名的會出現在正式課程列表、已撤回的不再列出。
+// 只回傳本人 owner 的邀請；待我處理／等待對方的細分在票 12。
+export type OwnProposalListItem = {
+  id: string;
+  title: string | null;
+  status: OrganizerClassProposalStatus;
+  startAt: Date | null;
+  updatedAt: Date;
+  organizationName: string;
+  teacherDisplayName: string | null;
+};
+
+export async function listOwnActiveProposalsForOrganizer(): Promise<OwnProposalListItem[]> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    return [];
+  }
+  const organizerProfileId = await getOwnOrganizerProfileId(currentUser.id);
+  if (!organizerProfileId) {
+    return [];
+  }
+  const rows = await prisma.organizerClassProposal.findMany({
+    where: {
+      organizerProfileId,
+      status: { in: ["draft", "pending_confirmation", "confirmed", "declined"] },
+    },
+    orderBy: { updatedAt: "desc" },
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      startAt: true,
+      updatedAt: true,
+      organization: { select: { name: true } },
+      teacherProfile: { select: { displayName: true } },
+    },
+  });
+  return rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    status: row.status,
+    startAt: row.startAt,
+    updatedAt: row.updatedAt,
+    organizationName: row.organization.name,
+    teacherDisplayName: row.teacherProfile?.displayName ?? null,
+  }));
+}
+
 // 受邀老師只看得到已送出過的邀請（草稿不給老師看）；不需要 approved 也能看自己收到的既有邀請。
 export async function getProposalForTeacher(proposalId: string): Promise<ProposalDetail | null> {
   const currentUser = await getCurrentUser();

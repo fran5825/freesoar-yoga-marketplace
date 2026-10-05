@@ -36,16 +36,17 @@ export default async function DemandRequestDetailPage({
   params,
   searchParams,
 }: DemandRequestDetailPageProps) {
-  try {
-    await requireUser();
-  } catch {
-    redirect("/sign-in");
-  }
-
   const [{ demandRequestId }, resolvedSearchParams] = await Promise.all([
     params,
     searchParams,
   ]);
+
+  // 票 10：未登入打開單筆需求網址，登入後回到同一筆需求。
+  try {
+    await requireUser();
+  } catch {
+    redirect(`/sign-in?callbackUrl=${encodeURIComponent(`/organizer/demands/${demandRequestId}`)}`);
+  }
 
   const feedback =
     resolvedSearchParams?.result && resolvedSearchParams.message

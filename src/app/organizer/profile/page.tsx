@@ -23,18 +23,19 @@ type OrganizerProfilePageProps = {
 export default async function OrganizerProfilePage({
   searchParams,
 }: OrganizerProfilePageProps) {
-  const currentUser = await getCurrentUser();
-
-  if (!currentUser) {
-    redirect("/sign-in");
-  }
-
-  const [organizerContext, resolvedSearchParams] = await Promise.all([
-    getOwnOrganizerContext(),
+  const [currentUser, resolvedSearchParams] = await Promise.all([
+    getCurrentUser(),
     searchParams,
   ]);
-
   const next = sanitizeOrganizerReturnPath(resolvedSearchParams?.next);
+
+  // 票 10：未登入時登入後回到這頁，並保留要接著前往的流程。
+  if (!currentUser) {
+    const here = next ? `/organizer/profile?next=${encodeURIComponent(next)}` : "/organizer/profile";
+    redirect(`/sign-in?callbackUrl=${encodeURIComponent(here)}`);
+  }
+
+  const organizerContext = await getOwnOrganizerContext();
 
   if (organizerContext && next) {
     const target = organizerContext.organization
@@ -54,7 +55,9 @@ export default async function OrganizerProfilePage({
         <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
           {organizerContext
             ? "這裡是你本人的團主資料；你代表的團體與聯絡方式在「我的團體」管理。"
-            : "填好這一頁就能開始整理團課需求，之後不用再補其他資料。"}
+            : next?.startsWith("/organizer/class-proposals/")
+              ? "填好這一頁就能接著安排課程、邀請合作老師，之後不用再補其他資料。"
+              : "填好這一頁就能開始整理團課需求，之後不用再補其他資料。"}
         </p>
       </header>
 

@@ -34,7 +34,8 @@ export default async function NewDemandRequestPage({ searchParams }: NewDemandRe
   const organizerContext = await getOwnOrganizerContext();
 
   if (!organizerContext) {
-    redirect("/organizer/profile");
+    // 票 10：第一次使用先建立團主資料，建立後回到新需求表單（保留找老師的意圖）。
+    redirect(`/organizer/profile?next=${encodeURIComponent("/organizer/demands/new")}`);
   }
 
   const organizations = await listOwnOrganizations();

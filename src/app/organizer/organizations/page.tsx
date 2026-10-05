@@ -16,7 +16,7 @@ export default async function OrganizationsPage({ searchParams }: OrganizationsP
   const currentUser = await getCurrentUser();
 
   if (!currentUser) {
-    redirect("/sign-in");
+    redirect(`/sign-in?callbackUrl=${encodeURIComponent("/organizer/organizations")}`);
   }
 
   const organizerContext = await getOwnOrganizerContext();
