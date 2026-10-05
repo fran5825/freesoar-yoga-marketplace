@@ -34,6 +34,8 @@
 - 驗證：tsc、lint、build、`git diff --check` 通過；3100 執行新增 `admin-class-detail-summary`（多風格／瑜伽類型／需確認／公開、舊資料退回單一風格／直接報名／不公開、2 已報名＋1 待確認＋1 已取消的摘要、區塊順序、頁內跳轉、已結束課程沒有取消入口、無橫向溢出）＋`admin-detail-links`＋`admin-class-session-management` 通過。截圖 `.ai-runs/admin-usability/*-class-summary.png`，已親看 390px。名單的「處理中」標籤屬票 12。
 - Codex peer review 第 1 輪指出：(1) 沒有長說明、首屏只用 `toContainText` 不能證明 RWD；(2) 未知來源 fallback 沒有測試。已補：測試課程加入含 160 字無空白長字串的長說明；一進頁面、還沒捲動前就斷言課程名稱、狀態、時間與報名摘要在畫面內（`toBeInViewport`），並檢查無橫向溢出（desktop／390px）；fallback 改為純函式並補測試。`admin-class-detail-summary`＋`admin-list-context` 14/14 通過。
 
+- 2026-10-06 用詞調整：合併團主 redesign 後，課程詳情頁首同時出現團主端加的來源標籤（「團主媒合」）與本票摘要（「團主團課」）。產品主人選擇統一用團主端的管理員用詞：`adminClassOriginLabel` 改讀 `classOriginLabelsForAdmin`（團主媒合／老師開課／團主直接開團，未知值仍顯示「其他來源」），並移除重複的頁首標籤；規格第 7 節同步更新。
+
 ## Security self review 重點
 
 - 只擴充 `getClassSessionDetailForAdmin` 的 select；新增欄位皆為課程本身的資料，不夾帶其他使用者個資。
@@ -53,3 +55,5 @@
 <!-- codex-peer-reviewed: 2026-10-04T22:20:22Z rounds=2 verdict=approved -->
 
 <!-- codex-peer-reviewed: 2026-10-05T08:50:21Z rounds=2 verdict=approved -->
+
+<!-- codex-peer-reviewed: 2026-10-05T21:19:50Z rounds=2 verdict=approved -->

@@ -115,9 +115,9 @@ test("class detail leads with time, place, teacher, origin and a full-roster enr
   await page.getByRole("link", { name: "前往取消操作" }).click();
   await expect(page.getByRole("button", { name: "取消課程", exact: true })).toBeInViewport();
 
-  // 舊資料：課程風格退回單一 serviceType；直接報名、不公開、團主團課；已結束的課沒有取消入口。
+  // 舊資料：課程風格退回單一 serviceType；直接報名、不公開、團主媒合；已結束的課沒有取消入口。
   await page.goto(`/admin/classes/${legacyClass.id}`);
-  await expect(header).toContainText("團主團課");
+  await expect(header).toContainText("團主媒合");
   await expect(header).toContainText("已報名 0 人・待老師確認 0 人・名額佔用 0／6");
   await expect(content).toContainText(`伸展 ${runId}`);
   await expect(content.getByText("直接報名", { exact: true })).toBeVisible();
