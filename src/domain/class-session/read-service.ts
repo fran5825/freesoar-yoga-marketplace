@@ -104,6 +104,9 @@ export type TeacherFacingClassSession = {
   id: string;
   title: string;
   description: string | null;
+  // member-flow 票 03：適合對象、準備事項（沒填是 null）。
+  suitableFor: string | null;
+  preparationNotes: string | null;
   serviceType: string | null;
   serviceTypes: string[];
   yogaStyles: string[];

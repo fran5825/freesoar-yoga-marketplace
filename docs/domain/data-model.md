@@ -280,6 +280,8 @@ Fields:
 - requiresApproval（新欄位，`Boolean @default(false)`；`true` 時新報名先落在 `Enrollment.status = "pending"`，需要老師確認才轉為 `confirmed`，見下方 `Enrollment` 說明與 Gate G2/G3）
 - title
 - description
+- suitableFor（2026-10-05 新增，nullable text：「適合對象／程度」，老師選填、最多 500 字（應用層限制），trim 後空字串存 null。目前可在老師「建立單堂課」與「改不屬於系列的單堂課」填寫；系列建立與系列場次修改由 member-flow 票 04 補上。舊課、團主媒合課與團主直接開課維持 null，不回填，學員課程頁顯示「尚未提供」。migration `20261005200000_class_session_member_info`，來源 `docs/superpowers/plans/member-flow-redesign/tickets/03-single-class-suitable-for-and-preparation.md`）
+- preparationNotes（2026-10-05 新增，規則同 suitableFor：「準備事項」，老師選填、最多 500 字。改課時修改這兩欄不通知已報名學員）
 - serviceType（主要課程風格，＝serviceTypes 的第一個）
 - serviceTypes（2026-09-26 新增，`String[] @default([])`：課程風格，可多選最多 3 個，值須落在 `service-types.ts` 清單內）
 - yogaStyles（2026-09-26 新增，`String[] @default([])`：瑜伽類型，老師建課必填，標籤來源同老師「擅長類型」，可加自訂項目；團主媒合的課為空。2026-10-03 起所有值一律寫「瑜伽」：儲存時自動把「瑜珈」改成「瑜伽」，舊資料由 data-only migration `20261003000000_yoga_wording_unify` 轉換，同一規則也套用在 `TeacherProfile.specialties`）
@@ -449,7 +451,7 @@ Fields:
 - createdAt
 - sentAt（nullable，`pending`／`failed` 狀態時為 null）
 
-**待確認（organizer-usability-redesign 票 12 的 Human Gate）**：合作邀請的站內通知需要新增 5 個 `NotificationType`。另外，要讓通知直達單筆、重試不重複，需要新增可空欄位 `targetType`、`targetId` 與 `eventKey`（unique）。這兩項都是 schema 變更，要在票 12 開始前取得產品主人確認；建議內容見 `docs/specs/organizer-usability-redesign-spec.md` 第 13.7 節。確認前沿用目前的做法（依通知類型連到列表頁）。
+**已落地（organizer-usability-redesign 票 12，產品主人 2026-10-05 確認方案 A）**：`NotificationType` 新增 5 個合作邀請事件（`class_proposal_invited`／`class_proposal_confirmed`／`class_proposal_declined`／`class_proposal_withdrawn`／`class_proposal_revised`，migration `20261005210000_notification_proposal_types`）。`Notification` 新增三個可空欄位（migration `20261005210100_notification_target`）：`targetType`（新 enum `NotificationTargetType`：`organizer_class_proposal`／`teacher_class_proposal`／`organizer_class_session`／`teacher_class_session`，連結由 `src/domain/notification/link.ts` 依白名單推導，不存網址）、`targetId`、`eventKey`（unique，格式 `class-proposal:<邀請 id>:<transitionSeq>:<收件人 userId>`，同一次轉換重試時寫入衝突即視為已發送）。舊通知三欄皆為 NULL，照舊依通知類型連到列表頁；不加已讀欄位。
 
 ## AdminNote
 

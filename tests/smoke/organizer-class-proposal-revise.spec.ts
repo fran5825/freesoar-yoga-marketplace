@@ -181,7 +181,7 @@ test.describe("organizer class proposal revise smoke", () => {
     const { organizer, teacher } = await setup(id);
     const times = slot(41);
     const proposal = await createProposal(organizer, teacher.teacherProfileId, `已確認修改 ${id}`, times);
-    expect(await confirmProposalCore(teacher.teacherProfileId, teacher.userId, proposal.id, 1)).toEqual({ ok: true });
+    expect(await confirmProposalCore(teacher.teacherProfileId, teacher.userId, proposal.id, 1)).toMatchObject({ ok: true });
 
     const { context, page } = await organizerPage(browser, organizer.sessionToken);
     await page.goto(`/organizer/class-proposals/${proposal.id}/edit`);
@@ -240,7 +240,7 @@ test.describe("organizer class proposal revise smoke", () => {
     const { organizer, teacher } = await setup(id);
     const times = slot(43);
     const proposal = await createProposal(organizer, teacher.teacherProfileId, `撤回 ${id}`, times);
-    expect(await confirmProposalCore(teacher.teacherProfileId, teacher.userId, proposal.id, 1)).toEqual({ ok: true });
+    expect(await confirmProposalCore(teacher.teacherProfileId, teacher.userId, proposal.id, 1)).toMatchObject({ ok: true });
 
     const { context, page } = await organizerPage(browser, organizer.sessionToken);
     await page.goto(`/organizer/class-proposals/${proposal.id}`);
@@ -270,7 +270,7 @@ test.describe("organizer class proposal revise smoke", () => {
 
     // 時段已釋放：同時段另一份邀請可以被確認。
     const another = await createProposal(organizer, teacher.teacherProfileId, `撤回後的新邀請 ${id}`, times);
-    expect(await confirmProposalCore(teacher.teacherProfileId, teacher.userId, another.id, 1)).toEqual({ ok: true });
+    expect(await confirmProposalCore(teacher.teacherProfileId, teacher.userId, another.id, 1)).toMatchObject({ ok: true });
   });
 
   test("teacher swap, organization lock, converted guard and other organizers", async ({}, testInfo) => {
@@ -286,7 +286,7 @@ test.describe("organizer class proposal revise smoke", () => {
       1,
       revisionOf(proposal, { teacherProfileId: teacherB.teacherProfileId }),
     );
-    expect(swapped).toEqual({ ok: true, version: 2, status: "pending_confirmation" });
+    expect(swapped).toMatchObject({ ok: true, version: 2, status: "pending_confirmation" });
     expect(await confirmProposalCore(teacher.teacherProfileId, teacher.userId, proposal.id, 2)).toEqual({
       ok: false,
       code: "proposal_not_found",
@@ -382,7 +382,7 @@ test.describe("organizer class proposal revise smoke", () => {
 
     releaseRevise.resolve();
     const [reviseResult, confirmResult] = await Promise.all([reviseCall, confirmCall]);
-    expect(reviseResult).toEqual({ ok: true, version: 2, status: "pending_confirmation" });
+    expect(reviseResult).toMatchObject({ ok: true, version: 2, status: "pending_confirmation" });
     expect(confirmResult).toEqual({ ok: false, code: "proposal_version_stale" });
   });
 
@@ -458,8 +458,8 @@ test.describe("organizer class proposal revise smoke", () => {
     releaseConfirm.resolve();
     const [confirmResult, reviseResult] = await Promise.all([confirmCall, reviseCall]);
     // 確認不改 version，所以之後的修改仍以 version 1 成功；已確認的邀請修改後回到草稿。
-    expect(confirmResult).toEqual({ ok: true });
-    expect(reviseResult).toEqual({ ok: true, version: 2, status: "draft" });
+    expect(confirmResult).toMatchObject({ ok: true });
+    expect(reviseResult).toMatchObject({ ok: true, version: 2, status: "draft" });
     const final = await prisma.organizerClassProposal.findUniqueOrThrow({
       where: { id: proposal.id },
       select: { status: true, confirmedAt: true, confirmedVersion: true, confirmedByUserId: true },
@@ -501,7 +501,7 @@ test.describe("organizer class proposal revise smoke", () => {
 
     // A 已確認 → 修改並換成 B（回到草稿）→ 還沒邀請 B 就撤回：A、B 都讀不到。
     const swapped = await createProposal(organizer, teacher.teacherProfileId, `換人後撤回 ${id}`, slot(48, 3));
-    expect(await confirmProposalCore(teacher.teacherProfileId, teacher.userId, swapped.id, 1)).toEqual({ ok: true });
+    expect(await confirmProposalCore(teacher.teacherProfileId, teacher.userId, swapped.id, 1)).toMatchObject({ ok: true });
     expect(
       await reviseProposalCore(
         organizer.organizerProfileId,
@@ -509,7 +509,7 @@ test.describe("organizer class proposal revise smoke", () => {
         1,
         revisionOf(swapped, { teacherProfileId: teacherB.teacherProfileId }),
       ),
-    ).toEqual({ ok: true, version: 2, status: "draft" });
+    ).toMatchObject({ ok: true, version: 2, status: "draft" });
     expect(await withdrawProposalCore(organizer.organizerProfileId, swapped.id, 2, "")).toMatchObject({ ok: true });
     expect(await teacherStatus(teacherB.sessionToken, swapped.id)).toBe(404);
     expect(await teacherStatus(teacher.sessionToken, swapped.id)).toBe(404);
@@ -547,7 +547,7 @@ test.describe("organizer class proposal revise smoke", () => {
       transitionSeq: before.transitionSeq + 1,
       declineReason: null,
     });
-    expect(await confirmProposalCore(teacher.teacherProfileId, teacher.userId, proposal.id, before.version)).toEqual({
+    expect(await confirmProposalCore(teacher.teacherProfileId, teacher.userId, proposal.id, before.version)).toMatchObject({
       ok: true,
     });
   });

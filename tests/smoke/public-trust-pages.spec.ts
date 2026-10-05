@@ -98,8 +98,10 @@ test.describe("public trust pages", () => {
       "href",
       `/sign-in?callbackUrl=${encodeURIComponent("/organizers/request?intent=find_teacher")}`,
     );
-    // 「我已有合作老師」入口暫不公開（DIRECT_CLASS_ENTRY_PUBLIC，等票 09 老師端 origin guards）。
-    await expect(page.getByRole("link", { name: /我已有合作老師/ })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /我已有合作老師/ })).toHaveAttribute(
+      "href",
+      `/sign-in?callbackUrl=${encodeURIComponent("/organizers/request?intent=direct_class")}`,
+    );
 
     // teacher-join-gated-application：未登入訪客現在看到的是導覽說明頁，不是可填表單
     // （G1／Definition of Done），入口控制項換成帶 callbackUrl 的登入 CTA。

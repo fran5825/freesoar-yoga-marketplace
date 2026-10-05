@@ -97,3 +97,10 @@ Organizer 會收到 class created / changed / cancelled 類通知；V1 課前提
 - 多語系通知
 - 個人化 AI 推薦通知
 - 大量通知 queue，除非通知量明顯超過 V1 需求
+
+## 合作邀請通知（organizer-usability-redesign 票 12，2026-10-05 已落地）
+
+- 事件與收件人：邀請送出／重送 → 受邀老師（`class_proposal_invited`）；等待確認中修改內容 → 受邀老師（`class_proposal_revised`）；老師確認／婉拒 → 團主（`class_proposal_confirmed`／`class_proposal_declined`，婉拒附原因）；撤回或換老師 → 曾看到邀請的原老師（`class_proposal_withdrawn`，撤回附說明）；團主開放報名 → 老師（`class_session_created`）。本人授課不寄給自己。
+- 直達單筆：通知帶 `targetType`＋`targetId`，連到團主或老師端的邀請頁／課程頁；舊通知照舊連到列表頁。
+- 防重複：`eventKey` 唯一，同一次轉換重試只會有一則；不同步驟（例如送出 → 婉拒 → 不修改重送 → 再婉拒）各自發送。
+- 通知在 domain transaction commit 之後發送，失敗只記 log，不回滾已完成的轉換。仍只寫 in_app，不寄 email、不加未讀數。

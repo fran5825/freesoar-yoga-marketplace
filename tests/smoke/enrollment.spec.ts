@@ -161,8 +161,11 @@ test.describe("enrollment smoke", () => {
     await page.getByRole("button", { name: "開放報名" }).click();
 
     await expect(page.getByText("已開放報名。")).toBeVisible();
-    const shareLink = page.getByText(`/classes/${classSessionId}`, { exact: true });
-    await expect(shareLink).toBeVisible();
+    // organizer-usability-redesign 票 13：報名連結顯示完整網址（含網域），主要動作是複製。
+    await expect(page.getByLabel("報名連結")).toHaveValue(
+      `${new URL(page.url()).origin}/classes/${classSessionId}`,
+    );
+    await expect(page.getByRole("button", { name: "複製報名連結" })).toBeVisible();
 
     await context.clearCookies();
     await addAuthSessionCookie(context, memberSessionToken);

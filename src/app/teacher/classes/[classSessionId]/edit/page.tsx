@@ -106,6 +106,8 @@ export default async function EditClassSessionPage({ params }: EditClassSessionP
             classSessionId: classSession.id,
             title: classSession.title,
             description: classSession.description ?? "",
+            suitableFor: classSession.suitableFor ?? "",
+            preparationNotes: classSession.preparationNotes ?? "",
             serviceTypes: classSession.serviceTypes.length
               ? classSession.serviceTypes
               : classSession.serviceType

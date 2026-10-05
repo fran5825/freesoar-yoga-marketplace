@@ -4,7 +4,9 @@ import {
   cancelClassSessionForAdmin,
   cancelClassSessionForOrganizer,
 } from "../../src/domain/class-session/__internal__/cancel-class-session-core";
+import { cancelClassSessionForTeacher } from "../../src/domain/class-session/__internal__/cancel-class-session-core-for-teacher";
 import { completeClassSessionForTeacher } from "../../src/domain/class-session/__internal__/complete-class-session-core-for-teacher";
+import { openClassSessionForEnrollmentForTeacher } from "../../src/domain/class-session/__internal__/open-class-session-core-for-teacher";
 import { createEnrollmentForUser } from "../../src/domain/enrollment/__internal__/create-enrollment-core";
 import { openDirectClassFromProposalCore } from "../../src/domain/organizer-class-proposal/__internal__/open-direct-class-core";
 import { createTeacherProfileWithSession } from "./_helpers/demand-response-fixtures";
@@ -477,5 +479,81 @@ test.describe("organizer direct class smoke", () => {
     await adminPage.goto(`/admin/classes/${opened.classSessionId}`);
     await expect(adminPage.getByText("團主直接開團").first()).toBeVisible();
     await adminContext.close();
+  });
+  test("teacher-side open and cancel only apply to the teacher's own classes, even when they teach the organizer's class", async ({}, testInfo) => {
+    const id = runId(testInfo, "teacher-guards");
+    const { organizer, teacher } = await setup(id);
+    const member = await createUserSession({ email: `member-guard-${id}@${testEmailDomain}` });
+    createdEmails.push(`member-guard-${id}@${testEmailDomain}`);
+
+    // 團主直接開團：受邀老師不能從老師端取消，課程與報名都不受影響。
+    const proposal = await createConfirmedProposal(organizer, teacher, `老師端越權 ${id}`, slot(59));
+    const opened = await openDirectClassFromProposalCore(organizer.organizerProfileId, proposal.id, 1);
+    if (!opened.ok) throw new Error("open failed");
+    expect(await createEnrollmentForUser(member.userId, opened.classSessionId, { notes: null })).toMatchObject({ ok: true });
+    expect(await cancelClassSessionForTeacher(teacher.teacherProfileId, opened.classSessionId)).toEqual({
+      ok: false,
+      code: "class_session_not_found",
+    });
+    expect(await openClassSessionForEnrollmentForTeacher(teacher.teacherProfileId, opened.classSessionId)).toEqual({
+      ok: false,
+      code: "class_session_not_found",
+    });
+    expect((await prisma.classSession.findUniqueOrThrow({ where: { id: opened.classSessionId } })).status).toBe(
+      "open_for_enrollment",
+    );
+    expect(
+      (await prisma.enrollment.findFirstOrThrow({ where: { userId: member.userId, classSessionId: opened.classSessionId } }))
+        .status,
+    ).toBe("confirmed");
+
+    // 團主媒合的草稿課：授課老師不能從老師端開放或取消。
+    const demand = await createDemandRequest({
+      organizerProfileId: organizer.organizerProfileId,
+      organizationId: organizer.organizationId,
+      status: "converted_to_class",
+    });
+    const matched = await prisma.classSession.create({
+      data: {
+        teacherProfileId: teacher.teacherProfileId,
+        origin: "organizer_matched",
+        demandRequestId: demand.id,
+        organizerProfileId: organizer.organizerProfileId,
+        organizationId: organizer.organizationId,
+        status: "draft",
+        title: `媒合草稿 ${id}`,
+        ...slot(59, 3),
+        location: "台北",
+        capacity: 10,
+      },
+    });
+    expect(await openClassSessionForEnrollmentForTeacher(teacher.teacherProfileId, matched.id)).toEqual({
+      ok: false,
+      code: "class_session_not_found",
+    });
+    expect(await cancelClassSessionForTeacher(teacher.teacherProfileId, matched.id)).toEqual({
+      ok: false,
+      code: "class_session_not_found",
+    });
+    expect((await prisma.classSession.findUniqueOrThrow({ where: { id: matched.id } })).status).toBe("draft");
+
+    // 團主仍可以取消自己的課（既有能力不變）。
+    expect(await cancelClassSessionForOrganizer(organizer.organizerProfileId, opened.classSessionId)).toMatchObject({ ok: true });
+
+    // 老師自己開的課：開放與取消照常可用。
+    const own = await prisma.classSession.create({
+      data: {
+        teacherProfileId: teacher.teacherProfileId,
+        origin: "teacher_initiated",
+        status: "draft",
+        title: `自己的課 ${id}`,
+        ...slot(59, 6),
+        location: "台北",
+        capacity: 10,
+      },
+    });
+    expect(await openClassSessionForEnrollmentForTeacher(teacher.teacherProfileId, own.id)).toEqual({ ok: true });
+    expect(await cancelClassSessionForTeacher(teacher.teacherProfileId, own.id)).toEqual({ ok: true });
+    expect((await prisma.classSession.findUniqueOrThrow({ where: { id: own.id } })).status).toBe("cancelled");
   });
 });

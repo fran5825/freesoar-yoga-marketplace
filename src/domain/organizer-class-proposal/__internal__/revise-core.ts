@@ -12,6 +12,7 @@ import type { ConflictLockHooks } from "@/domain/class-session/conflict-check";
 
 import { getProposalSubmitIssues } from "../submit-issues";
 import type { NormalizedProposalDraft, ProposalValidationError } from "../validation";
+import type { ProposalTransitionEvent } from "./transition-event";
 
 export const WITHDRAW_REASON_MAX_LENGTH = 500;
 
@@ -26,8 +27,9 @@ export type ReviseProposalErrorCode =
   | "withdraw_reason_invalid"
   | "revise_failed";
 
+// 票 12：成功時帶回這次轉換的資料（transitionSeq 與修改前後），由 service 在 commit 後發通知。
 export type ReviseProposalResult =
-  | { ok: true; version: number; status: OrganizerClassProposalStatus }
+  | { ok: true; version: number; status: OrganizerClassProposalStatus; event: ProposalTransitionEvent }
   | { ok: false; code: ReviseProposalErrorCode; validationErrors?: ProposalValidationError[] };
 
 export type ProposalRevision = NormalizedProposalDraft & {
@@ -98,7 +100,7 @@ export async function reviseProposalCore(
 
       const current = await tx.organizerClassProposal.findUniqueOrThrow({
         where: { id: proposalId },
-        select: { status: true, version: true, teacherProfileId: true, organizationId: true, submittedAt: true },
+        select: { status: true, version: true, teacherProfileId: true, organizationId: true, submittedAt: true, title: true },
       });
       // 鎖到之前老師被換掉了：鎖的不是現在這位老師，請對方重新整理。
       if (current.teacherProfileId !== preview.teacherProfileId) {
@@ -158,9 +160,19 @@ export async function reviseProposalCore(
             ? { confirmedVersion: null, confirmedAt: null, confirmedByUserId: null }
             : {}),
         },
-        select: { version: true, status: true },
+        select: { version: true, status: true, teacherProfileId: true, transitionSeq: true, title: true },
       });
-      return { ok: true as const, version: updated.version, status: updated.status };
+      return {
+        ok: true as const,
+        version: updated.version,
+        status: updated.status,
+        event: {
+          proposalId,
+          transitionSeq: updated.transitionSeq,
+          before: { status: current.status, teacherProfileId: current.teacherProfileId, title: current.title },
+          after: { status: updated.status, teacherProfileId: updated.teacherProfileId, title: updated.title },
+        },
+      };
     });
   } catch (error) {
     if (error instanceof ReviseError) {
@@ -199,7 +211,7 @@ export async function withdrawProposalCore(
 
       const current = await tx.organizerClassProposal.findUniqueOrThrow({
         where: { id: proposalId },
-        select: { status: true, version: true, teacherProfileId: true },
+        select: { status: true, version: true, teacherProfileId: true, title: true },
       });
       if (current.teacherProfileId !== preview.teacherProfileId) {
         throw new ReviseError("proposal_version_stale");
@@ -222,9 +234,19 @@ export async function withdrawProposalCore(
           // 清掉受邀老師，讓沒收過這份邀請的老師讀不到內容與團體聯絡資料。
           ...(current.status === "draft" ? { teacherProfileId: null } : {}),
         },
-        select: { version: true, status: true },
+        select: { version: true, status: true, teacherProfileId: true, transitionSeq: true, title: true },
       });
-      return { ok: true as const, version: updated.version, status: updated.status };
+      return {
+        ok: true as const,
+        version: updated.version,
+        status: updated.status,
+        event: {
+          proposalId,
+          transitionSeq: updated.transitionSeq,
+          before: { status: current.status, teacherProfileId: current.teacherProfileId, title: current.title },
+          after: { status: updated.status, teacherProfileId: updated.teacherProfileId, title: updated.title },
+        },
+      };
     });
   } catch (error) {
     if (error instanceof ReviseError) {

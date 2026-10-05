@@ -57,6 +57,9 @@ export type MemberFacingClassSession = {
   id: string;
   title: string;
   description: string | null;
+  // member-flow 票 03：適合對象、準備事項（沒填是 null，畫面顯示「尚未提供」）。
+  suitableFor: string | null;
+  preparationNotes: string | null;
   serviceType: string | null;
   serviceTypes: string[];
   yogaStyles: string[];
@@ -96,6 +99,8 @@ export async function getClassSessionForMember(
       id: true,
       title: true,
       description: true,
+      suitableFor: true,
+      preparationNotes: true,
       serviceType: true,
       serviceTypes: true,
       yogaStyles: true,

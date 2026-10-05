@@ -15,6 +15,9 @@ import {
 export type ClassSessionCreateInput = {
   title?: string | null;
   description?: string | null;
+  // member-flow 票 03：適合對象、準備事項，老師選填。
+  suitableFor?: string | null;
+  preparationNotes?: string | null;
   serviceType?: string | null;
   // 課程風格（可多選，最多 3 個）；沒帶時退回單一 serviceType（團主媒合建課仍是單選）。
   serviceTypes?: string[] | null;
@@ -36,11 +39,44 @@ export const LOCATION_MAX_LENGTH = 200;
 // D3：description 選填，若提供上限比照 DemandRequest.description 的上限，
 // 但不套用其下限（20 字），因為此欄位選填、不要求「具體」。
 export const DESCRIPTION_MAX_LENGTH = 2000;
+// member-flow 票 03（Q11）：適合對象、準備事項各最多 500 字；系列（票 04）沿用同一個上限與 helper。
+export const MEMBER_INFO_MAX_LENGTH = 500;
+
+// trim 後空字串視為未提供（null）。表單送出時瀏覽器會把換行變成 \r\n（兩個字元），但輸入框的
+// maxLength 把換行算一個字；先統一成 \n，才不會讓剛好 500 字、含換行的內容在 server 端被誤判超過。
+export function normalizeMemberInfoText(value: string | null | undefined): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.replace(/\r\n?/g, "\n").trim();
+
+  return normalized.length > 0 ? normalized : null;
+}
+
+const MEMBER_INFO_LABELS = { suitableFor: "適合對象", preparationNotes: "準備事項" } as const;
+
+export function checkMemberInfoLength(
+  field: keyof typeof MEMBER_INFO_LABELS,
+  value: string | null,
+): { field: typeof field; code: "suitable_for_too_long" | "preparation_notes_too_long"; message: string } | null {
+  if (!value || value.length <= MEMBER_INFO_MAX_LENGTH) {
+    return null;
+  }
+
+  return {
+    field,
+    code: field === "suitableFor" ? "suitable_for_too_long" : "preparation_notes_too_long",
+    message: `${MEMBER_INFO_LABELS[field]}不可超過 ${MEMBER_INFO_MAX_LENGTH} 個字。`,
+  };
+}
 
 export type ClassSessionValidationErrorCode =
   | "title_required"
   | "title_too_long"
   | "description_too_long"
+  | "suitable_for_too_long"
+  | "preparation_notes_too_long"
   | "service_type_required"
   | "service_type_invalid"
   | "service_type_too_many"
@@ -58,6 +94,8 @@ export type ClassSessionValidationError = {
   field:
     | "title"
     | "description"
+    | "suitableFor"
+    | "preparationNotes"
     | "serviceType"
     | "yogaStyles"
     | "location"
@@ -74,6 +112,8 @@ export type ClassSessionValidationResult =
       normalized: {
         title: string;
         description: string | null;
+        suitableFor: string | null;
+        preparationNotes: string | null;
         serviceType: string;
         serviceTypes: string[];
         yogaStyles: string[];
@@ -101,6 +141,8 @@ export function validateClassSessionCreate(
     typeof input.description === "string" && input.description.trim().length > 0
       ? input.description.trim()
       : null;
+  const normalizedSuitableFor = normalizeMemberInfoText(input.suitableFor);
+  const normalizedPreparationNotes = normalizeMemberInfoText(input.preparationNotes);
   const normalizedServiceTypes = normalizeYogaStyles(
     input.serviceTypes && input.serviceTypes.length > 0
       ? input.serviceTypes
@@ -129,6 +171,15 @@ export function validateClassSessionCreate(
       code: "description_too_long",
       message: `課程說明不可超過 ${DESCRIPTION_MAX_LENGTH} 個字。`,
     });
+  }
+
+  for (const issue of [
+    checkMemberInfoLength("suitableFor", normalizedSuitableFor),
+    checkMemberInfoLength("preparationNotes", normalizedPreparationNotes),
+  ]) {
+    if (issue) {
+      errors.push(issue);
+    }
   }
 
   // D4：serviceType 必填，即使是從 demand pre-fill 帶入，Organizer 也可能清空。
@@ -231,6 +282,8 @@ export function validateClassSessionCreate(
     normalized: {
       title: normalizedTitle,
       description: normalizedDescription,
+      suitableFor: normalizedSuitableFor,
+      preparationNotes: normalizedPreparationNotes,
       serviceType: normalizedServiceType,
       serviceTypes: normalizedServiceTypes,
       yogaStyles: normalizedYogaStyles,

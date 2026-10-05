@@ -66,6 +66,8 @@ export async function cancelSeriesFromOccurrenceForTeacherProfile(
         where: {
           recurringClassSeriesId,
           teacherProfileId,
+          // organizer-usability-redesign 票 09：只挑老師自己開的場次，與單堂取消核心的 origin 條件一致。
+          origin: "teacher_initiated",
           status: { in: ["draft", "open_for_enrollment"] },
           startAt: { gte: fromSession.startAt, gt: new Date() },
         },

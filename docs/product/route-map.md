@@ -15,7 +15,7 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 | `/teachers/join` | 老師加入與申請入口。**已擴充**（`teacher-join-gated-application` 已確認）：依登入狀態分支——未登入顯示品牌定位、審核流程、資料預覽、FAQ 與帶 `callbackUrl` 的登入 CTA（唯讀導覽，不渲染可填表單）；已登入才顯示完整申請表單（draft 儲存、送審、四種既有狀態顯示），行為與擴充前一致 | Visitor, Teacher |
 | `/organizers/request` | 團主提出需求入口 | Visitor, Organizer |
 | `/classes` | **已落地**（`teacher-initiated-open-classes` Slice D 已確認）：公開 class session 列表，任何人（含未登入 Visitor）都能瀏覽，可依課程類型／星期幾篩選；只顯示 `isPublic=true`、狀態符合、且授課老師 `approved` 的課程 | Visitor, Member |
-| `/classes/[classSessionId]` | class session 詳情、share link 與 enrollment 入口。**已落地並擴充（`teacher-initiated-open-classes` Slice D 已確認）**：依登入狀態分支——已登入沿用既有 `getClassSessionForMember()`（不檢查 `isPublic`，維持既有 share-link 查看模式不變）；未登入改走新的 `getPublicClassSessionDetail()`，只顯示公開條件符合的課程，顯示唯讀詳情＋「登入後報名」連結（不渲染報名表單），不符合公開條件一律回傳 not-found，不揭露存在性 | Visitor, Member |
+| `/classes/[classSessionId]` | class session 詳情、share link 與 enrollment 入口。**已落地並擴充（`teacher-initiated-open-classes` Slice D 已確認）**：依登入狀態分支——已登入沿用既有 `getClassSessionForMember()`（不檢查 `isPublic`，維持既有 share-link 查看模式不變）；未登入改走新的 `getPublicClassSessionDetail()`，只顯示公開條件符合的課程，顯示唯讀詳情＋「登入後報名」連結（不渲染報名表單），不符合公開條件一律回傳 not-found，不揭露存在性（票 13 起改為通用登入引導，見下方） | Visitor, Member |
 | `/faq` | **已落地**：常見問題與信任說明；不建立付款、退款或取消政策 | Visitor |
 
 ## Auth Routes
@@ -59,14 +59,14 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 
 | Route | 規劃責任 | 票 |
 |---|---|---|
-| `/organizers/request` | **部分落地（票 10）**：訪客品牌說明＋「我需要找老師」「我已有合作老師」兩張情境卡（第二張卡等票 09 老師端 origin guards 後才公開，`DIRECT_CLASS_ENTRY_PUBLIC`）；已有團主顯示精簡選擇（團主專區外框），不一律 redirect。`?intent=` 只接受 `find_teacher`／`direct_class`：訪客點卡片先登入並帶 intent 回這頁；已登入時直接分流（已有團主→對應表單，還沒有團主資料→`/organizer/profile?next=<表單>`，建立後回表單）。未知 intent 照常顯示入口 | 10 |
+| `/organizers/request` | **已落地（票 10）**：訪客品牌說明＋「我需要找老師」「我已有合作老師」兩張情境卡；已有團主顯示精簡選擇（團主專區外框），不一律 redirect。`?intent=` 只接受 `find_teacher`／`direct_class`：訪客點卡片先登入並帶 intent 回這頁；已登入時直接分流（已有團主→對應表單，還沒有團主資料→`/organizer/profile?next=<表單>`，建立後回表單）。未知 intent 照常顯示入口 | 10 |
 | `/organizer/profile` | **已落地（票 03）**：首次一頁建立本人＋第一個團體（同一個 transaction）；建立後只編輯本人稱呼並列出我的團體摘要。舊的 `?next=` 連結轉到預設團體的編輯頁（`returnTo`）。票 10：還沒有團主資料時 `next` 是建立後要前往的流程（新表單頁沒有團主資料會帶 `next` 導來），未登入時登入後保留 `next`；`next`／`returnTo` 先套登入 callback 同一套檢查，再要求正規化後在 `/organizer/` 底下 | 03、10 |
 | `/organizer/organizations` | **已落地（票 03）**：自己擁有的團體列表與聯絡資料完整度，首屏可新增；`/organizer/organizations/new` 新增團體（聯絡資料可先不完整） | 03 |
 | `/organizer/organizations/[organizationId]` | **已落地（票 03）**：單一自有團體的編輯，他人或孤立團體 404；從流程進來時「儲存並回到剛剛的頁面」，`returnTo` 只接受 `/organizer/` 底下的站內路徑 | 03 |
 | `/organizer/demands/new`、`/[demandRequestId]/edit` | **已落地（票 04）**：需求表單明確選自己的團體（`?organizationId=` 從新增團體返回時預選，仍驗 owner）；第一次存檔後網址換成含 ID 的 edit 頁；「儲存草稿並補齊聯絡資料／新增其他團體」先存檔再前往；未儲存離開有保護；送審成功前往 `/organizer/demands/[id]?submitted=1` | 04 |
-| `/organizer/class-proposals/new`、`/[proposalId]/edit` | **已落地（票 05；入口頁、總覽與我的課程的捷徑已做好但暫不公開，等票 09 老師端 origin guards）**：已有合作老師的單頁課程安排與草稿（第一次存檔換到含 ID 的 edit 頁、送出前確認；票 07 起等待確認／已婉拒／已確認也可修改，撤回或已開放報名導回詳情）；本人授課的明確確認是票 08 | 05、08 |
+| `/organizer/class-proposals/new`、`/[proposalId]/edit` | **已落地（票 05；票 10 公開入口：入口頁、總覽與我的課程首屏捷徑）**：已有合作老師的單頁課程安排與草稿（第一次存檔換到含 ID 的 edit 頁、送出前確認；票 07 起等待確認／已婉拒／已確認也可修改，撤回或已開放報名導回詳情）；本人授課的明確確認是票 08 | 05、08 |
 | `/organizer/class-proposals/[proposalId]` | **部分落地（票 05）**：單筆邀請的狀態、下一位處理者與完整安排，老師確認／婉拒結果（票 06），修改／撤回（票 07）；開放報名在票 09 | 05–09 |
-| `/organizer/classes`、`/organizer/classes/[classSessionId]` | **部分落地（票 10）**：列表首屏的「已有合作老師，直接開團」捷徑暫不公開（同上）；正式課程上方列出還沒開放報名的直接開團（草稿／等待確認／已確認／被婉拒，連到單筆邀請）；待我處理與等待對方的細分在票 12。開放後的課程詳情主要動作是複製完整報名連結（票 13） | 09、10、12、13 |
+| `/organizer/classes`、`/organizer/classes/[classSessionId]` | **部分落地（票 10）**：列表首屏有「已有合作老師，直接開團」捷徑；正式課程上方列出還沒開放報名的直接開團（草稿／等待確認／已確認／被婉拒，連到單筆邀請）；待我處理與等待對方的細分在票 12。開放後的課程詳情主要動作是複製完整報名連結（票 13 已落地：完整網址欄位＋複製按鈕〔成功／失敗 aria-live〕、開啟課程頁、看報名名單；說明是否公開在列表與連結可轉傳） | 09、10、12、13 |
 
 他人的團體、需求、邀請或課程 ID 一律 not-found；所有 owner 由 server 判斷。
 
@@ -102,7 +102,7 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 - 所有登入者預設具備 Member 基本能力；Teacher 或 Organizer 若要報名課程，使用同一個 User 的 Member 能力。
 - 公開 class detail / share link 只允許 `open_for_enrollment` 或 `confirmed` 且標記可公開的 class session。**已落地並擴充（`teacher-initiated-open-classes` Slice D 已確認）**：未登入 Visitor 走 `getPublicClassSessionDetail()`，額外要求授課老師 `status = approved`；已登入 Member 仍沿用既有 `getClassSessionForMember()`（不檢查 `isPublic`，維持既有 share-link 模式，D4 的既有行為不變）。兩條路徑對「不符合公開條件」與「`draft` 狀態」都一律回傳 not-found，不揭露任何欄位。
 - `/classes` 公開列表**已落地**（`teacher-initiated-open-classes` Slice D 已確認），不再是 optional / later。
-- **已核准・未實作（organizer-usability-redesign 票 13）**：未登入開啟公開規則讀不到的 `/classes/[classSessionId]` 時，改為一律顯示同一個通用登入引導（狀態碼、內容與 metadata 相同，不透露是否存在），登入後回到同一個網址再依 Member 規則讀取；取代目前匿名回 not-found 的呈現。
+- **已落地（organizer-usability-redesign 票 13，2026-10-05）**：未登入開啟公開規則讀不到的 `/classes/[classSessionId]`（不存在、草稿、僅透過連結招募、已取消、老師非 approved）時，一律顯示同一個通用登入引導（`src/app/classes/_components/ClassSignInGuide.tsx`；狀態碼 200、內容與頁面標題相同，只依網址上的 id 與已清理的找課條件產生，不讀課程資料、不透露是否存在），登入後回到同一個網址再依 Member 規則讀取，讀不到才 not-found；取代原本匿名回 not-found 的呈現。
 - **已核准・未實作（organizer-usability-redesign 票 10、13）**：團主流程的 `callbackUrl`、`returnTo` 只接受 `/` 開頭、非 `//`、且在允許前綴內的站內路徑；沒有明確 intent 時維持既有 last-role 行為。
 
 ## RWD 原則

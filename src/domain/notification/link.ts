@@ -1,4 +1,4 @@
-import type { NotificationType } from "@prisma/client";
+import type { NotificationTargetType, NotificationType } from "@prisma/client";
 
 // organizer-usability 票 11（方案 B）：通知沒有記錄「是哪一筆需求／課程」，也沒有記錄收件人是
 // 哪個角色，所以這裡只依「通知類型＋收件人目前擁有的身分」決定要連到哪一個列表頁，
@@ -12,10 +12,24 @@ export type NotificationRecipientIdentity = {
 
 export type NotificationLink = { href: string; label: string };
 
+// organizer-usability-redesign 票 12（spec 13.7）：有 target 的通知直達單筆。網址只從白名單
+// targetType 推導（不存任意網址）；點進去的頁面照原本規則檢查權限，越權或已失效就 not-found。
+const targetLinks: Record<NotificationTargetType, (id: string) => NotificationLink> = {
+  organizer_class_proposal: (id) => ({ href: `/organizer/class-proposals/${encodeURIComponent(id)}`, label: "查看這份合作邀請" }),
+  teacher_class_proposal: (id) => ({ href: `/teacher/class-proposals/${encodeURIComponent(id)}`, label: "查看這份合作邀請" }),
+  organizer_class_session: (id) => ({ href: `/organizer/classes/${encodeURIComponent(id)}`, label: "查看這堂課" }),
+  teacher_class_session: (id) => ({ href: `/teacher/classes/${encodeURIComponent(id)}`, label: "查看這堂課" }),
+};
+
 export function getNotificationLink(
   type: NotificationType,
   identity: NotificationRecipientIdentity,
+  target?: { targetType: NotificationTargetType | null; targetId: string | null },
 ): NotificationLink | null {
+  if (target?.targetType && target.targetId) {
+    return targetLinks[target.targetType](target.targetId);
+  }
+
   const { isOrganizer, isTeacher, isAdmin } = identity;
 
   switch (type) {
@@ -72,5 +86,15 @@ export function getNotificationLink(
       return isTeacher
         ? { href: "/teacher/classes", label: "前往我的課程" }
         : null;
+    // 票 12：合作邀請通知都會帶 target；沒有 target 時（理論上不會發生）退回列表頁。
+    case "class_proposal_invited":
+    case "class_proposal_revised":
+    case "class_proposal_withdrawn":
+      if (isTeacher) return { href: "/teacher/dashboard", label: "前往老師總覽" };
+      return null;
+    case "class_proposal_confirmed":
+    case "class_proposal_declined":
+      if (isOrganizer) return { href: "/organizer/classes", label: "前往我的課程" };
+      return null;
   }
 }

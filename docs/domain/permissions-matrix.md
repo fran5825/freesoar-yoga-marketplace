@@ -40,7 +40,7 @@ V1 採用能力模型，而不是限制一個 `User` 只能有一種身分：
 
 公開資料仍需遵守 visibility policy；不是所有 teacher profile 或 class session 都一定公開。
 
-**已核准・未實作（organizer-usability-redesign 票 13）**：未登入開啟公開規則讀不到的 `/classes/[id]`（不存在、草稿、僅透過連結招募、已取消、老師非 approved）時，一律顯示同一個通用登入引導，HTTP 狀態、內容與 metadata 相同，不透露課程是否存在或任何內容；登入後依 Member 規則讀取。這會取代目前「匿名一律 not-found」的呈現，可見範圍本身不變。
+**已落地（organizer-usability-redesign 票 13，2026-10-05）**：未登入開啟公開規則讀不到的 `/classes/[id]`（不存在、草稿、僅透過連結招募、已取消、老師非 approved）時，一律顯示同一個通用登入引導，HTTP 狀態、內容與 metadata 相同，不透露課程是否存在或任何內容；登入後依 Member 規則讀取。這會取代目前「匿名一律 not-found」的呈現，可見範圍本身不變。
 
 公開 class session 僅限 `open_for_enrollment` 或 `confirmed`，且已標記可公開。**已落地（`teacher-initiated-open-classes` Slice D 已確認）**：`/classes` 與 `/classes/[id]`，額外要求授課老師 `status = approved`（不在這條規則落地前就已經是完整未來設計的一部分，是這一輪新增的必要條件——沒有這條會讓已被暫停老師的舊公開課程繼續留在列表與可報名狀態）。
 
@@ -164,7 +164,7 @@ Teacher 可查看自己的 class session；下方「V1 落地範圍」對 Comple
 
 **已落地（`teacher-class-scheduling` 票 05，2026-10-05）：系列改課**。老師對自己系列中的場次也是 `Own`：「只改這場」條件同單堂改課；「改這場和之後所有場次」先鎖自己的系列，再逐場確認條件，並同步更新系列設定。Organizer 與 Admin 欄位不變。
 
-**`organizer_direct` 與老師端 origin guard（organizer-usability-redesign 票 09）**：團主從已確認的邀請直接開團**已落地**；老師端 `Complete class session` 的 origin 檢查**已落地**；`Open for enrollment`、`Cancel class session` 的 origin 檢查**尚未落地**（對應程式正被老師排課工作改寫且未 commit，等該工作 commit 後補上）。團主可以從自己已確認的合作邀請直接開團（見下方 OrganizerClassProposal 表的 `Open direct class from proposal`）。上表 `Open for enrollment`／`Cancel class session`／`Complete class session` 的 Teacher `Own` 會在 server 端限定 `origin = teacher_initiated`：目前的老師端核心只用 `teacherProfileId` 過濾、只靠 UI 隱藏按鈕，票 09 補上這個檢查。受邀老師確認授課，不會因此取得團主課程的開放、取消、完成或名單管理權；團主端核心同時適用 `organizer_matched` 與 `organizer_direct`。Admin 維持既有的查看與取消，不新增代確認或直接開團。
+**`organizer_direct` 與老師端 origin guard（organizer-usability-redesign 票 09）**：團主從已確認的邀請直接開團**已落地**；老師端 `Open for enrollment`、`Cancel class session`、`Complete class session` 的 origin 檢查**都已落地**（2026-10-05）。團主可以從自己已確認的合作邀請直接開團（見下方 OrganizerClassProposal 表的 `Open direct class from proposal`）。上表 `Open for enrollment`／`Cancel class session`／`Complete class session` 的 Teacher `Own` 在 server 端限定 `origin = teacher_initiated`（原本只用 `teacherProfileId` 過濾、只靠 UI 隱藏按鈕，票 09 補上）。受邀老師確認授課，不會因此取得團主課程的開放、取消、完成或名單管理權；團主端核心同時適用 `organizer_matched` 與 `organizer_direct`。Admin 維持既有的查看與取消，不新增代確認或直接開團。
 
 ## OrganizerClassProposal
 
@@ -242,7 +242,7 @@ V1 不做完整 Teacher attendance workflow；`attended` / `no_show` 可保留�
 
 通知建立可由 domain/service layer 觸發；一般使用者不可任意建立 system notification。
 
-**V1 落地範圍**（`notification`、`class-session-cancellation`、`demand-request-cancellation` 已確認）：`View own notifications` 透過 `/notifications` 頁面實現，own-scoped，任何登入使用者（含 Admin 自己）皆可查看自己收到的通知；`Create system notification`／`Send notification` 由各 domain/service layer 的 13 個既有 trigger 點（見 `state-transition-details.md` 的「Notification Side Effects」）內部呼叫 `notifyUsers`，不對外開放任何可手動建立或發送通知的 API 或 UI 入口，也沒有 Admin 專用的 notification 管理介面。收件人解析邏輯（誰會收到通知）持續受本文件 Security Review Required 清單規範。
+**V1 落地範圍**（`notification`、`class-session-cancellation`、`demand-request-cancellation` 已確認）：`View own notifications` 透過 `/notifications` 頁面實現，own-scoped，任何登入使用者（含 Admin 自己）皆可查看自己收到的通知；`Create system notification`／`Send notification` 由各 domain/service layer 的 13 個既有 trigger 點（見 `state-transition-details.md` 的「Notification Side Effects」）內部呼叫 `notifyUsers`，不對外開放任何可手動建立或發送通知的 API 或 UI 入口，也沒有 Admin 專用的 notification 管理介面。收件人解析邏輯（誰會收到通知）持續受本文件 Security Review Required 清單規範。**organizer-usability-redesign 票 12（已落地）**：合作邀請的五種通知由 `notifyProposalTransition` 依邀請的 owner 與修改前後的受邀老師解析收件人（本人授課不寄給自己），帶白名單 target 直達單筆；點進去的頁面照原本規則檢查權限，換掉的老師不附單筆連結。
 
 ## AdminNote
 

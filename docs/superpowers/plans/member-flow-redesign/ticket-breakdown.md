@@ -8,7 +8,7 @@
 |---|----|------|-----------|-----------|--------|
 | 01 | [背景預先載入不再改寫上次身分](tickets/01-fix-last-role-prefetch.md) | HEAVY | yes | – | 完成（`85bba16`） |
 | 02 | [第一批 review 與結案](tickets/02-batch-one-review-and-close.md) | STANDARD | no | 01 | 驗收完成（第一批 `2e54462`） |
-| 03 | [單堂課的適合對象與準備事項](tickets/03-single-class-suitable-for-and-preparation.md) | HEAVY | yes | – | draft |
+| 03 | [單堂課的適合對象與準備事項](tickets/03-single-class-suitable-for-and-preparation.md) | HEAVY | yes | – | 完成（2026-10-05） |
 | 04 | [系列課（每週固定與指定日期）沿用課程資訊](tickets/04-recurring-series-class-info.md) | HEAVY | yes | 03 | draft |
 | 05 | [從課程直接 Google 登入](tickets/05-direct-google-sign-in-from-class.md) | HEAVY | yes | – | 驗收完成（2026-10-05，`048b878`） |
 | 06 | [完整學員旅程 usability 驗收](tickets/06-full-member-journey-acceptance.md) | STANDARD | no | 02、04、05 | draft |

@@ -19,7 +19,7 @@ Can:
 
 - View public marketing pages
 - View public teacher profile if enabled
-- **View public class session（已落地，`teacher-initiated-open-classes` Slice D 已確認）**：`/classes` 公開列表與 `/classes/[id]` 詳情，僅限 `isPublic=true`、狀態符合、且授課老師 `status=approved` 的課程；不符合公開條件（含 `isPublic=false`／`draft`／老師已被暫停）一律回傳 not-found，不揭露存在性差異。看到的欄位是窄選過的 visitor-safe DTO，不含任何內部關聯 id。
+- **View public class session（已落地，`teacher-initiated-open-classes` Slice D 已確認）**：`/classes` 公開列表與 `/classes/[id]` 詳情，僅限 `isPublic=true`、狀態符合、且授課老師 `status=approved` 的課程；不符合公開條件（含 `isPublic=false`／`draft`／老師已被暫停）不揭露存在性差異：organizer-usability-redesign 票 13 起，`/classes/[id]` 對這些情況（以及不存在的 id、已取消）一律顯示同一個通用登入引導，不再回 not-found；登入後依 Member 規則讀取。可見範圍不變。看到的欄位是窄選過的 visitor-safe DTO，不含任何內部關聯 id。
 - Submit public forms if allowed
 
 Cannot:
@@ -95,7 +95,7 @@ Cannot:
 - Create class sessions while own `TeacherProfile.status` is not `approved`（含 `suspended`）——資格檢查與既有 demand-response 資格檢查同等嚴格
 - **已落地（`teacher-class-scheduling` 票 04，推導規則 11）**：Open own class sessions for enrollment while own `TeacherProfile.status` is not `approved`——老師端單場「開放報名」的 `updateMany` 條件已帶老師 `approved`，暫停中的老師無法開放。（系列的「全部開放報名」在票 01 已檢查。）
 - **已落地（`teacher-class-scheduling` 票 04）**：Edit class sessions that are not own `teacher_initiated`, have started, are `completed`／`cancelled`, or change `requiresApproval`
-- **organizer-usability-redesign 票 09**：Open / cancel / complete class sessions whose `origin` is not `teacher_initiated` through teacher-side services——complete 已在 server 端檢查 origin（已落地）；open 與 cancel 目前仍只靠 UI 隱藏按鈕，等老師排課工作 commit 後補上
+- **organizer-usability-redesign 票 09**：Open / cancel / complete class sessions whose `origin` is not `teacher_initiated` through teacher-side services——open、cancel、complete 都已在 server 端檢查 origin（已落地，系列的全部開放與從這場起取消也一併限定）
 
 ## Admin
 

@@ -15,8 +15,6 @@ import {
 // - 四種身分（訪客、已登入未有團主資料、已有團主、老師兼團主）都走到正確流程。
 // - intent 只接受兩個允許值；返回路徑只接受站內 /organizer/ 路徑。
 // - 單筆深連結登入後回到該筆；首屏有建立捷徑；直接開團建立後找得回來。
-// 「我已有合作老師」入口目前不公開（DIRECT_CLASS_ENTRY_PUBLIC = false，等票 09 老師端 origin guards）。
-// 公開前仍可用網址與 intent=direct_class 走完整流程，這裡照樣驗證。
 const testEmailDomain = "organizer-entry-intent-smoke.local";
 const createdEmails: string[] = [];
 
@@ -55,21 +53,22 @@ async function fillFirstTimeProfile(page: import("@playwright/test").Page, id: s
 }
 
 test.describe("organizer entry intent", () => {
-  test("a visitor sees the entry card on the first screen, and it goes to sign-in carrying the intent (keyboard)", async ({ page }) => {
+  test("a visitor sees both intent cards on the first screen, and a card goes to sign-in carrying that intent (keyboard)", async ({ page }) => {
     await page.goto("/organizers/request");
     const findCard = page.getByRole("link", { name: /我需要找老師/ });
-    // 桌機與手機（390）都不需要捲動就看得到主操作。
+    const directCard = page.getByRole("link", { name: /我已有合作老師/ });
+    // 桌機與手機（390）都不需要捲動就看得到兩條路徑的主操作。
     await expect(findCard.getByText("整理需求、找老師")).toBeInViewport({ ratio: 1 });
-    await expect(page.getByRole("link", { name: /我已有合作老師/ })).toHaveCount(0);
+    await expect(directCard.getByText("安排課程、邀請老師")).toBeInViewport({ ratio: 1 });
     await expect(findCard).toHaveAttribute(
       "href",
       `/sign-in?callbackUrl=${encodeURIComponent("/organizers/request?intent=find_teacher")}`,
     );
-    await findCard.focus();
+    await directCard.focus();
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/sign-in\?callbackUrl=/);
     await expect(page.locator('input[name="callbackUrl"]').first()).toHaveValue(
-      "/organizers/request?intent=find_teacher",
+      "/organizers/request?intent=direct_class",
     );
   });
 
@@ -83,9 +82,10 @@ test.describe("organizer entry intent", () => {
     const { sessionToken } = await createUserSession({ email });
     await addAuthSessionCookie(context, sessionToken);
 
-    // 已登入（學員專區外框）時入口卡也在第一個畫面。
+    // 已登入（學員專區外框）時兩張卡也都在第一個畫面。
     await page.goto("/organizers/request");
     await expect(page.getByText("整理需求、找老師")).toBeInViewport({ ratio: 1 });
+    await expect(page.getByText("安排課程、邀請老師")).toBeInViewport({ ratio: 1 });
 
     // 登入後回到入口頁（帶 intent），直接分流到一頁式團主資料。
     await page.goto("/organizers/request?intent=direct_class");
@@ -185,7 +185,7 @@ test.describe("organizer entry intent", () => {
     await expect(page.getByRole("heading", { name: `深連結 ${id}` })).toBeVisible();
   });
 
-  test("dashboard and demand list show the create shortcut on the first screen, and a direct-class draft can be found again", async ({
+  test("dashboard and list pages show create shortcuts on the first screen, and a direct-class draft can be found again", async ({
     context,
     page,
   }, testInfo) => {
@@ -198,7 +198,7 @@ test.describe("organizer entry intent", () => {
       "href",
       "/organizer/demands/new",
     );
-    await expect(page.getByRole("link", { name: "已有合作老師，直接開團" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "已有合作老師，直接開團" })).toBeInViewport();
     await page.goto("/organizer/demands");
     await expect(page.getByRole("link", { name: "提出新需求" })).toBeInViewport();
 
@@ -210,7 +210,7 @@ test.describe("organizer entry intent", () => {
       },
     });
     await page.goto("/organizer/classes");
-    await expect(page.getByRole("link", { name: "已有合作老師，直接開團" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "已有合作老師，直接開團" })).toBeInViewport();
     const progress = page.getByRole("region", { name: "直接開團的進度" });
     const item = progress.getByRole("link", { name: new RegExp(`直接開團草稿 ${id}`) });
     await expect(item).toContainText("草稿");

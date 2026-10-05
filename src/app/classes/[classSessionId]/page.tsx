@@ -10,6 +10,7 @@ import { ClassAvailabilityBadge } from "../_components/ClassAvailabilityBadge";
 import { ClassOriginTag } from "../_components/ClassOriginTag";
 import { ClassSummary } from "../_components/ClassSummary";
 import { ClassEnrollmentPanel } from "../_components/ClassEnrollmentPanel";
+import { ClassSignInGuide } from "../_components/ClassSignInGuide";
 
 export default async function MemberClassSessionPage({ params, searchParams }: {
   params: Promise<{ classSessionId: string }>;
@@ -18,8 +19,17 @@ export default async function MemberClassSessionPage({ params, searchParams }: {
   const [{ classSessionId }, query, user] = await Promise.all([params, searchParams, getCurrentUser()]);
   // 保留 Visitor / Member 各自既有的可見性與權限查詢條件。
   const classSession = user ? await getClassSessionForMember(classSessionId) : await getPublicClassSessionDetail(classSessionId);
-  if (!classSession) notFound();
   const returnTo = safeClassReturnPath(query?.returnTo);
+  // organizer-usability-redesign 票 13：訪客讀不到（不存在、草稿、僅透過連結招募等）一律顯示同一個
+  // 登入引導，不回 not-found，也不透露是哪一種；已登入仍依既有 Member 規則，讀不到就 not-found。
+  if (!classSession && !user) {
+    return (
+      <SiteShell signedInArea="member" publicMainClassName="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-5 py-8 sm:px-8" signedInClassName="flex flex-col gap-6">
+        <ClassSignInGuide classSessionId={classSessionId} returnTo={returnTo} />
+      </SiteShell>
+    );
+  }
+  if (!classSession) notFound();
   const feedback = query?.result && query.message ? { success: query.result === "success", message: query.message } : null;
   const ownEnrollment = "ownEnrollment" in classSession ? classSession.ownEnrollment : null;
   const canEnroll = classSession.canAcceptNewEnrollments && !ownEnrollment;
@@ -37,6 +47,9 @@ export default async function MemberClassSessionPage({ params, searchParams }: {
         <ClassSummary classSession={classSession} />
         <ClassEnrollmentPanel classSession={classSession} signedIn={Boolean(user)} returnTo={returnTo} />
         <section aria-labelledby="description-heading" className="min-w-0 rounded-2xl border border-ink/15 bg-white p-5 sm:p-6"><h2 id="description-heading" className="text-lg font-medium text-ink">課程說明</h2><p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-ink-soft">{classSession.description || "尚未提供課程說明。"}</p></section>
+        {/* member-flow 票 03：適合對象、準備事項，接在課程說明之後；舊課與團主課沒有資料時顯示「尚未提供」。 */}
+        <section aria-labelledby="suitable-for-heading" className="min-w-0 rounded-2xl border border-ink/15 bg-white p-5 sm:p-6"><h2 id="suitable-for-heading" className="text-lg font-medium text-ink">適合對象</h2><p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-ink-soft">{classSession.suitableFor || "尚未提供"}</p></section>
+        <section aria-labelledby="preparation-heading" className="min-w-0 rounded-2xl border border-ink/15 bg-white p-5 sm:p-6"><h2 id="preparation-heading" className="text-lg font-medium text-ink">準備事項</h2><p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-ink-soft">{classSession.preparationNotes || "尚未提供"}</p></section>
         {canEnroll ? <a href="#enroll" className="fixed inset-x-0 bottom-0 z-20 border-t border-pine/20 bg-cream px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-center text-sm font-medium text-pine underline focus-visible:outline-2 focus-visible:outline-pine group-has-[form:focus-within]:hidden sm:hidden">前往報名</a> : null}
       </div>
     </SiteShell>

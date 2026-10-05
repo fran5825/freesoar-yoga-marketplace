@@ -19,6 +19,9 @@ import { notifyUsers } from "@/domain/notification/create";
 export type CreateTeacherClassSessionInput = {
   title: string;
   description: string | null;
+  // member-flow 票 03：選填；系列生成等未帶的呼叫端維持 null。
+  suitableFor?: string | null;
+  preparationNotes?: string | null;
   serviceType: string;
   serviceTypes?: string[];
   // 瑜伽類型：選填，沒帶就是空清單（與既有呼叫端相容）；老師建課的必填檢查在 validation 層。
@@ -118,6 +121,8 @@ export async function createClassSessionForTeacherInTransaction(
       recurringClassSeriesId: input.recurringClassSeriesId ?? null,
       title: input.title,
       description: input.description,
+      suitableFor: input.suitableFor ?? null,
+      preparationNotes: input.preparationNotes ?? null,
       serviceType: input.serviceType,
       serviceTypes: input.serviceTypes ?? [input.serviceType],
       yogaStyles: input.yogaStyles ?? [],
