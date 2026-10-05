@@ -11,6 +11,7 @@ import { lockTeacherScheduleAndCheckConflict, type ConflictLockHooks } from "@/d
 import { isOrganizationContactComplete } from "@/domain/demand-request/validation";
 
 import { getProposalSubmitIssues } from "../submit-issues";
+import type { ProposalTransitionEvent } from "./transition-event";
 
 export const DECLINE_REASON_MAX_LENGTH = 500;
 
@@ -27,8 +28,9 @@ export type RespondToProposalErrorCode =
   | "organization_contact_incomplete"
   | "respond_failed";
 
+// 票 12：成功時帶回這次轉換的資料（transitionSeq 與修改前後），由 service 在 commit 後發通知。
 export type RespondToProposalResult =
-  | { ok: true }
+  | { ok: true; event: ProposalTransitionEvent }
   | { ok: false; code: RespondToProposalErrorCode };
 
 class RespondError extends Error {
@@ -46,7 +48,7 @@ export async function confirmProposalCore(
   hooks?: ConflictLockHooks,
 ): Promise<RespondToProposalResult> {
   try {
-    await prisma.$transaction(async (tx) => {
+    const event = await prisma.$transaction(async (tx) => {
       // 鎖外先讀出時間，用來在鎖老師時做撞課檢查；鎖到邀請後再以 version 確認內容沒變。
       const preview = await tx.organizerClassProposal.findFirst({
         where: { id: proposalId, teacherProfileId, status: { not: "draft" } },
@@ -137,7 +139,7 @@ export async function confirmProposalCore(
         throw new RespondError("schedule_conflict");
       }
 
-      await tx.organizerClassProposal.update({
+      const updated = await tx.organizerClassProposal.update({
         where: { id: proposalId },
         data: {
           status: "confirmed",
@@ -146,9 +148,16 @@ export async function confirmProposalCore(
           confirmedByUserId: teacherUserId,
           transitionSeq: { increment: 1 },
         },
+        select: { transitionSeq: true },
       });
+      return {
+        proposalId,
+        transitionSeq: updated.transitionSeq,
+        before: { status: proposal.status, teacherProfileId: proposal.teacherProfileId, title: proposal.title },
+        after: { status: "confirmed" as const, teacherProfileId: proposal.teacherProfileId, title: proposal.title },
+      };
     });
-    return { ok: true };
+    return { ok: true, event };
   } catch (error) {
     if (error instanceof RespondError) {
       return { ok: false, code: error.code };
@@ -170,12 +179,28 @@ export async function declineProposalCore(
 
   try {
     // 狀態、version、受邀老師都寫進 WHERE：與確認或團主修改同時發生時只有一個會成功。
-    const updated = await prisma.organizerClassProposal.updateMany({
-      where: { id: proposalId, teacherProfileId, status: "pending_confirmation", version: expectedVersion },
-      data: { status: "declined", declineReason: trimmed, transitionSeq: { increment: 1 } },
+    // 票 12：同一個 transaction 內讀回 transitionSeq（更新後這一列仍被本 transaction 鎖住）。
+    const event = await prisma.$transaction(async (tx) => {
+      const updated = await tx.organizerClassProposal.updateMany({
+        where: { id: proposalId, teacherProfileId, status: "pending_confirmation", version: expectedVersion },
+        data: { status: "declined", declineReason: trimmed, transitionSeq: { increment: 1 } },
+      });
+      if (updated.count === 0) {
+        return null;
+      }
+      const row = await tx.organizerClassProposal.findUniqueOrThrow({
+        where: { id: proposalId },
+        select: { transitionSeq: true, title: true },
+      });
+      return {
+        proposalId,
+        transitionSeq: row.transitionSeq,
+        before: { status: "pending_confirmation" as const, teacherProfileId, title: row.title },
+        after: { status: "declined" as const, teacherProfileId, title: row.title },
+      };
     });
-    if (updated.count > 0) {
-      return { ok: true };
+    if (event) {
+      return { ok: true, event };
     }
 
     const current = await prisma.organizerClassProposal.findFirst({
@@ -205,7 +230,7 @@ export async function selfConfirmProposalCore(
   hooks?: ConflictLockHooks,
 ): Promise<RespondToProposalResult> {
   try {
-    await prisma.$transaction(async (tx) => {
+    const event = await prisma.$transaction(async (tx) => {
       const preview = await tx.organizerClassProposal.findFirst({
         where: { id: proposalId, organizerProfileId },
         select: { startAt: true, endAt: true, teacherProfileId: true },
@@ -316,7 +341,7 @@ export async function selfConfirmProposalCore(
       }
 
       const now = new Date();
-      await tx.organizerClassProposal.update({
+      const updated = await tx.organizerClassProposal.update({
         where: { id: proposalId },
         data: {
           status: "confirmed",
@@ -327,9 +352,16 @@ export async function selfConfirmProposalCore(
           confirmedByUserId: userId,
           transitionSeq: { increment: 1 },
         },
+        select: { transitionSeq: true },
       });
+      return {
+        proposalId,
+        transitionSeq: updated.transitionSeq,
+        before: { status: proposal.status, teacherProfileId: proposal.teacherProfileId, title: proposal.title },
+        after: { status: "confirmed" as const, teacherProfileId: proposal.teacherProfileId, title: proposal.title },
+      };
     });
-    return { ok: true };
+    return { ok: true, event };
   } catch (error) {
     if (error instanceof RespondError) {
       return { ok: false, code: error.code };

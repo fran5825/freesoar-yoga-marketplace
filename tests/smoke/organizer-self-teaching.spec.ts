@@ -198,7 +198,7 @@ test.describe("organizer self teaching smoke", () => {
     await context.close();
 
     // 本人授課成功後，重試得到「狀態不符」，不會重複確認。
-    expect(await selfConfirmProposalCore(dual.organizerProfileId, dual.userId, draft.id, 1)).toEqual({ ok: true });
+    expect(await selfConfirmProposalCore(dual.organizerProfileId, dual.userId, draft.id, 1)).toMatchObject({ ok: true });
     expect(await selfConfirmProposalCore(dual.organizerProfileId, dual.userId, draft.id, 1)).toEqual({
       ok: false,
       code: "proposal_invalid_status",
@@ -217,7 +217,7 @@ test.describe("organizer self teaching smoke", () => {
       capacity: 12,
       isPublic: false,
     });
-    expect(revised).toEqual({ ok: true, version: 2, status: "draft" });
+    expect(revised).toMatchObject({ ok: true, version: 2, status: "draft" });
     const freed = await createClassSessionForTeacher(dual.teacherProfileId, {
       title: `釋放後 ${id}`,
       description: null,

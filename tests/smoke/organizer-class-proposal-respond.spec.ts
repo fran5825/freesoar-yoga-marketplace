@@ -250,7 +250,7 @@ test.describe("organizer class proposal respond smoke", () => {
     await prisma.teacherProfile.update({ where: { id: teacher.teacherProfileId }, data: { status: "approved" } });
 
     // 已確認的邀請不能再婉拒或再確認。
-    expect(await confirmProposalCore(teacher.teacherProfileId, teacher.userId, forOther.id, 1)).toEqual({ ok: true });
+    expect(await confirmProposalCore(teacher.teacherProfileId, teacher.userId, forOther.id, 1)).toMatchObject({ ok: true });
     expect(await declineProposalCore(teacher.teacherProfileId, forOther.id, 1, "改變主意")).toEqual({
       ok: false,
       code: "proposal_invalid_status",
@@ -274,7 +274,7 @@ test.describe("organizer class proposal respond smoke", () => {
       data: { status: "declined", declineReason: "不行" },
     });
     const target = await createPendingProposal(organizer, teacher.teacherProfileId, `要確認的 ${id}`, times);
-    expect(await confirmProposalCore(teacher.teacherProfileId, teacher.userId, target.id, 1)).toEqual({ ok: true });
+    expect(await confirmProposalCore(teacher.teacherProfileId, teacher.userId, target.id, 1)).toMatchObject({ ok: true });
 
     // 已確認的邀請擋下同時段的團主媒合建課（共用排課檢查）。
     const demand = await createDemandRequest({
@@ -350,7 +350,7 @@ test.describe("organizer class proposal respond smoke", () => {
 
     releaseFirst.resolve();
     const [firstResult, secondResult] = await Promise.all([firstCall, secondCall]);
-    expect(firstResult).toEqual({ ok: true });
+    expect(firstResult).toMatchObject({ ok: true });
     expect(secondResult).toEqual({ ok: false, code: "schedule_conflict" });
     expect(
       await prisma.organizerClassProposal.count({
@@ -412,7 +412,7 @@ test.describe("organizer class proposal respond smoke", () => {
 
     releaseConfirm.resolve();
     const [confirmResult, createResult] = await Promise.all([confirmCall, createCall]);
-    expect(confirmResult).toEqual({ ok: true });
+    expect(confirmResult).toMatchObject({ ok: true });
     expect(createResult).toEqual({ ok: false, code: "teacher_schedule_conflict" });
     expect(await prisma.classSession.count({ where: { teacherProfileId: teacher.teacherProfileId } })).toBe(0);
   });
@@ -466,7 +466,7 @@ test.describe("organizer class proposal respond smoke", () => {
     const busy = { startAt: taipeiAt(busyDate, "19:00"), endAt: taipeiAt(busyDate, "20:00") };
 
     const confirmed = await createPendingProposal(organizer, teacher.teacherProfileId, `已確認 ${id}`, busy);
-    expect(await confirmProposalCore(teacher.teacherProfileId, teacher.userId, confirmed.id, 1)).toEqual({ ok: true });
+    expect(await confirmProposalCore(teacher.teacherProfileId, teacher.userId, confirmed.id, 1)).toMatchObject({ ok: true });
 
     // 老師自己開單堂：撞到已確認的邀請被拒；不重疊的時段正常建立。
     const single = {

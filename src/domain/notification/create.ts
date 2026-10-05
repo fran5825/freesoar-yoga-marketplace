@@ -1,10 +1,10 @@
-import type { NotificationType } from "@prisma/client";
+import { Prisma, type NotificationType } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 
 import { buildNotificationCopy } from "./copy";
 import { inAppNotificationSender, type NotificationSender } from "./sender";
-import type { NotificationPayload, NotificationRecipient } from "./types";
+import type { NotificationPayload, NotificationRecipient, NotifyOptions } from "./types";
 
 // 核心寫入函式。不 export 給 UI 層直接呼叫，只給其他 domain module 的 trigger
 // 呼叫端使用；`sender` 參數只給測試用（見 D4、D9）。
@@ -12,11 +12,14 @@ import type { NotificationPayload, NotificationRecipient } from "./types";
 // D5：先以 userId 去重，保留第一次出現的角色（呼叫端應把 "self" 排最前面）。
 // D4：逐一收件人各自獨立 try/catch——寫入 pending → 呼叫 sender → 成功轉 sent／
 // 失敗轉 failed；單一收件人的例外絕不中斷其他收件人，也絕不外溢給呼叫端。
+// organizer-usability-redesign 票 12：收件人可帶 target（直達單筆）；options.eventKeyBase 讓
+// 同一事件重試不重複——eventKey 已存在（unique 衝突）就視為已發送，不再呼叫 sender。
 export async function notifyUsers(
   type: NotificationType,
   recipients: NotificationRecipient[],
   payload: NotificationPayload,
   sender: NotificationSender = inAppNotificationSender,
+  options: NotifyOptions = {},
 ): Promise<void> {
   const seen = new Set<string>();
   const deduped = recipients.filter((recipient) => {
@@ -31,17 +34,33 @@ export async function notifyUsers(
     try {
       const copy = buildNotificationCopy(type, recipient.role, payload);
 
-      const notification = await prisma.notification.create({
-        data: {
-          userId: recipient.userId,
-          type,
-          channel: "in_app",
-          title: copy.title,
-          body: copy.body,
-          status: "pending",
-        },
-        select: { id: true, userId: true },
-      });
+      let notification: { id: string; userId: string };
+      try {
+        notification = await prisma.notification.create({
+          data: {
+            userId: recipient.userId,
+            type,
+            channel: "in_app",
+            title: copy.title,
+            body: copy.body,
+            status: "pending",
+            targetType: recipient.target?.type ?? null,
+            targetId: recipient.target?.id ?? null,
+            eventKey: options.eventKeyBase ? `${options.eventKeyBase}:${recipient.userId}` : null,
+          },
+          select: { id: true, userId: true },
+        });
+      } catch (createError) {
+        if (
+          createError instanceof Prisma.PrismaClientKnownRequestError &&
+          createError.code === "P2002" &&
+          options.eventKeyBase
+        ) {
+          // 同一事件已經發給這位收件人（重試），不重複發送。
+          continue;
+        }
+        throw createError;
+      }
 
       try {
         await sender({

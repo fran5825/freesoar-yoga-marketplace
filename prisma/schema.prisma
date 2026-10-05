@@ -400,6 +400,12 @@ model Notification {
   status    NotificationStatus  @default(pending)
   createdAt DateTime            @default(now())
   sentAt    DateTime?
+  // organizer-usability-redesign 票 12（spec 13.7，產品主人 2026-10-05 確認方案 A）：
+  // targetType＋targetId 讓通知直達單筆（連結由 server 依白名單推導，不存網址）；
+  // eventKey 防止同一事件重試時重複發送（邀請 id＋transitionSeq＋收件人）。舊通知三欄皆為空。
+  targetType NotificationTargetType?
+  targetId   String?
+  eventKey   String?                 @unique
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -484,6 +490,20 @@ enum NotificationType {
   enrollment_cancelled
   class_reminder_basic
   review_submitted
+  // organizer-usability-redesign 票 12：合作邀請事件。
+  class_proposal_invited
+  class_proposal_confirmed
+  class_proposal_declined
+  class_proposal_withdrawn
+  class_proposal_revised
+}
+
+// 通知可直達的單筆頁白名單（organizer-usability-redesign 票 12）。
+enum NotificationTargetType {
+  organizer_class_proposal
+  teacher_class_proposal
+  organizer_class_session
+  teacher_class_session
 }
 
 enum NotificationChannel {
