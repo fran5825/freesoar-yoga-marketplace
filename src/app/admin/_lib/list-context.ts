@@ -16,7 +16,8 @@ const relationKeys: Record<AdminListKind, readonly AdminRelationKey[]> = {
   teachers: [],
   demands: ["organizationId"],
   classes: ["organizationId", "teacherProfileId"],
-  organizations: [],
+  // 第三批票 10：課程詳情「所屬團體」連到只看這個團體的團體列表。
+  organizations: ["organizationId"],
 };
 const relationIdPattern = /^[A-Za-z0-9_-]{1,64}$/;
 

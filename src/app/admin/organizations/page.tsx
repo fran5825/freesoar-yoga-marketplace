@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { listOrganizationsForAdmin } from "@/domain/organizer-profile/admin-service";
 import { organizationTypeLabels } from "@/domain/organizer-profile/organization-type-labels";
 import { requireAdmin } from "@/lib/auth/session";
-import { AdminSearchForm, AdminListResults } from "../_components/AdminSearchForm";
+import { AdminSearchForm, AdminListResults, AdminRelationNotice } from "../_components/AdminSearchForm";
 import { adminListHref, matchesAdminSearch, normalizeAdminListQuery, type AdminListQuery } from "../_lib/list-context";
 
 export default async function AdminOrganizationsPage({ searchParams }: { searchParams?: Promise<AdminListQuery> }) {
@@ -16,7 +16,9 @@ export default async function AdminOrganizationsPage({ searchParams }: { searchP
 
   const organizations = await listOrganizationsForAdmin();
   const query = normalizeAdminListQuery("organizations", await searchParams);
-  const searched = organizations.filter((item) => matchesAdminSearch(query.q, [item.name, item.contactName, item.contactEmail, ...item.organizers.map((organizer) => organizer.displayName)]));
+  // 第三批票 10：從課程詳情「所屬團體」進來時，依 id 只顯示那一個團體（同名團體不會混入）。
+  const limitedOrganization = query.organizationId ? organizations.find((item) => item.id === query.organizationId) : undefined;
+  const searched = organizations.filter((item) => (!query.organizationId || item.id === query.organizationId) && matchesAdminSearch(query.q, [item.name, item.contactName, item.contactEmail, ...item.organizers.map((organizer) => organizer.displayName)]));
 
   return (
     <div className="flex flex-col gap-8">
@@ -30,10 +32,11 @@ export default async function AdminOrganizationsPage({ searchParams }: { searchP
       </header>
 
       <AdminSearchForm kind="organizations" query={query} label="搜尋團體" hint="團體名稱、聯絡人、聯絡 email 或團主姓名" />
+      <AdminRelationNotice kind="organizations" query={query} label={limitedOrganization ? `只看團體「${limitedOrganization.name}」` : null} />
       <AdminListResults count={searched.length} query={query} />
       {searched.length === 0 ? (
         <section className="rounded-2xl border border-ink/15 bg-white p-6">
-          <h2 className="text-lg font-medium text-ink">{query.q ? "沒有符合搜尋條件的團體。" : "目前沒有任何團體"}</h2>
+          <h2 className="text-lg font-medium text-ink">{query.organizationId ? "沒有符合條件的團體。" : query.q ? "沒有符合搜尋條件的團體。" : "目前沒有任何團體"}</h2>
         </section>
       ) : (
         <section className="grid gap-4">

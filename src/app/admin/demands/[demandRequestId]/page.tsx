@@ -127,6 +127,18 @@ export default async function AdminDemandDetailPage({
           <p className="mt-2 text-sm leading-6 text-ink-soft">
             目前狀態：{adminDemandStatusLabel(demand.status)}。這個階段不需要管理員審核。
           </p>
+          {/* 第三批票 10：已成立課程時一鍵前往；沒有課程就不出現連結。 */}
+          {demand.classSession ? (
+            <p className="mt-3 text-sm leading-6 text-ink">
+              已成立的課程：
+              <Link
+                className="font-medium text-clay underline underline-offset-4 wrap-anywhere"
+                href={adminDetailHref("classes", demand.classSession.id)}
+              >
+                查看課程「{demand.classSession.title}」
+              </Link>
+            </p>
+          ) : null}
         </section>
       ) : null}
 

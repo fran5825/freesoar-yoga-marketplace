@@ -60,7 +60,7 @@ test.describe("admin related lists", () => {
     const b = await createOrganizerProfileWithOrganization({ email: emails.organizerB, displayName: `Organizer B ${runId}`, organizationName: orgName, organizationType: "community" });
     createdOrganizationIds.push(a.organizationId, b.organizationId);
 
-    const demand = (organizer: typeof a, title: string, status: "submitted" | "published" | "draft") =>
+    const demand = (organizer: typeof a, title: string, status: "submitted" | "published" | "draft" | "converted_to_class") =>
       prisma.demandRequest.create({ data: { organizerProfileId: organizer.organizerProfileId, organizationId: organizer.organizationId, title, status }, select: { id: true } });
     await demand(a, `A Pending ${runId}`, "submitted");
     await demand(a, `A Published ${runId}`, "published");
@@ -69,10 +69,12 @@ test.describe("admin related lists", () => {
 
     const teacher = await createTeacherProfileWithSession({ email: emails.teacher, displayName: teacherName, status: "approved" });
     const twin = await createTeacherProfileWithSession({ email: emails.teacherTwin, displayName: teacherName, status: "approved" });
-    const classSession = (title: string, teacherProfileId: string, organizer: typeof a | null, status: "open_for_enrollment" | "draft") =>
+    const classSession = async (title: string, teacherProfileId: string, organizer: typeof a | null, status: "open_for_enrollment" | "draft") =>
       prisma.classSession.create({
         data: {
           title, teacherProfileId, status,
+          // 團主團課一定要有來源需求（與 class origin invariants 一致）；老師開課沒有團體與需求。
+          demandRequestId: organizer ? (await demand(organizer, `Source of ${title}`, "converted_to_class")).id : null,
           organizerProfileId: organizer?.organizerProfileId ?? null,
           organizationId: organizer?.organizationId ?? null,
           origin: organizer ? "organizer_matched" : "teacher_initiated",
@@ -90,10 +92,10 @@ test.describe("admin related lists", () => {
     await page.goto(`/admin/organizations?q=${encodeURIComponent(orgName)}`);
     const cardA = page.locator("article").filter({ hasText: `Organizer A ${runId}` });
     await expect(cardA.getByRole("link", { name: "查看課程（1）" })).toBeVisible();
-    await cardA.getByRole("link", { name: "查看需求（2）" }).click();
+    await cardA.getByRole("link", { name: "查看需求（3）" }).click();
     await expect(page).toHaveURL(new RegExp(`organizationId=${a.organizationId}`));
     await expect(page.getByText(`只看團體「${orgName}」的需求`)).toBeVisible();
-    await expect(page.getByRole("link", { name: "全部・2" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "全部・3" })).toBeVisible();
     await expect(page.getByText(`A Pending ${runId}`)).toBeVisible();
     await expect(page.getByText(`A Published ${runId}`)).toBeVisible();
     await expect(page.getByText(`B Pending ${runId}`)).toHaveCount(0);
@@ -178,6 +180,7 @@ test.describe("admin related lists", () => {
     await prisma.classSession.create({
       data: {
         title: classTitle, teacherProfileId: teacher.teacherProfileId, status: "open_for_enrollment",
+        demandRequestId: (await prisma.demandRequest.create({ data: { organizerProfileId: org.organizerProfileId, organizationId: org.organizationId, title: `Source ${runId}`, status: "converted_to_class" }, select: { id: true } })).id,
         organizerProfileId: org.organizerProfileId, organizationId: org.organizationId,
         startAt: inDays(12), endAt: inDays(12, 1), location: "Taipei", capacity: 10,
       },
