@@ -30,6 +30,10 @@ import {
 export type EditClassSessionForTeacherInput = {
   title?: string | null;
   description?: string | null;
+  // member-flow 票 03：沒帶（undefined）就保留目前的值——系列場次「只改這一場」的表單不顯示這兩欄，
+  // 不能因此把它們清掉；要清空請傳空字串或 null。
+  suitableFor?: string | null;
+  preparationNotes?: string | null;
   serviceTypes?: string[] | null;
   yogaStyles?: string[] | null;
   startAt?: string | null;
@@ -96,9 +100,12 @@ export async function editClassSessionForTeacher(
           startAt: Date;
           endAt: Date;
           location: string;
+          suitableFor: string | null;
+          preparationNotes: string | null;
         }[]
       >`
-        SELECT "id", "status", "origin", "recurringClassSeriesId", "startAt", "endAt", "location"
+        SELECT "id", "status", "origin", "recurringClassSeriesId", "startAt", "endAt", "location",
+          "suitableFor", "preparationNotes"
         FROM "ClassSession"
         WHERE "id" = ${classSessionId} AND "teacherProfileId" = ${teacherProfileId}
         FOR UPDATE
@@ -135,6 +142,9 @@ export async function editClassSessionForTeacher(
         {
           title: input.title,
           description: input.description,
+          suitableFor: input.suitableFor === undefined ? current.suitableFor : input.suitableFor,
+          preparationNotes:
+            input.preparationNotes === undefined ? current.preparationNotes : input.preparationNotes,
           serviceTypes: input.serviceTypes,
           yogaStyles: input.yogaStyles,
           startAt: input.startAt,
@@ -191,6 +201,8 @@ export async function editClassSessionForTeacher(
         data: {
           title: next.title,
           description: next.description,
+          suitableFor: next.suitableFor,
+          preparationNotes: next.preparationNotes,
           serviceType: next.serviceType,
           serviceTypes: next.serviceTypes,
           yogaStyles: next.yogaStyles,

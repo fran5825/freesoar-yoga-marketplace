@@ -12,6 +12,8 @@ export const teacherFacingClassSessionSelect = {
   id: true,
   title: true,
   description: true,
+  suitableFor: true,
+  preparationNotes: true,
   serviceType: true,
   serviceTypes: true,
   yogaStyles: true,

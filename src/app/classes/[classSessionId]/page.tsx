@@ -37,6 +37,9 @@ export default async function MemberClassSessionPage({ params, searchParams }: {
         <ClassSummary classSession={classSession} />
         <ClassEnrollmentPanel classSession={classSession} signedIn={Boolean(user)} returnTo={returnTo} />
         <section aria-labelledby="description-heading" className="min-w-0 rounded-2xl border border-ink/15 bg-white p-5 sm:p-6"><h2 id="description-heading" className="text-lg font-medium text-ink">課程說明</h2><p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-ink-soft">{classSession.description || "尚未提供課程說明。"}</p></section>
+        {/* member-flow 票 03：適合對象、準備事項，接在課程說明之後；舊課與團主課沒有資料時顯示「尚未提供」。 */}
+        <section aria-labelledby="suitable-for-heading" className="min-w-0 rounded-2xl border border-ink/15 bg-white p-5 sm:p-6"><h2 id="suitable-for-heading" className="text-lg font-medium text-ink">適合對象</h2><p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-ink-soft">{classSession.suitableFor || "尚未提供"}</p></section>
+        <section aria-labelledby="preparation-heading" className="min-w-0 rounded-2xl border border-ink/15 bg-white p-5 sm:p-6"><h2 id="preparation-heading" className="text-lg font-medium text-ink">準備事項</h2><p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-ink-soft">{classSession.preparationNotes || "尚未提供"}</p></section>
         {canEnroll ? <a href="#enroll" className="fixed inset-x-0 bottom-0 z-20 border-t border-pine/20 bg-cream px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-center text-sm font-medium text-pine underline focus-visible:outline-2 focus-visible:outline-pine group-has-[form:focus-within]:hidden sm:hidden">前往報名</a> : null}
       </div>
     </SiteShell>

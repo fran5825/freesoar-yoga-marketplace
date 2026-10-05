@@ -274,6 +274,8 @@ model ClassSession {
   requiresApproval       Boolean            @default(false)
   title                  String
   description            String?
+  suitableFor            String? // 2026-10-05 member-flow 票 03：適合對象／程度，老師選填，最多 500 字（應用層限制）
+  preparationNotes       String? // 2026-10-05 member-flow 票 03：準備事項，老師選填，最多 500 字（應用層限制）
   serviceType            String? // 主要課程風格＝serviceTypes 的第一個
   serviceTypes           String[]           @default([]) // 2026-09-26 課程風格可多選（最多 3 個）
   yogaStyles             String[]           @default([]) // 2026-09-26 瑜伽風格；老師建立的課必填，團主媒合的課為空

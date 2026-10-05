@@ -33,6 +33,9 @@ export async function editOwnClassSessionAction(
     result = await editOwnClassSessionForTeacher(classSessionId, {
       title: readFormString(formData, "title"),
       description: readFormString(formData, "description"),
+      // member-flow 票 03：系列場次「只改這一場」的表單不顯示這兩欄，沒送出就不帶，核心會保留原值。
+      suitableFor: readOptionalFormString(formData, "suitableFor"),
+      preparationNotes: readOptionalFormString(formData, "preparationNotes"),
       serviceTypes: readServiceTypesFromForm(formData),
       yogaStyles: readYogaStylesFromForm(formData),
       startAt: readFormString(formData, "startAt"),
@@ -141,6 +144,12 @@ function readFormString(formData: FormData, name: string): string {
   const value = formData.get(name);
 
   return typeof value === "string" ? value : "";
+}
+
+function readOptionalFormString(formData: FormData, name: string): string | undefined {
+  const value = formData.get(name);
+
+  return typeof value === "string" ? value : undefined;
 }
 
 function readFormNumber(formData: FormData, name: string): number | null {

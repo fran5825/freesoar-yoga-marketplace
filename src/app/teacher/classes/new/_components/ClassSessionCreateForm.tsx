@@ -13,6 +13,7 @@ import {
 
 import { TagCheckbox } from "@/app/_components/tag-checkbox";
 import { SPECIALTY_GROUPS } from "@/app/teachers/join/_lib/application-fields";
+import { MEMBER_INFO_MAX_LENGTH } from "@/domain/class-session/validation";
 import {
   computeNextWeeklyOccurrenceDates,
   weeklyAfterDateForStartDate,
@@ -84,6 +85,8 @@ type SharedFields = {
   location: string;
   capacity: string;
   description: string;
+  suitableFor: string; // member-flow 票 03：適合對象（選填，只有單堂）
+  preparationNotes: string; // member-flow 票 03：準備事項（選填，只有單堂）
   requiresApproval: boolean;
   isPublic: boolean;
   openForEnrollment: boolean; // 系列：建立後直接開放報名（teacher-class-scheduling 票 01）
@@ -107,6 +110,8 @@ const initialShared: SharedFields = {
   location: "",
   capacity: "",
   description: "",
+  suitableFor: "",
+  preparationNotes: "",
   requiresApproval: false,
   isPublic: false,
   openForEnrollment: false,
@@ -131,6 +136,8 @@ const sharedKeyToErrorField: Record<keyof SharedFields, CreateClassFormField | n
   location: "location",
   capacity: "capacity",
   description: "description",
+  suitableFor: "suitableFor",
+  preparationNotes: "preparationNotes",
   requiresApproval: null,
   isPublic: null,
   openForEnrollment: null,
@@ -212,6 +219,9 @@ export type EditClassInitial = {
   classSessionId: string;
   title: string;
   description: string;
+  // member-flow 票 03：目前的值（沒填過是空字串）；系列場次不在表單顯示、也不送出。
+  suitableFor: string;
+  preparationNotes: string;
   serviceTypes: string[];
   yogaStyles: string[];
   date: string;
@@ -246,6 +256,8 @@ function sharedFromEdit(edit: EditClassInitial): SharedFields {
     ...initialShared,
     title: edit.title,
     description: edit.description,
+    suitableFor: edit.suitableFor,
+    preparationNotes: edit.preparationNotes,
     serviceTypes: edit.serviceTypes,
     yogaStyles: edit.yogaStyles.filter((style) => YOGA_STYLE_VALUES.has(style)),
     yogaStylesOther: edit.yogaStyles.filter((style) => !YOGA_STYLE_VALUES.has(style)).join("、"),
@@ -420,6 +432,8 @@ export function ClassSessionCreateForm({
       labels.push("瑜伽類型");
     }
     if (shared.description.trim() !== edit.description) labels.push("課程說明");
+    if (!edit.series && shared.suitableFor.trim() !== edit.suitableFor) labels.push("適合對象");
+    if (!edit.series && shared.preparationNotes.trim() !== edit.preparationNotes) labels.push("準備事項");
     if (timeChanged) labels.push(isFollowingScope ? "上課時段" : "日期與時間");
     if (locationChanged) labels.push("地點");
     if (shared.capacity.trim() !== String(edit.capacity)) labels.push("名額上限");
@@ -707,6 +721,13 @@ export function ClassSessionCreateForm({
             />
             <YogaStylesField {...yogaStylesFieldProps} serverError={fieldErrors.yogaStyles} />
             <DescriptionField {...descriptionProps} error={fieldErrors.description} />
+            {/* member-flow 票 03：只有建立單堂與改不屬於系列的單堂顯示；系列（建立與兩種改法）由 member-flow 票 04 處理。 */}
+            {!edit?.series ? (
+              <MemberInfoFields
+                {...sharedFieldProps}
+                errors={{ suitableFor: fieldErrors.suitableFor, preparationNotes: fieldErrors.preparationNotes }}
+              />
+            ) : null}
           </FormSection>
           <FormSection title="時間地點">
             <div>
@@ -811,6 +832,8 @@ export function ClassSessionCreateForm({
                 value: modeFields.date ? formatDateWithWeekday(modeFields.date) : null,
               },
               ...placeSummaryRows,
+              memberInfoSummaryRow("適合對象", shared.suitableFor),
+              memberInfoSummaryRow("準備事項", shared.preparationNotes),
               {
                 label: "公開列表",
                 value: shared.isPublic ? "列在公開課程列表" : "不列在公開課程列表",
@@ -1489,6 +1512,75 @@ function CapacityField({ idPrefix = "", shared, updateShared, error }: FieldProp
       <FieldError id={`${idPrefix}capacity-error`} messages={error} />
     </div>
   );
+}
+
+// member-flow 票 03：給學員看的「適合對象」「準備事項」，選填、各 500 字，預設收起；已填內容（例如改課）或有錯誤時展開。
+// 收起時欄位仍在 <form> 裡，內容一樣會送出。
+function MemberInfoFields({
+  shared,
+  updateShared,
+  errors,
+}: Omit<FieldProps, "error"> & {
+  errors: { suitableFor?: string[]; preparationNotes?: string[] };
+}) {
+  const hasError = Boolean(errors.suitableFor?.length || errors.preparationNotes?.length);
+  // 展開狀態由使用者決定（比照課程說明）：清空內容重寫時不會突然收起；已有內容或送出錯誤時展開。
+  const [open, setOpen] = useState(
+    () => shared.suitableFor.length > 0 || shared.preparationNotes.length > 0,
+  );
+
+  return (
+    <details
+      className="rounded-xl border border-ink/15 px-4 py-1"
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+      open={open || hasError}
+    >
+      <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-ink">
+        適合對象與準備事項（選填）
+      </summary>
+      <div className="grid gap-4 pb-3">
+        <div>
+          <label className={labelClassName} htmlFor="suitableFor">
+            適合對象（選填）
+          </label>
+          <textarea
+            className={`${inputClassName} min-h-20`}
+            id="suitableFor"
+            maxLength={MEMBER_INFO_MAX_LENGTH}
+            name="suitableFor"
+            onChange={(event) => updateShared("suitableFor", event.target.value)}
+            placeholder="例如：第一次接觸瑜伽也可以參加；有腰傷請先告知老師。"
+            value={shared.suitableFor}
+            {...errorAttributes("suitableFor-error", errors.suitableFor)}
+          />
+          <FieldError id="suitableFor-error" messages={errors.suitableFor} />
+        </div>
+        <div>
+          <label className={labelClassName} htmlFor="preparationNotes">
+            準備事項（選填）
+          </label>
+          <textarea
+            className={`${inputClassName} min-h-20`}
+            id="preparationNotes"
+            maxLength={MEMBER_INFO_MAX_LENGTH}
+            name="preparationNotes"
+            onChange={(event) => updateShared("preparationNotes", event.target.value)}
+            placeholder="例如：請穿著輕便衣物、自備瑜伽墊與水壺，提早 10 分鐘到。"
+            value={shared.preparationNotes}
+            {...errorAttributes("preparationNotes-error", errors.preparationNotes)}
+          />
+          <FieldError id="preparationNotes-error" messages={errors.preparationNotes} />
+        </div>
+        <p className="text-xs leading-5 text-ink-faint">學員會在課程頁看到這兩段；沒填的會顯示「尚未提供」。</p>
+      </div>
+    </details>
+  );
+}
+
+function memberInfoSummaryRow(label: string, value: string): SummaryRow {
+  const length = value.trim().length;
+
+  return { label, value: length > 0 ? `已填寫（${length} 字）` : "未填寫，學員會看到「尚未提供」" };
 }
 
 // 課程說明是選填，預設收起；展開狀態跨模式共用，已填內容或送出錯誤時會展開。

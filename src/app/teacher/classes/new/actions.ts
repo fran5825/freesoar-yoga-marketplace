@@ -20,6 +20,8 @@ export async function createOwnClassSessionAction(
     result = await createOwnClassSessionForTeacher({
     title: readFormString(formData, "title"),
     description: readFormString(formData, "description"),
+    suitableFor: readFormString(formData, "suitableFor"),
+    preparationNotes: readFormString(formData, "preparationNotes"),
     serviceTypes: readServiceTypesFromForm(formData),
     yogaStyles: readYogaStylesFromForm(formData),
     startAt: readFormString(formData, "startAt"),

@@ -280,6 +280,8 @@ Fields:
 - requiresApproval（新欄位，`Boolean @default(false)`；`true` 時新報名先落在 `Enrollment.status = "pending"`，需要老師確認才轉為 `confirmed`，見下方 `Enrollment` 說明與 Gate G2/G3）
 - title
 - description
+- suitableFor（2026-10-05 新增，nullable text：「適合對象／程度」，老師選填、最多 500 字（應用層限制），trim 後空字串存 null。目前可在老師「建立單堂課」與「改不屬於系列的單堂課」填寫；系列建立與系列場次修改由 member-flow 票 04 補上。舊課、團主媒合課與團主直接開課維持 null，不回填，學員課程頁顯示「尚未提供」。migration `20261005200000_class_session_member_info`，來源 `docs/superpowers/plans/member-flow-redesign/tickets/03-single-class-suitable-for-and-preparation.md`）
+- preparationNotes（2026-10-05 新增，規則同 suitableFor：「準備事項」，老師選填、最多 500 字。改課時修改這兩欄不通知已報名學員）
 - serviceType（主要課程風格，＝serviceTypes 的第一個）
 - serviceTypes（2026-09-26 新增，`String[] @default([])`：課程風格，可多選最多 3 個，值須落在 `service-types.ts` 清單內）
 - yogaStyles（2026-09-26 新增，`String[] @default([])`：瑜伽類型，老師建課必填，標籤來源同老師「擅長類型」，可加自訂項目；團主媒合的課為空。2026-10-03 起所有值一律寫「瑜伽」：儲存時自動把「瑜珈」改成「瑜伽」，舊資料由 data-only migration `20261003000000_yoga_wording_unify` 轉換，同一規則也套用在 `TeacherProfile.specialties`）

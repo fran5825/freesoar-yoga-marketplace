@@ -11,6 +11,8 @@ export type CreateClassFormField =
   | "location"
   | "capacity"
   | "description"
+  | "suitableFor"
+  | "preparationNotes"
   | "dayOfWeek"
   | "startDate"
   | "generateCount"
@@ -35,6 +37,8 @@ export const CREATE_CLASS_FIELD_ORDER: CreateClassFormField[] = [
   "serviceTypes",
   "yogaStyles",
   "description",
+  "suitableFor",
+  "preparationNotes",
   "date",
   "dayOfWeek",
   "startDate",
@@ -53,6 +57,8 @@ export function formFieldForValidationField(field: string): CreateClassFormField
     case "location":
     case "capacity":
     case "description":
+    case "suitableFor":
+    case "preparationNotes":
     case "yogaStyles":
     case "dayOfWeek":
     case "startDate":
