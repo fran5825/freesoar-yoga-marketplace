@@ -75,16 +75,17 @@ export default async function TeacherClassSessionDetailPage({
   params,
   searchParams,
 }: TeacherClassSessionDetailPageProps) {
-  try {
-    await requireUser();
-  } catch {
-    redirect("/sign-in");
-  }
-
   const [{ classSessionId }, resolvedSearchParams] = await Promise.all([
     params,
     searchParams,
   ]);
+
+  // organizer-usability-redesign 票 12：通知直達這一頁；未登入時登入後回到同一堂課。
+  try {
+    await requireUser();
+  } catch {
+    redirect(`/sign-in?callbackUrl=${encodeURIComponent(`/teacher/classes/${classSessionId}`)}`);
+  }
 
   const [classSession, teacherProfile] = await Promise.all([
     getOwnClassSessionDetailForTeacher(classSessionId),

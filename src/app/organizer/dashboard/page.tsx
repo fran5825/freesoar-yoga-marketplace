@@ -9,6 +9,8 @@ import {
 } from "@/domain/demand-request/service";
 import { isOrganizationContactComplete } from "@/domain/demand-request/validation";
 import { listOwnNotifications } from "@/domain/notification/read-service";
+import { listOwnActiveProposalsForOrganizer } from "@/domain/organizer-class-proposal/service";
+import { buildOrganizerProposalTodoItems } from "@/domain/organizer-class-proposal/todo";
 import { getOwnOrganizerContext } from "@/domain/organizer-profile/service";
 import { requireUser } from "@/lib/auth/session";
 
@@ -59,10 +61,15 @@ export default async function OrganizerDashboardPage() {
     );
   }
 
-  const [notifications, demandRequests] = await Promise.all([
+  const [notifications, demandRequests, proposals] = await Promise.all([
     listOwnNotifications(),
     getOwnDemandRequestList(),
+    listOwnActiveProposalsForOrganizer(),
   ]);
+  // organizer-usability-redesign 票 12：直接開團的邀請分成「待你處理」與「等待對方回覆」，都連到單筆邀請。
+  const proposalItems = buildOrganizerProposalTodoItems(proposals);
+  const proposalActions = proposalItems.filter((item) => item.kind === "action");
+  const proposalWaiting = proposalItems.filter((item) => item.kind === "waiting");
 
   const isContactComplete =
     organizerContext.organization !== null &&
@@ -142,10 +149,10 @@ export default async function OrganizerDashboardPage() {
         </div>
       )}
 
-      <section className="rounded-2xl border border-ink/15 bg-white p-6">
-        <h2 className="text-lg font-semibold text-ink">待你處理</h2>
+      <section aria-labelledby="pending-title" className="rounded-2xl border border-ink/15 bg-white p-6">
+        <h2 className="text-lg font-semibold text-ink" id="pending-title">待你處理</h2>
 
-        {pendingActions.length === 0 ? (
+        {pendingActions.length === 0 && proposalActions.length === 0 ? (
           <p className="mt-4 text-sm leading-6 text-ink-soft">
             目前沒有待處理事項。
           </p>
@@ -164,6 +171,16 @@ export default async function OrganizerDashboardPage() {
                 </p>
               </Link>
             ) : null}
+            {proposalActions.map((item) => (
+              <Link
+                className="grid gap-1 rounded-2xl border border-clay/30 bg-clay-tint p-4 transition hover:bg-sand"
+                href={item.href}
+                key={`${item.href}-${item.label}`}
+              >
+                <p className="text-sm font-medium text-clay-deep">{item.label}</p>
+                <p className="min-w-0 break-words text-sm text-ink">{item.message}</p>
+              </Link>
+            ))}
             {pendingNonDraftActions.map(({ demandRequest, nextStep }) => (
               <Link
                 className="grid gap-1 rounded-2xl border border-clay/30 bg-clay-tint p-4 transition hover:bg-sand"
@@ -179,6 +196,25 @@ export default async function OrganizerDashboardPage() {
           </div>
         )}
       </section>
+
+      {proposalWaiting.length > 0 ? (
+        <section aria-labelledby="waiting-title" className="rounded-2xl border border-ink/15 bg-white p-6">
+          <h2 className="text-lg font-semibold text-ink" id="waiting-title">等待對方回覆</h2>
+          <ul className="mt-4 grid gap-3">
+            {proposalWaiting.map((item) => (
+              <li key={`${item.href}-${item.label}`}>
+                <Link
+                  className="grid gap-1 rounded-2xl border border-pine/20 bg-pine-tint p-4 transition hover:bg-sand"
+                  href={item.href}
+                >
+                  <p className="text-sm font-medium text-pine">{item.label}</p>
+                  <p className="min-w-0 break-words text-sm text-ink">{item.message}</p>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section className="rounded-2xl border border-ink/15 bg-white p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">

@@ -386,7 +386,8 @@ model OrganizerClassProposal {
   - 新老師只在邀請處於 `pending_confirmation` 時收到 `class_proposal_invited`：pending 中換老師時立刻發；confirmed 或 declined 退回 draft 後換老師，則等團主重新送出時才發。
   - 驗收：A 確認後團主改成 B，A 收到安排已取消、B 在送出後才收到邀請；pending 中從 A 換成 B，兩人各收到一則正確的通知。
 - 目前 `Notification` 沒有記錄是哪一筆資料（見 `src/domain/notification/link.ts`，只能連到列表），也沒有防重複的鍵。要做到「直達單筆」和「重試不重複」，建議新增可空欄位 `targetType`、`targetId`，以及 `eventKey String? @unique`。連結由 server 依 target 推導，點擊時一樣檢查權限。`eventKey` 的粒度是「邀請 ID＋`transitionSeq`＋收件人」。`transitionSeq` 存在邀請上，**每一次成功的寫入**（存檔、送出、確認、婉拒、撤回、開放，包含 pending 中老師不變、狀態也不變的內容修改）都在同一個 transaction 內 +1，並由該次寫入的結果回傳；發通知時用這個值組 key。所以同一次轉換的重試沿用同一個 key、不會重複，而「送出 → 婉拒 → 不修改直接重送 → 再次婉拒」每一步都是新的 `transitionSeq`，各自都會發通知。不能用 `version` 組 key，因為不修改直接重送時 version 不變。驗收要涵蓋上述四步流程，以及「首次邀請 → 同一位老師、修改時間 → 再修改地點」三步（各自發出正確通知），並證明每一步的重試都不重複。
-- **以上兩項都是 notification schema 變更，要在票 12 開始前取得產品主人確認。** 確認之前，新事件先沿用現有做法連到列表頁。不加已讀欄位、不接 Resend。
+- **以上兩項都是 notification schema 變更，產品主人 2026-10-05 確認方案 A，票 12 已落地。** `targetType` 實作為白名單 enum（四種單筆頁），eventKey 格式 `class-proposal:<邀請 id>:<transitionSeq>:<收件人>`；收件人規則在 `src/domain/organizer-class-proposal/notifications.ts`。團主直接開團的 `class_session_created` 也帶老師端課程 target 與同格式 eventKey。不加已讀欄位、不接 Resend。
+- 已知取捨：已確認的邀請由團主修改但不換老師時，邀請回到草稿、確認失效，這一刻不另發通知；團主重新送出時老師會收到新的邀請（spec 13.3 的轉換不變）。
 
 ### 13.8 登入返回、匿名隱私與表單
 

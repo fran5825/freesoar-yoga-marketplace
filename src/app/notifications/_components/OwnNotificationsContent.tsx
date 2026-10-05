@@ -43,7 +43,7 @@ export async function OwnNotificationsContent() {
       ) : (
         <section className="grid gap-4">
           {notifications.map((notification) => {
-            const link = getNotificationLink(notification.type, identity);
+            const link = getNotificationLink(notification.type, identity, notification);
 
             return (
               <article

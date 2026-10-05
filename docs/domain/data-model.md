@@ -451,7 +451,7 @@ Fields:
 - createdAt
 - sentAt（nullable，`pending`／`failed` 狀態時為 null）
 
-**待確認（organizer-usability-redesign 票 12 的 Human Gate）**：合作邀請的站內通知需要新增 5 個 `NotificationType`。另外，要讓通知直達單筆、重試不重複，需要新增可空欄位 `targetType`、`targetId` 與 `eventKey`（unique）。這兩項都是 schema 變更，要在票 12 開始前取得產品主人確認；建議內容見 `docs/specs/organizer-usability-redesign-spec.md` 第 13.7 節。確認前沿用目前的做法（依通知類型連到列表頁）。
+**已落地（organizer-usability-redesign 票 12，產品主人 2026-10-05 確認方案 A）**：`NotificationType` 新增 5 個合作邀請事件（`class_proposal_invited`／`class_proposal_confirmed`／`class_proposal_declined`／`class_proposal_withdrawn`／`class_proposal_revised`，migration `20261005210000_notification_proposal_types`）。`Notification` 新增三個可空欄位（migration `20261005210100_notification_target`）：`targetType`（新 enum `NotificationTargetType`：`organizer_class_proposal`／`teacher_class_proposal`／`organizer_class_session`／`teacher_class_session`，連結由 `src/domain/notification/link.ts` 依白名單推導，不存網址）、`targetId`、`eventKey`（unique，格式 `class-proposal:<邀請 id>:<transitionSeq>:<收件人 userId>`，同一次轉換重試時寫入衝突即視為已發送）。舊通知三欄皆為 NULL，照舊依通知類型連到列表頁；不加已讀欄位。
 
 ## AdminNote
 

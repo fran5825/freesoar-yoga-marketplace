@@ -28,6 +28,7 @@ import {
   type ProposalValidationError,
   validateProposalDraft,
 } from "./validation";
+import { notifyProposalTransition } from "./notifications";
 
 export { getProposalSubmitIssues };
 
@@ -268,6 +269,39 @@ export async function listOwnActiveProposalsForOrganizer(): Promise<OwnProposalL
   }));
 }
 
+// 票 12：老師總覽的合作邀請（等待確認、已確認待團主開放）。只回傳寄給本人的邀請；
+// 本人授課的邀請（團主就是自己）不列，避免出現「等待團主（自己）開放」。
+export type TeacherProposalListItem = {
+  id: string;
+  title: string | null;
+  status: OrganizerClassProposalStatus;
+  startAt: Date | null;
+  organizationName: string;
+};
+
+export async function listOwnReceivedProposalsForTeacher(): Promise<TeacherProposalListItem[]> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    return [];
+  }
+  const rows = await prisma.organizerClassProposal.findMany({
+    where: {
+      teacherProfile: { userId: currentUser.id },
+      organizerProfile: { userId: { not: currentUser.id } },
+      status: { in: ["pending_confirmation", "confirmed"] },
+    },
+    orderBy: [{ startAt: "asc" }, { updatedAt: "desc" }],
+    select: { id: true, title: true, status: true, startAt: true, organization: { select: { name: true } } },
+  });
+  return rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    status: row.status,
+    startAt: row.startAt,
+    organizationName: row.organization.name,
+  }));
+}
+
 // 受邀老師只看得到已送出過的邀請（草稿不給老師看）；不需要 approved 也能看自己收到的既有邀請。
 export async function getProposalForTeacher(proposalId: string): Promise<ProposalDetail | null> {
   const currentUser = await getCurrentUser();
@@ -384,6 +418,8 @@ export async function saveOwnProposalDraft(
     if (!revised.ok) {
       return failure(revised.code === "revise_failed" ? "proposal_save_failed" : revised.code, REVISE_MESSAGES[revised.code], revised.validationErrors);
     }
+    // 票 12：commit 之後依修改前後發通知（換老師、等待確認中的內容更新）。
+    await notifyProposalTransition("revised", revised.event);
     return { ok: true, proposalId, version: revised.version, status: revised.status };
   } catch (error) {
     if (isAuthenticationRequiredError(error)) {
@@ -483,24 +519,41 @@ export async function submitOwnProposal(
       return failure("self_invitation_not_allowed", "授課老師是你自己時，請使用「由我授課並確認」，不需要寄邀請給自己。");
     }
 
-    const updated = await prisma.organizerClassProposal.updateMany({
-      where: {
-        id: proposalId,
-        organizerProfileId,
-        status: { in: ["draft", "declined"] },
-        version: expectedVersion,
-      },
-      data: {
-        status: "pending_confirmation",
-        // 第一次送出時寫入、之後永遠不清空（spec 13.3 換團體規則的依據）。
-        ...(proposal.submittedAt ? {} : { submittedAt: new Date() }),
-        declineReason: null,
-        transitionSeq: { increment: 1 },
-      },
+    // 票 12：同一個 transaction 內讀回這次寫入的 transitionSeq（更新後這一列仍被本 transaction 鎖住）。
+    const transitionSeq = await prisma.$transaction(async (tx) => {
+      const updated = await tx.organizerClassProposal.updateMany({
+        where: {
+          id: proposalId,
+          organizerProfileId,
+          status: { in: ["draft", "declined"] },
+          version: expectedVersion,
+        },
+        data: {
+          status: "pending_confirmation",
+          // 第一次送出時寫入、之後永遠不清空（spec 13.3 換團體規則的依據）。
+          ...(proposal.submittedAt ? {} : { submittedAt: new Date() }),
+          declineReason: null,
+          transitionSeq: { increment: 1 },
+        },
+      });
+      if (updated.count === 0) {
+        return null;
+      }
+      const row = await tx.organizerClassProposal.findUniqueOrThrow({
+        where: { id: proposalId },
+        select: { transitionSeq: true },
+      });
+      return row.transitionSeq;
     });
-    if (updated.count === 0) {
+    if (transitionSeq === null) {
       return failure("proposal_version_stale", "這份邀請剛剛在別處被修改過，請重新整理後再送出。");
     }
+    await notifyProposalTransition("submitted", {
+      proposalId,
+      transitionSeq,
+      before: { status: proposal.status, teacherProfileId: proposal.teacherProfileId, title: proposal.title },
+      after: { status: "pending_confirmation", teacherProfileId: proposal.teacherProfileId, title: proposal.title },
+    });
     return { ok: true, proposalId };
   } catch (error) {
     if (isAuthenticationRequiredError(error)) {
@@ -540,7 +593,7 @@ async function resolveTeacher(): Promise<{ userId: string; teacherProfileId: str
 }
 
 function toRespondResult(result: Awaited<ReturnType<typeof confirmProposalCore>>): RespondAsTeacherResult {
-  return result.ok ? result : { ok: false, code: result.code, message: RESPOND_MESSAGES[result.code] };
+  return result.ok ? { ok: true } : { ok: false, code: result.code, message: RESPOND_MESSAGES[result.code] };
 }
 
 export async function confirmProposalAsTeacher(
@@ -552,9 +605,11 @@ export async function confirmProposalAsTeacher(
     if (!teacher) {
       return { ok: false, code: "proposal_not_found", message: RESPOND_MESSAGES.proposal_not_found };
     }
-    return toRespondResult(
-      await confirmProposalCore(teacher.teacherProfileId, teacher.userId, proposalId, expectedVersion),
-    );
+    const result = await confirmProposalCore(teacher.teacherProfileId, teacher.userId, proposalId, expectedVersion);
+    if (result.ok) {
+      await notifyProposalTransition("confirmed", result.event);
+    }
+    return toRespondResult(result);
   } catch (error) {
     if (isAuthenticationRequiredError(error)) {
       return { ok: false, code: "authentication_required", message: "請先登入後再處理邀請。" };
@@ -573,9 +628,11 @@ export async function declineProposalAsTeacher(
     if (!teacher) {
       return { ok: false, code: "proposal_not_found", message: RESPOND_MESSAGES.proposal_not_found };
     }
-    return toRespondResult(
-      await declineProposalCore(teacher.teacherProfileId, proposalId, expectedVersion, reason),
-    );
+    const result = await declineProposalCore(teacher.teacherProfileId, proposalId, expectedVersion, reason);
+    if (result.ok) {
+      await notifyProposalTransition("declined", result.event, { reason: reason.trim() });
+    }
+    return toRespondResult(result);
   } catch (error) {
     if (isAuthenticationRequiredError(error)) {
       return { ok: false, code: "authentication_required", message: "請先登入後再處理邀請。" };
@@ -615,6 +672,7 @@ export async function withdrawOwnProposal(
     if (!result.ok) {
       return failure(result.code === "revise_failed" ? "proposal_save_failed" : result.code, REVISE_MESSAGES[result.code]);
     }
+    await notifyProposalTransition("withdrawn", result.event, { reason: reason.trim() || null });
     return { ok: true };
   } catch (error) {
     if (isAuthenticationRequiredError(error)) {

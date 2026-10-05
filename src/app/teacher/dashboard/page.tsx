@@ -10,6 +10,8 @@ import {
   type TeacherTodoItem,
 } from "@/domain/class-session/teacher-next-step";
 import { listOwnSelectedResponsesAwaitingClass } from "@/domain/demand-response/service";
+import { listOwnReceivedProposalsForTeacher } from "@/domain/organizer-class-proposal/service";
+import { buildTeacherProposalTodoItems } from "@/domain/organizer-class-proposal/todo";
 import { getOwnTeacherProfileApplicationSnapshot } from "@/domain/teacher-profile/service";
 import type { TeacherProfileStatus } from "@/domain/teacher-profile/state";
 import { requireUser } from "@/lib/auth/session";
@@ -89,12 +91,17 @@ export default async function TeacherDashboardPage() {
   // 還沒通過審核時只顯示申請狀態，不顯示「待你處理」。
   const hasClassCapability =
     profile?.status === "approved" || profile?.status === "suspended";
+  // organizer-usability-redesign 票 12：合作邀請排在最前面（待你確認是待辦，已確認等團主開放是等待中），
+  // 每一項連到該份邀請；未確認的邀請不會出現在課程列表，也不當成已排定的課。
   const todoItems: TeacherTodoItem[] = hasClassCapability
-    ? buildTeacherTodoItems({
-        classSessions: await listOwnClassSessionsForTeacher(),
-        selectedResponsesAwaitingClass: await listOwnSelectedResponsesAwaitingClass(),
-        seriesNeedingMore: await listOwnWeeklySeriesNeedingMoreForTeacher(),
-      })
+    ? [
+        ...buildTeacherProposalTodoItems(await listOwnReceivedProposalsForTeacher()),
+        ...buildTeacherTodoItems({
+          classSessions: await listOwnClassSessionsForTeacher(),
+          selectedResponsesAwaitingClass: await listOwnSelectedResponsesAwaitingClass(),
+          seriesNeedingMore: await listOwnWeeklySeriesNeedingMoreForTeacher(),
+        }),
+      ]
     : [];
 
   return (

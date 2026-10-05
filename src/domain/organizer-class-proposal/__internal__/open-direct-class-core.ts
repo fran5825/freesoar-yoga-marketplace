@@ -44,7 +44,14 @@ export async function openDirectClassFromProposalCore(
   expectedVersion: number,
   hooks?: OpenDirectClassHooks,
 ): Promise<OpenDirectClassResult> {
-  let createdForTeacher: { teacherUserId: string; organizerUserId: string; title: string } | null = null;
+  type CreatedForTeacher = {
+    teacherUserId: string;
+    organizerUserId: string;
+    title: string;
+    classSessionId: string;
+    transitionSeq: number;
+  };
+  let createdForTeacher: CreatedForTeacher | null = null;
 
   try {
     const classSessionId = await prisma.$transaction(async (tx) => {
@@ -160,26 +167,40 @@ export async function openDirectClassFromProposalCore(
 
       await hooks?.onClassSessionCreated?.();
 
-      await tx.organizerClassProposal.update({
+      const converted = await tx.organizerClassProposal.update({
         where: { id: proposalId },
         data: { status: "converted", classSessionId: classSession.id, transitionSeq: { increment: 1 } },
+        select: { transitionSeq: true },
       });
 
       createdForTeacher = {
         teacherUserId: teacherProfile.userId,
         organizerUserId: proposal.organizerProfile.userId,
         title: proposal.title as string,
+        classSessionId: classSession.id,
+        transitionSeq: converted.transitionSeq,
       };
       return classSession.id;
     });
 
     // 通知在 commit 之後才發，失敗不影響開放結果；本人授課不通知自己（spec 13.7）。
-    const created = createdForTeacher as { teacherUserId: string; organizerUserId: string; title: string } | null;
+    // 票 12：直達老師端的這堂課，並以「邀請 id＋transitionSeq」防止重試重複發送。
+    const created = createdForTeacher as CreatedForTeacher | null;
     if (created && created.teacherUserId !== created.organizerUserId) {
       try {
-        await notifyUsers("class_session_created", [{ userId: created.teacherUserId, role: "counterpart" }], {
-          classSessionTitle: created.title,
-        });
+        await notifyUsers(
+          "class_session_created",
+          [
+            {
+              userId: created.teacherUserId,
+              role: "counterpart",
+              target: { type: "teacher_class_session", id: created.classSessionId },
+            },
+          ],
+          { classSessionTitle: created.title },
+          undefined,
+          { eventKeyBase: `class-proposal:${proposalId}:${created.transitionSeq}` },
+        );
       } catch (notifyError) {
         console.error("[notification] class_session_created (organizer_direct) failed", notifyError);
       }
