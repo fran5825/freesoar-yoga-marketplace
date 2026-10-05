@@ -14,17 +14,25 @@ import { requireAdmin } from "@/lib/auth/session";
 
 import { AdminConfirmButton } from "../../_components/AdminConfirmButton";
 import { AdminFlash } from "../../_components/AdminFlash";
-import { adminDetailHref, adminListHref, safeAdminReturnTo } from "../../_lib/list-context";
+import {
+  adminClassRosterHref,
+  adminDetailHref,
+  adminListHref,
+  matchesAdminSearch,
+  normalizeAdminRosterQuery,
+  safeAdminReturnTo,
+  type AdminRosterStatus,
+} from "../../_lib/list-context";
 import { adminClassOriginLabel } from "../origin-labels";
 import { cancelClassSessionAdminAction, cancelEnrollmentAdminAction } from "./actions";
 
 type AdminClassSessionDetailPageProps = {
   params: Promise<{ classSessionId: string }>;
-  searchParams?: Promise<{ result?: string; message?: string; returnTo?: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 const enrollmentStatusLabels: Record<string, string> = {
-  pending: "處理中",
+  pending: "待老師確認",
   confirmed: "已報名",
   cancelled: "已取消",
   attended: "已出席",
@@ -32,6 +40,14 @@ const enrollmentStatusLabels: Record<string, string> = {
 };
 
 const CANCELLABLE_CLASS_SESSION_STATUSES = new Set(["draft", "open_for_enrollment"]);
+
+// 第三批票 12：名單分類。出席／未出席等歷史狀態只出現在「全部」並清楚標示，不提供出席管理動作。
+const rosterTabDefinitions: { key: AdminRosterStatus; label: string }[] = [
+  { key: "all", label: "全部" },
+  { key: "pending", label: "待老師確認" },
+  { key: "confirmed", label: "已報名" },
+  { key: "cancelled", label: "已取消" },
+];
 
 export default async function AdminClassSessionDetailPage({
   params,
@@ -62,6 +78,24 @@ export default async function AdminClassSessionDetailPage({
   // 第三批票 11：報名摘要一律用完整名單（不受之後的名單搜尋影響）；pending＋confirmed 都佔名額。
   const confirmedCount = classSession.roster.filter((entry) => entry.status === "confirmed").length;
   const pendingCount = classSession.roster.filter((entry) => entry.status === "pending").length;
+  // 第三批票 12：名單搜尋（姓名／email）與分類。分類數量先套用搜尋再計數；上面的報名摘要仍用完整名單。
+  const roster = normalizeAdminRosterQuery({ rq: resolvedSearchParams?.rq, rstatus: resolvedSearchParams?.rstatus });
+  const searchedRoster = classSession.roster.filter((entry) => matchesAdminSearch(roster.rq, [entry.memberName, entry.memberEmail]));
+  const rosterTabs = rosterTabDefinitions.map((tab) => ({
+    ...tab,
+    count: tab.key === "all" ? searchedRoster.length : searchedRoster.filter((entry) => entry.status === tab.key).length,
+  }));
+  const visibleRoster = roster.rstatus === "all" ? searchedRoster : searchedRoster.filter((entry) => entry.status === roster.rstatus);
+  // 剛取消的那筆若因狀態改變離開目前分類，提示提供「查看這筆」：切到已取消分類並定位到那一列。
+  // 網址參數重複時 Next 會給陣列；結果提示只接受單一字串，其餘一律忽略，頁面不能因此出錯。
+  const flashResult = typeof resolvedSearchParams?.result === "string" ? resolvedSearchParams.result : undefined;
+  const flashMessage = typeof resolvedSearchParams?.message === "string" ? resolvedSearchParams.message : undefined;
+  const flashItem = typeof resolvedSearchParams?.item === "string" ? resolvedSearchParams.item : undefined;
+  const processedEntry = flashItem ? classSession.roster.find((entry) => entry.id === flashItem) : undefined;
+  const processedHidden = processedEntry && !visibleRoster.some((entry) => entry.id === processedEntry.id);
+  const processedHref = processedEntry && processedHidden
+    ? adminClassRosterHref(classSessionId, returnTo, { rq: roster.rq, rstatus: processedEntry.status === "pending" || processedEntry.status === "confirmed" || processedEntry.status === "cancelled" ? processedEntry.status : "all" }, `enrollment-${processedEntry.id}`)
+    : undefined;
   const teacherName =
     classSession.teacherProfile.status === "draft"
       ? "老師資料無法查看"
@@ -110,7 +144,12 @@ export default async function AdminClassSessionDetailPage({
         ) : null}
       </header>
 
-      <AdminFlash message={resolvedSearchParams?.message} result={resolvedSearchParams?.result} />
+      <AdminFlash
+        detailHref={processedHref}
+        detailLabel={processedEntry ? `查看這筆（${memberDisplay(processedEntry)}・${enrollmentStatusLabels[processedEntry.status] ?? processedEntry.status}）` : undefined}
+        message={rosterFeedbackMessage(flashMessage, processedEntry)}
+        result={flashResult}
+      />
 
       <section aria-labelledby="content-title" className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6 sm:grid-cols-2">
         <h2 className="text-lg font-medium text-ink sm:col-span-2" id="content-title">課程內容</h2>
@@ -185,53 +224,93 @@ export default async function AdminClassSessionDetailPage({
         />
       </section>
 
-      <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
-        <h2 className="text-lg font-medium text-ink">
+      {/* 第三批票 12：名單顯示姓名＋email、可搜尋與分類；條件放在網址（rq／rstatus），取消後保留。 */}
+      <section aria-labelledby="roster-title" className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6" id="roster">
+        <h2 className="text-lg font-medium text-ink" id="roster-title">
           報名名單（{classSession.roster.length} 人）
         </h2>
         {classSession.roster.length === 0 ? (
           <p className="text-sm leading-6 text-ink-soft">目前還沒有任何報名紀錄。</p>
         ) : (
-          <ul className="grid gap-2">
-            {classSession.roster.map((entry) => (
-              <li
-                className="min-w-0 rounded-2xl border border-ink/10 bg-cream p-3 text-sm"
-                key={entry.id}
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="min-w-0 break-words font-medium text-ink">
-                    {entry.memberLabel}
-                  </p>
-                  <span className="w-fit rounded-full bg-ink/10 px-2 py-0.5 text-xs font-medium text-ink-soft">
-                    {enrollmentStatusLabels[entry.status] ?? entry.status}
-                  </span>
+          <>
+            <form action={`/admin/classes/${classSessionId}`} aria-label="搜尋報名名單" className="grid gap-2" method="get" role="search">
+              {returnTo !== adminListHref("classes") ? <input name="returnTo" type="hidden" value={returnTo} /> : null}
+              {roster.rstatus !== "all" ? <input name="rstatus" type="hidden" value={roster.rstatus} /> : null}
+              <label className="text-sm font-medium text-ink" htmlFor="roster-search">搜尋學員</label>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input className="min-w-0 flex-1 rounded-xl border border-ink/30 bg-white px-3 py-2 text-base text-ink focus:outline-2 focus:outline-clay" defaultValue={roster.rq} id="roster-search" key={roster.rq} maxLength={200} name="rq" placeholder="姓名或 email" type="search" />
+                <button className="rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay" type="submit">搜尋學員</button>
+              </div>
+              {roster.rq ? (
+                <div className="flex flex-wrap gap-3 text-sm text-ink-soft">
+                  <p className="min-w-0 wrap-anywhere">關鍵字：{roster.rq}</p>
+                  <Link className="font-medium text-clay underline underline-offset-4" href={adminClassRosterHref(classSessionId, returnTo, { rstatus: roster.rstatus })}>清除關鍵字</Link>
                 </div>
-                {entry.notes ? (
-                  <p className="mt-1 min-w-0 whitespace-pre-wrap break-words text-ink-soft">
-                    {entry.notes}
-                  </p>
-                ) : null}
+              ) : null}
+            </form>
+            <nav aria-label="報名狀態篩選" className="flex flex-wrap gap-2">
+              {rosterTabs.map((tab) => (
+                <Link
+                  aria-current={tab.key === roster.rstatus ? "page" : undefined}
+                  className={`rounded-full border px-4 py-2 text-sm transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay ${
+                    tab.key === roster.rstatus ? "border-pine bg-pine-tint font-medium text-pine" : "border-ink/20 text-ink-soft hover:border-ink/40"
+                  }`}
+                  href={adminClassRosterHref(classSessionId, returnTo, { rq: roster.rq, rstatus: tab.key })}
+                  key={tab.key}
+                >
+                  {tab.label}・{tab.count}
+                </Link>
+              ))}
+            </nav>
+            <p className="text-sm text-ink-soft" role="status">{roster.rq ? "搜尋結果" : "目前顯示"}：{visibleRoster.length} 筆</p>
+            {visibleRoster.length === 0 ? (
+              <p className="text-sm leading-6 text-ink-soft">{roster.rq ? "這個分類沒有符合搜尋條件的學員。" : "這個分類目前沒有報名。"}</p>
+            ) : (
+              <ul className="grid gap-2">
+                {visibleRoster.map((entry) => (
+                  <li
+                    className="min-w-0 scroll-mt-6 rounded-2xl border border-ink/10 bg-cream p-3 text-sm"
+                    id={`enrollment-${entry.id}`}
+                    key={entry.id}
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="min-w-0 wrap-anywhere font-medium text-ink">
+                        {entry.memberName ?? "未填姓名"}
+                      </p>
+                      <span className="w-fit rounded-full bg-ink/10 px-2 py-0.5 text-xs font-medium text-ink-soft">
+                        {enrollmentStatusLabels[entry.status] ?? entry.status}
+                      </span>
+                    </div>
+                    <p className="mt-1 min-w-0 wrap-anywhere text-ink-soft">{entry.memberEmail ?? "未提供 email"}</p>
+                    {entry.notes ? (
+                      <p className="mt-1 min-w-0 whitespace-pre-wrap break-words text-ink-soft">
+                        {entry.notes}
+                      </p>
+                    ) : null}
 
-                {entry.status === "confirmed" && !started ? (
-                  <form action={cancelEnrollmentAdminAction} className="mt-2">
-                    <input name="returnTo" type="hidden" value={returnTo} />
-                    <input name="classSessionId" type="hidden" value={classSessionId} />
-                    <input name="enrollmentId" type="hidden" value={entry.id} />
-                    <input name="confirmCancel" type="hidden" value="yes" />
-                    <input name="memberLabel" type="hidden" value={entry.memberLabel} />
-                    <AdminConfirmButton
-                      confirmLabel="確認取消報名"
-                      description={`課程：${classSession.title}。取消後無法復原，同一位學員也不能再報名這堂課；學員會收到通知。`}
-                      pendingLabel="取消處理中…"
-                      title={`確定要取消「${entry.memberLabel}」的報名嗎？`}
-                      triggerClassName="rounded-full border border-rose-300 px-3 py-1.5 text-xs font-medium text-rose-800 transition hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay disabled:cursor-not-allowed disabled:opacity-60"
-                      triggerLabel="取消這筆報名"
-                    />
-                  </form>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+                    {(entry.status === "confirmed" || entry.status === "pending") && !started ? (
+                      <form action={cancelEnrollmentAdminAction} className="mt-2">
+                        <input name="returnTo" type="hidden" value={returnTo} />
+                        <input name="classSessionId" type="hidden" value={classSessionId} />
+                        <input name="enrollmentId" type="hidden" value={entry.id} />
+                        <input name="confirmCancel" type="hidden" value="yes" />
+                        <input name="rq" type="hidden" value={roster.rq} />
+                        <input name="rstatus" type="hidden" value={roster.rstatus} />
+                        <AdminConfirmButton
+                          confirmLabel="確認取消報名"
+                          description={`課程：${classSession.title}。${entry.status === "pending" ? "這筆報名還在等老師確認。" : ""}取消後無法復原，同一位學員也不能再報名這堂課；學員會收到通知。`}
+                          pendingLabel="取消處理中…"
+                          title={`確定要取消「${memberDisplay(entry)}」的報名嗎？`}
+                          triggerClassName="rounded-full border border-rose-300 px-3 py-1.5 text-xs font-medium text-rose-800 transition hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay disabled:cursor-not-allowed disabled:opacity-60"
+                          triggerLabel="取消這筆報名"
+                        />
+                      </form>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
         )}
       </section>
 
@@ -245,6 +324,9 @@ export default async function AdminClassSessionDetailPage({
             <input name="returnTo" type="hidden" value={returnTo} />
             <input name="classSessionId" type="hidden" value={classSessionId} />
             <input name="confirmCancel" type="hidden" value="yes" />
+            {/* 第三批票 12：整堂取消失敗時留在同一課程，保留名單條件；成功仍回原課程列表。 */}
+            <input name="rq" type="hidden" value={roster.rq} />
+            <input name="rstatus" type="hidden" value={roster.rstatus} />
             <AdminConfirmButton
               confirmLabel="確認取消課程"
               description={`取消後無法復原，也無法重新建立。${
@@ -287,6 +369,24 @@ function PartyField({
       ))}
     </div>
   );
+}
+
+// 確認視窗與頁面上顯示學員的方式：有姓名用姓名，沒有才用 email（只在頁面上，不進網址）。
+function memberDisplay(entry: { memberName: string | null; memberEmail: string | null }): string {
+  return entry.memberName ?? entry.memberEmail ?? "這位學員";
+}
+
+// 第三批票 12：網址只帶通用的單筆取消提示與 item（enrollment id）。只有 item 是這堂課名單裡的
+// 報名時，才在頁面上把「這筆報名」換成學員名稱；名稱不經過網址。
+function rosterFeedbackMessage(
+  message: string | undefined,
+  entry: { memberName: string | null; memberEmail: string | null } | undefined,
+): string | undefined {
+  if (!message || !entry) return message;
+  const who = `「${memberDisplay(entry)}」`;
+  return message
+    .replace(/^已取消這筆報名/, `已取消${who}的報名`)
+    .replace(/^這筆報名沒有取消/, `${who}的報名沒有取消`);
 }
 
 function SummaryItem({ label, value }: { label: string; value: string }) {

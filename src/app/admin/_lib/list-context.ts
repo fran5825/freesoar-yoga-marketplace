@@ -78,6 +78,28 @@ export function adminDetailHref(kind: Exclude<AdminListKind, "organizations">, i
   return context === adminListHref(kind) ? path : `${path}?${new URLSearchParams({ returnTo: context })}`;
 }
 
+// 第三批票 12：課程詳情的名單條件（rq＝姓名／email 關鍵字、rstatus＝分類）。只是 UI 狀態，
+// 白名單 normalize，與課程詳情原本的 returnTo 並存、互不覆蓋。
+export const adminRosterStatuses = ["all", "pending", "confirmed", "cancelled"] as const;
+export type AdminRosterStatus = (typeof adminRosterStatuses)[number];
+export type AdminRosterQuery = { rq: string; rstatus: AdminRosterStatus };
+
+export function normalizeAdminRosterQuery(query: { rq?: unknown; rstatus?: unknown } = {}): AdminRosterQuery {
+  return {
+    rq: typeof query.rq === "string" ? query.rq.trim().slice(0, 200) : "",
+    rstatus: adminRosterStatuses.includes(query.rstatus as AdminRosterStatus) ? (query.rstatus as AdminRosterStatus) : "all",
+  };
+}
+
+export function adminClassRosterHref(classSessionId: string, returnTo: unknown, roster: Partial<AdminRosterQuery> = {}, hash?: string): string {
+  const url = new URL(adminDetailHref("classes", classSessionId, typeof returnTo === "string" ? returnTo : undefined), "https://admin.invalid");
+  const normalized = normalizeAdminRosterQuery(roster);
+  if (normalized.rq) url.searchParams.set("rq", normalized.rq);
+  if (normalized.rstatus !== "all") url.searchParams.set("rstatus", normalized.rstatus);
+  const search = url.searchParams.toString();
+  return `${url.pathname}${search ? `?${search}` : ""}${hash ? `#${hash}` : ""}`;
+}
+
 export function adminFeedbackHref(kind: AdminListKind, returnTo: unknown, result: "success" | "error", message: string, item?: string): string {
   const url = new URL(safeAdminReturnTo(kind, returnTo), "https://admin.invalid");
   url.searchParams.set("result", result);

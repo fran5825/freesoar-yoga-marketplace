@@ -91,9 +91,12 @@ export async function listAllClassSessionsForAdmin(): Promise<AdminClassSessionS
 // D7 修正版（codex round 2）：跟 Organizer own-scoped 用的 ClassSessionRosterEntry 不同，
 // 這裡刻意帶 status——Admin 需要看到「這位 Member 是不是已經自己取消過了」這種歷史狀態，
 // 才能正確判斷要不要／能不能介入，不是單純的報名名單。
+// 第三批票 12：姓名與 email 分開帶，只在這個 admin 專用型別出現（requireAdmin() 之後），
+// 不放進公開、老師、團主或學員共用的 DTO。
 export type AdminClassSessionRosterEntry = {
   id: string;
-  memberLabel: string;
+  memberName: string | null;
+  memberEmail: string | null;
   notes: string | null;
   status: EnrollmentStatus;
 };
@@ -203,7 +206,8 @@ export async function getClassSessionDetailForAdmin(
         : teacherProfile,
     roster: enrollments.map((enrollment) => ({
       id: enrollment.id,
-      memberLabel: enrollment.user.name ?? enrollment.user.email ?? "會員",
+      memberName: enrollment.user.name?.trim() || null,
+      memberEmail: enrollment.user.email,
       notes: enrollment.notes,
       status: enrollment.status,
     })),

@@ -24,7 +24,7 @@ const cancelEnrollmentErrorMessages: Record<
 };
 
 // D4/D5：Admin-scoped 取消單一 enrollment，資格條件跟既有 cancelOwnEnrollment 完全相同
-// （status="confirmed" 且 classSession.startAt 尚未到達），只是拿掉 userId 過濾。
+// （status 為 confirmed／pending 且 classSession.startAt 尚未到達），只是拿掉 userId 過濾。
 export async function cancelEnrollmentForAdmin(
   enrollmentId: string,
 ): Promise<CancelEnrollmentForAdminResult> {
