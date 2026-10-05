@@ -80,17 +80,17 @@ Allowed files：`src/lib/auth/callback-url.ts`、`src/lib/auth/sign-in-return.ts
 - [x] 開工前提供具體 Builder plan（含 callback security review 重點），經 Human Gate 確認（2026-10-05 產品主人選 A，含共用登入元件）
 - [x] 訪客從詳情一鍵進 Google，成功後回同一堂課，並保留列表條件（自動化：Auth.js 回程網址＝課程＋找課條件；真實登入待手動驗收）
 - [x] 首次建帳號的說明在按鈕前就看得到
-- [ ] 取消／失敗回原課，可重試，不送出報名（自動化已過：模擬 callback 錯誤落在本站 `/sign-in?error=`、「回到課程」與重試正確、無報名；**真實 Google 取消待手動驗收**）
+- [x] 取消／失敗回原課，可重試，不送出報名（自動化：模擬 callback 錯誤落在本站 `/sign-in?error=`、「回到課程」與重試正確、無報名；真實 Google 取消：2026-10-05 產品主人手動驗收通過）
 - [x] 回來後名額與狀態重新讀取；額滿／已開始時顯示正確出口（沿用第一批頁面，public-classes-discovery、enrollment 既有斷言通過）
 - [x] 外站或非法 callback 被拒絕；回歸案例至少包含 `https://evil.example/`、`//evil.example`、`/\evil.example/`、`/a/..//evil.example/`、`/a/%2e%2e//evil.example/`、含 tab／換行等控制字元的值，且已登入開 `/sign-in` 與 Google 登入兩條路徑都驗證
 - [x] `docs/engineering/auth-entry-strategy.md`、`docs/domain/permissions.md` 視需要同步（auth-entry-strategy 新增第 7 節；權限模型未變，permissions.md 不需改）
 - [x] tsc、lint、build；站內 session 模擬 smoke 通過
-- [ ] 報告分開寫：本站 session 模擬 smoke 結果，以及真實 Google OAuth 手動驗收結果（需產品主人操作；未做就寫未做）
-- [ ] 真實 OAuth 手動驗收未完成時，可交付實作與限制報告，但本票驗收維持未完成，票 06 不得據此宣稱完整旅程已通過
+- [x] 報告分開寫：本站 session 模擬 smoke 結果，以及真實 Google OAuth 手動驗收結果（見下方兩段）
+- [x] 真實 OAuth 手動驗收未完成時，可交付實作與限制報告，但本票驗收維持未完成，票 06 不得據此宣稱完整旅程已通過（已完成，見下方）
 
 ## 實作結果（2026-10-05，未 commit）
 
-**Status 補充：** 已實作，自動化驗證通過；**真實 Google OAuth 手動驗收尚未做**，本票驗收維持未完成。
+**Status 補充：** 驗收完成（2026-10-05）。實作已 commit 並 push（`048b878`）。
 
 Changed files：`src/lib/auth/callback-url.ts`、`src/lib/auth/sign-in-return.ts`（新）、`src/lib/auth/sign-in-providers.ts`（新）、`src/app/_components/sign-in-options.tsx`（新）、`src/auth.ts`（只加 `pages`）、`src/app/sign-in/page.tsx`、`src/app/classes/_components/ClassEnrollmentPanel.tsx`、`src/app/classes/[classSessionId]/actions.ts`、`tests/smoke/callback-url.spec.ts`（新）、`tests/smoke/class-direct-sign-in.spec.ts`（新）、`tests/smoke/public-classes-discovery.spec.ts`、`docs/engineering/auth-entry-strategy.md`、`docs/backlog.md`（第 4 項補充）、本票。
 
@@ -101,7 +101,7 @@ Changed files：`src/lib/auth/callback-url.ts`、`src/lib/auth/sign-in-return.ts
 - 模擬限制：測試自己組的取消 callback 沒有 Google 會帶的 `state`／`iss`，Auth.js 記為 `CallbackRouteError`（error 類），仍落在本站 `/sign-in?error=`。真實 Google 取消會是 signIn 類錯誤，靠 `pages.signIn` 落到同一頁，需手動驗收確認。
 - 證據：`.ai-runs/member-flow-redesign-05/`。
 
-**真實 Google OAuth 手動驗收**：未做，需產品主人操作（成功首次建帳號、成功既有帳號、在 Google 畫面取消、取消後按「回到課程」與重試）。
+**真實 Google OAuth 手動驗收**：2026-10-05 產品主人在本機開發伺服器（`localhost:3000`）手動操作後回報「驗收完成」。驗收步驟為：課程頁按「使用 Google 登入並報名」→ 在 Google 畫面取消 → 回到「登入沒有完成」畫面並有「回到課程」→ 重試完成登入 → 回到同一堂課、同意框未預勾。此結果為產品主人回報，Claude 未直接觀察操作過程；首次建帳號（可選步驟）是否另外測試未說明。
 
 Security self review：callback 過濾已涵蓋反斜線、控制字元、正規化繞過；Google 路徑由 Auth.js 預設 redirect callback 保證同源；server action 只接受清單內的登入方式；登入返回 cookie 只存過濾後的站內路徑、`httpOnly`；錯誤代碼不顯示給使用者。未新增 provider、未改 session／角色模型、不自動報名、同意框不預勾。
 
