@@ -287,7 +287,7 @@ test.describe("public classes discovery smoke", () => {
     ).toBe("pending");
   });
 
-  test("a visitor gets not-found (no existence leak) for a non-public class, a draft class, and a class taught by a suspended teacher, even though the last one is otherwise open_for_enrollment and isPublic=true", async ({
+  test("a visitor gets the generic sign-in guide (no existence leak) for a non-public class, a draft class, and a class taught by a suspended teacher, even though the last one is otherwise open_for_enrollment and isPublic=true", async ({
     page,
   }, testInfo) => {
     const testRunId = normalizeForEmail(
@@ -325,9 +325,16 @@ test.describe("public classes discovery smoke", () => {
       data: { status: "suspended" },
     });
 
-    for (const classSessionId of [privateClassId, draftClassId, suspendedTeacherClassId]) {
-      const response = await page.goto(`/classes/${classSessionId}`);
-      expect(response?.status()).toBe(404);
+    // organizer-usability-redesign 票 13：訪客讀不到的課程改顯示通用登入引導（不再 not-found），
+    // 不出現任何課程內容；一致性細節見 organizer-class-sharing.spec.ts。
+    for (const [classSessionId, title] of [
+      [privateClassId, `Private Class ${testRunId}`],
+      [draftClassId, `Draft Class ${testRunId}`],
+      [suspendedTeacherClassId, `Suspended Teacher Class ${testRunId}`],
+    ]) {
+      await page.goto(`/classes/${classSessionId}`);
+      await expect(page.getByRole("heading", { name: "登入後查看這堂課" })).toBeVisible();
+      await expect(page.getByText(title)).toHaveCount(0);
     }
   });
 

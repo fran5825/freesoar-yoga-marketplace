@@ -40,7 +40,7 @@ V1 採用能力模型，而不是限制一個 `User` 只能有一種身分：
 
 公開資料仍需遵守 visibility policy；不是所有 teacher profile 或 class session 都一定公開。
 
-**已核准・未實作（organizer-usability-redesign 票 13）**：未登入開啟公開規則讀不到的 `/classes/[id]`（不存在、草稿、僅透過連結招募、已取消、老師非 approved）時，一律顯示同一個通用登入引導，HTTP 狀態、內容與 metadata 相同，不透露課程是否存在或任何內容；登入後依 Member 規則讀取。這會取代目前「匿名一律 not-found」的呈現，可見範圍本身不變。
+**已落地（organizer-usability-redesign 票 13，2026-10-05）**：未登入開啟公開規則讀不到的 `/classes/[id]`（不存在、草稿、僅透過連結招募、已取消、老師非 approved）時，一律顯示同一個通用登入引導，HTTP 狀態、內容與 metadata 相同，不透露課程是否存在或任何內容；登入後依 Member 規則讀取。這會取代目前「匿名一律 not-found」的呈現，可見範圍本身不變。
 
 公開 class session 僅限 `open_for_enrollment` 或 `confirmed`，且已標記可公開。**已落地（`teacher-initiated-open-classes` Slice D 已確認）**：`/classes` 與 `/classes/[id]`，額外要求授課老師 `status = approved`（不在這條規則落地前就已經是完整未來設計的一部分，是這一輪新增的必要條件——沒有這條會讓已被暫停老師的舊公開課程繼續留在列表與可報名狀態）。
 

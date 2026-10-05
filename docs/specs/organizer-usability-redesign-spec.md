@@ -391,7 +391,7 @@ model OrganizerClassProposal {
 ### 13.8 登入返回、匿名隱私與表單
 
 - 分流 intent 只接受 `find_teacher`、`direct_class` 兩個值。`callbackUrl` 與 `returnTo` 一律經過與既有 `sanitizeCallbackUrl` 同類的檢查：必須以 `/` 開頭，不能是 `//` 或外站，而且只接受團主流程、課程詳情與老師邀請頁等允許的路徑前綴。
-- **匿名開啟非公開課程（票 13）**：凡是公開規則讀不到的 `/classes/[id]`（不存在、草稿、僅透過連結招募、已取消、老師不是 approved），都回應同一個通用登入引導頁，HTTP 狀態、內容與 metadata 完全相同，不出現標題、老師或地點。登入後依既有的 Member 規則讀取，無效就 not-found。這會改變目前「匿名一律 not-found」的行為，票 13 落地時要同步 route-map 與 permissions。
+- **匿名開啟非公開課程（票 13）**：凡是公開規則讀不到的 `/classes/[id]`（不存在、草稿、僅透過連結招募、已取消、老師不是 approved），都回應同一個通用登入引導頁，HTTP 狀態、內容與 metadata 完全相同，不出現標題、老師或地點。登入後依既有的 Member 規則讀取，無效就 not-found。這會改變原本「匿名一律 not-found」的行為（票 13 已落地，2026-10-05，route-map 與 permissions 已同步）。
 - 草稿：第一次存檔成功後，網址改成含 ID 的 edit 頁。「存草稿」與「送出」是兩個不同的動作。「儲存並補資料」要先存檔成功才離開，並帶上穩定的 ID 與允許的 `returnTo`；失敗就留在原頁、保留輸入。未存檔就離開時，要同時處理站內連結切換與瀏覽器 unload。不做持續的自動雲端存檔。
 
 ### 13.9 測試資料驗證與風險
