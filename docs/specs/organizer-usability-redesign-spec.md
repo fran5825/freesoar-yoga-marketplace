@@ -371,8 +371,8 @@ model OrganizerClassProposal {
 
 - 票 09 的 migration 用 SQL `CHECK` 約束保證前兩欄的組合（加約束前先確認既有資料都符合）；「必有一筆邀請」由 service 與測試保證。
 - 顯示與 DTO 一律讀 `origin` 判斷來源，不從 nullable FK 推導。直接開團沒有需求，「適合對象」顯示未指定，不猜成初學。
-- **既有缺口（票 09 修正；2026-10-05 完成「完成」核心，「開放」與「取消」等老師排課工作 commit 後補）**：老師端的開放、取消、完成目前只用 `teacherProfileId` 過濾，沒有檢查 `origin`。UI 雖然只在老師自建的課程顯示按鈕，直接呼叫函式仍可能操作團主的課。三個實際入口與修法：
-  - 開放：`src/domain/class-session/service.ts` 的 `openOwnClassSessionForEnrollmentForTeacher`，是直接 `updateMany`。
+- **既有缺口（票 09 已修正，2026-10-05 三處都落地）**：老師端的開放、取消、完成原本只用 `teacherProfileId` 過濾，沒有檢查 `origin`。UI 雖然只在老師自建的課程顯示按鈕，直接呼叫函式仍可能操作團主的課。三個實際入口與修法：
+  - 開放：`src/domain/class-session/service.ts` 的 `openOwnClassSessionForEnrollmentForTeacher`，判斷與寫入抽到 `__internal__/open-class-session-core-for-teacher.ts`（直接 `updateMany`）。系列「全部開放」（`open-all-draft-occurrences-core.ts`）與「從這場起取消」（`cancel-series-from-occurrence-core.ts`）也一併限定 `origin`。
   - 取消：`__internal__/cancel-class-session-core-for-teacher.ts`，是 `FOR UPDATE` 鎖查詢。
   - 完成：`__internal__/complete-class-session-core-for-teacher.ts`，是直接 `updateMany`。
 
@@ -391,7 +391,7 @@ model OrganizerClassProposal {
 ### 13.8 登入返回、匿名隱私與表單
 
 - 分流 intent 只接受 `find_teacher`、`direct_class` 兩個值。`callbackUrl` 與 `returnTo` 一律經過與既有 `sanitizeCallbackUrl` 同類的檢查：必須以 `/` 開頭，不能是 `//` 或外站，而且只接受團主流程、課程詳情與老師邀請頁等允許的路徑前綴。
-- **匿名開啟非公開課程（票 13）**：凡是公開規則讀不到的 `/classes/[id]`（不存在、草稿、僅透過連結招募、已取消、老師不是 approved），都回應同一個通用登入引導頁，HTTP 狀態、內容與 metadata 完全相同，不出現標題、老師或地點。登入後依既有的 Member 規則讀取，無效就 not-found。這會改變目前「匿名一律 not-found」的行為，票 13 落地時要同步 route-map 與 permissions。
+- **匿名開啟非公開課程（票 13）**：凡是公開規則讀不到的 `/classes/[id]`（不存在、草稿、僅透過連結招募、已取消、老師不是 approved），都回應同一個通用登入引導頁，HTTP 狀態、內容與 metadata 完全相同，不出現標題、老師或地點。登入後依既有的 Member 規則讀取，無效就 not-found。這會改變原本「匿名一律 not-found」的行為（票 13 已落地，2026-10-05，route-map 與 permissions 已同步）。
 - 草稿：第一次存檔成功後，網址改成含 ID 的 edit 頁。「存草稿」與「送出」是兩個不同的動作。「儲存並補資料」要先存檔成功才離開，並帶上穩定的 ID 與允許的 `returnTo`；失敗就留在原頁、保留輸入。未存檔就離開時，要同時處理站內連結切換與瀏覽器 unload。不做持續的自動雲端存檔。
 
 ### 13.9 測試資料驗證與風險

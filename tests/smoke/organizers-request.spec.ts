@@ -41,8 +41,10 @@ test.describe("/organizers/request states", () => {
       "href",
       `/organizer/profile?next=${encodeURIComponent("/organizer/demands/new")}`,
     );
-    // 「我已有合作老師」入口暫不公開（DIRECT_CLASS_ENTRY_PUBLIC，等票 09 老師端 origin guards）。
-    await expect(page.getByRole("link", { name: /我已有合作老師/ })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /我已有合作老師/ })).toHaveAttribute(
+      "href",
+      `/organizer/profile?next=${encodeURIComponent("/organizer/class-proposals/new")}`,
+    );
   });
 
   test("an existing organizer sees a compact choice of the two paths instead of the pitch", async ({
@@ -78,9 +80,8 @@ test.describe("/organizers/request states", () => {
       "href",
       "/organizer/demands/new",
     );
-    await expect(page.getByRole("link", { name: /我已有合作老師/ })).toHaveCount(0);
-    await page.getByRole("link", { name: /我需要找老師/ }).click();
-    await expect(page).toHaveURL(/\/organizer\/demands\/new$/);
+    await page.getByRole("link", { name: /我已有合作老師/ }).click();
+    await expect(page).toHaveURL(/\/organizer\/class-proposals\/new$/);
   });
 
   test("the home page sends a visitor to the pitch, and a signed-in organizer to their last-used area's dashboard", async ({

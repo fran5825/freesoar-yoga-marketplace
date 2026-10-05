@@ -2,7 +2,6 @@ import Link from "next/link";
 
 import {
   getOrganizerIntentHref,
-  isOrganizerIntentPublic,
   type OrganizerIntent,
 } from "@/domain/organizer-profile/intent";
 
@@ -40,11 +39,10 @@ export function OrganizerEntryCards({
   headingLevel?: "h2" | "h3";
 }) {
   const Heading = headingLevel;
-  const visibleCards = cards.filter((card) => isOrganizerIntentPublic(card.intent));
 
   return (
     <ul className="grid gap-3 md:grid-cols-2 md:gap-4">
-      {visibleCards.map((card) => (
+      {cards.map((card) => (
         <li key={card.intent}>
           <Link
             className="flex h-full flex-col gap-2 rounded-2xl border border-ink/15 bg-white p-5 sm:gap-3 sm:p-6 transition hover:border-pine/40 hover:bg-sand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"

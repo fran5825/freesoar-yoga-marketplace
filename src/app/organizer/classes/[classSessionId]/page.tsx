@@ -9,6 +9,7 @@ import { listReviewsForClassSession } from "@/domain/review/read-service";
 import { requireUser } from "@/lib/auth/session";
 
 import { demandRequestTargetLevelLabels } from "../../demands/_components/status-labels";
+import { ClassShareLink } from "../_components/ClassShareLink";
 import {
   classSessionStatusLabels,
   classSessionStatusToneClasses,
@@ -164,18 +165,21 @@ export default async function OrganizerClassSessionDetailPage({
       {["open_for_enrollment", "completed"].includes(classSession.status) ? (
         <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
           {classSession.status === "open_for_enrollment" ? (
-            <div>
-              <h2 className="text-lg font-medium text-ink">報名連結</h2>
-              <p className="mt-2 text-sm leading-6 text-ink-soft">
-                把這個連結分享給會員，他們登入後就能查看課程並報名。
-              </p>
-              <p className="mt-2 min-w-0 break-all rounded-xl border border-ink/15 bg-cream px-3 py-2 text-sm text-ink">
-                {`/classes/${classSessionId}`}
-              </p>
+            <div className="grid gap-3">
+              <div>
+                <h2 className="text-lg font-medium text-ink">分享報名連結</h2>
+                <p className="mt-2 text-sm leading-6 text-ink-soft">
+                  {classSession.isPublic
+                    ? "這堂課也公開在課程列表。把連結傳給團員，他們登入後就能查看課程並報名。"
+                    : "這堂課只透過連結招募，不會出現在公開課程列表。把連結傳給團員，他們登入後就能查看課程並報名。"}
+                  連結可以被轉傳，收到連結的人登入後都能報名，平台不會另外確認是否為公司或社團成員。
+                </p>
+              </div>
+              <ClassShareLink classSessionId={classSessionId} />
             </div>
           ) : null}
 
-          <div>
+          <div className="scroll-mt-24" id="roster">
             <h3 className="text-sm font-medium text-ink">
               已報名會員（{roster.length} 人）
             </h3>

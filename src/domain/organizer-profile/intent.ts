@@ -7,15 +7,6 @@ const intentDestinations: Record<OrganizerIntent, string> = {
   direct_class: "/organizer/class-proposals/new",
 };
 
-// 「我已有合作老師」入口是否公開（入口卡片、總覽與我的課程的捷徑）。
-// 2026-10-05 產品主人決定：先不公開，等票 09 的老師端開放／取消 origin guards 落地（spec §8：
-// 受邀老師不能從老師端取消團主的課）後再改成 true。網址與 intent 仍可用，只是不放入口。
-export const DIRECT_CLASS_ENTRY_PUBLIC = false;
-
-export function isOrganizerIntentPublic(intent: OrganizerIntent): boolean {
-  return intent === "find_teacher" || DIRECT_CLASS_ENTRY_PUBLIC;
-}
-
 export function parseOrganizerIntent(value: unknown): OrganizerIntent | null {
   return value === "find_teacher" || value === "direct_class" ? value : null;
 }

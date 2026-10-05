@@ -10,6 +10,7 @@ import { ClassAvailabilityBadge } from "../_components/ClassAvailabilityBadge";
 import { ClassOriginTag } from "../_components/ClassOriginTag";
 import { ClassSummary } from "../_components/ClassSummary";
 import { ClassEnrollmentPanel } from "../_components/ClassEnrollmentPanel";
+import { ClassSignInGuide } from "../_components/ClassSignInGuide";
 
 export default async function MemberClassSessionPage({ params, searchParams }: {
   params: Promise<{ classSessionId: string }>;
@@ -18,8 +19,17 @@ export default async function MemberClassSessionPage({ params, searchParams }: {
   const [{ classSessionId }, query, user] = await Promise.all([params, searchParams, getCurrentUser()]);
   // 保留 Visitor / Member 各自既有的可見性與權限查詢條件。
   const classSession = user ? await getClassSessionForMember(classSessionId) : await getPublicClassSessionDetail(classSessionId);
-  if (!classSession) notFound();
   const returnTo = safeClassReturnPath(query?.returnTo);
+  // organizer-usability-redesign 票 13：訪客讀不到（不存在、草稿、僅透過連結招募等）一律顯示同一個
+  // 登入引導，不回 not-found，也不透露是哪一種；已登入仍依既有 Member 規則，讀不到就 not-found。
+  if (!classSession && !user) {
+    return (
+      <SiteShell signedInArea="member" publicMainClassName="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-5 py-8 sm:px-8" signedInClassName="flex flex-col gap-6">
+        <ClassSignInGuide classSessionId={classSessionId} returnTo={returnTo} />
+      </SiteShell>
+    );
+  }
+  if (!classSession) notFound();
   const feedback = query?.result && query.message ? { success: query.result === "success", message: query.message } : null;
   const ownEnrollment = "ownEnrollment" in classSession ? classSession.ownEnrollment : null;
   const canEnroll = classSession.canAcceptNewEnrollments && !ownEnrollment;

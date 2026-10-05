@@ -150,7 +150,7 @@ Rules:
 
 **系列改課（`teacher-class-scheduling` 票 05，已落地 2026-10-05）**：同樣不新增狀態或轉換。老師改系列中的某一場時選擇範圍：(1)「只改這場」——規則與票 04 單堂改課相同，只改這一場，系列設定不變；(2)「改這場和之後所有場次」——套用到這一場與之後所有尚未開始、未取消的場次，每一場維持原本的日期、只套用新的上課時段，並同步更新 `RecurringClassSeries` 的設定，之後「生成更多」與追加的場次沿用。批次中任一場撞課，或新的人數上限低於任一場的 `pending + confirmed`，整批都不改（推導規則 4）。批次鎖定順序：`RecurringClassSeries` → 各場 `ClassSession`（依 id 排序）→ `TeacherProfile`；「只改這場」沿用票 04 的「場次 → 老師」。不能改星期幾。
 
-**已落地（票 09，老師端開放／取消的 origin 檢查待補）：團主直接開團（`organizer_direct`，organizer-usability-redesign）**：新增 `(none) → open_for_enrollment` 這條建立路徑。團主對已確認的 `OrganizerClassProposal` 按「開放報名」時，在同一個 transaction 建立課程並直接開放，不先建 `draft`。建立之後沿用同一套狀態機（`open_for_enrollment → completed`、`open_for_enrollment → cancelled`），由團主 own-scoped 操作；老師端的開放、取消、完成在 server 端限定 `origin = teacher_initiated`（票 09 補上目前缺少的 origin 檢查）。細節見 `docs/specs/organizer-usability-redesign-spec.md` 第 13.5–13.6 節。
+**已落地（票 09）：團主直接開團（`organizer_direct`，organizer-usability-redesign）**：新增 `(none) → open_for_enrollment` 這條建立路徑。團主對已確認的 `OrganizerClassProposal` 按「開放報名」時，在同一個 transaction 建立課程並直接開放，不先建 `draft`。建立之後沿用同一套狀態機（`open_for_enrollment → completed`、`open_for_enrollment → cancelled`），由團主 own-scoped 操作；老師端的開放、取消、完成在 server 端限定 `origin = teacher_initiated`（票 09 已補上）。細節見 `docs/specs/organizer-usability-redesign-spec.md` 第 13.5–13.6 節。
 
 ## OrganizerClassProposal Status
 

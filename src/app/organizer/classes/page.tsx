@@ -5,7 +5,6 @@ import { listOwnClassSessionsForOrganizer } from "@/domain/class-session/read-se
 import { classOriginLabelsForOrganizer } from "@/domain/class-session/origin-labels";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { listOwnActiveProposalsForOrganizer } from "@/domain/organizer-class-proposal/service";
-import { DIRECT_CLASS_ENTRY_PUBLIC } from "@/domain/organizer-profile/intent";
 import { requireUser } from "@/lib/auth/session";
 
 import {
@@ -38,16 +37,14 @@ export default async function OrganizerClassesPage() {
         <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
           這裡列出你的團主課程，包含找老師媒合成立的，以及直接邀請合作老師開放報名的課程。
         </p>
-        {DIRECT_CLASS_ENTRY_PUBLIC ? (
-          <div className="mt-4">
-            <Link
-              className="inline-flex rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep"
-              href="/organizer/class-proposals/new"
-            >
-              已有合作老師，直接開團
-            </Link>
-          </div>
-        ) : null}
+        <div className="mt-4">
+          <Link
+            className="inline-flex rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep"
+            href="/organizer/class-proposals/new"
+          >
+            已有合作老師，直接開團
+          </Link>
+        </div>
       </header>
 
       {/* 票 10：還沒開放報名的直接開團（草稿、等待老師確認、已確認、被婉拒）列在正式課程上方，
