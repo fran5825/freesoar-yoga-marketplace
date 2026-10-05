@@ -9,12 +9,14 @@ import {
 } from "@/app/organizer/classes/_components/status-labels";
 import { organizationTypeLabels } from "@/domain/organizer-profile/organization-type-labels";
 import { getClassSessionDetailForAdmin } from "@/domain/class-session/admin-service";
+import { getClassServiceTypes } from "@/domain/class-session/service-types-display";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { requireAdmin } from "@/lib/auth/session";
 
 import { AdminConfirmButton } from "../../_components/AdminConfirmButton";
 import { AdminFlash } from "../../_components/AdminFlash";
-import { safeAdminReturnTo } from "../../_lib/list-context";
+import { adminDetailHref, adminListHref, safeAdminReturnTo } from "../../_lib/list-context";
+import { adminClassOriginLabel } from "../origin-labels";
 import { cancelClassSessionAdminAction, cancelEnrollmentAdminAction } from "./actions";
 
 type AdminClassSessionDetailPageProps = {
@@ -58,6 +60,13 @@ export default async function AdminClassSessionDetailPage({
   const activeEnrollmentCount = classSession.roster.filter(
     (entry) => entry.status === "pending" || entry.status === "confirmed",
   ).length;
+  // 第三批票 11：報名摘要一律用完整名單（不受之後的名單搜尋影響）；pending＋confirmed 都佔名額。
+  const confirmedCount = classSession.roster.filter((entry) => entry.status === "confirmed").length;
+  const pendingCount = classSession.roster.filter((entry) => entry.status === "pending").length;
+  const teacherName =
+    classSession.teacherProfile.status === "draft"
+      ? "老師資料無法查看"
+      : (classSession.teacherProfile.displayName ?? "尚未填寫顯示名稱");
 
   return (
     <div className="flex flex-col gap-8">
@@ -81,11 +90,54 @@ export default async function AdminClassSessionDetailPage({
         <h1 className="mt-2 min-w-0 break-words text-3xl font-semibold tracking-tight text-ink">
           {classSession.title}
         </h1>
+        {/* 第三批票 11：首屏摘要——時間、地點、老師、來源與報名人數，先看清楚再往下。 */}
+        <dl className="mt-4 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+          <SummaryItem label="時間" value={`${formatTaipeiDatetime(classSession.startAt)} – ${formatTaipeiDatetime(classSession.endAt)}`} />
+          <SummaryItem label="地點" value={classSession.location} />
+          <SummaryItem label="授課老師" value={teacherName} />
+          <SummaryItem label="來源" value={adminClassOriginLabel(classSession.origin)} />
+          <div className="min-w-0 sm:col-span-2">
+            <dt className="font-medium text-ink">報名</dt>
+            <dd className="mt-1 break-words leading-6 text-ink-soft">
+              已報名 {confirmedCount} 人・待老師確認 {pendingCount} 人・名額佔用 {confirmedCount + pendingCount}／{classSession.capacity}
+              <span className="block text-xs text-ink-faint">已報名與待老師確認都會佔用名額。</span>
+            </dd>
+          </div>
+        </dl>
+        {canCancelClassSession ? (
+          <a
+            className="mt-4 inline-flex w-full justify-center rounded-full border border-rose-300 px-5 py-2 text-sm font-medium text-rose-800 transition hover:border-rose-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay sm:w-auto"
+            href="#class-actions"
+          >
+            前往取消操作
+          </a>
+        ) : null}
       </header>
 
       <AdminFlash message={resolvedSearchParams?.message} result={resolvedSearchParams?.result} />
 
-      <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6 sm:grid-cols-2">
+      <section aria-labelledby="content-title" className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6 sm:grid-cols-2">
+        <h2 className="text-lg font-medium text-ink sm:col-span-2" id="content-title">課程內容</h2>
+        <DetailField label="課程風格" value={getClassServiceTypes(classSession).join("、") || null} />
+        <DetailField label="瑜伽類型" value={classSession.yogaStyles.join("、") || null} />
+        <DetailField label="報名方式" value={classSession.requiresApproval ? "需老師確認" : "直接報名"} />
+        <DetailField label="公開狀態" value={classSession.isPublic ? "公開" : "不公開"} />
+        <DetailField
+          label="程度"
+          value={
+            classSession.demandRequest?.targetLevel
+              ? (demandRequestTargetLevelLabels[classSession.demandRequest.targetLevel] ??
+                classSession.demandRequest.targetLevel)
+              : null
+          }
+        />
+        <div className="min-w-0 sm:col-span-2">
+          <DetailField label="課程說明" multiline value={classSession.description} />
+        </div>
+      </section>
+
+      <section aria-labelledby="parties-title" className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6 sm:grid-cols-3">
+        <h2 className="text-lg font-medium text-ink sm:col-span-3" id="parties-title">團主、老師與團體</h2>
         <PartyField
           details={[classSession.organizerProfile?.user.email]}
           label="團主"
@@ -94,7 +146,7 @@ export default async function AdminClassSessionDetailPage({
         <PartyField
           details={[classSession.teacherProfile.user.email]}
           label="授課老師"
-          name={classSession.teacherProfile.displayName ?? "尚未填寫顯示名稱"}
+          name={teacherName}
         />
         <PartyField
           details={
@@ -112,23 +164,29 @@ export default async function AdminClassSessionDetailPage({
           label="團體"
           name={classSession.organization?.name ?? "（老師自建課程）"}
         />
-        <DetailField label="課程類型" value={classSession.serviceType} />
-        <DetailField
-          label="程度"
-          value={
-            classSession.demandRequest?.targetLevel
-              ? (demandRequestTargetLevelLabels[classSession.demandRequest.targetLevel] ??
-                classSession.demandRequest.targetLevel)
-              : null
-          }
+      </section>
+
+      {/* 第三批票 10：相關資料。只有存在且管理員看得到的關聯才給連結；沒有就寫中性文字，不做死連結。 */}
+      <section aria-labelledby="related-title" className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6 sm:grid-cols-3">
+        <h2 className="text-lg font-medium text-ink sm:col-span-3" id="related-title">相關資料</h2>
+        <RelatedField
+          href={classSession.teacherProfile.status !== "draft" ? adminDetailHref("teachers", classSession.teacherProfile.id) : null}
+          label="授課老師"
+          linkText={`查看老師「${classSession.teacherProfile.displayName ?? "未填顯示名稱"}」`}
+          fallback="老師資料無法查看"
         />
-        <DetailField label="開始時間" value={formatTaipeiDatetime(classSession.startAt)} />
-        <DetailField label="結束時間" value={formatTaipeiDatetime(classSession.endAt)} />
-        <DetailField label="地點" value={classSession.location} />
-        <DetailField label="名額上限" value={`${classSession.capacity} 人`} />
-        <div className="min-w-0 sm:col-span-2">
-          <DetailField label="課程說明" multiline value={classSession.description} />
-        </div>
+        <RelatedField
+          href={classSession.demandRequest && classSession.demandRequest.status !== "draft" ? adminDetailHref("demands", classSession.demandRequest.id) : null}
+          label="來源需求"
+          linkText="查看來源需求"
+          fallback="沒有來源需求"
+        />
+        <RelatedField
+          href={classSession.organization ? adminListHref("organizations", { organizationId: classSession.organization.id }) : null}
+          label="所屬團體"
+          linkText={`查看團體「${classSession.organization?.name ?? ""}」`}
+          fallback="沒有所屬團體"
+        />
       </section>
 
       <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
@@ -182,7 +240,7 @@ export default async function AdminClassSessionDetailPage({
       </section>
 
       {canCancelClassSession ? (
-        <section className="grid gap-3 rounded-2xl border border-rose-200 bg-white p-6">
+        <section className="grid scroll-mt-6 gap-3 rounded-2xl border border-rose-200 bg-white p-6" id="class-actions">
           <h2 className="text-lg font-medium text-rose-800">取消課程</h2>
           <p className="text-sm leading-6 text-ink-soft">
             取消後無法復原，也無法重新建立，已報名的學員報名也會一併取消，並會收到通知。
@@ -231,6 +289,43 @@ function PartyField({
           {line}
         </p>
       ))}
+    </div>
+  );
+}
+
+function SummaryItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <dt className="font-medium text-ink">{label}</dt>
+      <dd className="mt-1 break-words leading-6 text-ink-soft">{value}</dd>
+    </div>
+  );
+}
+
+function RelatedField({
+  label,
+  href,
+  linkText,
+  fallback,
+}: {
+  label: string;
+  href: string | null;
+  linkText: string;
+  fallback: string;
+}) {
+  return (
+    <div className="min-w-0 text-sm">
+      <h3 className="font-medium text-ink">{label}</h3>
+      {href ? (
+        <Link
+          className="mt-2 inline-block font-medium leading-6 text-clay underline underline-offset-4 wrap-anywhere"
+          href={href}
+        >
+          {linkText}
+        </Link>
+      ) : (
+        <p className="mt-2 leading-6 text-ink-soft">{fallback}</p>
+      )}
     </div>
   );
 }

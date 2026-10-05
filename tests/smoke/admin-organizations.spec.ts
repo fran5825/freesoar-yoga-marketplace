@@ -111,7 +111,7 @@ test.describe("admin organizations smoke", () => {
     await expect(alphaCard).toContainText("contact-alpha@example.com");
     await expect(alphaCard).toContainText("0900-000-000");
     await expect(alphaCard).toContainText(`Alpha Organizer ${runId}`);
-    await expect(alphaCard).toContainText("需求數：1");
+    await expect(alphaCard.getByRole("link", { name: "查看需求（1）" })).toBeVisible();
     await expect(alphaCard).toContainText("課程數：0");
 
     await expect(zebraCard).toContainText("未提供");

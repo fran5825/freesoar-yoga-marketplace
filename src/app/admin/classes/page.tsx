@@ -11,13 +11,15 @@ import {
   type AdminClassSessionSummary,
 } from "@/domain/class-session/admin-service";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
+import { getOrganizationNameForAdmin } from "@/domain/organizer-profile/admin-service";
+import { getTeacherDisplayNameForAdmin } from "@/domain/teacher-profile/service";
 import { requireAdmin } from "@/lib/auth/session";
 
 import { AdminFilterBar, resolveActiveTab } from "../_components/AdminFilterBar";
 import { AdminFlash, type AdminFlashParams } from "../_components/AdminFlash";
 import { AdminListCard } from "../_components/AdminListCard";
-import { AdminSearchForm, AdminListResults } from "../_components/AdminSearchForm";
-import { adminDetailHref, adminListHref, matchesAdminSearch, normalizeAdminListQuery, sortAdminClasses } from "../_lib/list-context";
+import { AdminSearchForm, AdminListResults, AdminRelationNotice } from "../_components/AdminSearchForm";
+import { adminDetailHref, adminListHref, adminRelationParams, hasAdminRelation, matchesAdminSearch, normalizeAdminListQuery, sortAdminClasses, type AdminListQuery, type NormalizedAdminListQuery } from "../_lib/list-context";
 
 type ClassStatus = AdminClassSessionSummary["status"];
 
@@ -32,8 +34,22 @@ const statusTabs: { key: string; label: string; statuses: ClassStatus[] | null }
 ];
 
 type AdminClassesPageProps = {
-  searchParams?: Promise<AdminFlashParams & { status?: string; q?: string }>;
+  searchParams?: Promise<AdminFlashParams & AdminListQuery>;
 };
+
+// 第三批票 09：限定對象的名稱一律由 server 依 id 查；任一個查不到就顯示「找不到」，不猜名稱。
+async function classRelationLabel(query: NormalizedAdminListQuery): Promise<string | null> {
+  const [organizationName, teacherName] = await Promise.all([
+    query.organizationId ? getOrganizationNameForAdmin(query.organizationId) : undefined,
+    query.teacherProfileId ? getTeacherDisplayNameForAdmin(query.teacherProfileId) : undefined,
+  ]);
+  if (organizationName === null || teacherName === null) return null;
+  const parts = [
+    organizationName ? `團體「${organizationName}」` : null,
+    teacherName ? `老師「${teacherName}」` : null,
+  ].filter(Boolean);
+  return parts.length > 0 ? `只看${parts.join("、")}的課程` : null;
+}
 
 export default async function AdminClassesPage({ searchParams }: AdminClassesPageProps) {
   try {
@@ -49,7 +65,11 @@ export default async function AdminClassesPage({ searchParams }: AdminClassesPag
 
   const query = normalizeAdminListQuery("classes", resolvedSearchParams);
   const returnTo = adminListHref("classes", query);
-  const searched = classSessions.filter((item) => matchesAdminSearch(query.q, [item.title, item.teacherDisplayName, item.organizerDisplayName, item.organizationName, item.location]));
+  const relationLabel = hasAdminRelation(query) ? await classRelationLabel(query) : null;
+  const searched = classSessions.filter((item) =>
+    (!query.organizationId || item.organizationId === query.organizationId) &&
+    (!query.teacherProfileId || item.teacherProfileId === query.teacherProfileId) &&
+    matchesAdminSearch(query.q, [item.title, item.teacherDisplayName, item.organizerDisplayName, item.organizationName, item.location]));
   const processed = classSessions.find((item) => item.id === resolvedSearchParams?.item);
   const countOf = (statuses: ClassStatus[] | null) =>
     statuses
@@ -72,10 +92,11 @@ export default async function AdminClassesPage({ searchParams }: AdminClassesPag
 
       <AdminFlash message={resolvedSearchParams?.message} result={resolvedSearchParams?.result} detailHref={processed ? adminDetailHref("classes", processed.id, returnTo) : undefined} detailLabel={processed ? `查看 ${processed.title}` : undefined} />
       <AdminSearchForm kind="classes" query={query} label="搜尋課程" hint="標題、老師、團主、團體或地點" />
-      <AdminFilterBar activeKey={activeTab.key} ariaLabel="課程狀態篩選" basePath="/admin/classes" tabs={tabs} q={query.q} />
+      <AdminRelationNotice kind="classes" query={query} label={relationLabel} />
+      <AdminFilterBar activeKey={activeTab.key} ariaLabel="課程狀態篩選" basePath="/admin/classes" tabs={tabs} q={query.q} relation={adminRelationParams(query)} />
       <AdminListResults count={visibleClassSessions.length} query={query} />
 
-      {classSessions.length === 0 && !query.q ? (
+      {classSessions.length === 0 && !query.q && !hasAdminRelation(query) ? (
         <section className="rounded-2xl border border-ink/15 bg-white p-6">
           <h2 className="text-lg font-medium text-ink">目前沒有任何課程</h2>
         </section>
@@ -83,7 +104,7 @@ export default async function AdminClassesPage({ searchParams }: AdminClassesPag
         <>
           {visibleClassSessions.length === 0 ? (
             <p className="rounded-2xl border border-ink/15 bg-white p-6 text-sm leading-6 text-ink-soft">
-              {query.q ? "這個分類沒有符合搜尋條件的課程。" : "這個分類目前沒有課程。"}
+              {query.q || hasAdminRelation(query) ? "這個分類沒有符合條件的課程。" : "這個分類目前沒有課程。"}
             </p>
           ) : (
             <section className="grid gap-3">

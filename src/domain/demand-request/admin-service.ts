@@ -124,12 +124,15 @@ export async function listSubmittedDemandRequestsForAdmin(): Promise<
 export type DemandRequestDetailForAdmin = SubmittedDemandRequestForAdmin & {
   status: DemandRequestStatus;
   rejectionReason: string | null;
+  // 第三批票 09：只用來在「只看這個團體」時依 id 篩選，不是授權依據。
+  organizationId: string;
 };
 
 const demandRequestDetailSelect = {
   ...submittedDemandRequestSelect,
   status: true,
   rejectionReason: true,
+  organizationId: true,
 } as const;
 
 // admin-usability 票 07：需求審核列表。除了待審（submitted），也列出已公開、已退回等，讓篩選列
@@ -147,14 +150,15 @@ export async function listDemandRequestsForAdmin(): Promise<
 }
 
 // 詳情頁的單筆讀取。草稿一律回 null（同上）；查無資料回傳 null（not-found 語意）。
+// 第三批票 10：詳情頁另外帶已成立的課程（只取 id／名稱），讓管理員一鍵前往；沒有課程時為 null。
 export async function getDemandRequestForAdmin(
   demandRequestId: string,
-): Promise<DemandRequestDetailForAdmin | null> {
+): Promise<(DemandRequestDetailForAdmin & { classSession: { id: string; title: string } | null }) | null> {
   await requireAdmin();
 
   const demandRequest = await prisma.demandRequest.findUnique({
     where: { id: demandRequestId },
-    select: demandRequestDetailSelect,
+    select: { ...demandRequestDetailSelect, classSession: { select: { id: true, title: true } } },
   });
 
   if (!demandRequest || demandRequest.status === "draft") {

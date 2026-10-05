@@ -11,18 +11,22 @@ export function AdminFilterBar({
   tabs,
   activeKey,
   q = "",
+  relation = {},
 }: {
   ariaLabel: string;
   basePath: string;
   tabs: AdminFilterTab[];
   activeKey: string;
   q?: string;
+  // 第三批票 09：切換分類時保留關聯限定（已由 list-context 驗證過的 id）。
+  relation?: Partial<Record<string, string | undefined>>;
 }) {
   return (
     <nav aria-label={ariaLabel} className="flex flex-wrap gap-2">
       {tabs.map((tab, index) => {
         const isActive = tab.key === activeKey;
         const params = new URLSearchParams();
+        for (const [key, value] of Object.entries(relation)) if (value) params.set(key, value);
         if (index !== 0) params.set("status", tab.key);
         if (q) params.set("q", q);
 

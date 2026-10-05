@@ -1,8 +1,10 @@
 import type {
   ClassSessionOrigin,
   ClassSessionStatus,
+  DemandRequestStatus,
   EnrollmentStatus,
   OrganizationType,
+  TeacherProfileStatus,
 } from "@prisma/client";
 
 import { requireAdmin } from "@/lib/auth/session";
@@ -33,7 +35,17 @@ export type AdminClassSessionSummary = {
   teacherDisplayName: string | null;
   organizationName: string | null;
   confirmedEnrollmentCount: number;
+  // 第三批票 09：只用來在「只看這個團體／老師」時依 id 篩選，不是授權依據。
+  organizationId: string | null;
+  teacherProfileId: string;
 };
+
+// 第三批票 09：老師詳情「這位老師的課程」入口顯示的數量，與課程列表限定後的「全部」一致。
+export async function countClassSessionsForTeacherForAdmin(teacherProfileId: string): Promise<number> {
+  await requireAdmin();
+
+  return prisma.classSession.count({ where: { teacherProfileId } });
+}
 
 export async function listAllClassSessionsForAdmin(): Promise<AdminClassSessionSummary[]> {
   await requireAdmin();
@@ -49,8 +61,10 @@ export async function listAllClassSessionsForAdmin(): Promise<AdminClassSessionS
       location: true,
       capacity: true,
       updatedAt: true,
+      organizationId: true,
+      teacherProfileId: true,
       organizerProfile: { select: { displayName: true } },
-      teacherProfile: { select: { displayName: true } },
+      teacherProfile: { select: { displayName: true, status: true } },
       organization: { select: { name: true } },
       _count: { select: { enrollments: { where: { status: "confirmed" } } } },
     },
@@ -68,9 +82,13 @@ export async function listAllClassSessionsForAdmin(): Promise<AdminClassSessionS
     capacity: classSession.capacity,
     updatedAt: classSession.updatedAt,
     organizerDisplayName: classSession.organizerProfile?.displayName ?? null,
-    teacherDisplayName: classSession.teacherProfile.displayName,
+    // 第三批票 10：草稿老師的姓名管理員看不到（列表顯示與搜尋都不使用）。
+    teacherDisplayName:
+      classSession.teacherProfile.status === "draft" ? null : classSession.teacherProfile.displayName,
     organizationName: classSession.organization?.name ?? null,
     confirmedEnrollmentCount: classSession._count.enrollments,
+    organizationId: classSession.organizationId,
+    teacherProfileId: classSession.teacherProfileId,
   }));
 }
 
@@ -90,6 +108,11 @@ export type AdminClassSessionDetail = {
   title: string;
   description: string | null;
   serviceType: string | null;
+  // 第三批票 11：課程本身既有的欄位，補讀給管理員看（不夾帶其他使用者資料）。
+  serviceTypes: string[];
+  yogaStyles: string[];
+  origin: ClassSessionOrigin;
+  requiresApproval: boolean;
   startAt: Date;
   endAt: Date;
   location: string;
@@ -99,11 +122,13 @@ export type AdminClassSessionDetail = {
   createdAt: Date;
   // teacher-initiated-open-classes：老師自建課程沒有 demandRequest／organizerProfile／
   // organization，三者皆改為 nullable；消費頁面需自行提供中性 fallback 文案。
-  demandRequest: { targetLevel: string | null } | null;
+  // 第三批票 10：id／status 只用來決定要不要顯示關聯連結（草稿需求不給連結），不是授權依據。
+  demandRequest: { id: string; status: DemandRequestStatus; targetLevel: string | null } | null;
   // 管理員需要能分辨「是誰」，所以除了名稱還帶聯絡方式（帳號 email、團體聯絡窗口）。
   organizerProfile: { displayName: string; user: { email: string | null } } | null;
-  teacherProfile: { displayName: string | null; user: { email: string | null } };
+  teacherProfile: { id: string; status: TeacherProfileStatus; displayName: string | null; user: { email: string | null } };
   organization: {
+    id: string;
     name: string;
     type: OrganizationType;
     contactName: string | null;
@@ -126,6 +151,10 @@ export async function getClassSessionDetailForAdmin(
       title: true,
       description: true,
       serviceType: true,
+      serviceTypes: true,
+      yogaStyles: true,
+      origin: true,
+      requiresApproval: true,
       startAt: true,
       endAt: true,
       location: true,
@@ -134,15 +163,16 @@ export async function getClassSessionDetailForAdmin(
       status: true,
       origin: true,
       createdAt: true,
-      demandRequest: { select: { targetLevel: true } },
+      demandRequest: { select: { id: true, status: true, targetLevel: true } },
       organizerProfile: {
         select: { displayName: true, user: { select: { email: true } } },
       },
       teacherProfile: {
-        select: { displayName: true, user: { select: { email: true } } },
+        select: { id: true, status: true, displayName: true, user: { select: { email: true } } },
       },
       organization: {
         select: {
+          id: true,
           name: true,
           type: true,
           contactName: true,
@@ -166,10 +196,17 @@ export async function getClassSessionDetailForAdmin(
     return null;
   }
 
-  const { enrollments, ...rest } = classSession;
+  const { enrollments, demandRequest, teacherProfile, ...rest } = classSession;
 
+  // 第三批票 10：草稿是管理員看不到的資料。正常流程下課程不會連到草稿需求／草稿老師，但讀取層仍防守：
+  // 草稿需求整筆不回傳（連程度都不露），草稿老師只留 id／status，不回傳姓名與 email。
   return {
     ...rest,
+    demandRequest: demandRequest && demandRequest.status !== "draft" ? demandRequest : null,
+    teacherProfile:
+      teacherProfile.status === "draft"
+        ? { ...teacherProfile, displayName: null, user: { email: null } }
+        : teacherProfile,
     roster: enrollments.map((enrollment) => ({
       id: enrollment.id,
       memberLabel: enrollment.user.name ?? enrollment.user.email ?? "會員",

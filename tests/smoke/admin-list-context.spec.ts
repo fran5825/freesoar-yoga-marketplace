@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { adminClassOriginLabel } from "../../src/app/admin/classes/origin-labels";
 import { adminDetailHref, adminFeedbackHref, matchesAdminSearch, normalizeAdminListQuery, safeAdminReturnTo, sortAdminClasses } from "../../src/app/admin/_lib/list-context";
 
 test("return context rejects external, cross-role and malformed paths, and removes unrelated parameters", () => {
@@ -19,6 +20,37 @@ test("feedback and detail preserve a safe search context without treating keywor
   expect(feedback.searchParams.get("q")).toBe("A&B");
   expect(feedback.searchParams.get("status")).toBe("open");
   expect(feedback.searchParams.get("item")).toBe("id");
+});
+
+test("relation filters are only accepted where supported, must look like ids, and survive return/detail/feedback", () => {
+  expect(normalizeAdminListQuery("demands", { organizationId: "org_123", teacherProfileId: "t1" })).toEqual({ status: "pending", q: "", organizationId: "org_123" });
+  expect(normalizeAdminListQuery("classes", { organizationId: "o1", teacherProfileId: "t1" })).toEqual({ status: "all", q: "", organizationId: "o1", teacherProfileId: "t1" });
+  expect(normalizeAdminListQuery("teachers", { organizationId: "o1", teacherProfileId: "t1" })).toEqual({ status: "pending", q: "" });
+  // 票 10：團體列表接受 organizationId（課程詳情「所屬團體」），但不接受老師限定。
+  expect(normalizeAdminListQuery("organizations", { organizationId: "o1", teacherProfileId: "t1" })).toEqual({ status: "all", q: "", organizationId: "o1" });
+  expect(safeAdminReturnTo("organizations", "/admin/organizations?organizationId=o1&teacherProfileId=t1")).toBe("/admin/organizations?organizationId=o1");
+  for (const bad of ["", "a b", "../x", "x".repeat(65), "https://evil.example", "1;drop"]) {
+    expect(normalizeAdminListQuery("classes", { organizationId: bad }).organizationId).toBeUndefined();
+  }
+
+  const context = "/admin/demands?organizationId=org_1&status=all&q=A%26B&teacherProfileId=t1&redirect=https://evil.example";
+  expect(safeAdminReturnTo("demands", context)).toBe("/admin/demands?organizationId=org_1&status=all&q=A%26B");
+  expect(safeAdminReturnTo("demands", "/admin/demands?organizationId=bad%20id")).toBe("/admin/demands");
+
+  const classContext = "/admin/classes?teacherProfileId=t1&status=open";
+  const detail = new URL(adminDetailHref("classes", "id", classContext), "https://admin.invalid");
+  expect(detail.searchParams.get("returnTo")).toBe(classContext);
+  const feedback = new URL(adminFeedbackHref("classes", classContext, "success", "完成", "id"), "https://admin.invalid");
+  expect(feedback.searchParams.get("teacherProfileId")).toBe("t1");
+  expect(feedback.searchParams.get("status")).toBe("open");
+});
+
+test("class origin wording matches the public pages and falls back for origins the admin page does not know yet", () => {
+  expect(adminClassOriginLabel("organizer_matched")).toBe("團主團課");
+  expect(adminClassOriginLabel("teacher_initiated")).toBe("老師開課");
+  for (const unknown of ["organizer_direct", "", "toString", "__proto__"]) {
+    expect(adminClassOriginLabel(unknown)).toBe("其他來源");
+  }
 });
 
 test("search handles missing fields, fullwidth text, case and Chinese partial terms", () => {

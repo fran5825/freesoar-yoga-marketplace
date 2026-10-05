@@ -958,6 +958,25 @@ export async function getTeacherProfileForAdmin(
   };
 }
 
+// admin-usability 第三批票 09：課程列表「只看這位老師」時顯示的名稱。只取顯示名稱；草稿老師
+// 管理員看不到，所以跟查無資料一樣回 null（不透露是否存在）。
+export async function getTeacherDisplayNameForAdmin(
+  teacherProfileId: string,
+): Promise<string | null> {
+  await requireAdmin();
+
+  const profile = await prisma.teacherProfile.findUnique({
+    where: { id: teacherProfileId },
+    select: { displayName: true, status: true },
+  });
+
+  if (!profile || profile.status === "draft") {
+    return null;
+  }
+
+  return profile.displayName ?? "未填顯示名稱的老師";
+}
+
 function toTeacherProfileDraftData(input: TeacherProfileApplicationInput) {
   return {
     displayName: input.displayName ?? null,
