@@ -32,6 +32,8 @@ export async function lockTeacherScheduleAndCheckConflict(
   endAt: Date,
   excludeClassSessionId?: string,
   hooks?: ConflictLockHooks,
+  // organizer-usability-redesign 票 06：轉課時只排除呼叫端自己那筆已確認的合作邀請。
+  options?: { excludeProposalId?: string },
 ): Promise<ConflictingClassSession | null> {
   // 步驟 1：鎖住這位老師的 TeacherProfile row。必須是這個函式的第一個資料庫操作，
   // 呼叫端（Organizer 路徑、Teacher 路徑）不得在呼叫本函式之前，於同一 transaction 內
@@ -57,5 +59,24 @@ export async function lockTeacherScheduleAndCheckConflict(
     LIMIT 1
   `;
 
-  return overlapping[0] ?? null;
+  if (overlapping[0]) {
+    return overlapping[0];
+  }
+
+  // organizer-usability-redesign 票 06（spec 13.5）：已確認、尚未轉成正式課程的合作邀請也占用老師時段；
+  // pending／declined／draft 不占。所有建課路徑都經過這裡，所以都會被已確認的邀請擋下。
+  const excludeProposalId = options?.excludeProposalId;
+  const overlappingProposals = await tx.$queryRaw<{ id: string; title: string | null }[]>`
+    SELECT "id", "title" FROM "OrganizerClassProposal"
+    WHERE "teacherProfileId" = ${teacherProfileId}
+      AND "status" = 'confirmed'::"OrganizerClassProposalStatus"
+      AND "classSessionId" IS NULL
+      AND "startAt" < ${endAt}
+      AND "endAt" > ${startAt}
+      ${excludeProposalId ? Prisma.sql`AND "id" != ${excludeProposalId}` : Prisma.empty}
+    LIMIT 1
+  `;
+
+  const proposal = overlappingProposals[0];
+  return proposal ? { id: proposal.id, title: proposal.title ?? "已確認的合作邀請" } : null;
 }

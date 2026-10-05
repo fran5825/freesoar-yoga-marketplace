@@ -295,7 +295,8 @@ organizer-usability-redesign（Q18：A）。每個轉換的 actor、guard、時�
 - 所有動作都由 server 從登入者解析身分：團主動作要求邀請的 `organizerProfileId` 是本人，老師動作要求邀請的 `teacherProfileId` 是本人的 TeacherProfile；不符一律回 `proposal_not_found`，不揭露存在性。
 - 送出、確認、本人授課、開放報名都要重新檢查：老師是 `approved`（在 TeacherProfile 鎖內讀取）、`startAt` 在未來、欄位完整、團體聯絡資料完整。
 - 確認、婉拒、開放報名都要帶 `expectedVersion`，必須等於目前的 `version`。
-- 鎖順序：TeacherProfile（兩位老師時依 id 由小到大）→ OrganizerClassProposal → 其他資料列。
+- 鎖順序（全站）：RecurringClassSeries → ClassSession（依 id）→ TeacherProfile（兩位老師時依 id 由小到大）→ OrganizerClassProposal → DemandRequest。
+- **已落地（票 06）**：`pending_confirmation → confirmed`（受邀老師，`confirmProposalCore`：鎖老師並檢查撞課 → 鎖邀請 → 重驗 version、狀態、老師 approved、未來時間與完整度，寫入 confirmedVersion／confirmedAt／確認者）與 `pending_confirmation → declined`（受邀老師，`declineProposalCore`：原因必填 1–500 字，狀態與 version 寫在 WHERE）。
 
 ### 時段占用
 

@@ -1,16 +1,24 @@
 import type { OrganizerClassProposalStatus, OrganizationType } from "@prisma/client";
 
 import { formatTaipeiDatetimeLocal } from "@/domain/class-session/timezone";
-import { validateClassSessionCreate } from "@/domain/class-session/validation";
 import { isOrganizationContactComplete } from "@/domain/demand-request/validation";
 import { getCurrentUser, requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
 import {
+  confirmProposalCore,
+  declineProposalCore,
+  DECLINE_REASON_MAX_LENGTH,
+  type RespondToProposalErrorCode,
+} from "./__internal__/respond-core";
+import { getProposalSubmitIssues } from "./submit-issues";
+import {
   type ProposalFormInput,
   type ProposalValidationError,
   validateProposalDraft,
 } from "./validation";
+
+export { getProposalSubmitIssues };
 
 // organizer-usability-redesign 票 05（spec 13.2–13.4）：合作邀請的草稿與送出。
 // 所有讀寫都由 server 從登入者解析身分：團主看 organizerProfileId，受邀老師看 teacherProfile.userId；
@@ -68,6 +76,7 @@ export type ProposalDetail = {
   isPublic: boolean;
   submittedAt: Date | null;
   declineReason: string | null;
+  confirmedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -94,6 +103,7 @@ const proposalDetailSelect = {
   isPublic: true,
   submittedAt: true,
   declineReason: true,
+  confirmedAt: true,
   createdAt: true,
   updatedAt: true,
   organization: {
@@ -141,6 +151,7 @@ function toDetail(row: {
   isPublic: boolean;
   submittedAt: Date | null;
   declineReason: string | null;
+  confirmedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
   organization: ProposalDetail["organization"];
@@ -329,48 +340,6 @@ export async function saveOwnProposalDraft(
 
 // ---------- 送出資格 ----------
 
-// 送出前的完整度與未來時間檢查，規則與正式建課一致（瑜伽類型對團主課程不強制）。
-// 送出時使用；編輯頁在「送出失敗後換頁」時也用它重建可定位的欄位錯誤。
-export function getProposalSubmitIssues(proposal: {
-  teacherProfileId: string | null;
-  title: string | null;
-  description: string | null;
-  serviceTypes: string[];
-  startAt: Date | null;
-  endAt: Date | null;
-  location: string | null;
-  capacity: number | null;
-  isPublic: boolean;
-}): { startsInPast: boolean; errors: ProposalValidationError[] } {
-  const errors: ProposalValidationError[] = [];
-  if (!proposal.teacherProfileId) {
-    errors.push({ field: "teacherProfileId", message: "請選擇授課老師。" });
-  }
-  const completeness = validateClassSessionCreate({
-    title: proposal.title,
-    description: proposal.description,
-    serviceTypes: proposal.serviceTypes,
-    startAt: proposal.startAt ? formatTaipeiDatetimeLocal(proposal.startAt) : null,
-    endAt: proposal.endAt ? formatTaipeiDatetimeLocal(proposal.endAt) : null,
-    location: proposal.location,
-    capacity: proposal.capacity,
-    isPublic: proposal.isPublic,
-  });
-  if (completeness.valid) {
-    return { startsInPast: false, errors };
-  }
-  return {
-    startsInPast: completeness.errors.some((error) => error.code === "start_at_in_past"),
-    errors: [
-      ...errors,
-      ...completeness.errors.map((error) => ({
-        field: (error.field === "serviceType" ? "serviceTypes" : error.field) as ProposalValidationError["field"],
-        message: error.message,
-      })),
-    ],
-  };
-}
-
 export function getProposalSubmitIssuesForDetail(detail: ProposalDetail) {
   return getProposalSubmitIssues({
     teacherProfileId: detail.teacher?.teacherProfileId ?? null,
@@ -469,5 +438,77 @@ export async function submitOwnProposal(
       return failure("authentication_required", "請先登入後再送出邀請。");
     }
     return failure("proposal_save_failed", "邀請暫時無法送出，請稍後再試。");
+  }
+}
+
+// ---------- 受邀老師確認／婉拒（票 06）----------
+
+const RESPOND_MESSAGES: Record<RespondToProposalErrorCode, string> = {
+  proposal_not_found: "找不到這份合作邀請，或你沒有權限處理。",
+  proposal_version_stale: "團主剛剛修改了這份邀請，請重新整理後確認最新內容。",
+  proposal_invalid_status: "這份邀請目前不需要你確認（可能已經確認、婉拒或撤回），請重新整理查看最新狀態。",
+  teacher_not_approved: "你的老師資格目前不是已通過審核的狀態，暫時不能確認授課。",
+  proposal_starts_in_past: "這堂課的開始時間已經過了，無法確認。可以請團主修改時間後再邀請你。",
+  proposal_incomplete: "這份邀請的內容還不完整，無法確認。可以請團主補齊後再邀請你。",
+  schedule_conflict: "這個時段你已經有其他課程或已確認的合作，無法確認。可以請團主調整時間。",
+  decline_reason_invalid: `請填寫婉拒原因（${DECLINE_REASON_MAX_LENGTH} 字以內），讓團主知道怎麼調整。`,
+  respond_failed: "暫時無法處理，請稍後再試。",
+};
+
+export type RespondAsTeacherResult =
+  | { ok: true }
+  | { ok: false; code: RespondToProposalErrorCode | "authentication_required"; message: string };
+
+async function resolveTeacher(): Promise<{ userId: string; teacherProfileId: string } | null> {
+  const currentUser = await requireUser();
+  const teacherProfile = await prisma.teacherProfile.findUnique({
+    where: { userId: currentUser.id },
+    select: { id: true },
+  });
+  return teacherProfile ? { userId: currentUser.id, teacherProfileId: teacherProfile.id } : null;
+}
+
+function toRespondResult(result: Awaited<ReturnType<typeof confirmProposalCore>>): RespondAsTeacherResult {
+  return result.ok ? result : { ok: false, code: result.code, message: RESPOND_MESSAGES[result.code] };
+}
+
+export async function confirmProposalAsTeacher(
+  proposalId: string,
+  expectedVersion: number,
+): Promise<RespondAsTeacherResult> {
+  try {
+    const teacher = await resolveTeacher();
+    if (!teacher) {
+      return { ok: false, code: "proposal_not_found", message: RESPOND_MESSAGES.proposal_not_found };
+    }
+    return toRespondResult(
+      await confirmProposalCore(teacher.teacherProfileId, teacher.userId, proposalId, expectedVersion),
+    );
+  } catch (error) {
+    if (isAuthenticationRequiredError(error)) {
+      return { ok: false, code: "authentication_required", message: "請先登入後再處理邀請。" };
+    }
+    return { ok: false, code: "respond_failed", message: RESPOND_MESSAGES.respond_failed };
+  }
+}
+
+export async function declineProposalAsTeacher(
+  proposalId: string,
+  expectedVersion: number,
+  reason: string,
+): Promise<RespondAsTeacherResult> {
+  try {
+    const teacher = await resolveTeacher();
+    if (!teacher) {
+      return { ok: false, code: "proposal_not_found", message: RESPOND_MESSAGES.proposal_not_found };
+    }
+    return toRespondResult(
+      await declineProposalCore(teacher.teacherProfileId, proposalId, expectedVersion, reason),
+    );
+  } catch (error) {
+    if (isAuthenticationRequiredError(error)) {
+      return { ok: false, code: "authentication_required", message: "請先登入後再處理邀請。" };
+    }
+    return { ok: false, code: "respond_failed", message: RESPOND_MESSAGES.respond_failed };
   }
 }

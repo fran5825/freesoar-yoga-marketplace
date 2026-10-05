@@ -340,13 +340,16 @@ model OrganizerClassProposal {
 
 **全站鎖順序（所有建課與邀請路徑共用）**：
 
-1. 先鎖 `TeacherProfile`（`FOR UPDATE`）。同時涉及兩位老師時（例如修改已確認的邀請並換老師），依 `id` 由小到大依序鎖。
-2. 再鎖 `OrganizerClassProposal`。
-3. 最後才鎖 `ClassSession`、`DemandRequest` 等其他資料列。
+全站統一為 **`RecurringClassSeries` → `ClassSession`（多筆時依 id 排序）→ `TeacherProfile` → `OrganizerClassProposal` → `DemandRequest`**（2026-10-05 票 06 與老師排課規格 `docs/specs/teacher-class-scheduling-spec.md` 第 6 節對齊）：
+
+1. 系列與既有場次的鎖（老師排課的系列操作、單場報名）排在老師之前；團主的邀請流程不會鎖既有場次，開放報名是新建一堂課，所以不受影響。
+2. 鎖 `TeacherProfile`（`FOR UPDATE`）。同時涉及兩位老師時（例如修改已確認的邀請並換老師），依 `id` 由小到大依序鎖。
+3. 再鎖 `OrganizerClassProposal`。
+4. 最後才鎖 `DemandRequest`。任何路徑都不得在持有後面的鎖之後，再回頭取前面的鎖。
 
 邀請流程先在不加鎖的情況下讀出候選 `teacherProfileId`（目前的與要換成的），依上述順序加鎖後，再確認邀請的 `teacherProfileId` 與 `version` 都沒變；有變就回 `proposal_version_stale`，不在鎖外做判斷。
 
-**既有路徑要調整（票 06）**：目前團主媒合建課（`src/domain/class-session/__internal__/create-class-session-core.ts`）先鎖 `DemandRequest`，之後才在 `lockTeacherScheduleAndCheckConflict` 鎖 `TeacherProfile`，與上述順序相反；邀請路徑上線後，兩條路徑同時進行就可能 deadlock（兩邊互相等對方的鎖）。票 06 改成：先不加鎖讀出需求選定的老師 → 鎖 `TeacherProfile` → 鎖 `DemandRequest` 並重新確認選定的老師沒變。老師自建與系列路徑本來就先鎖 `TeacherProfile`，維持不變。
+**既有路徑要調整（票 06）**：目前團主媒合建課（`src/domain/class-session/__internal__/create-class-session-core.ts`）先鎖 `DemandRequest`，之後才在 `lockTeacherScheduleAndCheckConflict` 鎖 `TeacherProfile`，與上述順序相反；邀請路徑上線後，兩條路徑同時進行就可能 deadlock（兩邊互相等對方的鎖）。票 06 改成：先不加鎖讀出需求選定的老師 → 鎖 `TeacherProfile` → 鎖 `DemandRequest` 並重新確認選定的老師沒變（**已落地**）。測試用的 hooks：`onBeforeLock` 在取第一把鎖之前、`onLockAcquired` 在老師與需求的鎖都到手之後。老師自建與系列路徑本來就先鎖 `TeacherProfile`，維持不變。
 
 **衝突檢查的相容擴充**：`lockTeacherScheduleAndCheckConflict` 保留既有的 positional 參數與 test hooks，另外新增 options（`excludeClassSessionId`、`excludeProposalId`、`hooks`）。查詢除了既有的「同老師、非 cancelled 的 `ClassSession`（含 draft）」，再加上「同老師、`confirmed` 且 `classSessionId IS NULL` 的邀請」，只排除呼叫端自己那一筆。既有的團主媒合建課、老師單堂、老師系列與「生成更多」都走同一個函式，所以都會被已確認的邀請擋下。pending、declined、draft 的邀請不占時段。
 

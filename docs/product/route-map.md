@@ -40,7 +40,7 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 | `/teacher/classes/[classSessionId]` | 單堂詳情（own-scoped，別人的課 404）。票 03：頂端課程重點＋下一步操作，婉拒／取消先在確認視窗說明影響。票 04：返回上下文只收白名單參數 `from=list&tab=…&status=cancelled` 或 `from=series&series=<這堂課自己的系列 id>`，不接受任意 return URL；操作後回到同一堂並保留上下文 |
 | `/teacher/classes/new` | **新增**（`teacher-initiated-open-classes` 已確認）：approved 老師建立單堂、常規（每週固定星期）或固定期課程；僅 `approved` 老師可建立，其餘狀態顯示引導文案 |
 | `/teacher/classes/series/[recurringClassSeriesId]` | **新增**（`teacher-initiated-open-classes` 已確認）：管理單一常規/固定期課程系列——列出已生成場次、手動生成更多（僅常規模式）、取消整個系列 |
-| `/teacher/class-proposals/[proposalId]` | **唯讀已落地（票 05）**，確認／婉拒在票 06（organizer-usability-redesign）：受邀老師查看自己收到的合作邀請最新內容，確認授課或附原因婉拒；不是自己的邀請一律 not-found。未確認的邀請不會出現在「我的課程」 |
+| `/teacher/class-proposals/[proposalId]` | **已落地（票 05 唯讀、票 06 確認／婉拒）**（organizer-usability-redesign）：受邀老師查看自己收到的合作邀請最新內容，確認授課或附原因婉拒；不是自己的邀請一律 not-found。未確認的邀請不會出現在「我的課程」 |
 
 ## Organizer Routes
 

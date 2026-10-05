@@ -82,6 +82,13 @@ class TeacherScheduleConflictError extends Error {
 // (d) 查出 selected DemandResponse 的 teacherProfileId；
 // (e) 建立 ClassSession；
 // (f) 呼叫 markDemandRequestAsConvertedToClassIfMatched。
+//
+// organizer-usability-redesign 票 06（spec 13.5）：全站鎖順序是
+// 系列 → 場次 → TeacherProfile → OrganizerClassProposal → DemandRequest。
+// 所以先在鎖外讀出選定的老師，鎖住老師（同時做撞課檢查），之後才鎖 DemandRequest，
+// 並在鎖內重新確認選定的老師沒有變。沒有選定老師時不需要老師鎖，直接鎖需求並回報原因。
+// hooks：onBeforeLock 在取第一把鎖之前、onLockAcquired 在所有鎖（老師與需求）都到手之後，
+// 併發測試因此能證明「持有全部鎖」的一方會擋住另一方。
 export async function createClassSessionForOrganizer(
   organizerProfileId: string,
   demandRequestId: string,
@@ -90,7 +97,26 @@ export async function createClassSessionForOrganizer(
 ): Promise<CreateClassSessionForOrganizerResult> {
   try {
     const classSessionId = await prisma.$transaction(async (tx) => {
+      const preselected = await tx.demandResponse.findFirst({
+        where: {
+          demandRequestId,
+          status: "selected",
+          demandRequest: { organizerProfileId },
+        },
+        select: { teacherProfileId: true },
+      });
+
       await hooks?.onBeforeLock?.();
+
+      let conflict: Awaited<ReturnType<typeof lockTeacherScheduleAndCheckConflict>> = null;
+      if (preselected) {
+        conflict = await lockTeacherScheduleAndCheckConflict(
+          tx,
+          preselected.teacherProfileId,
+          input.startAt,
+          input.endAt,
+        );
+      }
 
       const lockedDemand = await tx.$queryRaw<
         { id: string; status: string; organizationId: string }[]
@@ -127,19 +153,10 @@ export async function createClassSessionForOrganizer(
         select: { teacherProfileId: true },
       });
 
-      if (!selectedResponse) {
+      // 鎖內重新確認：選定的老師必須就是剛才鎖住、做過撞課檢查的那一位。
+      if (!selectedResponse || selectedResponse.teacherProfileId !== preselected?.teacherProfileId) {
         throw new DemandNotReadyError();
       }
-
-      // teacher-initiated-open-classes 第 6 節：一律先鎖 TeacherProfile（見
-      // conflict-check.ts），此時已經在同一 transaction 內鎖過 DemandRequest，這是額外多鎖
-      // 一個 row，不影響既有 DemandRequest 鎖的語意；鎖定順序必須跟老師自建路徑一致，避免死鎖。
-      const conflict = await lockTeacherScheduleAndCheckConflict(
-        tx,
-        selectedResponse.teacherProfileId,
-        input.startAt,
-        input.endAt,
-      );
 
       if (conflict) {
         throw new TeacherScheduleConflictError();
