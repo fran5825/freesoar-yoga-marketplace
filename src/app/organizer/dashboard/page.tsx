@@ -115,7 +115,7 @@ export default async function OrganizerDashboardPage() {
           我的總覽
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
-          這裡彙整你最近的通知與需求狀態。
+          這裡彙整你的待辦、直接開團的進度、最近的通知與需求狀態。
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
           <Link
