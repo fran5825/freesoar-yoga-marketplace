@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { listOwnClassSessionsForTeacher } from "@/domain/class-session/read-service";
+import {
+  listOwnClassSessionsForTeacher,
+  listOwnWeeklySeriesNeedingMoreForTeacher,
+} from "@/domain/class-session/read-service";
 import {
   buildTeacherTodoItems,
   type TeacherTodoItem,
@@ -90,6 +93,7 @@ export default async function TeacherDashboardPage() {
     ? buildTeacherTodoItems({
         classSessions: await listOwnClassSessionsForTeacher(),
         selectedResponsesAwaitingClass: await listOwnSelectedResponsesAwaitingClass(),
+        seriesNeedingMore: await listOwnWeeklySeriesNeedingMoreForTeacher(),
       })
     : [];
 

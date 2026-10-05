@@ -33,6 +33,9 @@ export async function completeClassSessionForTeacher(
     where: {
       id: classSessionId,
       teacherProfileId,
+      // organizer-usability-redesign 票 09（spec 13.6）：老師只能完成自己開的課；
+      // 團主媒合或團主直接開團的課由團主管理，即使授課老師是自己也一樣。
+      origin: "teacher_initiated",
       status: "open_for_enrollment",
       endAt: { lte: now },
     },
@@ -70,7 +73,7 @@ export async function completeClassSessionForTeacher(
   }
 
   const classSession = await prisma.classSession.findFirst({
-    where: { id: classSessionId, teacherProfileId },
+    where: { id: classSessionId, teacherProfileId, origin: "teacher_initiated" },
     select: { status: true, endAt: true },
   });
 

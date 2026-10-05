@@ -316,12 +316,14 @@ model OrganizerClassProposal {
 | draft → confirmed（本人授課） | 同一 User 的團主＋老師 | 上一列全部 guard，加上明確的本人確認操作 | **開始占用** | 團主 | 無（不通知自己） |
 | pending_confirmation → declined | 受邀老師 own | 是受邀老師本人；`expectedVersion` 一致；`declineReason` 有效 | 不占 | 團主（修改重送或撤回） | 團主：老師婉拒（含原因） |
 | pending_confirmation → pending_confirmation（修改） | 團主 own | owner；`version` +1；不可換團體；可換老師，新老師必須 `approved` | 不占 | 受邀老師（換老師時是新老師） | 沒換老師：受邀老師收到「內容已更新」；換老師：見 13.7 |
+| pending_confirmation → draft（改成由團主本人授課） | 團主 own | owner；新老師是團主本人且 approved；`version` +1；不可換團體（`submittedAt` 保留）；內容可暫時不完整（沒有寄給任何人） | 不占（仍需之後明確本人確認才占用） | 團主（由我授課並確認） | 原受邀老師：邀請已撤回（票 12） |
 | declined → draft（修改內容） | 團主 own | owner；`version` +1；不可換團體；`declineReason` 保留給團主參考，下次送出時清空 | 不占 | 團主（重新送出） | 無 |
 | confirmed → draft（修改內容） | 團主 own | owner；未轉課；`version` +1；不可換團體；清除 `confirmedVersion`／`confirmedAt`／`confirmedByUserId` | **釋放** | 團主（重新送出） | 原受邀老師：安排已變更、需要重新確認（本人授課不通知；換老師時見 13.7） |
 | draft／pending／declined／confirmed → withdrawn | 團主 own | owner；未轉課 | confirmed 時**釋放** | 無 | 老師曾看到的（pending／confirmed）：邀請已撤回 |
 | confirmed → converted（開放報名） | 團主 own | 見 13.5 | 占用移交給新課程 | 學員報名 | 沿用 `class_session_created` 通知老師（本人授課不通知） |
 
 - **換團體的判斷依據是 `submittedAt`，不是目前狀態**：`submittedAt` 在第一次送出時寫入、之後永遠不清空。所以即使「送出 → 確認 → 修改退回 draft」或「婉拒 → 修改退回 draft」，也不能換團體，要撤回後另建。驗收要涵蓋這兩條路徑。
+- **不會自己邀請自己**（票 08）：等待確認中的邀請改成團主本人授課時退回草稿，原受邀老師不再看得到；`submittedAt` 與團體鎖定保留；時段要等團主明確「由我授課並確認」才占用。`submitOwnProposal` 也拒絕把邀請寄給自己。
 - 婉拒後的完整流程是：婉拒 → 團主修改並存檔（回到 draft，version +1）→ 重新送出（清空 `declineReason`）→ 老師確認。團主也可以不修改直接重送（`declined → pending_confirmation`）。
 - `withdrawn`、`converted` 是終局狀態，不能再回到其他狀態。
 - 已過 `startAt` 的邀請不能送出、確認或開放，畫面顯示「已過期，需要修改時間」；不新增 cron 或 `expired` 狀態。
@@ -340,13 +342,16 @@ model OrganizerClassProposal {
 
 **全站鎖順序（所有建課與邀請路徑共用）**：
 
-1. 先鎖 `TeacherProfile`（`FOR UPDATE`）。同時涉及兩位老師時（例如修改已確認的邀請並換老師），依 `id` 由小到大依序鎖。
-2. 再鎖 `OrganizerClassProposal`。
-3. 最後才鎖 `ClassSession`、`DemandRequest` 等其他資料列。
+全站統一為 **`RecurringClassSeries` → `ClassSession`（多筆時依 id 排序）→ `TeacherProfile` → `OrganizerClassProposal` → `DemandRequest`**（2026-10-05 票 06 與老師排課規格 `docs/specs/teacher-class-scheduling-spec.md` 第 6 節對齊）：
+
+1. 系列與既有場次的鎖（老師排課的系列操作、單場報名）排在老師之前；團主的邀請流程不會鎖既有場次，開放報名是新建一堂課，所以不受影響。
+2. 鎖 `TeacherProfile`（`FOR UPDATE`）。同時涉及兩位老師時（例如修改已確認的邀請並換老師），依 `id` 由小到大依序鎖。
+3. 再鎖 `OrganizerClassProposal`。
+4. 最後才鎖 `DemandRequest`。任何路徑都不得在持有後面的鎖之後，再回頭取前面的鎖。
 
 邀請流程先在不加鎖的情況下讀出候選 `teacherProfileId`（目前的與要換成的），依上述順序加鎖後，再確認邀請的 `teacherProfileId` 與 `version` 都沒變；有變就回 `proposal_version_stale`，不在鎖外做判斷。
 
-**既有路徑要調整（票 06）**：目前團主媒合建課（`src/domain/class-session/__internal__/create-class-session-core.ts`）先鎖 `DemandRequest`，之後才在 `lockTeacherScheduleAndCheckConflict` 鎖 `TeacherProfile`，與上述順序相反；邀請路徑上線後，兩條路徑同時進行就可能 deadlock（兩邊互相等對方的鎖）。票 06 改成：先不加鎖讀出需求選定的老師 → 鎖 `TeacherProfile` → 鎖 `DemandRequest` 並重新確認選定的老師沒變。老師自建與系列路徑本來就先鎖 `TeacherProfile`，維持不變。
+**既有路徑要調整（票 06）**：目前團主媒合建課（`src/domain/class-session/__internal__/create-class-session-core.ts`）先鎖 `DemandRequest`，之後才在 `lockTeacherScheduleAndCheckConflict` 鎖 `TeacherProfile`，與上述順序相反；邀請路徑上線後，兩條路徑同時進行就可能 deadlock（兩邊互相等對方的鎖）。票 06 改成：先不加鎖讀出需求選定的老師 → 鎖 `TeacherProfile` → 鎖 `DemandRequest` 並重新確認選定的老師沒變（**已落地**）。測試用的 hooks：`onBeforeLock` 在取第一把鎖之前、`onLockAcquired` 在老師與需求的鎖都到手之後。老師自建與系列路徑本來就先鎖 `TeacherProfile`，維持不變。
 
 **衝突檢查的相容擴充**：`lockTeacherScheduleAndCheckConflict` 保留既有的 positional 參數與 test hooks，另外新增 options（`excludeClassSessionId`、`excludeProposalId`、`hooks`）。查詢除了既有的「同老師、非 cancelled 的 `ClassSession`（含 draft）」，再加上「同老師、`confirmed` 且 `classSessionId IS NULL` 的邀請」，只排除呼叫端自己那一筆。既有的團主媒合建課、老師單堂、老師系列與「生成更多」都走同一個函式，所以都會被已確認的邀請擋下。pending、declined、draft 的邀請不占時段。
 
@@ -366,7 +371,7 @@ model OrganizerClassProposal {
 
 - 票 09 的 migration 用 SQL `CHECK` 約束保證前兩欄的組合（加約束前先確認既有資料都符合）；「必有一筆邀請」由 service 與測試保證。
 - 顯示與 DTO 一律讀 `origin` 判斷來源，不從 nullable FK 推導。直接開團沒有需求，「適合對象」顯示未指定，不猜成初學。
-- **既有缺口（票 09 修正）**：老師端的開放、取消、完成目前只用 `teacherProfileId` 過濾，沒有檢查 `origin`。UI 雖然只在老師自建的課程顯示按鈕，直接呼叫函式仍可能操作團主的課。三個實際入口與修法：
+- **既有缺口（票 09 修正；2026-10-05 完成「完成」核心，「開放」與「取消」等老師排課工作 commit 後補）**：老師端的開放、取消、完成目前只用 `teacherProfileId` 過濾，沒有檢查 `origin`。UI 雖然只在老師自建的課程顯示按鈕，直接呼叫函式仍可能操作團主的課。三個實際入口與修法：
   - 開放：`src/domain/class-session/service.ts` 的 `openOwnClassSessionForEnrollmentForTeacher`，是直接 `updateMany`。
   - 取消：`__internal__/cancel-class-session-core-for-teacher.ts`，是 `FOR UPDATE` 鎖查詢。
   - 完成：`__internal__/complete-class-session-core-for-teacher.ts`，是直接 `updateMany`。

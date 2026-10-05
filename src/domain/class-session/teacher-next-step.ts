@@ -1,5 +1,7 @@
 import type { ClassSessionOrigin, ClassSessionStatus } from "@prisma/client";
 
+import { formatTaipeiShortDatetime } from "./timezone";
+
 // teacher-usability 第 06／08 票：老師端課程「下一步」的共用文案。
 // 課程詳情頁、課程列表卡片、老師總覽「待你處理」都從這裡取，避免同一個狀態在不同頁面說法不一樣。
 // 只依課程狀態、來源、待確認報名數與時間決定，不改狀態機；`kind` 讓畫面決定要不要放進「待你處理」。
@@ -95,6 +97,8 @@ export function getTeacherClassNextStep(input: {
 // teacher-usability 第 08、09 票：老師總覽「待你處理」清單。
 // 排序依急迫度：① 報名待確認 ② 團主已選定你、等待建立課程（等待中，不是老師要做的事）
 // ③ 課程時間已過、還沒標記完成 ④ 草稿課程還沒開放報名。同一類裡依上課時間由近到遠。
+// teacher-class-scheduling 票 01：同一個系列的草稿合併成一張卡片（連到系列頁、列出最近日期），
+// 單堂草稿卡片也顯示日期，避免出現好幾張一模一樣、看不出是哪天的卡片。
 export type TeacherTodoItem = {
   kind: "action" | "waiting";
   label: string;
@@ -110,11 +114,26 @@ type TodoClassInput = {
   startAt: Date;
   endAt: Date;
   enrollments: { status: string }[];
+  recurringClassSeriesId?: string | null;
+  recurringClassSeries?: { title: string } | null;
+};
+
+// 合併卡片上最多列出幾個日期。
+const SERIES_DRAFT_DATES_SHOWN = 3;
+
+// teacher-class-scheduling 票 02：每週固定系列快排完時，提醒老師「生成更多」。排在最後（⑤），
+// 因為還沒影響到已排定的課。
+type SeriesNeedingMoreInput = {
+  id: string;
+  title: string;
+  remainingCount: number;
+  lastUpcomingStartAt: Date | null;
 };
 
 export function buildTeacherTodoItems(input: {
   classSessions: TodoClassInput[];
   selectedResponsesAwaitingClass: { demandRequestId: string; demandTitle: string }[];
+  seriesNeedingMore?: SeriesNeedingMoreInput[];
   now?: Date;
 }): TeacherTodoItem[] {
   const now = input.now ?? new Date();
@@ -125,6 +144,8 @@ export function buildTeacherTodoItems(input: {
   const pending: TeacherTodoItem[] = [];
   const ended: TeacherTodoItem[] = [];
   const drafts: TeacherTodoItem[] = [];
+  // 系列草稿：依系列分組，保留第一次出現（最近一場）的位置，排序與其他草稿一致。
+  const seriesDrafts = new Map<string, { title: string; startAts: Date[]; index: number }>();
 
   for (const classSession of byStart) {
     const pendingCount = classSession.enrollments.filter(
@@ -142,10 +163,30 @@ export function buildTeacherTodoItems(input: {
       continue;
     }
 
+    if (pendingCount === 0 && classSession.status === "draft" && classSession.recurringClassSeriesId) {
+      const group = seriesDrafts.get(classSession.recurringClassSeriesId);
+
+      if (group) {
+        group.startAts.push(classSession.startAt);
+      } else {
+        seriesDrafts.set(classSession.recurringClassSeriesId, {
+          title: classSession.recurringClassSeries?.title ?? classSession.title,
+          startAts: [classSession.startAt],
+          index: drafts.length,
+        });
+        // 先放一個位置，迴圈結束後換成合併卡片。
+        drafts.push({ kind: "action", label: "", message: "", href: "" });
+      }
+
+      continue;
+    }
+
+    const datePrefix =
+      classSession.status === "draft" ? `（${formatTaipeiShortDatetime(classSession.startAt)}）` : "";
     const item: TeacherTodoItem = {
       kind: "action",
       label: nextStep.shortMessage,
-      message: `「${classSession.title}」${nextStep.message}`,
+      message: `「${classSession.title}」${datePrefix}${nextStep.message}`,
       href: `/teacher/classes/${classSession.id}`,
     };
 
@@ -158,6 +199,24 @@ export function buildTeacherTodoItems(input: {
     }
   }
 
+  for (const [seriesId, group] of seriesDrafts) {
+    const shownDates = group.startAts
+      .slice(0, SERIES_DRAFT_DATES_SHOWN)
+      .map((startAt) => formatTaipeiShortDatetime(startAt))
+      .join("、");
+    const moreText =
+      group.startAts.length > SERIES_DRAFT_DATES_SHOWN
+        ? ` 等 ${group.startAts.length} 場`
+        : "";
+
+    drafts[group.index] = {
+      kind: "action",
+      label: `草稿：${group.startAts.length} 場還沒開放報名`,
+      message: `「${group.title}」系列的 ${shownDates}${moreText}還是草稿。到系列頁確認後，可以按「全部開放報名」一次開放。`,
+      href: `/teacher/classes/series/${seriesId}`,
+    };
+  }
+
   const awaitingClass: TeacherTodoItem[] = input.selectedResponsesAwaitingClass.map(
     (response) => ({
       kind: "waiting",
@@ -167,5 +226,16 @@ export function buildTeacherTodoItems(input: {
     }),
   );
 
-  return [...pending, ...awaitingClass, ...ended, ...drafts];
+  const generateMore: TeacherTodoItem[] = (input.seriesNeedingMore ?? []).map((series) => ({
+    kind: "action",
+    label:
+      series.remainingCount === 0 ? "常態班：已經沒有之後的場次" : `常態班：只剩 ${series.remainingCount} 場`,
+    message:
+      series.remainingCount === 0 || !series.lastUpcomingStartAt
+        ? `「${series.title}」已經沒有之後的場次。要繼續上課的話，到系列頁按「生成更多」。`
+        : `「${series.title}」最後一場是 ${formatTaipeiShortDatetime(series.lastUpcomingStartAt)}。要繼續上課的話，到系列頁按「生成更多」。`,
+    href: `/teacher/classes/series/${series.id}#generate-more`,
+  }));
+
+  return [...pending, ...awaitingClass, ...ended, ...drafts, ...generateMore];
 }

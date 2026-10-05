@@ -4,12 +4,18 @@ import { pickInitialOrganizationId } from "@/app/organizer/demands/_components/o
 import { listOwnOrganizations } from "@/domain/organization/service";
 import {
   getOwnProposalForOrganizer,
+  getOwnTeacherProfileId,
   getProposalSubmitIssuesForDetail,
   toProposalFormInput,
 } from "@/domain/organizer-class-proposal/service";
 import { getCurrentUser } from "@/lib/auth/session";
 
-import { saveAndSubmitProposalAction, saveProposalDraftAction, searchTeacherCardsAction } from "../../actions";
+import {
+  saveAndSelfConfirmProposalAction,
+  saveAndSubmitProposalAction,
+  saveProposalDraftAction,
+  searchTeacherCardsAction,
+} from "../../actions";
 import { ProposalForm } from "../../_components/ProposalForm";
 import {
   toProposalFlash,
@@ -22,8 +28,8 @@ type EditProposalPageProps = {
   searchParams?: Promise<{ organizationId?: string; flash?: string }>;
 };
 
-// organizer-usability-redesign 票 05：繼續編輯自己的合作邀請草稿。不是自己的一律 404；
-// 已送出的邀請不在這裡修改（修改與撤回是票 07），導回單筆詳情。
+// organizer-usability-redesign 票 05／07：編輯自己的合作邀請。不是自己的一律 404；
+// 草稿、等待確認、已婉拒、已確認都可以修改（效果依狀態不同，見 revise-core）；已撤回或已開放報名導回詳情。
 export default async function EditProposalPage({ params, searchParams }: EditProposalPageProps) {
   const [currentUser, { proposalId }, resolvedSearchParams] = await Promise.all([
     getCurrentUser(),
@@ -43,11 +49,11 @@ export default async function EditProposalPage({ params, searchParams }: EditPro
   if (!proposal) {
     notFound();
   }
-  if (proposal.status !== "draft") {
+  if (proposal.status === "withdrawn" || proposal.status === "converted") {
     redirect(`/organizer/class-proposals/${proposalId}`);
   }
 
-  const organizations = await listOwnOrganizations();
+  const [organizations, selfTeacherProfileId] = await Promise.all([listOwnOrganizations(), getOwnTeacherProfileId()]);
   const organizationLocked = proposal.submittedAt !== null;
   const initialOrganizationId = organizationLocked
     ? proposal.organization.id
@@ -74,15 +80,19 @@ export default async function EditProposalPage({ params, searchParams }: EditPro
       </header>
 
       <ProposalForm
+        declineReason={proposal.declineReason}
         initialFeedback={withSubmitIssues(toProposalFlash(resolvedSearchParams?.flash), proposal)}
+        initialStatus={proposal.status}
         initialProposalId={proposal.id}
         initialTeacher={proposal.teacher}
         initialValues={{ ...toProposalFormInput(proposal), organizationId: initialOrganizationId }}
         initialVersion={proposal.version}
         onSaveDraft={saveProposalDraftAction}
         onSearchTeachers={searchTeacherCardsAction}
+        onSelfConfirm={saveAndSelfConfirmProposalAction}
         onSubmit={saveAndSubmitProposalAction}
         organizationLocked={organizationLocked}
+        selfTeacherProfileId={selfTeacherProfileId}
         organizations={organizationOptions}
         savedOrganizationId={proposal.organization.id}
       />

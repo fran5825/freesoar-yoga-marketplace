@@ -44,7 +44,9 @@ export async function createOwnRecurringClassSeriesAction(
   let result: Awaited<ReturnType<typeof createOwnRecurringClassSeriesForTeacher>>;
 
   try {
-    result = await createOwnRecurringClassSeriesForTeacher(input);
+    result = await createOwnRecurringClassSeriesForTeacher(input, {
+      openForEnrollment: formData.get("openForEnrollment") === "yes",
+    });
   } catch {
     // 系列可能已建立、場次生成到一半出錯：結果不確定，不能讓使用者直接重送。
     return {
@@ -68,25 +70,35 @@ export async function createOwnRecurringClassSeriesAction(
 
   redirect(
     `/teacher/classes/series/${result.recurringClassSeriesId}?result=success&message=${encodeURIComponent(
-      buildCreatedMessage(result.createdClassSessionIds.length, result.skipped),
+      buildCreatedMessage(
+        result.createdClassSessionIds.length,
+        result.skipped,
+        formData.get("openForEnrollment") === "yes",
+      ),
     )}`,
   );
 }
 
-// 系列不會整批公開：每一場都是草稿、要逐堂開放報名，也不會列在公開課程列表。
-const NEXT_STEP_MESSAGE = "每一場目前都是草稿，請逐堂開放報名；系列場次不會列在公開課程列表。";
+// 系列場次不會列在公開課程列表；草稿可以在系列頁一次全部開放報名（teacher-class-scheduling 票 01）。
+const DRAFT_NEXT_STEP_MESSAGE =
+  "每一場目前都是草稿，確認沒問題後按「全部開放報名」；系列場次不會列在公開課程列表。";
+const OPENED_NEXT_STEP_MESSAGE =
+  "每一場都已開放報名，可以複製報名連結傳給學員；系列場次不會列在公開課程列表。";
 
 function buildCreatedMessage(
   createdCount: number,
   skipped: { date: string }[],
+  openedForEnrollment: boolean,
 ): string {
+  const nextStep = openedForEnrollment ? OPENED_NEXT_STEP_MESSAGE : DRAFT_NEXT_STEP_MESSAGE;
+
   if (skipped.length === 0) {
-    return `課程系列已建立，共生成 ${createdCount} 場。${NEXT_STEP_MESSAGE}`;
+    return `課程系列已建立，共生成 ${createdCount} 場。${nextStep}`;
   }
 
   const skippedDates = skipped.map((occurrence) => occurrence.date).join("、");
 
-  return `課程系列已建立，共生成 ${createdCount} 場；以下日期因時段衝突未生成：${skippedDates}。${NEXT_STEP_MESSAGE}`;
+  return `課程系列已建立，共生成 ${createdCount} 場；以下日期因時段衝突未生成：${skippedDates}。${nextStep}`;
 }
 
 function readFormString(formData: FormData, name: string): string {

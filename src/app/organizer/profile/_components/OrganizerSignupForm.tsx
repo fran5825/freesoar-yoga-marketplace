@@ -149,7 +149,9 @@ export function OrganizerSignupForm({
         disabled={isPending}
         type="submit"
       >
-        建立團主資料並開始整理需求
+        {next?.startsWith("/organizer/class-proposals/")
+          ? "建立團主資料並繼續安排課程"
+          : "建立團主資料並開始整理需求"}
       </button>
     </form>
   );

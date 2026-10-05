@@ -8,7 +8,7 @@ export default async function OrganizerNotificationsPage() {
   try {
     await requireUser();
   } catch {
-    redirect("/sign-in");
+    redirect(`/sign-in?callbackUrl=${encodeURIComponent("/organizer/notifications")}`);
   }
 
   return <OwnNotificationsContent />;

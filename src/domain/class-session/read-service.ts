@@ -7,6 +7,10 @@ import {
   getClassSessionDetailForTeacherUser,
   teacherFacingClassSessionSelect,
 } from "./__internal__/class-session-detail-core-for-teacher";
+import {
+  listWeeklySeriesNeedingMoreForTeacherProfile,
+  type WeeklySeriesNeedingMore,
+} from "./__internal__/series-needing-more-core";
 
 // D14：targetLevel 不新增欄位，透過既有 demandRequestId 關聯衍生。
 export type OrganizerFacingClassSession = {
@@ -21,10 +25,12 @@ export type OrganizerFacingClassSession = {
   isPublic: boolean;
   status: ClassSessionStatus;
   createdAt: Date;
-  // teacher-initiated-open-classes：demandRequest 改為 nullable（老師自建課程沒有對應
-  // DemandRequest），但 Organizer 自己建立的課程一律有 demandRequest；own-scoped 查詢仍只會
-  // 回傳 organizer_matched 來源的課程，型別上放寬是為了配合 schema 變更，不代表這裡真的會出現 null。
+  // organizer-usability-redesign 票 09：團主的課程有兩種來源（找老師媒合、直接邀請合作老師），依 origin 辨識。
+  origin: ClassSessionOrigin;
+  // 直接開團（organizer_direct）沒有需求，demandRequest 會是 null；適合對象顯示未指定，不猜測。
   demandRequest: { targetLevel: string | null } | null;
+  // 票 11：找老師媒合的課程可以連回來源需求；直接開團沒有需求，為 null。
+  demandRequestId: string | null;
   teacherProfile: { displayName: string | null };
 };
 
@@ -40,7 +46,9 @@ const organizerFacingClassSessionSelect = {
   isPublic: true,
   status: true,
   createdAt: true,
+  origin: true,
   demandRequest: { select: { targetLevel: true } },
+  demandRequestId: true,
   teacherProfile: { select: { displayName: true } },
 } as const;
 
@@ -158,6 +166,23 @@ export async function listOwnClassSessionsForTeacher(): Promise<
   });
 }
 
+// teacher-class-scheduling 票 02：老師總覽「生成更多」提醒的資料。只看本人系列；
+// 只有已通過審核的老師能生成更多，暫停中的老師不提醒。
+export async function listOwnWeeklySeriesNeedingMoreForTeacher(): Promise<WeeklySeriesNeedingMore[]> {
+  const currentUser = await requireUser();
+
+  const teacherProfile = await prisma.teacherProfile.findUnique({
+    where: { userId: currentUser.id },
+    select: { id: true, status: true },
+  });
+
+  if (!teacherProfile || teacherProfile.status !== "approved") {
+    return [];
+  }
+
+  return listWeeklySeriesNeedingMoreForTeacherProfile(teacherProfile.id);
+}
+
 // teacher-usability 第 05 票：單堂課詳情。權限規則與列表相同（只看得到自己的課，suspended 老師仍可
 // 查看），別人的課或不存在都回傳 null；未登入時 requireUser() 會丟出錯誤。
 export async function getOwnClassSessionDetailForTeacher(
@@ -202,6 +227,8 @@ export type RecurringClassSeriesOccurrence = {
   startAt: Date;
   endAt: Date;
   status: ClassSessionStatus;
+  // teacher-class-scheduling 票 05：這一場自己的名額上限（只改這場之後可能與系列不同）。
+  capacity: number;
   // teacher-usability-redesign 票 05：這一場的已確認／待確認報名數，只從本人系列底下這一場的報名推導。
   confirmedCount: number;
   pendingCount: number;
@@ -261,6 +288,7 @@ export async function getOwnRecurringClassSeriesDetailForTeacher(
           startAt: true,
           endAt: true,
           status: true,
+          capacity: true,
           // 只讀狀態，不帶學員資料；查詢仍在 teacherProfileId 限定的系列底下，不會讀到別人的報名。
           enrollments: {
             where: { status: { in: ["confirmed", "pending"] } },

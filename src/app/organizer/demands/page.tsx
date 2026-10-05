@@ -41,7 +41,7 @@ export default async function OrganizerDemandsPage({
   try {
     await requireUser();
   } catch {
-    redirect("/sign-in");
+    redirect(`/sign-in?callbackUrl=${encodeURIComponent("/organizer/demands")}`);
   }
 
   const [organizerContext, demandRequests, resolvedSearchParams] =
@@ -69,6 +69,14 @@ export default async function OrganizerDemandsPage({
         <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
           這裡列出你提出過的所有團課需求，點進去可以看進度與下一步。
         </p>
+        <div className="mt-4">
+          <Link
+            className="inline-flex rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep"
+            href="/organizer/demands/new"
+          >
+            提出新需求
+          </Link>
+        </div>
       </header>
 
       {!organizerContext ? (
@@ -146,6 +154,7 @@ export default async function OrganizerDemandsPage({
               {visibleDemandRequests.map((demandRequest) => {
                 const nextStep = getDemandNextStep({
                   status: demandRequest.status,
+                  effectiveResponseCount: demandRequest.effectiveResponseCount,
                 });
 
                 return (

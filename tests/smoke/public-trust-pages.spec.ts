@@ -91,13 +91,15 @@ test.describe("public trust pages", () => {
   });
 
   test("preserves existing organizer and teacher entry controls", async ({ page }) => {
-    // organizer-flow-redesign 第 2 批：未登入訪客的入口改成帶 callbackUrl 的登入 CTA，
-    // 登入後直接進 /organizer/demands/new（新使用者會被導到建立團主資料，見 organizers-request.spec.ts）。
+    // organizer-usability-redesign 票 10：未登入訪客看到兩張情境卡，各自帶 intent 去登入，
+    // 登入後回入口頁再分流（見 organizer-entry-intent.spec.ts）。
     await page.goto("/organizers/request");
-    await expect(page.getByRole("link", { name: "登入／建立帳號並開始" })).toHaveAttribute(
+    await expect(page.getByRole("link", { name: /我需要找老師/ })).toHaveAttribute(
       "href",
-      `/sign-in?callbackUrl=${encodeURIComponent("/organizer/demands/new")}`,
+      `/sign-in?callbackUrl=${encodeURIComponent("/organizers/request?intent=find_teacher")}`,
     );
+    // 「我已有合作老師」入口暫不公開（DIRECT_CLASS_ENTRY_PUBLIC，等票 09 老師端 origin guards）。
+    await expect(page.getByRole("link", { name: /我已有合作老師/ })).toHaveCount(0);
 
     // teacher-join-gated-application：未登入訪客現在看到的是導覽說明頁，不是可填表單
     // （G1／Definition of Done），入口控制項換成帶 callbackUrl 的登入 CTA。

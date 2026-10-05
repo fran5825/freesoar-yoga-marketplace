@@ -24,7 +24,10 @@ export function ResponseList({
   );
 
   return (
-    <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
+    <section
+      className="grid scroll-mt-24 gap-4 rounded-2xl border border-ink/15 bg-white p-6"
+      id="responses"
+    >
       <div>
         <h2 className="text-lg font-medium text-ink">收到的老師回應</h2>
         <p className="mt-2 text-sm leading-6 text-ink-soft">

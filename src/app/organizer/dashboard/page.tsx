@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { getDemandNextStep } from "@/domain/demand-request/next-step";
+import { DIRECT_CLASS_ENTRY_PUBLIC } from "@/domain/organizer-profile/intent";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import {
   getOwnDemandRequestList,
@@ -25,7 +26,7 @@ export default async function OrganizerDashboardPage() {
   try {
     await requireUser();
   } catch {
-    redirect("/sign-in");
+    redirect(`/sign-in?callbackUrl=${encodeURIComponent("/organizer/dashboard")}`);
   }
 
   const organizerContext = await getOwnOrganizerContext();
@@ -73,7 +74,10 @@ export default async function OrganizerDashboardPage() {
   const pendingActions = demandRequests
     .map((demandRequest) => ({
       demandRequest,
-      nextStep: getDemandNextStep({ status: demandRequest.status }),
+      nextStep: getDemandNextStep({
+        status: demandRequest.status,
+        effectiveResponseCount: demandRequest.effectiveResponseCount,
+      }),
     }))
     .filter(({ nextStep }) => nextStep.kind === "action");
   // 草稿可能有好幾筆，而且下方「我的需求」已經逐筆列出，所以這裡只放一行摘要。
@@ -107,6 +111,22 @@ export default async function OrganizerDashboardPage() {
         <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
           這裡彙整你最近的通知與需求狀態。
         </p>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <Link
+            className="inline-flex rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep"
+            href="/organizer/demands/new"
+          >
+            找老師開課
+          </Link>
+          {DIRECT_CLASS_ENTRY_PUBLIC ? (
+            <Link
+              className="inline-flex rounded-full border border-pine/40 px-5 py-2 text-sm font-medium text-pine transition hover:bg-pine-tint"
+              href="/organizer/class-proposals/new"
+            >
+              已有合作老師，直接開團
+            </Link>
+          ) : null}
+        </div>
       </header>
 
       {isContactComplete ? null : (

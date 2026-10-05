@@ -1,11 +1,10 @@
-import Link from "next/link";
+import { OrganizerEntryCards } from "./OrganizerEntryCards";
 
 // 2026-09-22 organizer-flow-redesign 第 2 批：還不是團主的人（沒登入／已登入但沒有團主資料）
-// 看到的招募內容。兩種狀態只差主按鈕：沒登入先去登入（登入後直接進入開需求流程），已登入就直接去建立團主資料。比照 teachers/join 的
-// TeacherJoinExplainer，把原本右側卡片的內容併進標題下方的「左側色條＋條列」。
-// 票 02：登入後直接落在新需求表單。新使用者還沒有團主資料，/organizer/demands/new 會自己導向
-// /organizer/profile 建立；已是團主的人則直接看到表單，兩種人都不會再回到這頁多看一次招募內容。
-const signInHref = `/sign-in?callbackUrl=${encodeURIComponent("/organizer/demands/new")}`;
+// 看到的招募內容。比照 teachers/join 的 TeacherJoinExplainer，把原本右側卡片的內容併進標題下方
+// 的「左側色條＋條列」。
+// organizer-usability-redesign 票 10：主按鈕改成兩張情境卡（找老師／已有合作老師），開團意圖
+// 會一路保留到登入與建立團主資料之後。
 
 const valuePoints = [
   "平台以審核與需求整理，協助團主與老師建立長期、互相尊重的合作關係。",
@@ -38,17 +37,30 @@ const audienceExamples = [
 ];
 
 export function OrganizerRequestExplainer({
-  isSignedIn,
+  viewer,
 }: {
-  isSignedIn: boolean;
+  viewer: "visitor" | "signed_in_without_organizer";
 }) {
   return (
     <>
-      <section>
-        <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
+      {/* 票 10：兩張情境卡緊接在標題下，手機第一個畫面就看得到兩條路徑；介紹往下移。 */}
+      <section aria-labelledby="organizer-entry-heading" className="grid gap-5">
+        <h1
+          className="max-w-3xl text-3xl font-semibold tracking-tight text-ink sm:text-5xl"
+          id="organizer-entry-heading"
+        >
           為公司社團與社區，找到適合的瑜伽老師
         </h1>
-        <div className="mt-6 ml-6 max-w-2xl border-l-4 border-clay/50 pl-4">
+        <OrganizerEntryCards headingLevel="h2" viewer={viewer} />
+        <p className="text-sm leading-6 text-ink-faint">
+          {viewer === "signed_in_without_organizer"
+            ? "你已經登入了。第一次使用時，先用一頁填好你的稱呼與團體資料，就會回到你選的流程。"
+            : "選好後會先登入或建立帳號；第一次使用時，用一頁填好你的稱呼與團體資料，就會回到你選的流程。"}
+        </p>
+      </section>
+
+      <section>
+        <div className="ml-6 max-w-2xl border-l-4 border-clay/50 pl-4">
           <p className="text-base leading-7 text-ink-soft">
             飛索協助團體把上課需求整理清楚，也重視清楚溝通，而不是低價競標：
           </p>
@@ -64,28 +76,6 @@ export function OrganizerRequestExplainer({
             ))}
           </ul>
         </div>
-        <div className="mt-7 ml-6">
-          {isSignedIn ? (
-            <Link
-              className="inline-flex rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-pine-deep"
-              href="/organizer/profile"
-            >
-              建立團主資料
-            </Link>
-          ) : (
-            <a
-              className="inline-flex rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-pine-deep"
-              href={signInHref}
-            >
-              登入／建立帳號並開始
-            </a>
-          )}
-        </div>
-        <p className="mt-4 ml-6 text-sm leading-6 text-ink-faint">
-          {isSignedIn
-            ? "你已經登入了，只要填顯示名稱和所屬組織就能開始。"
-            : "登入或建立帳號後，就可以建立團主資料、開始整理需求。"}
-        </p>
       </section>
 
       <section className="grid gap-4 md:grid-cols-3">

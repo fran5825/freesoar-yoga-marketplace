@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 
+import { classOriginLabelsForAdmin } from "@/domain/class-session/origin-labels";
+
 import {
   classSessionStatusLabels,
   classSessionStatusToneClasses,
@@ -114,7 +116,7 @@ export default async function AdminClassesPage({ searchParams }: AdminClassesPag
                     `${classSession.teacherDisplayName ?? "老師尚未填寫"}・${
                       classSession.organizationName ?? "（老師自建課程）"
                     }`,
-                    `${formatTaipeiDatetime(classSession.startAt)}・已報名 ${classSession.confirmedEnrollmentCount} 人`,
+                    `${classOriginLabelsForAdmin[classSession.origin]}・${formatTaipeiDatetime(classSession.startAt)}・已報名 ${classSession.confirmedEnrollmentCount} 人`,
                   ]}
                   statusLabel={classSessionStatusLabels[classSession.status]}
                   statusToneClass={classSessionStatusToneClasses[classSession.status]}

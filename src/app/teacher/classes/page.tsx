@@ -33,6 +33,7 @@ type TeacherClassesPageProps = {
 const originLabels: Record<string, string> = {
   organizer_matched: "團主媒合",
   teacher_initiated: "自己開的課",
+  organizer_direct: "團主合作開課",
 };
 
 const emptyMessages: Record<TeacherClassListTab, string> = {

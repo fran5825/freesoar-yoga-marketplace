@@ -224,6 +224,7 @@ suspended
 | `draft`／`open_for_enrollment` | `cancelled` | Organizer / Admin | Organizer own-scoped 或 Admin（不檢查擁有權），且 `startAt` 尚未到達（`class-session-cancellation` D2，與 D14 同一精神；Admin 版由 `admin-class-enrollment-management` D1/D5 新增，資格條件完全相同） | 該 ClassSession 底下所有 `confirmed` Enrollment 在同一 transaction 內一併轉成 `cancelled`（連帶取消，D4）；Organizer/Teacher/受影響 Member 收到 `class_session_cancelled` 通知（D7），不論觸發者是 Organizer 還是 Admin，收件人解析邏輯完全相同 |
 | `open_for_enrollment` | `completed` | Organizer | own-scoped，且 `endAt` 已經過去（`class-session-completion` D2，與 D14/D2 的時間方向相反——完成需要「已經發生」，取消/開放需要「尚未發生」） | 標記課程已完成；不連帶處理 `Enrollment`（D3，`attended`/`no_show` 仍不接線）；不觸發新的 Notification（D5） |
 
+- **改課（`teacher-class-scheduling` 票 04，已落地 2026-10-05）**：老師自己開的單堂課在 `draft`／`open_for_enrollment` 且 `startAt` 未到時可改內容、時間、地點、人數上限；不改變任何狀態，見 `state-machines.md`。下一條「無編輯」仍適用於團主媒合的課。
 - **一次到位建立，無編輯**：`title`/`description`（選填）/`serviceType`/`startAt`/`endAt`/`location`/`capacity`/`isPublic` 皆於建立當下一次填齊並通過驗證，建立後不提供編輯（D2）；因此不存在「資料不完整的 draft」，`draft` 語意純粹是「已建立、尚未開放報名」。
 - **`draft → open_for_enrollment` 不經過 `pending_confirmation`**：對齊 D2 的一次到位建立，沒有需要「初步完整」與「必要欄位完整」分兩階段確認的理由。
 - **`pending_confirmation`/`confirmed` 不接線**：`open_for_enrollment → confirmed` 沒有明確、機械式的觸發條件（不像 capacity 那樣可自動判斷），`enrollment` 沿用 `class-session-creation` D9 的判斷不提前接線；`open_for_enrollment` 本身已足以讓 Member 報名到滿額為止。
@@ -295,7 +296,11 @@ organizer-usability-redesign（Q18：A）。每個轉換的 actor、guard、時�
 - 所有動作都由 server 從登入者解析身分：團主動作要求邀請的 `organizerProfileId` 是本人，老師動作要求邀請的 `teacherProfileId` 是本人的 TeacherProfile；不符一律回 `proposal_not_found`，不揭露存在性。
 - 送出、確認、本人授課、開放報名都要重新檢查：老師是 `approved`（在 TeacherProfile 鎖內讀取）、`startAt` 在未來、欄位完整、團體聯絡資料完整。
 - 確認、婉拒、開放報名都要帶 `expectedVersion`，必須等於目前的 `version`。
-- 鎖順序：TeacherProfile（兩位老師時依 id 由小到大）→ OrganizerClassProposal → 其他資料列。
+- 鎖順序（全站）：RecurringClassSeries → ClassSession（依 id）→ TeacherProfile（兩位老師時依 id 由小到大）→ OrganizerClassProposal → DemandRequest。
+- **已落地（票 06）**：`pending_confirmation → confirmed`（受邀老師，`confirmProposalCore`：鎖老師並檢查撞課 → 鎖邀請 → 重驗 version、狀態、老師 approved、未來時間與完整度，寫入 confirmedVersion／confirmedAt／確認者）與 `pending_confirmation → declined`（受邀老師，`declineProposalCore`：原因必填 1–500 字，狀態與 version 寫在 WHERE）。
+
+- **已落地（票 07）**：團主修改（`reviseProposalCore`：先鎖目前與新老師〔依 id 排序〕再鎖邀請，鎖內重驗老師、version、狀態與團體鎖定；pending 維持 pending 且必須仍完整，declined／confirmed 回到 draft，confirmed 同時清除確認資料並釋放時段）與撤回（`withdrawProposalCore`：draft／pending／declined／confirmed → withdrawn，原因選填 ≤500 字；從 draft 撤回時清掉受邀老師，讓沒收過目前版本的老師讀不到）；`declined → pending_confirmation` 不修改直接重送（`submitOwnProposal`，version 不變、清除婉拒原因）。
+- **已落地（票 08）**：`draft → confirmed`（本人授課，`selfConfirmProposalCore`：邀請選的老師必須是團主本人的 TeacherProfile；與受邀老師確認相同的鎖順序與資格、版本、完整度、撞課檢查，另檢查團體 owner 與聯絡資料，成功時寫入確認資料與 submittedAt）。`submitOwnProposal` 拒絕把邀請寄給自己；等待確認中的邀請改選團主本人時，修改會退回 draft（不再是 pending、可暫時不完整、原受邀老師看不到；submittedAt 與團體鎖定保留；仍需之後明確本人確認才占用時段）。
 
 ### 時段占用
 
@@ -313,7 +318,7 @@ organizer-usability-redesign（Q18：A）。每個轉換的 actor、guard、時�
 - 未 approved（含 suspended）的老師不能確認或本人授課；Admin 不能代為確認。
 - 開放報名不能分成兩個 transaction（先建 draft 再開放）；重試只能回傳同一堂課。
 
-### ClassSession：`(none) → open_for_enrollment`（organizer_direct）
+### ClassSession：`(none) → open_for_enrollment`（organizer_direct，已落地：`openDirectClassFromProposalCore`，票 09）
 
 - Actor：團主 own。
 - 前置：對應的邀請是 `confirmed`、`confirmedVersion = version = expectedVersion`、老師仍是 `approved`、`startAt` 在未來、排課無衝突（只排除這筆邀請自己的占用）。

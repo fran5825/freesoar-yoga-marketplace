@@ -4,7 +4,7 @@ import {
   getDemandNextStep,
   type DemandNextStep,
 } from "@/domain/demand-request/next-step";
-import type { DemandRequestSnapshot } from "@/domain/demand-request/service";
+import type { OwnDemandRequestSummary } from "@/domain/demand-request/service";
 
 const kindClassNames: Record<DemandNextStep["kind"], string> = {
   action: "border-clay/30 bg-clay-tint",
@@ -19,26 +19,22 @@ const kindLabels: Record<DemandNextStep["kind"], string> = {
 };
 
 // 票 08：詳情頁最上方的「下一步」提示，文案來自 domain 層的 getDemandNextStep。
+// 票 11：主要動作依下一步決定——有可選的回應就跳到回應列表、已媒合就跳到建立課程表單、
+// 已成課就直接連到那一堂課（不是課程列表）。
 export function NextStepCard({
   demandRequest,
-  responseCount,
 }: {
-  demandRequest: Pick<DemandRequestSnapshot, "id" | "status">;
-  responseCount: number;
+  demandRequest: Pick<
+    OwnDemandRequestSummary,
+    "id" | "status" | "effectiveResponseCount" | "classSessionId"
+  >;
 }) {
   const nextStep = getDemandNextStep({
     status: demandRequest.status,
-    responseCount,
+    effectiveResponseCount: demandRequest.effectiveResponseCount,
   });
 
-  const action =
-    demandRequest.status === "draft"
-      ? { href: `/organizer/demands/${demandRequest.id}/edit`, label: "繼續編輯草稿" }
-      : demandRequest.status === "converted_to_class"
-        ? { href: "/organizer/classes", label: "前往我的課程" }
-        : demandRequest.status === "rejected"
-          ? { href: "/organizer/demands/new", label: "建立新的需求" }
-          : null;
+  const action = getNextStepAction(demandRequest, nextStep);
 
   return (
     <section
@@ -65,4 +61,30 @@ export function NextStepCard({
       ) : null}
     </section>
   );
+}
+
+function getNextStepAction(
+  demandRequest: Pick<OwnDemandRequestSummary, "id" | "status" | "classSessionId">,
+  nextStep: DemandNextStep,
+): { href: string; label: string } | null {
+  switch (demandRequest.status) {
+    case "draft":
+      return { href: `/organizer/demands/${demandRequest.id}/edit`, label: "繼續編輯草稿" };
+    case "published":
+    case "teacher_responded":
+      return nextStep.kind === "action"
+        ? { href: "#responses", label: "查看老師回應" }
+        : null;
+    case "matched":
+      return { href: "#create-class", label: "填寫課程資訊" };
+    case "converted_to_class":
+    case "completed":
+      return demandRequest.classSessionId
+        ? { href: `/organizer/classes/${demandRequest.classSessionId}`, label: "前往這堂課" }
+        : { href: "/organizer/classes", label: "前往我的課程" };
+    case "rejected":
+      return { href: "/organizer/demands/new", label: "建立新的需求" };
+    default:
+      return null;
+  }
 }

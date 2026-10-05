@@ -5,6 +5,7 @@ import {
   startTransition,
   useActionState,
   useEffect,
+  useRef,
   useState,
   type FormEvent,
   type ReactNode,
@@ -25,6 +26,7 @@ import {
 import { ClassCreateSummary, type SummaryRow } from "./ClassCreateSummary";
 import { MultiMonthDatePicker } from "./MultiMonthDatePicker";
 import { createOwnClassSessionAction } from "../actions";
+import { editOwnClassSessionAction } from "../../[classSessionId]/edit/actions";
 import {
   CREATE_CLASS_FIELD_ORDER,
   dayOfWeekLabel,
@@ -84,6 +86,7 @@ type SharedFields = {
   description: string;
   requiresApproval: boolean;
   isPublic: boolean;
+  openForEnrollment: boolean; // 系列：建立後直接開放報名（teacher-class-scheduling 票 01）
 };
 
 type ModeFields = {
@@ -106,6 +109,7 @@ const initialShared: SharedFields = {
   description: "",
   requiresApproval: false,
   isPublic: false,
+  openForEnrollment: false,
 };
 
 const initialModeFields: ModeFields = {
@@ -129,6 +133,7 @@ const sharedKeyToErrorField: Record<keyof SharedFields, CreateClassFormField | n
   description: "description",
   requiresApproval: null,
   isPublic: null,
+  openForEnrollment: null,
 };
 
 const modeFieldToErrorField: Record<keyof ModeFields, CreateClassFormField> = {
@@ -201,6 +206,58 @@ const NOT_WRITTEN_CODES = [
 
 type FieldErrors = Partial<Record<CreateClassFormField, string[]>>;
 
+// teacher-class-scheduling 票 04：改課模式的初始值（目前這堂課的內容）。時間以台北時間的
+// 日期（YYYY-MM-DD）與時:分（HH:mm）傳入。
+export type EditClassInitial = {
+  classSessionId: string;
+  title: string;
+  description: string;
+  serviceTypes: string[];
+  yogaStyles: string[];
+  date: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  capacity: number;
+  requiresApproval: boolean;
+  isPublic: boolean;
+  // 目前已報名（含待確認）人數：改時間或地點時要通知的人數，也是人數上限的下限。
+  enrolledCount: number;
+  // teacher-class-scheduling 票 05：這一場屬於系列時才有。following＝這一場與之後尚未開始的場次（含這一場）。
+  series?: {
+    id: string;
+    title: string;
+    following: { date: string; enrolledCount: number }[];
+  };
+};
+
+const YOGA_STYLE_VALUES = new Set(
+  SPECIALTY_GROUPS.flatMap((group) => group.options).map((option) => option.value),
+);
+
+function timeValueFromString(value: string): TimeValue {
+  const [hour = "", minute = ""] = value.split(":");
+
+  return { hour, minute };
+}
+
+function sharedFromEdit(edit: EditClassInitial): SharedFields {
+  return {
+    ...initialShared,
+    title: edit.title,
+    description: edit.description,
+    serviceTypes: edit.serviceTypes,
+    yogaStyles: edit.yogaStyles.filter((style) => YOGA_STYLE_VALUES.has(style)),
+    yogaStylesOther: edit.yogaStyles.filter((style) => !YOGA_STYLE_VALUES.has(style)).join("、"),
+    startTime: timeValueFromString(edit.startTime),
+    endTime: timeValueFromString(edit.endTime),
+    location: edit.location,
+    capacity: String(edit.capacity),
+    requiresApproval: edit.requiresApproval,
+    isPublic: edit.isPublic,
+  };
+}
+
 // teacher-initiated-open-classes Slice B：三個模式各自是獨立的 <form>，每個 form 的 action 一律綁定
 // 固定的 Server Action 參考——不在提交當下動態決定要呼叫哪個 function。
 // 共用欄位的內容存在這裡的 state，各 form 只是顯示與修改同一份資料，所以切換模式不會清掉。
@@ -208,31 +265,49 @@ type FieldErrors = Partial<Record<CreateClassFormField, string[]>>;
 // 送出失敗由 Server Action 回傳結果（useActionState），留在原頁、保留輸入與摘要。
 export function ClassSessionCreateForm({
   defaults,
+  edit,
 }: {
   // 老師最近一次自己建立的課的地點、名額、是否需確認報名；沒建過課時是 null。
   defaults: { location: string; capacity: number; requiresApproval: boolean } | null;
+  // teacher-class-scheduling 票 04：有值時是改課模式——只有單堂欄位，送出改課 action。
+  edit?: EditClassInitial;
 }) {
+  const isEdit = edit !== undefined;
   const [mode, setMode] = useState<Mode>("single");
   const [shared, setShared] = useState<SharedFields>(() =>
-    defaults
-      ? {
-          ...initialShared,
-          location: defaults.location,
-          capacity: String(defaults.capacity),
-          requiresApproval: defaults.requiresApproval,
-        }
-      : initialShared,
+    edit
+      ? sharedFromEdit(edit)
+      : defaults
+        ? {
+            ...initialShared,
+            location: defaults.location,
+            capacity: String(defaults.capacity),
+            requiresApproval: defaults.requiresApproval,
+          }
+        : initialShared,
   );
-  const [modeFields, setModeFields] = useState<ModeFields>(initialModeFields);
+  const [modeFields, setModeFields] = useState<ModeFields>(() =>
+    edit ? { ...initialModeFields, date: edit.date } : initialModeFields,
+  );
+  // 改課時，有人報名又改了時間或地點：送出前先確認（會通知學員）。
+  const changeConfirmRef = useRef<HTMLDialogElement>(null);
+  const [pendingEditFormData, setPendingEditFormData] = useState<FormData | null>(null);
+  // 票 05：系列場次的套用範圍，預設只改這一場（產品主人決定 B）。
+  const [editScope, setEditScope] = useState<"single" | "following">("single");
+  const isFollowingScope = Boolean(edit?.series) && editScope === "following";
+  const followingSessions = edit?.series?.following ?? [];
+  const followingEnrolledTotal = followingSessions.reduce((sum, item) => sum + item.enrolledCount, 0);
+  const followingSessionsWithEnrollment = followingSessions.filter((item) => item.enrolledCount > 0).length;
+  const affectedEnrolledCount = isFollowingScope ? followingEnrolledTotal : (edit?.enrolledCount ?? 0);
   // 載入時的內容（含帶入的上次設定）：跟它一樣就不算使用者改過，不跳離頁提醒。
   const [initialSnapshot] = useState(() => JSON.stringify({ shared, modeFields }));
-  const [descriptionOpen, setDescriptionOpen] = useState(false);
+  const [descriptionOpen, setDescriptionOpen] = useState(() => Boolean(edit?.description));
   const [showYogaStylesError, setShowYogaStylesError] = useState(false);
   const [showServiceTypesError, setShowServiceTypesError] = useState(false);
   const [showFixedDatesError, setShowFixedDatesError] = useState(false);
 
   const [singleFormState, singleFormAction, isSinglePending] = useActionState(
-    createOwnClassSessionAction,
+    isEdit ? editOwnClassSessionAction : createOwnClassSessionAction,
     initialCreateClassFormState,
   );
   const [seriesFormState, seriesFormAction, isSeriesPending] = useActionState(
@@ -320,6 +395,38 @@ export function ClassSessionCreateForm({
     endTimeString !== "" &&
     endTimeString <= startTimeString;
 
+  // 改課：跟原本的內容比，改了哪些項目（摘要與確認視窗用）。
+  const editChanges = (() => {
+    if (!edit) {
+      return { timeChanged: false, locationChanged: false, labels: [] as string[] };
+    }
+
+    const original = sharedFromEdit(edit);
+    const labels: string[] = [];
+    const timeChanged =
+      modeFields.date !== edit.date ||
+      startTimeString !== edit.startTime ||
+      endTimeString !== edit.endTime;
+    const locationChanged = shared.location.trim() !== edit.location;
+
+    if (shared.title.trim() !== edit.title) labels.push("課程名稱");
+    if (JSON.stringify(shared.serviceTypes) !== JSON.stringify(original.serviceTypes)) {
+      labels.push("課程風格");
+    }
+    if (
+      JSON.stringify(shared.yogaStyles) !== JSON.stringify(original.yogaStyles) ||
+      shared.yogaStylesOther.trim() !== original.yogaStylesOther
+    ) {
+      labels.push("瑜伽類型");
+    }
+    if (shared.description.trim() !== edit.description) labels.push("課程說明");
+    if (timeChanged) labels.push(isFollowingScope ? "上課時段" : "日期與時間");
+    if (locationChanged) labels.push("地點");
+    if (shared.capacity.trim() !== String(edit.capacity)) labels.push("名額上限");
+
+    return { timeChanged, locationChanged, labels };
+  })();
+
   const sharedFieldProps = { shared, updateShared };
   const descriptionProps = {
     ...sharedFieldProps,
@@ -384,9 +491,25 @@ export function ClassSessionCreateForm({
     }
 
     const formData = new FormData(event.currentTarget);
+
+    if (edit && affectedEnrolledCount > 0 && (editChanges.timeChanged || editChanges.locationChanged)) {
+      setPendingEditFormData(formData);
+      changeConfirmRef.current?.showModal();
+      return;
+    }
+
     startTransition(() =>
       mode === "single" ? singleFormAction(formData) : seriesFormAction(formData),
     );
+  }
+
+  function confirmEditSubmit() {
+    const formData = pendingEditFormData;
+    changeConfirmRef.current?.close();
+
+    if (formData) {
+      startTransition(() => singleFormAction(formData));
+    }
   }
 
   // 每週固定：用跟 domain 建立系列時同一個函式推算實際日期，摘要才會跟建立結果一致。
@@ -433,10 +556,16 @@ export function ClassSessionCreateForm({
     ...placeSummaryRows,
     { label: "公開列表", value: "不列在公開課程列表" },
     approvalSummaryRow,
+    {
+      label: "建立後",
+      value: shared.openForEnrollment ? "每一場直接開放報名" : "每一場先存成草稿",
+    },
   ];
   const seriesSummaryNotes = [
-    "建立後目前無法修改課程內容，請先確認以上資訊。",
-    "每一場都會先存成草稿，要逐堂開放報名；系列場次不會列在公開課程列表。",
+    "系列建立後目前無法修改課程內容，請先確認以上資訊。",
+    shared.openForEnrollment
+      ? "每一場建立後直接開放報名，學員拿到連結就能報名；系列場次不會列在公開課程列表。"
+      : "每一場會先存成草稿，之後可以在系列頁按「全部開放報名」一次開放；系列場次不會列在公開課程列表。",
     "如果某個日期跟你其他課程的時段衝突，那一天會跳過不建立，建立後會列出來。",
   ];
 
@@ -461,13 +590,16 @@ export function ClassSessionCreateForm({
       ) : (
         <>
           <p className="font-medium">
-            {NOT_WRITTEN_CODES.includes(bannerState.code)
-              ? `${mode === "single" ? "課程" : "課程系列"}還沒建立：`
-              : "建立沒有完成："}
+            {isEdit
+              ? "課程還沒更新："
+              : NOT_WRITTEN_CODES.includes(bannerState.code)
+                ? `${mode === "single" ? "課程" : "課程系列"}還沒建立：`
+                : "建立沒有完成："}
             {bannerState.message}
           </p>
           <p>
-            你填的內容都還在，修正標示的欄位後再按一次「{mode === "single" ? "建立課程" : "建立課程系列"}」。
+            你填的內容都還在，修正標示的欄位後再按一次「
+            {isEdit ? "儲存修改" : mode === "single" ? "建立課程" : "建立課程系列"}」。
           </p>
         </>
       )}
@@ -482,11 +614,11 @@ export function ClassSessionCreateForm({
     return (
       <div>
         <button className={submitButtonClassName} disabled={isPending} type="submit">
-          {isPending ? "建立中…" : label}
+          {isPending ? (isEdit ? "儲存中…" : "建立中…") : label}
         </button>
         {isPending ? (
           <p aria-live="polite" className="mt-2 text-xs leading-5 text-ink-faint">
-            正在建立，請稍候，不需要再按一次。
+            {isEdit ? "正在儲存，請稍候，不需要再按一次。" : "正在建立，請稍候，不需要再按一次。"}
           </p>
         ) : null}
       </div>
@@ -504,6 +636,8 @@ export function ClassSessionCreateForm({
 
   return (
     <div className="grid gap-6">
+      {isEdit ? null : (
+        <>
       <div className="flex flex-wrap gap-2" role="group" aria-label="課程排程方式">
         {modeOptions.map((option) => (
           <button
@@ -525,10 +659,46 @@ export function ClassSessionCreateForm({
         切換排程方式時，已填的課程名稱、時間、地點等內容會保留。
         {defaults ? "地點、名額與報名確認方式已帶入你上一次開課的設定，可以直接修改。" : null}
       </p>
+        </>
+      )}
 
       {mode === "single" ? (
         <form aria-busy={isPending} className="grid gap-6" onSubmit={handleSubmit}>
+          {edit ? <input name="classSessionId" type="hidden" value={edit.classSessionId} /> : null}
           {formErrorBanner}
+          {edit?.series ? (
+            <FormSection title="套用範圍">
+              <input name="recurringClassSeriesId" type="hidden" value={edit.series.id} />
+              <fieldset className="grid min-w-0 gap-2">
+                <legend className={labelClassName}>這堂課屬於系列「{edit.series.title}」，要改哪些場次？</legend>
+                <ChoiceOption
+                  checked={editScope === "single"}
+                  description="只改這一場，其他場次與系列設定不變；可以改日期，例如把放假那週移到別天。"
+                  id="edit-scope-single"
+                  name="scope"
+                  onChange={() => setEditScope("single")}
+                  title="只改這一場"
+                  value="single"
+                />
+                <ChoiceOption
+                  checked={editScope === "following"}
+                  description="這一場與之後尚未開始的場次都套用新的內容、時段、地點與名額，每一場維持原本的日期；之後生成的新場次也會沿用。"
+                  id="edit-scope-following"
+                  name="scope"
+                  onChange={() => setEditScope("following")}
+                  title={`改這一場和之後所有場次（共 ${followingSessions.length} 場）`}
+                  value="following"
+                />
+              </fieldset>
+              <p className="text-xs leading-5 text-ink-faint">
+                要換上課的星期，請到
+                <Link className="mx-1 underline" href={`/teacher/classes/series/${edit.series.id}`}>
+                  系列頁
+                </Link>
+                用「從這場以後全部取消」，再建立新的系列。
+              </p>
+            </FormSection>
+          ) : null}
           <FormSection title="課程內容">
             <TitleField {...sharedFieldProps} error={fieldErrors.title} />
             <ServiceTypesField
@@ -544,15 +714,23 @@ export function ClassSessionCreateForm({
                 上課日期
               </label>
               <input
-                aria-describedby={fieldErrors.date ? "single-date-error" : undefined}
+                aria-describedby={
+                  isFollowingScope ? "single-date-note" : fieldErrors.date ? "single-date-error" : undefined
+                }
                 aria-invalid={fieldErrors.date ? true : undefined}
                 className={inputClassName}
+                disabled={isFollowingScope}
                 id="single-date"
                 onChange={(event) => updateModeField("date", event.target.value)}
                 required
                 type="date"
                 value={modeFields.date}
               />
+              {isFollowingScope ? (
+                <p className="mt-1 text-xs leading-5 text-ink-faint" id="single-date-note">
+                  改之後所有場次時，每一場維持原本的日期，只套用新的上課時段。
+                </p>
+              ) : null}
               <FieldError id="single-date-error" messages={fieldErrors.date} />
             </div>
             <TimeRangeFields
@@ -576,13 +754,53 @@ export function ClassSessionCreateForm({
             <LocationField {...sharedFieldProps} error={fieldErrors.location} />
             <CapacityField {...sharedFieldProps} error={fieldErrors.capacity} />
           </FormSection>
-          <FormSection title="報名設定">
-            <PublicListingField {...sharedFieldProps} />
-            <RequiresApprovalField {...sharedFieldProps} />
-          </FormSection>
+          {edit ? (
+            <FormSection title="報名設定">
+              <div className="rounded-xl border border-ink/15 bg-cream px-4 py-3 text-sm leading-6 text-ink-soft">
+                <p>公開列表：{edit.isPublic ? "列在公開課程列表" : "不列在公開課程列表"}</p>
+                <p>報名方式：{edit.requiresApproval ? "需要你確認才算報名成功" : "報名送出即成立"}</p>
+                <p className="mt-1 text-xs leading-5 text-ink-faint">這兩項目前不能在這裡修改。</p>
+              </div>
+            </FormSection>
+          ) : (
+            <FormSection title="報名設定">
+              <PublicListingField {...sharedFieldProps} />
+              <RequiresApprovalField {...sharedFieldProps} />
+            </FormSection>
+          )}
+          {edit ? (
+            <ClassCreateSummary
+              dates={isFollowingScope ? followingSessions.map((item) => item.date) : undefined}
+              datesAriaLabel="會修改的上課日期"
+              heading="儲存前核對"
+              notes={[
+                editChanges.labels.length > 0
+                  ? `這次會修改：${editChanges.labels.join("、")}。`
+                  : "目前還沒有修改任何內容。",
+                affectedEnrolledCount > 0 && (editChanges.timeChanged || editChanges.locationChanged)
+                  ? isFollowingScope
+                    ? `改了時間或地點，儲存後會通知這些場次已報名（含待確認）的學員（${followingSessionsWithEnrollment} 堂有人報名），每位學員只收一則，報名照樣保留。`
+                    : `改了時間或地點，儲存後會通知 ${edit.enrolledCount} 位已報名（含待確認）的學員，他們的報名照樣保留。`
+                  : "只改內容或名額時不會通知學員。",
+                ...(isFollowingScope
+                  ? ["之後生成的新場次也會使用新的設定。只要有一場撞課或名額不足，這次就全部不改。"]
+                  : []),
+              ]}
+              rows={[
+                titleSummaryRow,
+                isFollowingScope
+                  ? { label: "範圍", value: `這一場和之後所有場次（共 ${followingSessions.length} 場）` }
+                  : {
+                      label: "日期",
+                      value: modeFields.date ? formatDateWithWeekday(modeFields.date) : null,
+                    },
+                ...placeSummaryRows,
+              ]}
+            />
+          ) : (
           <ClassCreateSummary
             notes={[
-              "建立後目前無法修改課程內容，請先確認以上資訊。",
+              "建立後，開課前都還可以在課程頁修改內容、時間、地點與名額。",
               "建立後會先存成草稿，不會立即開放報名；到課程頁按「開放報名」學員才能報名。",
             ]}
             rows={[
@@ -600,7 +818,48 @@ export function ClassSessionCreateForm({
               approvalSummaryRow,
             ]}
           />
-          {submitArea("建立課程")}
+          )}
+          {submitArea(isEdit ? "儲存修改" : "建立課程")}
+          {edit ? (
+            <dialog
+              aria-labelledby="edit-confirm-title"
+              className="m-auto w-[min(32rem,calc(100vw-2rem))] rounded-2xl border border-ink/15 bg-white p-0 text-ink shadow-xl backdrop:bg-ink/40"
+              onClose={() => setPendingEditFormData(null)}
+              ref={changeConfirmRef}
+            >
+              <div className="grid gap-4 p-5 sm:p-6">
+                <h2 className="text-lg font-medium" id="edit-confirm-title">
+                  改了時間或地點，要通知學員嗎？
+                </h2>
+                <p className="text-sm leading-6 text-ink-soft">
+                  {isFollowingScope
+                    ? `儲存後會通知這 ${followingSessions.length} 場中已報名（含待確認）的學員（${followingSessionsWithEnrollment} 堂有人報名），每位學員只收一則，`
+                    : `儲存後會通知 ${edit.enrolledCount} 位已報名（含待確認）的學員，`}
+                  告訴他們新的
+                  {[editChanges.timeChanged ? "時間" : null, editChanges.locationChanged ? "地點" : null]
+                    .filter(Boolean)
+                    .join("與")}
+                  。他們的報名照樣保留，不能來的人可以自己取消。
+                </p>
+                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                  <button
+                    className="min-h-11 rounded-full border border-ink/25 px-5 py-2 text-sm font-medium text-ink transition hover:bg-cream"
+                    onClick={() => changeConfirmRef.current?.close()}
+                    type="button"
+                  >
+                    先不要
+                  </button>
+                  <button
+                    className="min-h-11 rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep"
+                    onClick={confirmEditSubmit}
+                    type="button"
+                  >
+                    儲存並通知學員
+                  </button>
+                </div>
+              </div>
+            </dialog>
+          ) : null}
         </form>
       ) : null}
 
@@ -724,6 +983,7 @@ export function ClassSessionCreateForm({
           <FormSection title="報名設定">
             <SeriesListingNote />
             <RequiresApprovalField {...sharedFieldProps} idPrefix="weekly-" />
+            <OpenForEnrollmentField {...sharedFieldProps} idPrefix="weekly-" />
           </FormSection>
           <ClassCreateSummary
             dates={weeklyDates}
@@ -792,6 +1052,7 @@ export function ClassSessionCreateForm({
           <FormSection title="報名設定">
             <SeriesListingNote />
             <RequiresApprovalField {...sharedFieldProps} idPrefix="fixed-" />
+            <OpenForEnrollmentField {...sharedFieldProps} idPrefix="fixed-" />
           </FormSection>
           <ClassCreateSummary
             dates={modeFields.fixedDates}
@@ -1345,8 +1606,39 @@ function SeriesListingNote() {
   return (
     <div className="rounded-xl border border-ink/15 bg-cream px-4 py-3 text-sm leading-6 text-ink-soft">
       <p className="font-medium text-ink">公開列表</p>
-      <p>系列的場次目前不會列在公開課程列表；建立後每一場都是草稿，要逐堂開放報名。</p>
+      <p>系列的場次目前不會列在公開課程列表，學員要透過你分享的報名連結報名。</p>
     </div>
+  );
+}
+
+// teacher-class-scheduling 票 01：系列建立後要不要直接開放報名。預設先存成草稿（沿用既有行為）。
+function OpenForEnrollmentField({
+  idPrefix = "",
+  shared,
+  updateShared,
+}: FieldProps) {
+  return (
+    <fieldset className="grid min-w-0 gap-2">
+      <legend className={labelClassName}>建立後</legend>
+      <ChoiceOption
+        checked={!shared.openForEnrollment}
+        description="先檢查每一場，之後在系列頁按「全部開放報名」一次開放。"
+        id={`${idPrefix}openForEnrollment-no`}
+        name="openForEnrollment"
+        onChange={() => updateShared("openForEnrollment", false)}
+        title="先存成草稿"
+        value="no"
+      />
+      <ChoiceOption
+        checked={shared.openForEnrollment}
+        description="每一場建立後就開放報名，學員拿到連結就能報名。"
+        id={`${idPrefix}openForEnrollment-yes`}
+        name="openForEnrollment"
+        onChange={() => updateShared("openForEnrollment", true)}
+        title="建立後全部開放報名"
+        value="yes"
+      />
+    </fieldset>
   );
 }
 

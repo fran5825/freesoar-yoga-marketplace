@@ -2,10 +2,16 @@ import { redirect } from "next/navigation";
 
 import { pickInitialOrganizationId } from "@/app/organizer/demands/_components/organization-options";
 import { listOwnOrganizations } from "@/domain/organization/service";
+import { getOwnTeacherProfileId } from "@/domain/organizer-class-proposal/service";
 import { getOwnOrganizerContext } from "@/domain/organizer-profile/service";
 import { getCurrentUser } from "@/lib/auth/session";
 
-import { saveAndSubmitProposalAction, saveProposalDraftAction, searchTeacherCardsAction } from "../actions";
+import {
+  saveAndSelfConfirmProposalAction,
+  saveAndSubmitProposalAction,
+  saveProposalDraftAction,
+  searchTeacherCardsAction,
+} from "../actions";
 import { ProposalForm } from "../_components/ProposalForm";
 import { toProposalOrganizationOptions, withOrganizationParam } from "../_components/page-helpers";
 
@@ -14,7 +20,8 @@ type NewProposalPageProps = {
 };
 
 // organizer-usability-redesign 票 05：「我已有合作老師」的新課程安排。
-// 尚未在任何導覽或入口公開（入口在票 10 才開），只能直接開網址。
+// 票 10：入口頁、總覽與「我的課程」的「已有合作老師」捷徑由 DIRECT_CLASS_ENTRY_PUBLIC 控制，
+// 目前尚未公開（等票 09 老師端 origin guards）；intent=direct_class 與直接開網址仍可用。
 export default async function NewProposalPage({ searchParams }: NewProposalPageProps) {
   const [currentUser, resolvedSearchParams] = await Promise.all([getCurrentUser(), searchParams]);
 
@@ -26,10 +33,11 @@ export default async function NewProposalPage({ searchParams }: NewProposalPageP
 
   const organizerContext = await getOwnOrganizerContext();
   if (!organizerContext) {
-    redirect("/organizer/profile");
+    // 票 10：第一次使用先建立團主資料，建立後回到這個表單（保留直接開團的意圖）。
+    redirect(`/organizer/profile?next=${encodeURIComponent("/organizer/class-proposals/new")}`);
   }
 
-  const organizations = await listOwnOrganizations();
+  const [organizations, selfTeacherProfileId] = await Promise.all([listOwnOrganizations(), getOwnTeacherProfileId()]);
   const initialOrganizationId = pickInitialOrganizationId(
     organizations,
     resolvedSearchParams?.organizationId,
@@ -66,8 +74,10 @@ export default async function NewProposalPage({ searchParams }: NewProposalPageP
         initialVersion={null}
         onSaveDraft={saveProposalDraftAction}
         onSearchTeachers={searchTeacherCardsAction}
+        onSelfConfirm={saveAndSelfConfirmProposalAction}
         onSubmit={saveAndSubmitProposalAction}
         organizationLocked={false}
+        selfTeacherProfileId={selfTeacherProfileId}
         organizations={toProposalOrganizationOptions(organizations)}
       />
     </div>

@@ -17,6 +17,7 @@ export function ConfirmActionDialog({
   confirmLabel,
   action,
   hiddenFields,
+  confirmClassName = "min-h-11 rounded-full bg-clay px-5 py-2 text-sm font-medium text-white transition hover:bg-clay-deep",
 }: {
   triggerLabel: string;
   // 同一頁有多個同名按鈕時（例如每筆報名都有「婉拒」），用來說清楚是哪一筆。
@@ -27,6 +28,8 @@ export function ConfirmActionDialog({
   confirmLabel: string;
   action: (formData: FormData) => Promise<void>;
   hiddenFields: Record<string, string>;
+  // 非破壞性的確認（例如「全部開放報名」）可改用主要操作的顏色。
+  confirmClassName?: string;
 }) {
   const titleId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -76,7 +79,7 @@ export function ConfirmActionDialog({
             >
               先不要
             </button>
-            <PendingSubmitButton className="min-h-11 rounded-full bg-clay px-5 py-2 text-sm font-medium text-white transition hover:bg-clay-deep">
+            <PendingSubmitButton className={confirmClassName}>
               {confirmLabel}
             </PendingSubmitButton>
           </form>

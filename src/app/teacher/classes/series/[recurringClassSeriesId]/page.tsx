@@ -13,11 +13,19 @@ import {
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { requireUser } from "@/lib/auth/session";
 
+import {
+  CancelFromHereDialog,
+  occurrencesFromHere,
+} from "../../_components/CancelFromHereDialog";
 import { ConfirmActionDialog } from "../../_components/ConfirmActionDialog";
 import { CopyEnrollLinkButton } from "../../_components/CopyEnrollLinkButton";
-import { PendingSubmitButton } from "../../_components/PendingSubmitButton";
 import { teacherClassDetailHref } from "../../_lib/return-context";
-import { cancelRecurringClassSeriesAction, generateMoreOccurrencesAction } from "./actions";
+import {
+  cancelRecurringClassSeriesAction,
+  generateMoreOccurrencesAction,
+  openAllDraftOccurrencesAction,
+} from "./actions";
+import { GenerateMoreForm } from "./GenerateMoreForm";
 
 const dayOfWeekLabels = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
 
@@ -65,6 +73,10 @@ export default async function RecurringClassSeriesPage({
   );
   const affectedConfirmed = cancellableOccurrences.reduce((sum, item) => sum + item.confirmedCount, 0);
   const affectedPending = cancellableOccurrences.reduce((sum, item) => sum + item.pendingCount, 0);
+  // 票 01：可以一次開放報名的場次＝尚未開始的草稿。
+  const openableDrafts = series.occurrences.filter(
+    (occurrence) => occurrence.status === "draft" && occurrence.startAt.getTime() > now,
+  );
 
   return (
     <div className="flex flex-col gap-6 sm:gap-8">
@@ -85,7 +97,7 @@ export default async function RecurringClassSeriesPage({
             : `每週固定系列——每${dayOfWeekLabels[series.dayOfWeek]} ${series.startTime}–${series.endTime}。`}
         </p>
         <p className="mt-1 max-w-2xl text-sm leading-6 text-ink-soft">
-          每一場都是獨立的課：要逐堂開放報名、逐堂處理報名；系列場次不會列在公開課程列表，開放報名的場次可以複製報名連結傳給學員（學員需先登入）。
+          每一場都是獨立的課，學員一場一場報名、你也一場一場處理報名；草稿可以用「全部開放報名」一次開放。系列場次不會列在公開課程列表，開放報名的場次可以複製報名連結傳給學員（學員需先登入）。
           {series.requiresApproval ? "新報名需要你確認才算成立。" : "新報名送出即成立。"}
         </p>
       </header>
@@ -100,6 +112,45 @@ export default async function RecurringClassSeriesPage({
           }
         >
           {feedback.message}
+        </section>
+      ) : null}
+
+      {openableDrafts.length > 0 ? (
+        <section
+          aria-labelledby="open-all-title"
+          className="grid gap-3 rounded-2xl border border-clay/30 bg-clay-tint p-5 sm:p-6"
+        >
+          <h2 className="text-lg font-medium text-ink" id="open-all-title">
+            還有 {openableDrafts.length} 場草稿沒開放報名
+          </h2>
+          <p className="text-sm leading-6 text-ink-soft">
+            確認內容沒問題後，可以一次把這些草稿全部開放報名；已開始或已取消的場次不受影響。
+          </p>
+          <div>
+            <ConfirmActionDialog
+              action={openAllDraftOccurrencesAction}
+              confirmClassName="min-h-11 rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep"
+              confirmLabel={`開放 ${openableDrafts.length} 場報名`}
+              hiddenFields={{ recurringClassSeriesId: series.id }}
+              title="全部開放報名？"
+              triggerClassName="min-h-11 rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep"
+              triggerLabel={`全部開放報名（${openableDrafts.length} 場）`}
+            >
+              <p>
+                系列：<span className="break-words font-medium text-ink">{series.title}</span>
+              </p>
+              <p>會開放以下 {openableDrafts.length} 場：</p>
+              <ul
+                aria-label="會開放報名的場次"
+                className="grid max-h-56 gap-1 overflow-y-auto rounded-xl border border-ink/10 bg-cream p-3"
+              >
+                {openableDrafts.map((occurrence) => (
+                  <li key={occurrence.id}>{formatTaipeiDatetime(occurrence.startAt)}</li>
+                ))}
+              </ul>
+              <p>開放後學員就能透過報名連結報名；系列場次仍不會列在公開課程列表。</p>
+            </ConfirmActionDialog>
+          </div>
         </section>
       ) : null}
 
@@ -141,7 +192,7 @@ export default async function RecurringClassSeriesPage({
                     </span>
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-ink-soft">
                       <span>
-                        已報名 {occurrence.confirmedCount} / {series.capacity} 人
+                        已報名 {occurrence.confirmedCount} / {occurrence.capacity} 人
                       </span>
                       {occurrence.pendingCount > 0 ? (
                         <span className="font-medium text-clay-deep">
@@ -151,14 +202,26 @@ export default async function RecurringClassSeriesPage({
                       <span aria-hidden="true">→</span>
                     </span>
                   </Link>
-                  {/* 複製按鈕放在場次連結外面，避免連結裡再包按鈕。 */}
-                  {occurrence.status === "open_for_enrollment" ? (
-                    <div className="pl-3">
-                      <CopyEnrollLinkButton
-                        ariaLabel={`複製 ${formatTaipeiDatetime(occurrence.startAt)} 這一場的報名連結`}
-                        className="min-h-11 rounded-full px-3 text-sm font-medium text-pine underline-offset-4 hover:underline"
-                        classSessionId={occurrence.id}
-                      />
+                  {/* 複製與取消按鈕放在場次連結外面，避免連結裡再包按鈕。 */}
+                  {occurrence.status === "open_for_enrollment" || isCancellableOccurrence(occurrence, now) ? (
+                    <div className="flex flex-wrap gap-x-2 pl-3">
+                      {occurrence.status === "open_for_enrollment" ? (
+                        <CopyEnrollLinkButton
+                          ariaLabel={`複製 ${formatTaipeiDatetime(occurrence.startAt)} 這一場的報名連結`}
+                          className="min-h-11 rounded-full px-3 text-sm font-medium text-pine underline-offset-4 hover:underline"
+                          classSessionId={occurrence.id}
+                        />
+                      ) : null}
+                      {isCancellableOccurrence(occurrence, now) ? (
+                        <CancelFromHereDialog
+                          affected={occurrencesFromHere(series.occurrences, occurrence, now)}
+                          canGenerateMore={series.dayOfWeek !== null}
+                          fromClassSessionId={occurrence.id}
+                          recurringClassSeriesId={series.id}
+                          seriesTitle={series.title}
+                          triggerAriaLabel={`從 ${formatTaipeiDatetime(occurrence.startAt)} 這一場以後全部取消`}
+                        />
+                      ) : null}
                     </div>
                   ) : null}
                 </li>
@@ -181,7 +244,7 @@ export default async function RecurringClassSeriesPage({
             <dd className="mt-1 break-words">{series.location}</dd>
           </div>
           <div>
-            <dt className="font-medium text-ink">名額上限（每場）</dt>
+            <dt className="font-medium text-ink">名額上限（系列設定，新場次沿用）</dt>
             <dd className="mt-1">{series.capacity} 人</dd>
           </div>
           {getClassServiceTypes(series).length > 0 ? (
@@ -205,31 +268,15 @@ export default async function RecurringClassSeriesPage({
       </section>
 
       {series.dayOfWeek !== null ? (
-        <section className="grid gap-3 rounded-2xl border border-ink/15 bg-white p-5 sm:p-6">
-          <form action={generateMoreOccurrencesAction} className="grid gap-3">
-            <input name="recurringClassSeriesId" type="hidden" value={series.id} />
-            <label className="text-sm font-medium text-ink" htmlFor="count">
-              生成更多場次
-            </label>
-            <div className="flex flex-wrap items-center gap-3">
-              <input
-                className="min-h-11 w-24 rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
-                defaultValue={8}
-                id="count"
-                max={26}
-                min={1}
-                name="count"
-                required
-                type="number"
-              />
-              <PendingSubmitButton className="min-h-11 rounded-full border border-ink/25 px-5 py-2 text-sm font-medium text-ink transition hover:border-pine/40 hover:bg-pine-tint">
-                生成
-              </PendingSubmitButton>
-            </div>
-            <p className="text-xs leading-5 text-ink-faint">
-              從目前最後一場之後，依每{dayOfWeekLabels[series.dayOfWeek]}繼續生成；新場次一樣是草稿，要逐堂開放報名。
-            </p>
-          </form>
+        <section
+          className="grid scroll-mt-6 gap-3 rounded-2xl border border-ink/15 bg-white p-5 sm:p-6"
+          id="generate-more"
+        >
+          <GenerateMoreForm
+            action={generateMoreOccurrencesAction}
+            dayLabel={dayOfWeekLabels[series.dayOfWeek]}
+            recurringClassSeriesId={series.id}
+          />
         </section>
       ) : null}
 

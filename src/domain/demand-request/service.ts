@@ -64,6 +64,45 @@ const demandRequestSelect = {
   updatedAt: true,
 } as const;
 
+// organizer-usability-redesign 票 11：團主自己的需求列表／詳情額外帶出兩個衍生值。
+// - effectiveResponseCount：還在等團主選擇的老師回應數＝DemandResponse.status = submitted 且
+//   老師 status = approved（與選師 guard 相同：被暫停老師的回應選不了，不算）。需求狀態不會 persist teacher_responded，下一步提示改依這個數字判斷。
+// - classSessionId：轉成課程後對應的 ClassSession，讓「下一步」直接連到那一堂課。
+export type OwnDemandRequestSummary = DemandRequestSnapshot & {
+  effectiveResponseCount: number;
+  classSessionId: string | null;
+};
+
+const ownDemandRequestSummarySelect = {
+  ...demandRequestSelect,
+  classSession: { select: { id: true } },
+  _count: {
+    select: {
+      demandResponses: {
+        where: {
+          status: "submitted" as const,
+          teacherProfile: { status: "approved" as const },
+        },
+      },
+    },
+  },
+} as const;
+
+function toOwnDemandRequestSummary<
+  T extends DemandRequestSnapshot & {
+    classSession: { id: string } | null;
+    _count: { demandResponses: number };
+  },
+>(row: T): OwnDemandRequestSummary {
+  const { classSession, _count, ...snapshot } = row;
+
+  return {
+    ...snapshot,
+    effectiveResponseCount: _count.demandResponses,
+    classSessionId: classSession?.id ?? null,
+  };
+}
+
 export type DemandRequestDraftSaveErrorCode =
   | "authentication_required"
   | "organizer_profile_required"
@@ -105,36 +144,40 @@ export type DemandRequestSubmitResult =
       validationErrors?: DemandRequestValidationError[];
     };
 
-export async function getOwnDemandRequestList(): Promise<DemandRequestSnapshot[]> {
+export async function getOwnDemandRequestList(): Promise<OwnDemandRequestSummary[]> {
   const currentUser = await getCurrentUser();
 
   if (!currentUser) {
     return [];
   }
 
-  return prisma.demandRequest.findMany({
+  const rows = await prisma.demandRequest.findMany({
     where: { organizerProfile: { userId: currentUser.id } },
     orderBy: { updatedAt: "desc" },
-    select: demandRequestSelect,
+    select: ownDemandRequestSummarySelect,
   });
+
+  return rows.map(toOwnDemandRequestSummary);
 }
 
 export async function getOwnDemandRequestDetail(
   demandRequestId: string,
-): Promise<DemandRequestSnapshot | null> {
+): Promise<OwnDemandRequestSummary | null> {
   const currentUser = await getCurrentUser();
 
   if (!currentUser) {
     return null;
   }
 
-  return prisma.demandRequest.findFirst({
+  const row = await prisma.demandRequest.findFirst({
     where: {
       id: demandRequestId,
       organizerProfile: { userId: currentUser.id },
     },
-    select: demandRequestSelect,
+    select: ownDemandRequestSummarySelect,
   });
+
+  return row ? toOwnDemandRequestSummary(row) : null;
 }
 
 // organizer-usability-redesign 票 04：requestedOrganizationId 是團主在表單選的團體；

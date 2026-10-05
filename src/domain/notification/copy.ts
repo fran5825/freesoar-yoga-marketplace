@@ -136,6 +136,13 @@ const COPY_TABLE: CopyTable = {
       body: `「${classSessionTitle ?? ""}」的報名已經取消。`,
     }),
   },
+  // teacher-class-scheduling 票 04：老師改了時間或地點，通知該場已報名（含待確認）的學員；報名照樣保留。
+  class_session_changed: {
+    affected_member: ({ classSessionTitle, changeSummary }) => ({
+      title: "課程時間或地點有變更",
+      body: `「${classSessionTitle ?? ""}」有變更：${changeSummary ?? "上課資訊有變更"}。你的報名仍然有效，如果不能來，可以到我的報名取消。`,
+    }),
+  },
   class_session_cancelled: {
     self: ({ classSessionTitle }) => ({
       title: "課程已取消",

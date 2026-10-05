@@ -232,6 +232,8 @@ model DemandResponse {
 enum ClassSessionOrigin {
   organizer_matched
   teacher_initiated
+  // organizer-usability-redesign 票 09：團主邀請已合作的老師、老師確認後直接開團（沒有需求，有 converted 的合作邀請）
+  organizer_direct
 }
 
 // teacher-initiated-open-classes G1 = A：常規／固定期課程的「範本」，實際可報名的單位仍是

@@ -82,6 +82,8 @@ Can:
 - **View own single class session detail（`teacher-usability` 第 05 票，產品主人 2026-09-25 放行）**：老師只能讀自己的單堂課詳情（範圍與上方列表完全相同，未新增可讀欄位：只含 confirmed／pending 報名的學員姓名、email、備註，評價者姓名與 email，Organization 只有名稱、無團主聯絡資料，無學員電話與頭像）；別人的課、不存在、沒有老師資料一律回傳找不到；suspended 老師仍可查看自己既有的課。own-scope 寫在查詢 WHERE，不是事後比對。
 - View own calendar
 - Enroll in class sessions only through the same User's Member capability
+- **已落地（`teacher-class-scheduling` 票 04，2026-10-05）：Edit own single class session（改課）**：approved 老師可以修改自己開的單堂課（`origin = teacher_initiated`、不屬於系列、`draft`／`open_for_enrollment`、`startAt` 尚未到達）的標題、說明、課程風格、瑜伽類型、時間、地點與人數上限。所有條件都在 server 端檢查（own-scope 寫在鎖查詢的 WHERE、origin 與狀態在鎖內確認、老師狀態在鎖內讀取），不只靠 UI 隱藏。改時間或地點時通知該場 `pending`／`confirmed` 學員；不能改「是否需要確認報名」；不能改團主媒合的課；暫停中的老師不能改。系列場次的改課在票 05，公開設定的修改在票 06。
+- **已落地（`teacher-class-scheduling` 票 05，2026-10-05）：Edit own series class sessions（系列改課）**：approved 老師可以改自己系列中尚未開始的場次，選「只改這場」或「改這場和之後所有場次」（後者同時更新自己的 `RecurringClassSeries` 設定）。系列 own-scope 寫在系列鎖查詢的 WHERE，每一場的條件（屬於這個系列、`teacher_initiated`、`draft`／`open_for_enrollment`、未開始）在鎖內重新檢查；不能改星期幾、公開設定與「是否需要確認報名」。
 - **已核准・未實作（organizer-usability-redesign）**：查看自己收到的團主合作邀請，確認最新版本或附原因婉拒；確認需要 `approved` 且排課無衝突。確認授課不會取得團主課程的開放、修改、取消、完成或名單管理權。同一個帳號可以另外建立團主資料與團體，approved 資格只限制授課、不限制建團。
 
 Cannot:
@@ -91,7 +93,9 @@ Cannot:
 - Approve self
 - Access admin dashboard
 - Create class sessions while own `TeacherProfile.status` is not `approved`（含 `suspended`）——資格檢查與既有 demand-response 資格檢查同等嚴格
-- **已核准・未實作（organizer-usability-redesign 票 09）**：Open / cancel / complete class sessions whose `origin` is not `teacher_initiated` through teacher-side services——目前只靠 UI 隱藏按鈕，票 09 在 server 端補上 origin 檢查
+- **已落地（`teacher-class-scheduling` 票 04，推導規則 11）**：Open own class sessions for enrollment while own `TeacherProfile.status` is not `approved`——老師端單場「開放報名」的 `updateMany` 條件已帶老師 `approved`，暫停中的老師無法開放。（系列的「全部開放報名」在票 01 已檢查。）
+- **已落地（`teacher-class-scheduling` 票 04）**：Edit class sessions that are not own `teacher_initiated`, have started, are `completed`／`cancelled`, or change `requiresApproval`
+- **organizer-usability-redesign 票 09**：Open / cancel / complete class sessions whose `origin` is not `teacher_initiated` through teacher-side services——complete 已在 server 端檢查 origin（已落地）；open 與 cancel 目前仍只靠 UI 隱藏按鈕，等老師排課工作 commit 後補上
 
 ## Admin
 
@@ -116,5 +120,7 @@ Security review required when changing:
 - Teacher approval
 - Enrollment capacity
 - Payment-related code
+
+**`teacher-class-scheduling` 票 04 touch 到 `Permissions`、`Teacher approval`、`Enrollment capacity` 三項（2026-10-05 開工前 review，見 `docs/superpowers/plans/teacher-class-scheduling/tickets/04-single-class-edit.md` 的「開工前安全檢查」）**：新增老師 own-scoped 改課；單場開放報名補上 approved 檢查；人數上限調小時須在課程鎖內與報名數比對，不得低於 `pending + confirmed`。
 
 **`teacher-initiated-open-classes` 直接 touch 到其中兩項（已過一輪 review，非跳過）**：`enrollment capacity`（`pending`＋`confirmed` 合計佔用名額的計算條件變更）、`teacher approval`（新增的老師自建課程資格檢查，與既有 demand-response 資格檢查同等嚴格，suspended 老師無法繞過；資格檢查用 `TeacherProfile` row 鎖避免跟 Admin suspend 的 TOCTOU 競態）。

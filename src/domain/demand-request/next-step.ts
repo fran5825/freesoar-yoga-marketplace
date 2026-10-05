@@ -2,7 +2,10 @@ import type { DemandRequestStatus } from "@prisma/client";
 
 // organizer-usability 票 08：團主端「下一步」提示的共用文案。
 // 詳情頁、總覽「待你處理」、需求列表卡片都從這裡取文案，避免同一個狀態在不同頁面說法不一樣。
-// 只依需求狀態決定，不改狀態機；`kind` 讓畫面決定要不要放進「待你處理」。
+// 依需求狀態＋有效回應數決定，不改狀態機；`kind` 讓畫面決定要不要放進「待你處理」。
+// 票 11：published 不會 persist 成 teacher_responded，所以「老師已回應」由 effectiveResponseCount
+// （還能選的回應數）衍生；列表、總覽、詳情都必須傳同一個數字，三處說法才會一致。
+// waiting 一律代表「輪到別人」（平台或老師），不會出現在「待你處理」。
 export type DemandNextStepKind = "action" | "waiting" | "info";
 
 export type DemandNextStep = {
@@ -15,9 +18,10 @@ export type DemandNextStep = {
 
 export function getDemandNextStep(input: {
   status: DemandRequestStatus;
-  responseCount?: number;
+  effectiveResponseCount?: number;
 }): DemandNextStep {
-  const { status, responseCount } = input;
+  const { status } = input;
+  const responseCount = input.effectiveResponseCount ?? 0;
 
   switch (status) {
     case "draft":
@@ -34,6 +38,13 @@ export function getDemandNextStep(input: {
         shortMessage: "等待平台審核",
       };
     case "published":
+      if (responseCount > 0) {
+        return {
+          kind: "action",
+          message: `已有 ${responseCount} 位老師回應，請看看回應內容並選擇合作的老師。`,
+          shortMessage: `${responseCount} 位老師已回應：請選擇合作的老師`,
+        };
+      }
       return {
         kind: "waiting",
         message: "平台審核通過，合適的老師現在在「需求池」看得到這筆需求。老師回應時會通知你，再由你選擇合作的老師。",
@@ -43,7 +54,7 @@ export function getDemandNextStep(input: {
       return {
         kind: "action",
         message:
-          typeof responseCount === "number" && responseCount > 0
+          responseCount > 0
             ? `已有 ${responseCount} 位老師回應，請看看回應內容並選擇合作的老師。`
             : "已有老師回應，請看看回應內容並選擇合作的老師。",
         shortMessage: "老師已回應：請選擇合作的老師",
@@ -57,7 +68,7 @@ export function getDemandNextStep(input: {
     case "converted_to_class":
       return {
         kind: "info",
-        message: "課程已建立，可到「我的課程」查看報名狀況。",
+        message: "課程已建立。到課程頁可以開放報名、分享連結並查看報名狀況。",
         shortMessage: "課程已建立",
       };
     case "completed":

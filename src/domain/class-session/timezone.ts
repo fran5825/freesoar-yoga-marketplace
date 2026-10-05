@@ -64,3 +64,22 @@ const taipeiDisplayFormatter = new Intl.DateTimeFormat("zh-TW", {
 export function formatTaipeiDatetime(date: Date): string {
   return taipeiDisplayFormatter.format(date);
 }
+
+// teacher-class-scheduling 票 01：總覽卡片用的短日期，例如「10/07（二）19:00」。
+const taipeiShortDateFormatter = new Intl.DateTimeFormat("zh-TW", {
+  timeZone: "Asia/Taipei",
+  month: "2-digit",
+  day: "2-digit",
+  weekday: "narrow",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+export function formatTaipeiShortDatetime(date: Date): string {
+  const parts = Object.fromEntries(
+    taipeiShortDateFormatter.formatToParts(date).map((part) => [part.type, part.value]),
+  );
+
+  return `${parts.month}/${parts.day}（${parts.weekday}）${parts.hour}:${parts.minute}`;
+}
