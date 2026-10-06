@@ -33,6 +33,8 @@ export type EditSeriesFromOccurrenceInput = {
   endTime?: string | null;
   location?: string | null;
   capacity?: number | null;
+  // 票 06：公開設定也套用到這些場次並成為系列預設；沒帶時維持原本設定。
+  isPublic?: boolean | null;
 };
 
 export type EditSeriesFromOccurrenceErrorCode =
@@ -244,6 +246,7 @@ export async function editSeriesFromOccurrenceForTeacher(
               endAt: item.endAt,
               location: next.location,
               capacity: next.capacity,
+              ...(typeof input.isPublic === "boolean" ? { isPublic: input.isPublic } : {}),
             },
           });
         }
@@ -260,6 +263,7 @@ export async function editSeriesFromOccurrenceForTeacher(
             endTime: input.endTime ?? undefined,
             location: next.location,
             capacity: next.capacity,
+            ...(typeof input.isPublic === "boolean" ? { isPublic: input.isPublic } : {}),
           },
         });
 

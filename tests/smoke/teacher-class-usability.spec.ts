@@ -288,7 +288,7 @@ test.describe("teacher single-class creation usability (ticket 01)", () => {
     await page.goto("/teacher/classes/new");
     await page.getByRole("button", { name: "每週固定" }).click();
     await expect(page.locator("#weekly-confirmCreate")).toHaveCount(0);
-    await expect(summary(page)).toContainText("不列在公開課程列表");
+    await expect(summary(page)).toContainText("僅透過連結招募");
 
     const title = `每週系列 ${testRunId}`;
     await page.locator("#weekly-title").fill(title);

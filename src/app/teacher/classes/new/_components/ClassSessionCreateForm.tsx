@@ -437,6 +437,7 @@ export function ClassSessionCreateForm({
     if (timeChanged) labels.push(isFollowingScope ? "上課時段" : "日期與時間");
     if (locationChanged) labels.push("地點");
     if (shared.capacity.trim() !== String(edit.capacity)) labels.push("名額上限");
+    if (shared.isPublic !== edit.isPublic) labels.push("公開設定");
 
     return { timeChanged, locationChanged, labels };
   })();
@@ -568,7 +569,7 @@ export function ClassSessionCreateForm({
     { label: "排程", value: scheduleLabel },
     ...extraRows,
     ...placeSummaryRows,
-    { label: "公開列表", value: "不列在公開課程列表" },
+    { label: "公開列表", value: shared.isPublic ? "開放報名後列在公開課程列表" : "僅透過連結招募" },
     approvalSummaryRow,
     {
       label: "建立後",
@@ -578,8 +579,8 @@ export function ClassSessionCreateForm({
   const seriesSummaryNotes = [
     "系列建立後目前無法修改課程內容，請先確認以上資訊。",
     shared.openForEnrollment
-      ? "每一場建立後直接開放報名，學員拿到連結就能報名；系列場次不會列在公開課程列表。"
-      : "每一場會先存成草稿，之後可以在系列頁按「全部開放報名」一次開放；系列場次不會列在公開課程列表。",
+      ? `每一場建立後直接開放報名，學員拿到連結就能報名${shared.isPublic ? "，也會列在公開課程列表" : ""}。`
+      : "每一場會先存成草稿，之後可以在系列頁按「全部開放報名」一次開放；開放報名前不會列在公開課程列表。",
     "如果某個日期跟你其他課程的時段衝突，那一天會跳過不建立，建立後會列出來。",
   ];
 
@@ -777,10 +778,10 @@ export function ClassSessionCreateForm({
           </FormSection>
           {edit ? (
             <FormSection title="報名設定">
+              <PublicListingField {...sharedFieldProps} />
               <div className="rounded-xl border border-ink/15 bg-cream px-4 py-3 text-sm leading-6 text-ink-soft">
-                <p>公開列表：{edit.isPublic ? "列在公開課程列表" : "不列在公開課程列表"}</p>
                 <p>報名方式：{edit.requiresApproval ? "需要你確認才算報名成功" : "報名送出即成立"}</p>
-                <p className="mt-1 text-xs leading-5 text-ink-faint">這兩項目前不能在這裡修改。</p>
+                <p className="mt-1 text-xs leading-5 text-ink-faint">報名方式目前不能在這裡修改。</p>
               </div>
             </FormSection>
           ) : (
@@ -1004,7 +1005,7 @@ export function ClassSessionCreateForm({
             <CapacityField {...sharedFieldProps} error={fieldErrors.capacity} idPrefix="weekly-" />
           </FormSection>
           <FormSection title="報名設定">
-            <SeriesListingNote />
+            <PublicListingField {...sharedFieldProps} idPrefix="weekly-" />
             <RequiresApprovalField {...sharedFieldProps} idPrefix="weekly-" />
             <OpenForEnrollmentField {...sharedFieldProps} idPrefix="weekly-" />
           </FormSection>
@@ -1073,7 +1074,7 @@ export function ClassSessionCreateForm({
             <CapacityField {...sharedFieldProps} error={fieldErrors.capacity} idPrefix="fixed-" />
           </FormSection>
           <FormSection title="報名設定">
-            <SeriesListingNote />
+            <PublicListingField {...sharedFieldProps} idPrefix="fixed-" />
             <RequiresApprovalField {...sharedFieldProps} idPrefix="fixed-" />
             <OpenForEnrollmentField {...sharedFieldProps} idPrefix="fixed-" />
           </FormSection>
@@ -1690,16 +1691,6 @@ function PublicListingField({ idPrefix = "", shared, updateShared }: FieldProps)
         value="yes"
       />
     </fieldset>
-  );
-}
-
-// 系列場次目前一律不列在公開列表（既有限制），不提供無法生效的公開選項。
-function SeriesListingNote() {
-  return (
-    <div className="rounded-xl border border-ink/15 bg-cream px-4 py-3 text-sm leading-6 text-ink-soft">
-      <p className="font-medium text-ink">公開列表</p>
-      <p>系列的場次目前不會列在公開課程列表，學員要透過你分享的報名連結報名。</p>
-    </div>
   );
 }
 

@@ -250,6 +250,8 @@ export type RecurringClassSeriesDetail = {
   location: string;
   capacity: number;
   requiresApproval: boolean;
+  // 票 06：系列的公開設定（之後生成的場次沿用）。
+  isPublic: boolean;
   occurrences: RecurringClassSeriesOccurrence[];
 };
 
@@ -283,6 +285,7 @@ export async function getOwnRecurringClassSeriesDetailForTeacher(
       location: true,
       capacity: true,
       requiresApproval: true,
+      isPublic: true,
       serviceTypes: true,
       yogaStyles: true,
       classSessions: {

@@ -330,7 +330,7 @@ test.describe("teacher series management (ticket 05)", () => {
     expect(otherResponse?.status()).toBe(404);
 
     await page.goto(`/teacher/classes/series/${series.id}`);
-    await expect(page.getByText("系列場次不會列在公開課程列表")).toBeVisible();
+    await expect(page.getByText(/這個系列僅透過連結招募/)).toBeVisible();
     await expect(page.locator(`#class-${openId}`)).toContainText("已報名 1 / 8 人");
     await expect(page.locator(`#class-${openId}`)).toContainText("待確認 2 人");
     await expect(page.locator(`#class-${draftId}`)).toContainText("已報名 0 / 8 人");
