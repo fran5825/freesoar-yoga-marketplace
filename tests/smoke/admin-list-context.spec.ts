@@ -45,6 +45,16 @@ test("relation filters are only accepted where supported, must look like ids, an
   expect(feedback.searchParams.get("status")).toBe("open");
 });
 
+test("the upcoming condition is classes-only, whitelisted, and survives return/detail/feedback", () => {
+  expect(normalizeAdminListQuery("classes", { when: "upcoming" })).toEqual({ status: "all", q: "", when: "upcoming" });
+  for (const kind of ["teachers", "demands", "organizations"] as const) expect(normalizeAdminListQuery(kind, { when: "upcoming" }).when).toBeUndefined();
+  for (const bad of ["", "past", "UPCOMING", "upcoming "]) expect(normalizeAdminListQuery("classes", { when: bad }).when).toBeUndefined();
+  const context = "/admin/classes?when=upcoming&teacherProfileId=t1&q=A&redirect=https://evil.example";
+  expect(safeAdminReturnTo("classes", context)).toBe("/admin/classes?teacherProfileId=t1&when=upcoming&q=A");
+  const feedback = new URL(adminFeedbackHref("classes", context, "success", "完成", "c1"), "https://admin.invalid");
+  expect(feedback.searchParams.get("when")).toBe("upcoming");
+});
+
 test("roster conditions are whitelisted and coexist with the class list return context", () => {
   expect(normalizeAdminRosterQuery({ rq: "  Alice  ", rstatus: "pending" })).toEqual({ rq: "Alice", rstatus: "pending" });
   for (const bad of ["bogus", "attended", "", null, ["pending"]]) expect(normalizeAdminRosterQuery({ rstatus: bad }).rstatus).toBe("all");
@@ -59,9 +69,11 @@ test("roster conditions are whitelisted and coexist with the class list return c
 });
 
 test("class origin wording matches the public pages and falls back for origins the admin page does not know yet", () => {
-  expect(adminClassOriginLabel("organizer_matched")).toBe("團主團課");
+  // 2026-10-06 產品主人選擇與團主端同一份管理員用詞（classOriginLabelsForAdmin）。
+  expect(adminClassOriginLabel("organizer_matched")).toBe("團主媒合");
   expect(adminClassOriginLabel("teacher_initiated")).toBe("老師開課");
-  for (const unknown of ["organizer_direct", "", "toString", "__proto__"]) {
+  expect(adminClassOriginLabel("organizer_direct")).toBe("團主直接開團");
+  for (const unknown of ["some_future_origin", "", "toString", "__proto__"]) {
     expect(adminClassOriginLabel(unknown)).toBe("其他來源");
   }
 });

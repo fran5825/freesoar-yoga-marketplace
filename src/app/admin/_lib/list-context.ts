@@ -1,7 +1,7 @@
 export type AdminListKind = "teachers" | "demands" | "classes" | "organizations";
 export type AdminRelationKey = "organizationId" | "teacherProfileId";
-export type AdminListQuery = { q?: string; status?: string } & Partial<Record<AdminRelationKey, string>>;
-export type NormalizedAdminListQuery = { q: string; status: string } & Partial<Record<AdminRelationKey, string>>;
+export type AdminListQuery = { q?: string; status?: string; when?: string } & Partial<Record<AdminRelationKey, string>>;
+export type NormalizedAdminListQuery = { q: string; status: string; when?: "upcoming" } & Partial<Record<AdminRelationKey, string>>;
 
 const statuses: Record<AdminListKind, readonly string[]> = {
   teachers: ["pending", "approved", "suspended", "rejected", "all"],
@@ -30,11 +30,18 @@ export function normalizeAdminListQuery(kind: AdminListKind, query: AdminListQue
     const value = query[key];
     if (typeof value === "string" && relationIdPattern.test(value)) normalized[key] = value;
   }
+  // 第三批票 13：只有課程列表接受「即將開始」條件（開放報名且尚未開始），與總覽 KPI 同一規則。
+  if (kind === "classes" && query.when === "upcoming") normalized.when = "upcoming";
   return normalized;
 }
 
 export function adminRelationParams(query: NormalizedAdminListQuery): Partial<Record<AdminRelationKey, string>> {
   return { organizationId: query.organizationId, teacherProfileId: query.teacherProfileId };
+}
+
+// 第三批票 13：切換分類、搜尋時要一起保留的條件（關聯限定＋即將開始）。
+export function adminConditionParams(query: NormalizedAdminListQuery): Partial<Record<AdminRelationKey | "when", string>> {
+  return { ...adminRelationParams(query), when: query.when };
 }
 
 export function hasAdminRelation(query: NormalizedAdminListQuery): boolean {
@@ -48,6 +55,7 @@ export function adminListHref(kind: AdminListKind, query: AdminListQuery = {}): 
     const value = normalized[key];
     if (value) params.set(key, value);
   }
+  if (normalized.when) params.set("when", normalized.when);
   if (normalized.status !== statuses[kind][0]) params.set("status", normalized.status);
   if (normalized.q) params.set("q", normalized.q);
   const suffix = params.toString();
@@ -66,6 +74,7 @@ export function safeAdminReturnTo(kind: AdminListKind, value: unknown): string {
       status: url.searchParams.get("status") ?? "",
       organizationId: url.searchParams.get("organizationId") ?? undefined,
       teacherProfileId: url.searchParams.get("teacherProfileId") ?? undefined,
+      when: url.searchParams.get("when") ?? undefined,
     });
   } catch {
     return fallback;

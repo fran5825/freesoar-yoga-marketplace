@@ -18,8 +18,8 @@ import { requireAdmin } from "@/lib/auth/session";
 import { AdminFilterBar, resolveActiveTab } from "../_components/AdminFilterBar";
 import { AdminFlash, type AdminFlashParams } from "../_components/AdminFlash";
 import { AdminListCard } from "../_components/AdminListCard";
-import { AdminSearchForm, AdminListResults, AdminRelationNotice } from "../_components/AdminSearchForm";
-import { adminDetailHref, adminListHref, adminRelationParams, hasAdminRelation, matchesAdminSearch, normalizeAdminListQuery, sortAdminClasses, type AdminListQuery, type NormalizedAdminListQuery } from "../_lib/list-context";
+import { AdminSearchForm, AdminListResults, AdminRelationNotice, AdminUpcomingNotice } from "../_components/AdminSearchForm";
+import { adminConditionParams, adminDetailHref, adminListHref, hasAdminRelation, matchesAdminSearch, normalizeAdminListQuery, sortAdminClasses, type AdminListQuery, type NormalizedAdminListQuery } from "../_lib/list-context";
 
 type ClassStatus = AdminClassSessionSummary["status"];
 
@@ -66,7 +66,11 @@ export default async function AdminClassesPage({ searchParams }: AdminClassesPag
   const query = normalizeAdminListQuery("classes", resolvedSearchParams);
   const returnTo = adminListHref("classes", query);
   const relationLabel = hasAdminRelation(query) ? await classRelationLabel(query) : null;
+  // 第三批票 13：「即將開始」與總覽 KPI 同一規則：open_for_enrollment 且 startAt 尚未到達。
+  const now = new Date();
+  const hasCondition = hasAdminRelation(query) || query.when === "upcoming";
   const searched = classSessions.filter((item) =>
+    (query.when !== "upcoming" || (item.status === "open_for_enrollment" && item.startAt.getTime() > now.getTime())) &&
     (!query.organizationId || item.organizationId === query.organizationId) &&
     (!query.teacherProfileId || item.teacherProfileId === query.teacherProfileId) &&
     matchesAdminSearch(query.q, [item.title, item.teacherDisplayName, item.organizerDisplayName, item.organizationName, item.location]));
@@ -79,7 +83,7 @@ export default async function AdminClassesPage({ searchParams }: AdminClassesPag
   const activeTab = resolveActiveTab(tabs, query.status);
   const visibleClassSessions = sortAdminClasses(activeTab.statuses
     ? searched.filter((classSession) => activeTab.statuses?.includes(classSession.status))
-    : searched, new Date());
+    : searched, now);
 
   return (
     <div className="flex flex-col gap-8">
@@ -93,10 +97,11 @@ export default async function AdminClassesPage({ searchParams }: AdminClassesPag
       <AdminFlash message={resolvedSearchParams?.message} result={resolvedSearchParams?.result} detailHref={processed ? adminDetailHref("classes", processed.id, returnTo) : undefined} detailLabel={processed ? `查看 ${processed.title}` : undefined} />
       <AdminSearchForm kind="classes" query={query} label="搜尋課程" hint="標題、老師、團主、團體或地點" />
       <AdminRelationNotice kind="classes" query={query} label={relationLabel} />
-      <AdminFilterBar activeKey={activeTab.key} ariaLabel="課程狀態篩選" basePath="/admin/classes" tabs={tabs} q={query.q} relation={adminRelationParams(query)} />
+      <AdminUpcomingNotice query={query} />
+      <AdminFilterBar activeKey={activeTab.key} ariaLabel="課程狀態篩選" basePath="/admin/classes" tabs={tabs} q={query.q} relation={adminConditionParams(query)} />
       <AdminListResults count={visibleClassSessions.length} query={query} />
 
-      {classSessions.length === 0 && !query.q && !hasAdminRelation(query) ? (
+      {classSessions.length === 0 && !query.q && !hasCondition ? (
         <section className="rounded-2xl border border-ink/15 bg-white p-6">
           <h2 className="text-lg font-medium text-ink">目前沒有任何課程</h2>
         </section>
@@ -104,7 +109,7 @@ export default async function AdminClassesPage({ searchParams }: AdminClassesPag
         <>
           {visibleClassSessions.length === 0 ? (
             <p className="rounded-2xl border border-ink/15 bg-white p-6 text-sm leading-6 text-ink-soft">
-              {query.q || hasAdminRelation(query) ? "這個分類沒有符合條件的課程。" : "這個分類目前沒有課程。"}
+              {query.q || hasCondition ? "這個分類沒有符合條件的課程。" : "這個分類目前沒有課程。"}
             </p>
           ) : (
             <section className="grid gap-3">

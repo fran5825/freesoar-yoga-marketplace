@@ -9,6 +9,8 @@ import {
 import { formatRelativeTime } from "@/lib/format-relative-time";
 import { requireAdmin } from "@/lib/auth/session";
 
+import { adminListHref } from "../_lib/list-context";
+
 // admin-usability 票 03：最上方「待你處理」列出等最久的幾筆待審，整列可點；數字統計放在下面。
 // 每一列直接連到該筆的審核詳情頁；「看全部」連到列表頁。
 function PendingGroup({
@@ -81,12 +83,13 @@ export default async function AdminDashboardPage() {
   const hasPending =
     pending.teacherApplications.total > 0 || pending.demandRequests.total > 0;
 
-  const stats = [
-    { label: "已通過的老師", value: kpis.approvedTeachers },
-    { label: "已公開的需求", value: kpis.publishedDemandRequests },
-    { label: "已媒合的需求", value: kpis.matchedDemandRequests },
-    { label: "即將開始的課程", value: kpis.upcomingClassSessions },
-    { label: "已確認的報名", value: kpis.confirmedEnrollments },
+  // 第三批票 13：數字點下去是條件完全相同的列表；已確認報名只作統計，沒有對應頁面所以不給連結。
+  const stats: { label: string; value: number; href?: string; hint?: string }[] = [
+    { label: "已通過的老師", value: kpis.approvedTeachers, href: adminListHref("teachers", { status: "approved" }) },
+    { label: "已公開的需求", value: kpis.publishedDemandRequests, href: adminListHref("demands", { status: "published" }) },
+    { label: "已媒合的需求", value: kpis.matchedDemandRequests, href: adminListHref("demands", { status: "matched" }) },
+    { label: "即將開始的課程", value: kpis.upcomingClassSessions, href: adminListHref("classes", { when: "upcoming" }), hint: "開放報名中，且還沒到開始時間" },
+    { label: "已確認的報名", value: kpis.confirmedEnrollments, hint: "全平台統計" },
   ];
 
   return (
@@ -139,15 +142,29 @@ export default async function AdminDashboardPage() {
       <section className="grid gap-4">
         <h2 className="text-xl font-semibold text-ink">數字概況</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {stats.map((stat) => (
-            <div
-              className="rounded-2xl border border-ink/15 bg-white p-5"
-              key={stat.label}
-            >
-              <p className="text-sm font-medium text-ink">{stat.label}</p>
-              <p className="mt-2 text-3xl font-semibold text-ink">{stat.value}</p>
-            </div>
-          ))}
+          {stats.map((stat) => {
+            const body = (
+              <>
+                <p className="text-sm font-medium text-ink">{stat.label}</p>
+                <p className="mt-2 text-3xl font-semibold text-ink">{stat.value}</p>
+                {stat.hint ? <p className="mt-1 text-xs text-ink-soft">{stat.hint}</p> : null}
+                {stat.href ? <p className="mt-3 text-sm font-medium text-clay">查看列表 →</p> : null}
+              </>
+            );
+            return stat.href ? (
+              <Link
+                className="rounded-2xl border border-ink/15 bg-white p-5 transition hover:bg-sand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+                href={stat.href}
+                key={stat.label}
+              >
+                {body}
+              </Link>
+            ) : (
+              <div className="rounded-2xl border border-ink/15 bg-white p-5" key={stat.label}>
+                {body}
+              </div>
+            );
+          })}
         </div>
       </section>
     </div>

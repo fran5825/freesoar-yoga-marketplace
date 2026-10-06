@@ -118,7 +118,7 @@
 | 完整方案共同理解 | 已確認，產品主人回覆「1」選擇現有 task 執行。 |
 | 第一批 | [四張票](admin-usability-redesign/tickets/README.md) 已實作；typecheck／lint／build／diff check 通過，88 項 smoke 覆蓋最終皆通過；desktop／390px mobile 截圖已檢查；2026-10-04 產品主人回覆「第一批通過，開始做 05」，畫面驗收完成。 |
 | 第二批 | [05–08](admin-usability-redesign/tickets/README.md) 已實作，各票經 Codex peer review 核准；typecheck／lint／build／diff check 通過，admin smoke 與受影響回歸通過（高負載下的長流程逾時已單獨重跑通過並記錄於票券）。2026-10-05 產品主人回覆「第二批畫面看過了，通過」，畫面驗收完成。 |
-| 第三批 | 2026-10-05 已切 [09–13](admin-usability-redesign/tickets/README.md) 五張票（Codex peer review 核准）。同日產品主人回覆「第三批切票確認，開始做 09」，確認粒度與依賴並放行 Builder 從 09 開始；10–13 待 09 完成並回報後依序接續，整批完成後仍需產品主人看畫面。 |
+| 第三批 | 2026-10-05 切 [09–13](admin-usability-redesign/tickets/README.md) 五張票並經產品主人確認。09–12 已實作、各票經 Codex peer review 核准並畫面驗收通過（09、10–11、12 已分三次 commit／push 到 main）。13 與課程來源用詞統一（2026-10-06 產品主人選 1）已實作、經 Codex 核准，2026-10-06 畫面驗收通過。第三批完成；第四批未啟動，需產品主人另行放行。 |
 | 第四批 | 未啟動。 |
 | Commit／push／部署 | 未授權、未執行。 |
 
@@ -172,3 +172,5 @@ Output Report Requirement:
 <!-- codex-peer-reviewed: 2026-10-04T21:27:48Z rounds=1 verdict=approved -->
 
 <!-- codex-peer-reviewed: 2026-10-05T03:25:05Z rounds=2 verdict=approved -->
+
+<!-- codex-peer-reviewed: 2026-10-05T21:19:50Z rounds=2 verdict=approved -->
