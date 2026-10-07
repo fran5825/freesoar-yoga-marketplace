@@ -13,7 +13,7 @@
 | [03 從這場以後全部取消](03-cancel-from-this-session.md) | 中途結束系列 | None | STANDARD | yes | done（2026-10-05） |
 | [04 單堂改課](04-single-class-edit.md) | 改內容、時間、地點、人數上限並通知 | None | HEAVY | yes | done（2026-10-05） |
 | [05 系列改課](05-series-class-edit.md) | 只改這場／改這場和之後所有場次 | 04 | HEAVY | yes | done（2026-10-05） |
-| [06 公開設定](06-visibility-settings.md) | 系列可公開、建好後可改 | 04、05 | HEAVY | yes | draft |
+| [06 公開設定](06-visibility-settings.md) | 系列可公開、建好後可改 | 04、05 | HEAVY | yes | done（2026-10-06） |
 | [07 建立期班](07-term-class-creation.md) | 持續開課／期班、報名方式 | 01、02、06 | HEAVY | yes | draft |
 | [08 報名整期](08-term-enrollment.md) | 學員整期報名、中途加入 | 07 | HEAVY | yes | draft |
 | [09 請假與退出](09-term-leave-and-withdraw.md) | 整期學員請假單場、退出整期 | 08 | HEAVY | yes | draft |

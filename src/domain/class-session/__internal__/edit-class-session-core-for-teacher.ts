@@ -1,7 +1,7 @@
 // teacher-class-scheduling 票 04：老師改課（單堂）。
 //
-// 可以改：標題、說明、課程風格、瑜伽類型、時間、地點、人數上限。不能改：是否需要確認報名（推導規則 6）、
-// 公開設定（票 06）。只限老師自己開的課（origin = teacher_initiated）、狀態為 draft／open_for_enrollment、
+// 可以改：標題、說明、課程風格、瑜伽類型、時間、地點、人數上限、公開設定（票 06）。
+// 不能改：是否需要確認報名（推導規則 6）。只限老師自己開的課（origin = teacher_initiated）、狀態為 draft／open_for_enrollment、
 // 尚未開始，且老師為 approved。
 // 票 05：系列中的場次也可以用這個核心「只改這場」（可以改日期，產品主人決定 D）；系列設定不變。
 // 「改這場和之後所有場次」在 edit-series-from-occurrence-core.ts。
@@ -40,6 +40,8 @@ export type EditClassSessionForTeacherInput = {
   endAt?: string | null;
   location?: string | null;
   capacity?: number | null;
+  // 票 06：沒帶時維持原本的設定。
+  isPublic?: boolean | null;
 };
 
 export type EditClassSessionForTeacherErrorCode =
@@ -210,6 +212,7 @@ export async function editClassSessionForTeacher(
           endAt: next.endAt,
           location: next.location,
           capacity: next.capacity,
+          ...(typeof input.isPublic === "boolean" ? { isPublic: input.isPublic } : {}),
         },
       });
 

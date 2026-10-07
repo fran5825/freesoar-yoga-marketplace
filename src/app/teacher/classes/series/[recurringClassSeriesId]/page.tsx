@@ -97,7 +97,9 @@ export default async function RecurringClassSeriesPage({
             : `每週固定系列——每${dayOfWeekLabels[series.dayOfWeek]} ${series.startTime}–${series.endTime}。`}
         </p>
         <p className="mt-1 max-w-2xl text-sm leading-6 text-ink-soft">
-          每一場都是獨立的課，學員一場一場報名、你也一場一場處理報名；草稿可以用「全部開放報名」一次開放。系列場次不會列在公開課程列表，開放報名的場次可以複製報名連結傳給學員（學員需先登入）。
+          每一場都是獨立的課，學員一場一場報名、你也一場一場處理報名；草稿可以用「全部開放報名」一次開放。{series.isPublic
+            ? "這個系列設定為公開：開放報名的場次會列在公開課程列表，也可以複製報名連結傳給學員。"
+            : "這個系列僅透過連結招募：場次不會列在公開課程列表，開放報名的場次可以複製報名連結傳給學員（學員需先登入）。"}
           {series.requiresApproval ? "新報名需要你確認才算成立。" : "新報名送出即成立。"}
         </p>
       </header>
@@ -148,7 +150,11 @@ export default async function RecurringClassSeriesPage({
                   <li key={occurrence.id}>{formatTaipeiDatetime(occurrence.startAt)}</li>
                 ))}
               </ul>
-              <p>開放後學員就能透過報名連結報名；系列場次仍不會列在公開課程列表。</p>
+              <p>
+                {series.isPublic
+                  ? "開放後學員就能透過報名連結報名，這些場次也會列在公開課程列表。"
+                  : "開放後學員就能透過報名連結報名；這些場次不會列在公開課程列表。"}
+              </p>
             </ConfirmActionDialog>
           </div>
         </section>
@@ -246,6 +252,10 @@ export default async function RecurringClassSeriesPage({
           <div>
             <dt className="font-medium text-ink">名額上限（系列設定，新場次沿用）</dt>
             <dd className="mt-1">{series.capacity} 人</dd>
+          </div>
+          <div>
+            <dt className="font-medium text-ink">公開列表（系列設定，新場次沿用）</dt>
+            <dd className="mt-1">{series.isPublic ? "開放報名後列在公開課程列表" : "僅透過連結招募"}</dd>
           </div>
           {getClassServiceTypes(series).length > 0 ? (
             <div className="min-w-0">

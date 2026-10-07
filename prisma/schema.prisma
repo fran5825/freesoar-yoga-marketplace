@@ -254,6 +254,7 @@ model RecurringClassSeries {
   location         String
   capacity         Int
   requiresApproval Boolean  @default(false)
+  isPublic         Boolean  @default(false) // teacher-class-scheduling 票 06：系列的公開設定，生成與追加的場次沿用；既有系列為 false（僅透過連結招募）
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 

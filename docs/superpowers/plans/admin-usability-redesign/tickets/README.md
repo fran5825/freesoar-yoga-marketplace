@@ -71,7 +71,7 @@
 
 | 票 | 完整流程 | Blocked by | Mode | Human Gate | Status |
 | --- | --- | --- | --- | --- | --- |
-| [14](14-full-regression-and-visual-acceptance.md) | 整條工作路徑 desktop／mobile 逐步截圖、邊界資料、權限草稿規則回歸、驗收畫面集 | 13 | STANDARD | yes，已驗收 | 原畫面 2026-10-06 驗收；兩項 findings 修正後 164/164 回歸通過、獨立 Reviewer APPROVE；2026-10-07 產品主人回覆「修正畫面接受」，同日另以「commit+push」授權提交並推送本票八檔至既有 Claude 分支 |
+| [14](14-full-regression-and-visual-acceptance.md) | 整條工作路徑 desktop／mobile 逐步截圖、邊界資料、權限草稿規則回歸、驗收畫面集 | 13 | STANDARD | yes，已驗收 | 原畫面 2026-10-06 驗收；兩項 findings 修正後 164/164 回歸通過、獨立 Reviewer APPROVE；2026-10-07 產品主人回覆「修正畫面接受」，本票八檔已以 `1830513` 提交並推送 Claude 分支；之後另授權整合推送 main，整合 build／typecheck／lint 與 172/172 回歸通過 |
 <!-- codex-peer-reviewed: 2026-10-05T02:34:39Z rounds=1 verdict=approved -->
 
 <!-- codex-peer-reviewed: 2026-10-05T03:25:05Z rounds=2 verdict=approved -->

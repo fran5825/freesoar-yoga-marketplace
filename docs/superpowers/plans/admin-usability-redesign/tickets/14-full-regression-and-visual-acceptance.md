@@ -4,7 +4,7 @@
 
 **Blocked by:** 13（第三批全部完成並已 push，2026-10-06）。
 
-**Status:** 兩項 review findings 已修正，工程驗證與獨立 Reviewer 複查 APPROVE；2026-10-07 產品主人看過本次八張 desktop／mobile 重點截圖後回覆「修正畫面接受」，修正畫面驗收完成。同日另回覆「commit+push」，授權提交及推送票 14 完整成果。2026-10-06 原畫面驗收與本次修正驗收分開記錄；部署及重新發布 Artifact 未授權。
+**Status:** 兩項 review findings 已修正，工程驗證與獨立 Reviewer 複查 APPROVE；2026-10-07 產品主人看過本次八張 desktop／mobile 重點截圖後回覆「修正畫面接受」，修正畫面驗收完成。同日另回覆「commit+push」，票 14 完整成果已以 `1830513` 提交並推送 Claude 分支；之後明確要求推送 main，放行整合與常規推送。2026-10-06 原畫面驗收與本次修正驗收分開記錄；部署及重新發布 Artifact 未授權。
 
 **Workflow mode:** STANDARD（verification；修正只限阻擋項）
 
@@ -117,6 +117,14 @@
 - 目標：既有 `claude/nice-fermat-7b1fb3` 分支推送到同名 origin 分支；不合併 main，不包含 `.claude/settings.local.json`、ignored 截圖／logs 或其他 task。
 - 工程依據：已通過 checks、164/164 回歸、獨立 review 與產品主人畫面確認；source／test 未再修改，僅補授權紀錄並核對 staged diff。
 - 此授權不包含部署、重新發布 Artifact 或其他票施工；Git 執行結果另存於 `.ai-runs/admin14-review-fixes/` 並向產品主人回報。
+
+### main 整合授權（2026-10-07）
+
+- 產品主人在分支 push 回報後要求推送 main，授權將已驗收票 14 整合到 `origin/main`。
+- 在既有 Claude worktree 整合最新 main，自動合併無衝突；相對 main 僅本票八檔，既有票 14 source／test 與 `1830513` 一致，其他已在 main 的成果完整保留。
+- 主 checkout 仍有其他 task 的未提交工作，本輪不收錄那些差異、不 stash／reset／覆寫；已保存 67 個既有未提交檔案的 SHA256，與本票八檔無重疊。推送後可用 `--ff-only` 同步本機 main，並再比對這些檔案指紋。使用常規 fast-forward push，不 force push、不執行 migration／部署／Artifact 發布。
+- integration checks、完整相對 main patch 與推送結果存於 `.ai-runs/admin14-review-fixes/`；人工鍵盤／實機觸控未另測的限制不因整合而回填通過。
+- 整合驗證：Prisma client generate、build、TypeScript、lint、diff check 通過；`PORT=3251; CI=1; npx playwright test admin- teacher-profile-suspension teacher-series-visibility` 雙尺寸 **172/172 首輪通過（6.3m）**。只讀確認 localhost dev DB 已有 main 的 `isPublic` 欄位，未執行 migration。初次 lint 只因本機 evidence script 的 CommonJS import 失敗，改成 ESM 後通過，初次 log 保留於 `main-lint-initial.log`；TypeScript 無文字輸出，`main-typecheck.log` 為實際 exit 0 的結果紀錄。
 
 ## 已知待辦（不在本票修，只記錄）
 

@@ -42,6 +42,7 @@ export async function editOwnClassSessionAction(
       endAt: readFormString(formData, "endAt"),
       location: readFormString(formData, "location"),
       capacity: readFormNumber(formData, "capacity"),
+      isPublic: formData.get("isPublic") === "yes",
     });
   } catch {
     // 改課是整筆覆寫、在同一個 transaction 內完成，失敗就是沒有寫入，可以直接再送一次。
@@ -100,6 +101,7 @@ async function editFollowingSessions(
       endTime,
       location: readFormString(formData, "location"),
       capacity: readFormNumber(formData, "capacity"),
+      isPublic: formData.get("isPublic") === "yes",
     });
   } catch {
     // 整批在同一個 transaction 內，失敗就是全部沒寫入，可以直接再送一次。

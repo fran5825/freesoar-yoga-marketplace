@@ -1076,6 +1076,7 @@ export async function createOwnRecurringClassSeriesForTeacher(
       location: validation.normalized.location,
       capacity: validation.normalized.capacity,
       requiresApproval: validation.normalized.requiresApproval,
+      isPublic: validation.normalized.isPublic,
     },
     select: { id: true },
   });

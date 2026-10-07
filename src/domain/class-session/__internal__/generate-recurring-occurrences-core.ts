@@ -113,8 +113,8 @@ export async function generateOccurrencesForSeries(
             endAt,
             location: series.location,
             capacity: series.capacity,
-            // RecurringClassSeries 目前沒有 isPublic 欄位（票 06 才新增），系列場次維持不公開。
-            isPublic: false,
+            // 票 06：沿用系列目前的公開設定。
+            isPublic: series.isPublic,
             requiresApproval: series.requiresApproval,
             recurringClassSeriesId: series.id,
             openForEnrollment: options.openForEnrollment === true,

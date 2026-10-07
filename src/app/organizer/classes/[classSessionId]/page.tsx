@@ -111,6 +111,22 @@ export default async function OrganizerClassSessionDetailPage({
         </section>
       ) : null}
 
+      {/* 票 14：開放報名後的主要動作是分享，放在課程資料之前，手機第一屏就看得到。 */}
+      {classSession.status === "open_for_enrollment" ? (
+        <section aria-labelledby="share-title" className="grid gap-3 rounded-2xl border border-pine/25 bg-white p-6">
+          <div>
+            <h2 className="text-lg font-medium text-ink" id="share-title">分享報名連結</h2>
+            <p className="mt-2 text-sm leading-6 text-ink-soft">
+              {classSession.isPublic
+                ? "這堂課也公開在課程列表。把連結傳給團員，他們登入後就能查看課程並報名。"
+                : "這堂課只透過連結招募，不會出現在公開課程列表。把連結傳給團員，他們登入後就能查看課程並報名。"}
+              連結可以被轉傳，收到連結的人登入後都能報名，平台不會另外確認是否為公司或社團成員。
+            </p>
+          </div>
+          <ClassShareLink classSessionId={classSessionId} />
+        </section>
+      ) : null}
+
       <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6 sm:grid-cols-2">
         <DetailField label="授課老師" value={classSession.teacherProfile.displayName} />
         <DetailField label="課程類型" value={classSession.serviceType} />
@@ -164,21 +180,6 @@ export default async function OrganizerClassSessionDetailPage({
 
       {["open_for_enrollment", "completed"].includes(classSession.status) ? (
         <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
-          {classSession.status === "open_for_enrollment" ? (
-            <div className="grid gap-3">
-              <div>
-                <h2 className="text-lg font-medium text-ink">分享報名連結</h2>
-                <p className="mt-2 text-sm leading-6 text-ink-soft">
-                  {classSession.isPublic
-                    ? "這堂課也公開在課程列表。把連結傳給團員，他們登入後就能查看課程並報名。"
-                    : "這堂課只透過連結招募，不會出現在公開課程列表。把連結傳給團員，他們登入後就能查看課程並報名。"}
-                  連結可以被轉傳，收到連結的人登入後都能報名，平台不會另外確認是否為公司或社團成員。
-                </p>
-              </div>
-              <ClassShareLink classSessionId={classSessionId} />
-            </div>
-          ) : null}
-
           <div className="scroll-mt-24" id="roster">
             <h3 className="text-sm font-medium text-ink">
               已報名會員（{roster.length} 人）

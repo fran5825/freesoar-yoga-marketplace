@@ -238,7 +238,7 @@ test.describe("organizer class sharing", () => {
     await expect(page.getByText(/連結可以被轉傳/)).toBeVisible();
     const origin = new URL(page.url()).origin;
     const fullUrl = `${origin}/classes/${classSessionId}`;
-    await expect(page.getByLabel("報名連結")).toHaveValue(fullUrl);
+    await expect(page.getByLabel("報名連結", { exact: true })).toHaveValue(fullUrl);
     await page.getByRole("button", { name: "複製報名連結" }).click();
     await expect(page.getByText("已複製，可以貼到 LINE 或群組傳給團員。")).toBeVisible();
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(fullUrl);

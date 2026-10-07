@@ -42,6 +42,8 @@ export type RecurringSeriesInput = {
   // 第 8 節（Gate G2/G3）：套用到這個系列底下生成的每一場，套用時機由 Slice C 決定，
   // schema 上的欄位（RecurringClassSeries.requiresApproval）第 5 節就已經定案。
   requiresApproval?: boolean | null;
+  // teacher-class-scheduling 票 06：系列的公開設定，預設僅透過連結招募（false）。
+  isPublic?: boolean | null;
   mode?: string | null;
   // mode === "weekly"
   dayOfWeek?: number | null;
@@ -106,6 +108,7 @@ type NormalizedBaseFields = {
   location: string;
   capacity: number;
   requiresApproval: boolean;
+  isPublic: boolean;
 };
 
 export type RecurringSeriesSchedule =
@@ -335,6 +338,7 @@ export function validateRecurringSeriesInput(
       location: normalizedLocation,
       capacity: input.capacity as number,
       requiresApproval: input.requiresApproval === true,
+      isPublic: input.isPublic === true,
     },
     schedule,
   };

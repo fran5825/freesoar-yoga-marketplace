@@ -162,7 +162,7 @@ test.describe("enrollment smoke", () => {
 
     await expect(page.getByText("已開放報名。")).toBeVisible();
     // organizer-usability-redesign 票 13：報名連結顯示完整網址（含網域），主要動作是複製。
-    await expect(page.getByLabel("報名連結")).toHaveValue(
+    await expect(page.getByLabel("報名連結", { exact: true })).toHaveValue(
       `${new URL(page.url()).origin}/classes/${classSessionId}`,
     );
     await expect(page.getByRole("button", { name: "複製報名連結" })).toBeVisible();

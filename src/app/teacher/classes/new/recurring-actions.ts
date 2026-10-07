@@ -28,6 +28,7 @@ export async function createOwnRecurringClassSeriesAction(
     location: readFormString(formData, "location"),
     capacity: readFormNumber(formData, "capacity"),
     requiresApproval: formData.get("requiresApproval") === "yes",
+    isPublic: formData.get("isPublic") === "yes",
     mode,
     dayOfWeek: mode === "weekly" ? readFormNumber(formData, "dayOfWeek") : undefined,
     generateCount: mode === "weekly" ? readFormNumber(formData, "generateCount") : undefined,
@@ -79,11 +80,9 @@ export async function createOwnRecurringClassSeriesAction(
   );
 }
 
-// 系列場次不會列在公開課程列表；草稿可以在系列頁一次全部開放報名（teacher-class-scheduling 票 01）。
-const DRAFT_NEXT_STEP_MESSAGE =
-  "每一場目前都是草稿，確認沒問題後按「全部開放報名」；系列場次不會列在公開課程列表。";
-const OPENED_NEXT_STEP_MESSAGE =
-  "每一場都已開放報名，可以複製報名連結傳給學員；系列場次不會列在公開課程列表。";
+// 草稿可以在系列頁一次全部開放報名（teacher-class-scheduling 票 01）；公開與否依系列設定（票 06）。
+const DRAFT_NEXT_STEP_MESSAGE = "每一場目前都是草稿，確認沒問題後按「全部開放報名」。";
+const OPENED_NEXT_STEP_MESSAGE = "每一場都已開放報名，可以複製報名連結傳給學員。";
 
 function buildCreatedMessage(
   createdCount: number,
