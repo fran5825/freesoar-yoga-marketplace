@@ -21,7 +21,8 @@ import {
 type TeacherStatus = keyof typeof adminTeacherStatusLabels;
 
 // 票 06：預設停在「待審」，因為老師審核是管理員每天最常做的事；列表只放名稱、狀態、多久前、
-// 服務地區，完整資料與審核按鈕都在詳情頁。列表涵蓋 submitted／approved／suspended／rejected
+// 服務地區；票 14 補既有帳號 email，讓同名老師也能辨識。完整資料與審核按鈕都在詳情頁。
+// 列表涵蓋 submitted／approved／suspended／rejected
 // （草稿是老師私人資料，管理員看不到，不在任何分頁；票 13d 補上「已退回」分頁，不然退回後
 // 這位老師就從列表消失，只能靠網址進詳情頁找）。
 const statusTabs: { key: string; label: string; statuses: TeacherStatus[] | null }[] = [
@@ -118,6 +119,7 @@ export default async function AdminTeachersPage({ searchParams }: AdminTeachersP
               href={adminDetailHref("teachers", teacher.id, returnTo)}
               key={teacher.id}
               lines={[
+                teacher.user.email ?? "未提供帳號 email",
                 `${teacher.serviceAreas.length > 0 ? teacher.serviceAreas.join("、") : "尚未填服務地區"}${
                   typeof teacher.experienceYears === "number"
                     ? `・教學 ${teacher.experienceYears} 年`

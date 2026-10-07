@@ -329,11 +329,11 @@ test.describe("teacher profile suspension smoke", () => {
     // 確認視窗：先按「返回」不會暫停，再按一次並確認才送出。
     await dialog.getByRole("button", { name: "返回" }).click();
     await expect(dialog).toBeHidden();
-    await expect(page.getByText("這位老師已經暫停。")).toBeHidden();
+    await expect(page.getByText("這位老師已經暫停，暫停原因會顯示給老師。")).toBeHidden();
     await page.getByRole("button", { name: "暫停這位老師" }).click();
     await dialog.getByRole("button", { name: "確認暫停" }).click();
 
-    await expect(page.getByText("這位老師已經暫停。")).toBeVisible();
+    await expect(page.getByText("這位老師已經暫停，暫停原因會顯示給老師。")).toBeVisible();
 
     // 暫停後，詳情頁顯示暫停原因與「恢復」，不再有暫停按鈕。
     await page.goto(`/admin/teachers/${teacher.teacherProfileId}`);

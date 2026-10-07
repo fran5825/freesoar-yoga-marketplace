@@ -14,12 +14,12 @@ export function AdminFlash({ result, message, detailHref, detailLabel }: AdminFl
       aria-live="polite"
       className={
         result === "success"
-          ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
-          : "rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
+          ? "min-w-0 wrap-anywhere rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
+          : "min-w-0 wrap-anywhere rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
       }
     >
       {message}
-      {detailHref ? <Link className="ml-2 font-medium underline underline-offset-4" href={detailHref}>{detailLabel ?? "查看剛處理的資料"}</Link> : null}
+      {detailHref ? <Link className="ml-2 wrap-anywhere font-medium underline underline-offset-4" href={detailHref}>{detailLabel ?? "查看剛處理的資料"}</Link> : null}
     </section>
   );
 }

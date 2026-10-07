@@ -118,9 +118,9 @@
 | 完整方案共同理解 | 已確認，產品主人回覆「1」選擇現有 task 執行。 |
 | 第一批 | [四張票](admin-usability-redesign/tickets/README.md) 已實作；typecheck／lint／build／diff check 通過，88 項 smoke 覆蓋最終皆通過；desktop／390px mobile 截圖已檢查；2026-10-04 產品主人回覆「第一批通過，開始做 05」，畫面驗收完成。 |
 | 第二批 | [05–08](admin-usability-redesign/tickets/README.md) 已實作，各票經 Codex peer review 核准；typecheck／lint／build／diff check 通過，admin smoke 與受影響回歸通過（高負載下的長流程逾時已單獨重跑通過並記錄於票券）。2026-10-05 產品主人回覆「第二批畫面看過了，通過」，畫面驗收完成。 |
-| 第三批 | 2026-10-05 切 [09–13](admin-usability-redesign/tickets/README.md) 五張票並經產品主人確認。09–12 已實作、各票經 Codex peer review 核准並畫面驗收通過（09、10–11、12 已分三次 commit／push 到 main）。13 與課程來源用詞統一（2026-10-06 產品主人選 1）已實作、經 Codex 核准，2026-10-06 畫面驗收通過。第三批完成；第四批未啟動，需產品主人另行放行。 |
-| 第四批 | 未啟動。 |
-| Commit／push／部署 | 未授權、未執行。 |
+| 第三批 | 2026-10-05 切 [09–13](admin-usability-redesign/tickets/README.md) 五張票並經產品主人確認。09–12 已實作、各票經 Codex peer review 核准並畫面驗收通過（09、10–11、12 已分三次 commit／push 到 main）。13 與課程來源用詞統一（2026-10-06 產品主人選 1）已實作、經 Codex 核准，2026-10-06 畫面驗收通過。第三批完成；第四批狀態見下一列。 |
+| 第四批 | 2026-10-06 [票 14](admin-usability-redesign/tickets/14-full-regression-and-visual-acceptance.md) 原畫面以私人 Artifact 驗收；原完整 300 項回歸是歷史紀錄。Codex review 指出結果提示溢出與同名老師不可辨識，產品主人授權修正；2026-10-07 補固定 viewport 反證與同名老師測試後，typecheck／lint／build／diff check 與 164/164 admin／暫停回歸通過，獨立 Reviewer APPROVE（報告在 `.ai-runs/admin14-review-fixes/independent-review.md`）。同日產品主人看過八張修正截圖並回覆「修正畫面接受」，之後另以「commit+push」授權提交及推送本票八檔至既有 Claude 分支。人工鍵盤／實機觸控未另測，Artifact 未更新或重新發布。 |
+| Commit／push／部署 | 票 14 commit／push 已獲產品主人 2026-10-07 明確授權，目標 `claude/nice-fermat-7b1fb3` 的同名 origin 分支；本輪不合併 main、不包含其他 task。部署與重新發布 Artifact 未授權。 |
 
 ## 6. 第一批 Builder prompt（已核准）
 

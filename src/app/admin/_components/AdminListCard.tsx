@@ -20,8 +20,9 @@ export function AdminListCard({
       className="grid min-w-0 gap-2 rounded-2xl border border-ink/15 bg-white p-4 transition hover:bg-sand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] sm:items-center sm:gap-5 sm:py-3"
       href={href}
     >
-      <div className="flex flex-wrap items-center gap-3">
-        <h2 className="min-w-0 break-words text-lg font-semibold text-ink">
+      {/* 第四批票 14：沒有空白的長名稱在手機上會撐出卡片（break-words 不會縮小最小寬度），改用 wrap-anywhere。 */}
+      <div className="flex min-w-0 flex-wrap items-center gap-3">
+        <h2 className="min-w-0 max-w-full wrap-anywhere text-lg font-semibold text-ink">
           {title}
         </h2>
         {statusLabel ? (
@@ -33,7 +34,7 @@ export function AdminListCard({
         ) : null}
       </div>
       <div className="grid min-w-0 gap-1">{lines.map((line) => (
-        <p className="break-words text-sm text-ink-soft" key={line}>
+        <p className="wrap-anywhere text-sm text-ink-soft" key={line}>
           {line}
         </p>
       ))}</div>

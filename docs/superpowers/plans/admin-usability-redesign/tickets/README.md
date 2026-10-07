@@ -65,6 +65,13 @@
 - 報名姓名／email 只在 admin 專用 DTO：不進公開、老師、團主或學員共用的型別或 helper；回饋訊息與定位參數不放 email（管理員自行輸入的名單搜尋詞例外，見票 12）。
 - 不改 Auth、Prisma schema、permissions、state machine、取消／報名核心或通知；不做 backlog 17 管理員指派。
 
+## 第四批：整體回歸與畫面驗收
+
+2026-10-06 產品主人回覆「1」，要求先列檢查清單；同日再回覆「1」確認清單、放行第四批，並同意驗收截圖發布成私人 Artifact 頁面。
+
+| 票 | 完整流程 | Blocked by | Mode | Human Gate | Status |
+| --- | --- | --- | --- | --- | --- |
+| [14](14-full-regression-and-visual-acceptance.md) | 整條工作路徑 desktop／mobile 逐步截圖、邊界資料、權限草稿規則回歸、驗收畫面集 | 13 | STANDARD | yes，已驗收 | 原畫面 2026-10-06 驗收；兩項 findings 修正後 164/164 回歸通過、獨立 Reviewer APPROVE；2026-10-07 產品主人回覆「修正畫面接受」，同日另以「commit+push」授權提交並推送本票八檔至既有 Claude 分支 |
 <!-- codex-peer-reviewed: 2026-10-05T02:34:39Z rounds=1 verdict=approved -->
 
 <!-- codex-peer-reviewed: 2026-10-05T03:25:05Z rounds=2 verdict=approved -->
@@ -76,3 +83,5 @@
 <!-- codex-peer-reviewed: 2026-10-05T13:52:50Z rounds=3 verdict=approved -->
 
 <!-- codex-peer-reviewed: 2026-10-05T21:19:50Z rounds=2 verdict=approved -->
+
+<!-- codex-peer-reviewed: 2026-10-05T22:29:10Z rounds=2 verdict=approved -->
