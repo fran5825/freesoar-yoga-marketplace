@@ -149,9 +149,50 @@ test.describe("direct Google sign-in from a class", () => {
     await expect(page.locator('input[name="callbackUrl"]')).toHaveValue(destination);
     expect(await prisma.enrollment.count({ where: { classSessionId } })).toBe(0);
 
+    // 票 06：真的送出重試，核對兩個 destination cookies，再模擬登入完成。
+    expect(await submitAndInterceptGoogle(page, context, "使用 Google 帳號繼續")).toBe(destination);
+    expect(await cookieValue(context, "fsy_sign_in_return")).toBe(destination);
+    const email = `member-${runId(testInfo, "retry")}@${testEmailDomain}`;
+    createdEmails.push(email);
+    const member = await createUserSession({ email });
+    await addAuthSessionCookie(context, member.sessionToken);
+    await page.goto(destination);
+    await expect(page.getByRole("checkbox", { name: /我了解此課程非醫療行為/ })).not.toBeChecked();
+    expect(await prisma.enrollment.count({ where: { classSessionId } })).toBe(0);
+
     // 其他 Auth.js 錯誤（pages.error）也回到本站登入頁。
     await authRedirectPath(page, "/api/auth/error?error=Configuration");
   });
+
+  for (const change of ["full", "started"] as const) {
+    test(`returning from sign-in after the class becomes ${change} cannot submit an enrollment`, async ({ context, page }, testInfo) => {
+      const run = runId(testInfo, `changed-${change}`);
+      const classSessionId = await seedOpenClass(run);
+      const returnTo = "/classes?timeOfDay=evening";
+      await page.goto(`/classes/${classSessionId}?returnTo=${encodeURIComponent(returnTo)}`);
+      const destination = await submitAndInterceptGoogle(page, context, "使用 Google 登入並報名");
+      const email = `member-${run}@${testEmailDomain}`;
+      createdEmails.push(email);
+      const member = await createUserSession({ email });
+      if (change === "full") {
+        const otherEmail = `other-${run}@${testEmailDomain}`;
+        createdEmails.push(otherEmail);
+        const other = await createUserSession({ email: otherEmail });
+        await prisma.classSession.update({ where: { id: classSessionId }, data: { capacity: 1 } });
+        await prisma.enrollment.create({ data: { classSessionId, userId: other.userId, status: "confirmed", consentedAt: new Date() } });
+      } else {
+        await prisma.classSession.update({ where: { id: classSessionId }, data: { startAt: new Date(Date.now() - 60_000) } });
+      }
+      await addAuthSessionCookie(context, member.sessionToken);
+      await page.goto(destination);
+      await expect(page.getByText(change === "full" ? /這堂課名額已滿/ : /這堂課程目前無法報名/)).toBeVisible();
+      await expect(page.getByRole("button", { name: "確認報名" })).toHaveCount(0);
+      await expect(page.getByRole("checkbox", { name: /我了解此課程非醫療行為/ })).toHaveCount(0);
+      await expect(page.getByRole("link", { name: "看看其他課程" })).toHaveAttribute("href", returnTo);
+      expect(await prisma.enrollment.count({ where: { classSessionId, userId: member.userId } })).toBe(0);
+      await page.screenshot({ path: testInfo.outputPath(`returned-${change}.png`), fullPage: true });
+    });
+  }
 
   test("a later sign-in from another entry does not reuse the earlier class destination", async ({ context, page }, testInfo) => {
     const classSessionId = await seedOpenClass(runId(testInfo, "cross"));
