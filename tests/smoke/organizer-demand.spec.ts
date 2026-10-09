@@ -56,7 +56,7 @@ test.describe("organizer demand smoke", () => {
       where: { user: { email } },
       select: {
         displayName: true,
-        organization: {
+        ownedOrganizations: {
           select: {
             name: true,
             contactName: true,
@@ -67,12 +67,12 @@ test.describe("organizer demand smoke", () => {
       },
     });
     expect(created.displayName).toBe(displayName);
-    expect(created.organization).toEqual({
+    expect(created.ownedOrganizations).toEqual([{
       name: organizationName,
       contactName: displayName,
       contactEmail: email,
       contactPhone: "0912345678",
-    });
+    }]);
   });
 
   test("stops syncing the contact name once the user edits it by hand", async ({

@@ -43,7 +43,6 @@ test("a teacher who is also an organizer stays in the teacher area when opening 
     data: {
       userId: teacher.userId,
       displayName: `Dual Organizer ${testRunId}`,
-      organizationId: organization.id,
     },
     select: { id: true },
   });

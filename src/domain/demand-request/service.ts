@@ -181,7 +181,7 @@ export async function getOwnDemandRequestDetail(
 }
 
 // organizer-usability-redesign 票 04：requestedOrganizationId 是團主在表單選的團體；
-// 沒有提供時沿用預設團體（legacy pointer）。不論哪一種，都必須是本人擁有的團體。
+// 沒有提供時用本人最早建立的團體（createdAt／id 穩定排序）。兩種情況都必須是本人擁有的團體。
 // 草稿可以換團體；已送出的需求不會走到這裡（更新只允許 draft）。
 export async function saveOwnDemandRequestDraft(
   input: DemandRequestApplicationInput,
@@ -204,7 +204,7 @@ export async function saveOwnDemandRequestDraft(
 
     const organizerContext = await getOwnOrganizerContext();
 
-    if (!organizerContext || !organizerContext.organizerProfile.organizationId) {
+    if (!organizerContext) {
       return {
         ok: false,
         code: "organizer_profile_required",
@@ -214,7 +214,15 @@ export async function saveOwnDemandRequestDraft(
 
     const organizerProfileId = organizerContext.organizerProfile.id;
     const organizationId =
-      requestedOrganizationId ?? organizerContext.organizerProfile.organizationId;
+      requestedOrganizationId ?? organizerContext.organization?.id;
+
+    if (!organizationId) {
+      return {
+        ok: false,
+        code: "organizer_profile_required",
+        message: "請先建立團體後再建立需求。",
+      };
+    }
 
     // organizer-usability-redesign 票 02／04：授權看 owner，團體不是本人擁有的就不能拿來建需求。
     const ownedOrganization = await prisma.organization.findFirst({

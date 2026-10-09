@@ -73,7 +73,7 @@ test.describe("organizer demand organizations smoke", () => {
 
     await page.goto("/organizer/demands/new");
     const organizationSelect = page.getByLabel("為哪個團體提出需求");
-    // 預設選預設團體（legacy pointer 指向的第一個團體）。
+    // owner-only fixture 的預設團體是本人最早建立的團體。
     await expect(organizationSelect).toHaveValue(organizer.organizationId);
     await organizationSelect.selectOption(organizer.secondOrganizationId);
     await page.getByLabel("需求標題").fill(`Beta 的需求 ${id}`);

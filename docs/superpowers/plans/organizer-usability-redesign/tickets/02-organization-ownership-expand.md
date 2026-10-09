@@ -50,3 +50,5 @@
 - [x] 本機 commit（未 push）。
 
 <!-- codex-peer-reviewed: 2026-10-04T14:04:41Z rounds=2 verdict=approved -->
+
+後續相容狀態（2026-10-07）：[票 15a](15-organization-legacy-contract.md) 已核准並實作 owner-derived default／owner-only fixtures，bootstrap 暫留雙寫；驗證與獨立 review 見票 15。15b 尚未放行。此補記不改寫本票既有驗證／review 紀錄。

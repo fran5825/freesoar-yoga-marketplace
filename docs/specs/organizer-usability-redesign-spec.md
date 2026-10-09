@@ -210,7 +210,7 @@
 
 ```prisma
 model OrganizerProfile {
-  organizationId     String?        // legacy pointer：相容期保留，票 15 才移除
+  organizationId     String?        // legacy pointer：15a 暫留 bootstrap 雙寫，15b 另核准後移除
   organization       Organization?  @relation("OrganizerLegacyOrganization", fields: [organizationId], references: [id], onDelete: SetNull)
   ownedOrganizations Organization[] @relation("OrganizationOwner")
 }
@@ -237,12 +237,13 @@ model Organization {
 - Migration SQL 的順序：**先跑歧義檢查**（`DO` block，有歧義就 `RAISE EXCEPTION`），通過後才 `ADD COLUMN`、index、FK、`UPDATE` 回填。歧義檢查排在任何 DDL 之前，所以失敗時資料庫沒有任何部分變更。
 - 票 02 驗證時，另外確認 Prisma 對這個 migration 的 transaction 行為，並記錄在票內。
 
-**相容期讀寫規則（票 02–14）**：
+**相容期讀寫規則（票 02–14 歷史狀態；15a 遷移一般讀取）**：
 
 - 授權一律改用 owner：「這個團體是不是我的」只看 `Organization.ownerOrganizerProfileId` 是否等於我的 `organizerProfileId`。查詢的 `WHERE` 同時帶 id 與 owner，不先讀後比對。
-- legacy pointer 只當「舊單團體畫面的預設團體」。首次 bootstrap 同時寫入 owner 與 legacy pointer；之後新增的團體只寫 owner，不改 legacy pointer。
-- 票 03（我的團體）、04（需求選團體）、05（邀請選團體）逐批把呼叫點改用 owner 與明確的 `organizationId`；fixtures／seed 建立團體時同時寫入 owner。
-- **票 15 contract**：所有讀寫 legacy pointer 的呼叫點歸零並提出證據後，另開破壞性 migration，移除 `OrganizerProfile.organizationId` 與 `OrganizerLegacyOrganization` 關聯；執行前要先取得產品主人確認。
+- 票 02–14 的 legacy pointer 曾作為舊單團體畫面的預設團體。票 15a 已改用本人 owned organizations 的 `createdAt asc`、同時間 `id asc` 第一筆；context、list／detail 的 `isDefault` 與表單 fallback 使用同一排序。沒有 profile 與有 profile 但沒有 owned organization 分別保留 null 語意。首次 bootstrap 同一 transaction 暫留 owner＋pointer 雙寫；之後新團體只寫 owner。
+- 表單預選優先序保持：本人擁有的 requested ID → 本人擁有的既有 draft organization → derived default → null；不把已存草稿或歷史 FK 改成 default。admin 團主摘要只看 owner，不合併 legacy pointer 連結的其他人。
+- 票 03–05 已把團體管理、需求與邀請選團體改用 owner。15a 一般 fixtures 只寫／查 owner；有意的 bootstrap 雙寫斷言、錯 owner／孤立團體 legacy 注入安全測試暫留，完整清單與驗證／獨立 review 狀態見票 15。
+- **票 15b contract**：15a 完整驗證與獨立 review 後，再移除 bootstrap writer、`OrganizerProfile.organizationId` 與兩側 legacy relation。仍待 recovery 決策、transaction／寫入隔離 SQL review、disposable DB 故障演練與確切 DB 操作授權；不能從 owner 承諾還原每筆原 pointer（含 null），不能把 15a 授權當成刪欄位授權。
 
 **Rollback**：票 02 的 expand 只新增欄位，舊資料不動。在票 03 開放建立第二個團體之前，可以用一個 forward migration 刪掉 owner 欄位、回到原狀，沒有資料損失。**一旦有團主建立了第二個團體**，刪 owner 欄位就會失去「第二個團體屬於誰」的資訊，之後只能往前修，不能回退。這個截止點寫在票 02／03 的紀錄裡。
 

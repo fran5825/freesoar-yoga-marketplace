@@ -60,7 +60,7 @@ async function seedTeacherWithCompletedClassSession({
     select: { id: true },
   });
   const organizerProfile = await prisma.organizerProfile.create({
-    data: { userId: organizer.userId, organizationId: organization.id, displayName: "Organizer" },
+    data: { userId: organizer.userId, displayName: "Organizer" },
     select: { id: true },
   });
   await prisma.organization.update({

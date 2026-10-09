@@ -8,6 +8,8 @@
 
 ## HEAVY 票券
 
+2026-10-07：票 15a 已核准並進行 Builder 驗證／獨立 review；一般讀取改用 owner-derived default，bootstrap 暫留雙寫。確切執行狀態及 fixture DB 授權見票 15。15b 仍 blocked，不包含 schema／migration 操作授權。
+
 以下 13 票 Human Gate=yes／需產品主人確認；沿用已核准 Q1–Q19，不把 draft 當成 ready-for-agent。每票執行前核對具體範圍、最新共享 diff、驗證與 rollback；新產品決策、未涵蓋的 migration 細節、production、commit／push／deploy 不屬於本次放行。
 
 | 票號／Title | Blocked by | What it delivers | Workflow mode | Human Gate |
@@ -75,4 +77,3 @@
 - Notification reason：確認票券已落地，單堂先行／多堂 backlog 與 code 尚未實作的狀態清楚。
 - Approval noise reduction applied：yes，記錄原批准，不重問產品方向；production／commit／push／deploy 維持獨立 gate。
 - Approval boundary note：切票已批准，票券仍 draft；01 為已核准 docs 工作，不等同任何 production 或不可逆資料操作批准。
-

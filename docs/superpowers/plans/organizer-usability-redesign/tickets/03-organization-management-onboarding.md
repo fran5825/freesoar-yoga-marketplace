@@ -55,3 +55,5 @@
 - [x] 本機 commit（未 push）。
 
 <!-- codex-peer-reviewed: 2026-10-04T14:51:51Z rounds=3 verdict=approved -->
+
+後續相容狀態（2026-10-07）：[票 15a](15-organization-legacy-contract.md) 已核准並實作以本人 owned organizations 的 `createdAt asc`／`id asc` 推導 default；requested ID 與已存 draft 優先，bootstrap 暫留雙寫。驗證與獨立 review 見票 15，15b 仍 blocked；本票歷史驗收紀錄保持不變。

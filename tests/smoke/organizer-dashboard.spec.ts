@@ -25,7 +25,7 @@ test.afterAll(async () => {
   });
   await prisma.organization.deleteMany({
     where: {
-      organizerProfiles: { some: { user: { email: { in: createdEmails } } } },
+      ownerOrganizerProfile: { user: { email: { in: createdEmails } } },
     },
   });
   await prisma.organizerProfile.deleteMany({

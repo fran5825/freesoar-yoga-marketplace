@@ -15,12 +15,58 @@ import {
 // 驗證首次建立團主資料會寫入 owner，以及團體更新、建立需求改用 owner 判斷權限。
 const testEmailDomain = "organization-ownership-smoke.local";
 const createdEmails: string[] = [];
+const orphanOrganizationIds: string[] = [];
 
 test.afterAll(async () => {
+  await prisma.organization.deleteMany({ where: { id: { in: orphanOrganizationIds } } });
   await cleanupOrganizerDemandFixtures(createdEmails);
 });
 
 test.describe("organization ownership smoke", () => {
+  test("does not expose an orphan group through a legacy pointer and can still use an owned group", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const id = normalizeForEmail(`${testInfo.project.name}-${Date.now()}-orphan`);
+    const email = `orphan-${id}@${testEmailDomain}`;
+    createdEmails.push(email);
+    const organizer = await createOrganizerProfileWithOrganization({
+      email,
+      displayName: `Owner ${id}`,
+      organizationName: `Private Orphan ${id}`,
+      contactEmail: `private-${id}@example.com`,
+    });
+    orphanOrganizationIds.push(organizer.organizationId);
+    // 15a 有意保留的 legacy 安全注入：pointer 不能洩漏 owner=null 的聯絡資料。
+    await prisma.organizerProfile.update({
+      where: { id: organizer.organizerProfileId }, data: { organizationId: organizer.organizationId },
+    });
+    await prisma.organization.update({
+      where: { id: organizer.organizationId }, data: { ownerOrganizerProfileId: null },
+    });
+    await addAuthSessionCookie(context, organizer.sessionToken);
+    await page.goto("/organizer/organizations");
+    await expect(page.getByText(`Private Orphan ${id}`)).toHaveCount(0);
+    const response = await page.goto(`/organizer/organizations/${organizer.organizationId}`);
+    expect(response?.status()).toBe(404);
+    await expect(page.getByText(`private-${id}@example.com`)).toHaveCount(0);
+    const owned = await prisma.organization.create({
+      data: { name: `Owned Instead ${id}`, type: "company", ownerOrganizerProfileId: organizer.organizerProfileId },
+      select: { id: true },
+    });
+    await page.goto("/organizer/demands/new");
+    await expect(page.getByLabel("為哪個團體提出需求")).toHaveValue(owned.id);
+    await expect(page.getByText(`Private Orphan ${id}`)).toHaveCount(0);
+    await page.getByLabel("需求標題").fill(`Owned Draft ${id}`);
+    await page.getByRole("button", { name: "儲存草稿" }).first().click();
+    await expect(page).toHaveURL(/\/organizer\/demands\/[^/]+\/edit$/);
+    const draft = await prisma.demandRequest.findFirstOrThrow({
+      where: { organizerProfileId: organizer.organizerProfileId, title: `Owned Draft ${id}` },
+      select: { organizationId: true },
+    });
+    expect(draft.organizationId).toBe(owned.id);
+  });
+
   test("first-time organizer bootstrap records the new profile as the organization owner", async ({
     context,
     page,
@@ -89,6 +135,11 @@ test.describe("organization ownership smoke", () => {
     });
 
     // 模擬資料不一致：A 的 legacy pointer 仍指向這個團體，但 owner 是 B。
+    // 15a 有意保留的 legacy 安全注入；一般 fixture 已不寫 pointer。
+    await prisma.organizerProfile.update({
+      where: { id: organizerA.organizerProfileId },
+      data: { organizationId: organizerA.organizationId },
+    });
     await prisma.organization.update({
       where: { id: organizerA.organizationId },
       data: { ownerOrganizerProfileId: organizerB.organizerProfileId },

@@ -81,7 +81,7 @@ export async function cleanupDemandResponseFixtures(emails: string[]) {
     where: { organizerProfile: { user: { email: { in: emails } } } },
   });
   await prisma.organization.deleteMany({
-    where: { organizerProfiles: { some: { user: { email: { in: emails } } } } },
+    where: { ownerOrganizerProfile: { user: { email: { in: emails } } } },
   });
   await prisma.organizerProfile.deleteMany({
     where: { user: { email: { in: emails } } },

@@ -172,7 +172,7 @@ test.describe("organizer profile edit smoke", () => {
     expect(profileCount).toBe(0); // 沒有意外建立一筆新的 OrganizerProfile。
 
     // 這裡手動刪除 Organization：cleanupOrganizerDemandFixtures 的既有清理邏輯是靠
-    // `organizerProfiles: { some: { user: { email } } } }` 找到要清的 Organization，
+    // `ownerOrganizerProfile: { user: { email } }` 找到要清的 Organization，
     // 但這個測試把 OrganizerProfile 刪在前面，afterAll 執行時已經找不到這筆關聯，
     // 會變成清不到的孤兒資料——直接用 organizationId 補刪，不依賴那個關聯條件。
     await prisma.organization.deleteMany({ where: { id: organizer.organizationId } });

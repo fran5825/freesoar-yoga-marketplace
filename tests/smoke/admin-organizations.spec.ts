@@ -172,7 +172,7 @@ test.describe("admin organizations smoke", () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 
-  test("shows every organizer on a multi-organizer organization", async ({
+  test("shows only the owner and ignores an unrelated legacy pointer", async ({
     context,
     page,
   }, testInfo) => {
@@ -194,10 +194,9 @@ test.describe("admin organizations smoke", () => {
     const { userId: userOneId } = await createUserSession({ email: organizerOneEmail });
     const { userId: userTwoId } = await createUserSession({ email: organizerTwoEmail });
 
-    await prisma.organizerProfile.create({
+    const owner = await prisma.organizerProfile.create({
       data: {
         userId: userOneId,
-        organizationId: organization.id,
         displayName: `Organizer One ${runId}`,
       },
     });
@@ -208,6 +207,11 @@ test.describe("admin organizations smoke", () => {
         displayName: `Organizer Two ${runId}`,
       },
     });
+    // 15a 有意保留的 legacy 安全 fixture：另一位團主的 pointer 不授予管理者身分。
+    await prisma.organization.update({
+      where: { id: organization.id },
+      data: { ownerOrganizerProfileId: owner.id },
+    });
 
     const { sessionToken } = await createUserSession({ email: adminEmail, isAdmin: true });
     await addAuthSessionCookie(context, sessionToken);
@@ -216,7 +220,7 @@ test.describe("admin organizations smoke", () => {
 
     const card = page.locator("article").filter({ hasText: organizationName });
     await expect(card).toContainText(`Organizer One ${runId}`);
-    await expect(card).toContainText(`Organizer Two ${runId}`);
+    await expect(card).not.toContainText(`Organizer Two ${runId}`);
   });
 
   test("renders an orphan organization (no linked organizer) as 無, without crashing", async ({

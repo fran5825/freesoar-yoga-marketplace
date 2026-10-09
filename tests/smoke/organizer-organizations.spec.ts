@@ -15,10 +15,18 @@ const testEmailDomain = "organizer-organizations-smoke.local";
 const createdEmails: string[] = [];
 
 test.afterAll(async () => {
+  const organizations = await prisma.organization.findMany({
+    where: { ownerOrganizerProfile: { user: { email: { in: createdEmails } } } },
+    select: { id: true },
+  });
   await prisma.teacherProfile.deleteMany({
     where: { user: { email: { in: createdEmails } } },
   });
   await cleanupOrganizerDemandFixtures(createdEmails);
+  expect(await prisma.organization.count({
+    where: { id: { in: organizations.map((organization) => organization.id) } },
+  })).toBe(0);
+  await prisma.$disconnect();
 });
 
 function runId(testInfo: { project: { name: string }; workerIndex: number }, label: string) {
@@ -33,6 +41,75 @@ async function expectNoHorizontalOverflow(page: Page) {
 }
 
 test.describe("organizer organizations smoke", () => {
+  test("uses a stable owner default for tied creation times without replacing a requested or saved group", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const id = runId(testInfo, "owner-default-tie");
+    const email = `tie-${id}@${testEmailDomain}`;
+    createdEmails.push(email);
+    const organizer = await createOrganizerProfileWithOrganization({
+      email,
+      displayName: `Tie Owner ${id}`,
+      organizationName: `First Created ${id}`,
+      contactName: "第一窗口",
+      contactEmail: `tie-${id}@example.com`,
+      contactPhone: "0900000001",
+    });
+    const createdAt = new Date("2020-01-01T00:00:00.000Z");
+    await prisma.organization.update({ where: { id: organizer.organizationId }, data: { createdAt } });
+    const defaultGroup = await prisma.organization.create({
+      data: {
+        id: `c0${Date.now()}${testInfo.workerIndex}${testInfo.project.name.includes("mobile") ? "m" : "d"}`,
+        name: `Default Tie ${id}`,
+        type: "community",
+        ownerOrganizerProfileId: organizer.organizerProfileId,
+        createdAt,
+      },
+      select: { id: true },
+    });
+    // 後建立的團體 id 更小：不能只靠插入順序或 createdAt 選第一筆。
+    expect(defaultGroup.id < organizer.organizationId).toBe(true);
+    await addAuthSessionCookie(context, organizer.sessionToken);
+
+    await page.goto("/organizer/demands/new");
+    await expect(page.getByLabel("為哪個團體提出需求")).toHaveValue(defaultGroup.id);
+    await expectNoHorizontalOverflow(page);
+
+    await page.goto(`/organizer/demands/new?organizationId=${organizer.organizationId}`);
+    await expect(page.getByLabel("為哪個團體提出需求")).toHaveValue(organizer.organizationId);
+    await page.getByLabel("需求標題").fill(`Keep Requested ${id}`);
+    await page.getByRole("button", { name: "儲存草稿" }).first().click();
+    await expect(page).toHaveURL(/\/organizer\/demands\/[^/]+\/edit$/);
+    await page.reload();
+    await expect(page.getByLabel("為哪個團體提出需求")).toHaveValue(organizer.organizationId);
+    const saved = await prisma.demandRequest.findFirstOrThrow({
+      where: { organizerProfileId: organizer.organizerProfileId, title: `Keep Requested ${id}` },
+      select: { organizationId: true },
+    });
+    expect(saved.organizationId).toBe(organizer.organizationId);
+
+    await page.goto("/organizer/class-proposals/new");
+    await expect(page.getByLabel("為哪個團體開團")).toHaveValue(defaultGroup.id);
+    await page.getByLabel("課程名稱").fill(`Default Proposal ${id}`);
+    await page.getByRole("button", { name: "儲存草稿", exact: true }).first().click();
+    await expect(page).toHaveURL(/\/organizer\/class-proposals\/[^/?]+\/edit$/);
+    const proposal = await prisma.organizerClassProposal.findFirstOrThrow({
+      where: { organizerProfileId: organizer.organizerProfileId, title: `Default Proposal ${id}` },
+      select: { organizationId: true },
+    });
+    expect(proposal.organizationId).toBe(defaultGroup.id);
+    await expectNoHorizontalOverflow(page);
+
+    await page.goto("/organizer/dashboard");
+    await expect(page.getByRole("link", { name: "前往我的團體補齊" })).toHaveAttribute(
+      "href", `/organizer/organizations/${defaultGroup.id}`,
+    );
+    await page.goto(`/organizer/profile?next=${encodeURIComponent("/organizer/demands/new")}`);
+    await expect(page).toHaveURL(new RegExp(`/organizer/organizations/${defaultGroup.id}\\?returnTo=`));
+    await expectNoHorizontalOverflow(page);
+  });
+
   test("adds a second organization with incomplete contact info and edits it without touching the first", async ({
     context,
     page,
@@ -73,12 +150,10 @@ test.describe("organizer organizations smoke", () => {
     expect(second.ownerOrganizerProfileId).toBe(organizer.organizerProfileId);
     expect(second.contactEmail).toBeNull();
 
-    // legacy pointer 仍指向第一個團體（預設團體不變）。
-    const profile = await prisma.organizerProfile.findUniqueOrThrow({
-      where: { id: organizer.organizerProfileId },
-      select: { organizationId: true },
-    });
-    expect(profile.organizationId).toBe(organizer.organizationId);
+    // pointer=null 的 owner-only fixture 仍以第一個團體預選。
+    await page.goto("/organizer/demands/new");
+    await expect(page.getByLabel("為哪個團體提出需求")).toHaveValue(organizer.organizationId);
+    await page.goto("/organizer/organizations");
 
     // 編輯第二個團體，不影響第一個。
     await page.getByRole("link", { name: new RegExp(`Second Org ${id}`) }).click();

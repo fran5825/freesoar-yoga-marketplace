@@ -2,6 +2,7 @@ import { OrganizationType, Prisma } from "@prisma/client";
 
 import { getCurrentUser, requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { ownedOrganizationOrderBy } from "@/domain/organization/service";
 
 import {
   type CreateOrganizerProfileInput,
@@ -26,7 +27,6 @@ export type OrganizerContextOrganization = {
 export type OrganizerContextProfile = {
   id: string;
   userId: string;
-  organizationId: string | null;
   displayName: string;
   createdAt: Date;
   updatedAt: Date;
@@ -40,7 +40,6 @@ export type OwnOrganizerContext = {
 const organizerProfileSelect = {
   id: true,
   userId: true,
-  organizationId: true,
   displayName: true,
   createdAt: true,
   updatedAt: true,
@@ -68,8 +67,10 @@ export async function getOwnOrganizerContext(): Promise<OwnOrganizerContext | nu
     where: { userId: currentUser.id },
     select: {
       ...organizerProfileSelect,
-      organization: {
-        select: { ...organizationSelect, ownerOrganizerProfileId: true },
+      ownedOrganizations: {
+        select: organizationSelect,
+        orderBy: ownedOrganizationOrderBy,
+        take: 1,
       },
     },
   });
@@ -78,20 +79,12 @@ export async function getOwnOrganizerContext(): Promise<OwnOrganizerContext | nu
     return null;
   }
 
-  const { organization, ...profile } = organizerProfile;
-
-  // organizer-usability-redesign 票 02：legacy pointer 只決定「預設團體」，能不能讀到團體資料看 owner。
-  // owner 不是本人（含 owner 為 null 的孤立團體）時一律不回傳，避免洩漏他人聯絡資料。
-  if (!organization || organization.ownerOrganizerProfileId !== profile.id) {
-    return { organizerProfile: profile, organization: null };
-  }
-
-  const { ownerOrganizerProfileId: _owner, ...ownedOrganization } = organization;
-  void _owner;
+  const { ownedOrganizations, ...profile } = organizerProfile;
 
   return {
     organizerProfile: profile,
-    organization: ownedOrganization,
+    // 票 15a：relation 本身依 owner 限定；legacy pointer 為空或指錯團體都不影響讀取。
+    organization: ownedOrganizations[0] ?? null,
   };
 }
 

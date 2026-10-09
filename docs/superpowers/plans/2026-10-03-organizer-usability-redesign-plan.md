@@ -4,6 +4,8 @@
 
 規格：[Organizer Usability Redesign Spec](../../specs/organizer-usability-redesign-spec.md)。[訪談決策](../../organizer-usability-plan.md)與[名詞表](../../context/glossary.md)保留產品主人已確認內容。
 
+2026-10-07 進度：15a 已核准並實作 owner-derived default（`createdAt asc`／`id asc`）、owner-only fixtures 與 admin owner 摘要，bootstrap 暫留雙寫。驗證／獨立 review 與 scoped fixture DB 授權紀錄集中於[票 15](organizer-usability-redesign/tickets/15-organization-legacy-contract.md)；schema 未變更，15b recovery／migration 仍 blocked。下方批次規劃保留歷史設計，15a 相容狀態以 spec 13.1 為準。
+
 已核准的可執行拆分：[15 張票券與前置關係](organizer-usability-redesign/ticket-breakdown.md)。下方批次為功能分組，實際 Builder 每次只做一張可驗收票，不將整批當成一輪巨大修改。多堂安排記在 [backlog 第 18 項](../../backlog.md#18-團主一次安排多堂課2026-10-03)，建議在單堂完整流程驗收後另做系列規劃。
 
 ## 1. Repo-aware Triage
@@ -39,7 +41,7 @@ Q18／Q19 已確認；01 將核准方案同步到 `docs/domain/data-model.md`、
 
 ### 批次 1：多團體基礎與資料安全
 
-Additive owner migration、明確 relation name、回填一致性檢查、own-scoped organization service、一次性 bootstrap transaction、新團體表單與列表、profile 分工。先保留 legacy pointer 做相容 default，授權改以 owner 關聯判斷。
+Additive owner migration、明確 relation name、回填一致性檢查、own-scoped organization service、一次性 bootstrap transaction、新團體表單與列表、profile 分工。票 02–14 曾保留 legacy pointer 做相容 default；15a 改由 owner 推導 default，首次 bootstrap 暫留雙寫，授權持續以 owner 關聯判斷。
 
 Demand input 支援明確選 organization；只允許 own draft 改團體，已送出需求維持原歸屬。同步 organizer DTO、現有 admin owner 顯示的窄查詢與 fixtures／清理順序，與當前後台工作協調後再動共享檔。
 

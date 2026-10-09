@@ -38,6 +38,12 @@ const organizationSelect = {
   updatedAt: true,
 } as const;
 
+// 票 15a：預設團體由 owner 決定；相同建立時間仍有穩定順序。
+export const ownedOrganizationOrderBy = [
+  { createdAt: "asc" as const },
+  { id: "asc" as const },
+];
+
 type OrganizationRow = {
   id: string;
   name: string;
@@ -63,7 +69,14 @@ function toOwnOrganization(
 async function getOwnOrganizerProfileRef(userId: string) {
   return prisma.organizerProfile.findUnique({
     where: { userId },
-    select: { id: true, organizationId: true },
+    select: {
+      id: true,
+      ownedOrganizations: {
+        select: { id: true },
+        orderBy: ownedOrganizationOrderBy,
+        take: 1,
+      },
+    },
   });
 }
 
@@ -83,10 +96,10 @@ export async function listOwnOrganizations(): Promise<OwnOrganization[]> {
   const rows = await prisma.organization.findMany({
     where: { ownerOrganizerProfileId: profile.id },
     select: organizationSelect,
-    orderBy: { createdAt: "asc" },
+    orderBy: ownedOrganizationOrderBy,
   });
 
-  return rows.map((row) => toOwnOrganization(row, profile.organizationId));
+  return rows.map((row) => toOwnOrganization(row, rows[0]?.id ?? null));
 }
 
 export async function getOwnOrganization(
@@ -109,7 +122,7 @@ export async function getOwnOrganization(
     select: organizationSelect,
   });
 
-  return row ? toOwnOrganization(row, profile.organizationId) : null;
+  return row ? toOwnOrganization(row, profile.ownedOrganizations[0]?.id ?? null) : null;
 }
 
 export type SaveOwnOrganizationErrorCode =

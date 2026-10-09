@@ -65,7 +65,7 @@ async function setupTeacherOrganizer(id: string, status: "approved" | "suspended
     },
   });
   const organizerProfile = await prisma.organizerProfile.create({
-    data: { userId: user.userId, displayName: `Dual Organizer ${id}`, organizationId: organization.id },
+    data: { userId: user.userId, displayName: `Dual Organizer ${id}` },
   });
   await prisma.organization.update({
     where: { id: organization.id },

@@ -40,12 +40,8 @@ export async function listOrganizationsForAdmin(): Promise<AdminOrganizationSumm
       contactEmail: true,
       contactPhone: true,
       updatedAt: true,
-      // organizer-usability-redesign 票 03：一位團主可以有多個團體，之後新增的團體只有 owner、
-      // 沒有 legacy pointer。相容期顯示 owner 加上仍以 legacy pointer 連到這個團體的團主（去重）。
+      // 票 15a：只顯示團體 owner，不再由 legacy pointer 推導管理者。
       ownerOrganizerProfile: {
-        select: { id: true, displayName: true, user: { select: { email: true } } },
-      },
-      organizerProfiles: {
         select: { id: true, displayName: true, user: { select: { email: true } } },
       },
       // 需求草稿是團主私人資料，管理員看不到，所以也不算進需求數，避免數字暗示有看不到的資料。
@@ -66,9 +62,6 @@ export async function listOrganizationsForAdmin(): Promise<AdminOrganizationSumm
     updatedAt: organization.updatedAt,
     organizers: [
       ...(organization.ownerOrganizerProfile ? [organization.ownerOrganizerProfile] : []),
-      ...organization.organizerProfiles.filter(
-        (profile) => profile.id !== organization.ownerOrganizerProfile?.id,
-      ),
     ].map((profile) => ({
       id: profile.id,
       displayName: profile.displayName,
