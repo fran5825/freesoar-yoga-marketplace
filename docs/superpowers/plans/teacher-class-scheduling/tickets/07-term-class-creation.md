@@ -78,7 +78,7 @@
 
 ## 實作紀錄（2026-10-09，Claude，worktree `term-classes`）
 
-**Status：done（待 Codex 補審；待產品主人看畫面）**
+**Status：done（Codex 補審通過（2026-10-09，4 輪）；待產品主人看畫面）**
 
 - Schema／migration `20261009022844_term_class_series_kind`：`RecurringClassSeriesKind`、`TermEnrollmentMode`、`kind`／`termEnrollmentMode` 與 DB check；回填：指定日期 → term + term_and_single，每週固定 → continuous。於獨立測試 DB 以兩筆舊式系列實測回填結果正確，並確認 check 擋下「期班沒有報名方式」。
 - 建立表單：每週固定新增「課程型態」（持續開課／期班），期班時堂數欄位改為「這一期共幾堂」；每週期班與指定日期新增「期班報名方式」（預設整期和單堂都收）；摘要與建立訊息顯示實際堂數（「期班已建立，共 N 堂」）。

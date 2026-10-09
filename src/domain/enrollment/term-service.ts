@@ -238,7 +238,7 @@ export async function listOwnTermEnrollmentsForTeacher(
             select: {
               status: true,
               seriesEnrollmentSource: true,
-              classSession: { select: { startAt: true } },
+              classSession: { select: { startAt: true, status: true } },
             },
           },
         },
@@ -266,8 +266,14 @@ export async function listOwnTermEnrollmentsForTeacher(
       notes: seriesEnrollment.notes,
       memberLabel: seriesEnrollment.user.name ?? seriesEnrollment.user.email ?? "會員",
       activeUpcomingCount: active.length,
-      leaveDates: seriesEnrollment.enrollments
-        .filter((enrollment) => enrollment.status === "cancelled")
+      // 整期仍有效、課程本身沒有取消，但這一堂的報名已取消：學員請假，或管理員取消了這一筆。
+      // 沒有記錄取消原因，畫面如實標成「請假或取消」。老師停課（整堂取消）、學員退出整期、
+      // 老師婉拒整期造成的取消都不列（2026-10-09 Codex review）。
+      leaveDates: (seriesEnrollment.status === "pending" || seriesEnrollment.status === "confirmed"
+        ? seriesEnrollment.enrollments
+        : []
+      )
+        .filter((enrollment) => enrollment.status === "cancelled" && enrollment.classSession.status !== "cancelled")
         .map((enrollment) => enrollment.classSession.startAt)
         .sort((a, b) => a.getTime() - b.getTime()),
       declineCancelCount: active.filter((enrollment) => enrollment.seriesEnrollmentSource === "term_created")

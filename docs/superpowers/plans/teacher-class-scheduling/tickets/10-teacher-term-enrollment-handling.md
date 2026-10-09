@@ -26,7 +26,7 @@
 
 ## 實作紀錄（2026-10-09，Claude，worktree `term-classes`）
 
-**Status：done（待 Codex 補審；待產品主人看畫面）**。推導規則 9 已於 2026-10-09 一次性放行。
+**Status：done（Codex 補審通過（2026-10-09，4 輪）；待產品主人看畫面）**。推導規則 9 已於 2026-10-09 一次性放行。
 
 - 核心 `src/domain/enrollment/__internal__/decide-series-enrollment-core.ts`：先鎖系列（own-scope：`teacherProfileId` 寫在鎖查詢 WHERE）再鎖整期報名列，必須是 pending。確認：未開始的 pending 逐場改 confirmed、整期改 confirmed。婉拒：整期改 declined；`term_created` 的未開始逐場改 cancelled；`merged_single` 的逐場清空整期關聯與來源、保留原狀態恢復為單堂。各只通知學員一則。
 - 系列頁（期班）：新增「整期學員」名單（狀態、之後幾堂、備註、請假日期），待確認的可「確認整期報名」或「婉拒」（確認視窗先說明會取消幾堂、幾堂恢復為單堂）。

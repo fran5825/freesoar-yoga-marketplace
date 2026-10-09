@@ -204,7 +204,7 @@ export default async function TeacherClassSessionDetailPage({
         <div className="border-t border-ink/10 pt-3 text-sm leading-6" key={item.label}>
           <p className="font-medium text-ink">{item.label}</p>
           <p className="mt-1 whitespace-pre-wrap break-words text-ink-soft">
-            {item.value || "未填寫，學員會看到「尚未提供」。"}
+            {item.value || "未填寫，學員頁面不顯示這一項。"}
           </p>
         </div>
       ))}

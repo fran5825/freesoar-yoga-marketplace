@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { signIn } from "@/auth";
 import { cancelOwnEnrollment, createOwnEnrollment } from "@/domain/enrollment/service";
+import { createOwnSeriesEnrollment } from "@/domain/enrollment/term-service";
 import { parseSignInProvider } from "@/lib/auth/sign-in-providers";
 import { rememberSignInReturn } from "@/lib/auth/sign-in-return";
 import { classDetailHref, safeClassReturnPath } from "@/lib/navigation/class-return-path";
@@ -12,10 +13,13 @@ import { classDetailHref, safeClassReturnPath } from "@/lib/navigation/class-ret
 // member-flow-redesign 票 05：訪客在課程頁直接開始登入，不先經過 /sign-in。登入完回到同一堂課
 // （含找課條件），由學員自己確認報名；這裡不建立任何報名。
 export async function signInToEnrollAction(formData: FormData): Promise<void> {
-  const destination = classDetailHref(
+  const detail = classDetailHref(
     readFormString(formData, "classSessionId"),
     safeClassReturnPath(readFormString(formData, "returnTo")),
   );
+  // teacher-class-scheduling 票 14（Q5）：期班單堂頁登入回來時帶 enroll=1，報名區直接展開（仍由本人送出）。
+  const destination =
+    formData.get("openForm") === "1" ? `${detail}${detail.includes("?") ? "&" : "?"}enroll=1` : detail;
   const provider = parseSignInProvider(formData.get("provider"));
 
   if (!provider) {
@@ -51,6 +55,50 @@ export async function enrollAction(formData: FormData): Promise<void> {
     "success",
     result.status === "pending" ? "報名已送出，等待老師確認。" : "報名成功。",
     readFormString(formData, "returnTo"),
+  );
+}
+
+// teacher-class-scheduling 票 14（Q2）：整期和單堂都收的期班，單堂頁「我要報名」二選一，同一張表單送出。
+// 整期走 createOwnSeriesEnrollment、只報這一堂走 createOwnEnrollment，規則與鎖都在原本的 service。
+export async function enrollFromTermClassAction(formData: FormData): Promise<void> {
+  const classSessionId = readFormString(formData, "classSessionId");
+  const returnTo = readFormString(formData, "returnTo");
+  const input = { notes: readFormString(formData, "notes"), basicConsent: formData.get("basicConsent") === "yes" };
+
+  if (readFormString(formData, "choice") === "term") {
+    const result = await createOwnSeriesEnrollment(readFormString(formData, "recurringClassSeriesId"), input);
+
+    revalidatePath(`/classes/${classSessionId}`);
+    revalidatePath("/member/enrollments");
+
+    if (!result.ok) {
+      redirectWithFeedback(classSessionId, "error", result.message, returnTo, true);
+    }
+
+    redirectWithFeedback(
+      classSessionId,
+      "success",
+      result.status === "pending"
+        ? `整期報名已送出（共 ${result.sessionCount} 堂），等待老師確認。`
+        : `整期報名成功，共 ${result.sessionCount} 堂。`,
+      returnTo,
+    );
+  }
+
+  const result = await createOwnEnrollment(classSessionId, input);
+
+  revalidatePath(`/classes/${classSessionId}`);
+  revalidatePath("/member/enrollments");
+
+  if (!result.ok) {
+    redirectWithFeedback(classSessionId, "error", buildErrorMessage(result.message, result.validationErrors), returnTo, true);
+  }
+
+  redirectWithFeedback(
+    classSessionId,
+    "success",
+    result.status === "pending" ? "報名已送出，等待老師確認。" : "報名成功。",
+    returnTo,
   );
 }
 
@@ -98,7 +146,11 @@ function redirectWithFeedback(
   result: "success" | "error",
   message: string,
   returnTo?: string,
+  // 票 14：期班單堂頁報名失敗時，回來保持表單展開。
+  keepFormOpen = false,
 ): never {
   const href = classDetailHref(classSessionId, safeClassReturnPath(returnTo));
-  redirect(`${href}${href.includes("?") ? "&" : "?"}result=${result}&message=${encodeURIComponent(message)}`);
+  redirect(
+    `${href}${href.includes("?") ? "&" : "?"}result=${result}&message=${encodeURIComponent(message)}${keepFormOpen ? "&enroll=1" : ""}`,
+  );
 }

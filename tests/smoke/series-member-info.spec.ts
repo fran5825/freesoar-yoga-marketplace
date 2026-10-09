@@ -219,9 +219,11 @@ test.describe("series member info", () => {
     await page.goto(`/classes/${filledSession.id}`);
     await expect(page.getByRole("region", { name: "適合對象" })).toContainText("指定日期的適合對象");
     await expect(page.getByRole("region", { name: "準備事項" })).toContainText("指定日期的準備事項");
+    // 票 14：沒填的說明卡不顯示。
     await page.goto(`/classes/${emptySession.id}`);
-    await expect(page.getByRole("region", { name: "適合對象" })).toContainText("尚未提供");
-    await expect(page.getByRole("region", { name: "準備事項" })).toContainText("尚未提供");
+    await expect(page.getByRole("region", { name: "課程重點" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "適合對象" })).toHaveCount(0);
+    await expect(page.getByRole("region", { name: "準備事項" })).toHaveCount(0);
   });
 
   test("over 500 characters on a series is rejected by the server and creates nothing", async ({ context, page }, testInfo) => {

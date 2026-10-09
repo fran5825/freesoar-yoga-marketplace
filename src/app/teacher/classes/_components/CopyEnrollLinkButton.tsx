@@ -4,13 +4,16 @@ import { useState } from "react";
 
 // 複製學員報名連結（/classes/<id>）。系列場次與不公開的單堂不會出現在「找課程」，
 // 老師要把這個連結傳給學員；學員登入後就能打開並報名（既有讀取規則，不改權限）。
+// teacher-class-scheduling：期班改傳 path（/classes/terms/<系列 id>），學員打開就能報整期。
 export function CopyEnrollLinkButton({
   classSessionId,
+  path,
   label = "複製報名連結",
   ariaLabel,
   className = "min-h-11 rounded-full border border-pine/40 bg-white px-4 py-2 text-sm font-medium text-pine transition hover:bg-pine-tint",
 }: {
-  classSessionId: string;
+  classSessionId?: string;
+  path?: string;
   label?: string;
   ariaLabel?: string;
   className?: string;
@@ -19,7 +22,7 @@ export function CopyEnrollLinkButton({
   const [link, setLink] = useState("");
 
   async function copy() {
-    const url = `${window.location.origin}/classes/${encodeURIComponent(classSessionId)}`;
+    const url = `${window.location.origin}${path ?? `/classes/${encodeURIComponent(classSessionId ?? "")}`}`;
     setLink(url);
 
     try {

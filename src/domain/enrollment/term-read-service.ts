@@ -18,6 +18,8 @@ export type TermSessionView = {
   status: "open_for_enrollment" | "completed";
   // 讀取當下尚未開始（畫面元件不能自己呼叫 Date.now）。
   upcoming: boolean;
+  // 這一堂實際的地點（只改這場時可能與系列預設不同；2026-10-09 Codex review）。
+  location: string;
   capacity: number;
   activeEnrollmentCount: number;
   ownEnrollmentStatus: EnrollmentStatus | null;
@@ -38,6 +40,9 @@ export type TermDetail = {
   description: string | null;
   suitableFor: string | null;
   preparationNotes: string | null;
+  // 票 14（Q8）：課程風格、瑜伽類型改為標題下方標籤。
+  serviceTypes: string[];
+  yogaStyles: string[];
   location: string;
   startTime: string;
   endTime: string;
@@ -69,6 +74,9 @@ export async function getTermDetailForViewer(
       description: true,
       suitableFor: true,
       preparationNotes: true,
+      serviceType: true,
+      serviceTypes: true,
+      yogaStyles: true,
       location: true,
       startTime: true,
       endTime: true,
@@ -85,6 +93,7 @@ export async function getTermDetailForViewer(
           startAt: true,
           endAt: true,
           status: true,
+          location: true,
           capacity: true,
           _count: { select: { enrollments: { where: { status: { in: ["pending", "confirmed"] } } } } },
         },
@@ -148,6 +157,7 @@ export async function getTermDetailForViewer(
         endAt: session.endAt,
         status: session.status,
         upcoming: session.startAt.getTime() > now.getTime(),
+        location: session.location,
         capacity: session.capacity,
         activeEnrollmentCount: session._count.enrollments,
         ownEnrollmentStatus,
@@ -162,6 +172,8 @@ export async function getTermDetailForViewer(
     description: series.description,
     suitableFor: series.suitableFor,
     preparationNotes: series.preparationNotes,
+    serviceTypes: series.serviceTypes.length ? series.serviceTypes : series.serviceType ? [series.serviceType] : [],
+    yogaStyles: series.yogaStyles,
     location: series.location,
     startTime: series.startTime,
     endTime: series.endTime,
@@ -243,16 +255,20 @@ export async function listVisibleSiblingSessions(
       teacherProfile: { status: "approved" },
       ...(signedIn ? {} : { isPublic: true }),
     },
+    // 不截斷：規格 4.8 要列出同系列其他可見、尚未開始的場次（期班最多 26 堂；2026-10-09 Codex review）。
     orderBy: { startAt: "asc" },
-    take: 8,
     select: { id: true, startAt: true },
   });
 }
 
-// 單堂課程頁用：這一場屬於哪個期班（只有期班才回傳）。
-export async function getTermSummaryForClassSession(
-  classSessionId: string,
-): Promise<{ id: string; title: string; termEnrollmentMode: TermEnrollmentMode; totalCount: number } | null> {
+// teacher-class-scheduling 票 14：單堂頁一次讀出這一堂所屬系列的資訊（是否期班、報名方式、堂數），
+// 讓不屬於系列的課（例如團主團課）只多一次輕量查詢，其餘期班相關查詢只在需要時才做。
+export type ClassSeriesContext = {
+  seriesId: string;
+  term: { id: string; title: string; termEnrollmentMode: TermEnrollmentMode; totalCount: number } | null;
+} | null;
+
+export async function getClassSeriesContext(classSessionId: string): Promise<ClassSeriesContext> {
   const row = await prisma.classSession.findUnique({
     where: { id: classSessionId },
     select: {
@@ -269,14 +285,15 @@ export async function getTermSummaryForClassSession(
   });
   const series = row?.recurringClassSeries;
 
-  if (!series || series.kind !== "term" || !series.termEnrollmentMode) {
+  if (!series) {
     return null;
   }
 
   return {
-    id: series.id,
-    title: series.title,
-    termEnrollmentMode: series.termEnrollmentMode,
-    totalCount: series._count.classSessions,
+    seriesId: series.id,
+    term:
+      series.kind === "term" && series.termEnrollmentMode
+        ? { id: series.id, title: series.title, termEnrollmentMode: series.termEnrollmentMode, totalCount: series._count.classSessions }
+        : null,
   };
 }

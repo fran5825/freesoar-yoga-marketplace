@@ -87,6 +87,10 @@ export default async function RecurringClassSeriesPage({
   // 票 07：期班標示實際堂數（不含已取消）；只有持續開課可以生成更多。
   const isTerm = series.kind === "term";
   const termSessionCount = series.occurrences.filter((occurrence) => occurrence.status !== "cancelled").length;
+  // 期班頁對學員可見的條件（term-read-service）：至少一場已開放報名或已完成。
+  const hasMemberVisibleOccurrence = series.occurrences.some(
+    (occurrence) => occurrence.status === "open_for_enrollment" || occurrence.status === "completed",
+  );
   const canGenerateMore = series.kind === "continuous" && series.dayOfWeek !== null;
   // 票 10：期班的整期學員名單（own-scoped）。
   const termEnrollments = isTerm ? await listOwnTermEnrollmentsForTeacher(series.id) : null;
@@ -138,6 +142,29 @@ export default async function RecurringClassSeriesPage({
           }
         >
           {feedback.message}
+        </section>
+      ) : null}
+
+      {/* 期班：把期班頁連結傳給學員，學員打開就能報整期（只收整期時只能報整期）。 */}
+      {isTerm ? (
+        <section
+          aria-labelledby="share-term-title"
+          className="grid gap-3 rounded-2xl border border-pine/25 bg-pine-tint p-5 sm:p-6"
+        >
+          <h2 className="text-lg font-medium text-ink" id="share-term-title">
+            把期班傳給學員
+          </h2>
+          <p className="text-sm leading-6 text-ink-soft">
+            {series.termEnrollmentMode === "term_only"
+              ? "這一期只收整期報名。傳這個期班連結給學員，學員打開後按「報名整期」就能一次報上剩下的每一堂。"
+              : "傳這個期班連結給學員，學員打開後可以報整期，也可以點進其中幾堂單獨報名。"}
+            {openableDrafts.length > 0 ? "還有草稿場次時學員無法報整期，請先按「全部開放報名」。" : ""}
+          </p>
+          {hasMemberVisibleOccurrence ? (
+            <CopyEnrollLinkButton label="複製期班報名連結" path={`/classes/terms/${series.id}`} />
+          ) : (
+            <p className="text-sm leading-6 text-ink-soft">開放報名後才能複製期班連結。</p>
+          )}
         </section>
       ) : null}
 
@@ -274,7 +301,8 @@ export default async function RecurringClassSeriesPage({
                   {/* 複製與取消按鈕放在場次連結外面，避免連結裡再包按鈕。 */}
                   {occurrence.status === "open_for_enrollment" || isCancellableOccurrence(occurrence, now) ? (
                     <div className="flex flex-wrap gap-x-2 pl-3">
-                      {occurrence.status === "open_for_enrollment" ? (
+                      {/* 票 14（Q14）：只收整期的期班只留「複製期班報名連結」，不提供每一堂的連結。 */}
+                      {occurrence.status === "open_for_enrollment" && series.termEnrollmentMode !== "term_only" ? (
                         <CopyEnrollLinkButton
                           ariaLabel={`複製 ${formatTaipeiDatetime(occurrence.startAt)} 這一場的報名連結`}
                           className="min-h-11 rounded-full px-3 text-sm font-medium text-pine underline-offset-4 hover:underline"
@@ -346,7 +374,7 @@ export default async function RecurringClassSeriesPage({
           <div className="border-t border-ink/10 pt-3 text-sm leading-6" key={item.label}>
             <p className="font-medium text-ink">{item.label}</p>
             <p className="mt-1 whitespace-pre-wrap break-words text-ink-soft">
-              {item.value || "未填寫，學員會看到「尚未提供」。"}
+              {item.value || "未填寫，學員頁面不顯示這一項。"}
             </p>
           </div>
         ))}
@@ -462,7 +490,7 @@ function TermEnrollmentsSection({
               ) : null}
               {item.leaveDates.length > 0 ? (
                 <p className="text-ink-soft">
-                  請假：{item.leaveDates.map((date) => formatTaipeiDatetime(date)).join("、")}
+                  請假或取消：{item.leaveDates.map((date) => formatTaipeiDatetime(date)).join("、")}
                 </p>
               ) : null}
               {item.status === "pending" ? (

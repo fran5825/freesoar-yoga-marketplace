@@ -58,6 +58,29 @@ test.describe("public term card (domain)", () => {
   });
 });
 
+// 2026-10-09 Codex review：只改某一堂的結束時間或風格時，卡片要跟符合篩選的那一堂一致。
+test.describe("public term card after only-this-class changes (domain)", () => {
+  test("an end-time-only change marks the schedule, and a style filter shows the matched class's styles", async ({}, testInfo) => {
+    const id = runId(testInfo, "card-drift");
+    const teacher = await seedTeacher(id);
+    const { series, sessions } = await seedTerm(teacher.teacherProfileId, { isPublic: true, count: 3, title: `改單堂 ${id}` });
+    await prisma.classSession.update({
+      where: { id: sessions[1].id },
+      data: { endAt: new Date(sessions[1].endAt.getTime() + 30 * 60_000) },
+    });
+    await prisma.classSession.update({
+      where: { id: sessions[2].id },
+      data: { serviceType: "核心與體態", serviceTypes: ["核心與體態"] },
+    });
+
+    const all = await getPublicClassListEntries();
+    expect(termEntry(all, series.id)).toMatchObject({ item: { scheduleLabel: expect.stringContaining("部分堂次時間不同") } });
+
+    const byStyle = await getPublicClassListEntries({ serviceType: "核心與體態" });
+    expect(termEntry(byStyle, series.id)).toMatchObject({ item: { serviceTypes: ["核心與體態"] } });
+  });
+});
+
 test.describe("member term display (UI)", () => {
   test("找課程 shows one term card linking to the term page", async ({ page }, testInfo) => {
     const id = runId(testInfo, "ui-card");

@@ -176,7 +176,9 @@ test.describe("single class member info", () => {
     const preparation = visitor.getByRole("region", { name: "準備事項" });
     await expect(suitable).toContainText("有腰傷請先告知老師。");
     await expect(preparation).toContainText("請自備瑜伽墊與水壺。");
-    expect((await description.boundingBox())!.y).toBeLessThan((await suitable.boundingBox())!.y);
+    // 票 14（Q6）：這堂沒填課程說明，該段不顯示；有填的兩段照順序排在課程重點之後。
+    await expect(description).toHaveCount(0);
+    expect((await visitor.getByRole("region", { name: "課程重點" }).boundingBox())!.y).toBeLessThan((await suitable.boundingBox())!.y);
     expect((await suitable.boundingBox())!.y).toBeLessThan((await preparation.boundingBox())!.y);
     await visitor.close();
 
@@ -188,7 +190,8 @@ test.describe("single class member info", () => {
     await expect(page.getByRole("region", { name: "準備事項" })).toContainText("請自備瑜伽墊與水壺。");
   });
 
-  test("classes without the info (old teacher class, organizer class) show 尚未提供", async ({ page }, testInfo) => {
+  // 票 14（Q6，2026-10-09 產品主人）：沒填的說明卡整張不顯示，取代原本的「尚未提供」。
+  test("classes without the info (old teacher class, organizer class) hide those sections", async ({ page }, testInfo) => {
     const id = runId(testInfo, "empty");
     const teacher = await seedTeacher(id);
     const oldClass = await seedClass(teacher.teacherProfileId);
@@ -203,8 +206,9 @@ test.describe("single class member info", () => {
 
     for (const classSession of [oldClass, organizerClass]) {
       await page.goto(`/classes/${classSession.id}`);
-      await expect(page.getByRole("region", { name: "適合對象" })).toContainText("尚未提供");
-      await expect(page.getByRole("region", { name: "準備事項" })).toContainText("尚未提供");
+      await expect(page.getByRole("region", { name: "課程重點" })).toBeVisible();
+      await expect(page.getByRole("region", { name: "適合對象" })).toHaveCount(0);
+      await expect(page.getByRole("region", { name: "準備事項" })).toHaveCount(0);
     }
   });
 
@@ -275,9 +279,9 @@ test.describe("single class member info", () => {
     expect(saved.suitableFor).toBeNull();
     expect(saved.preparationNotes).toBe("新的準備事項");
 
-    // 學員端讀回新內容：清空的顯示「尚未提供」。
+    // 學員端讀回新內容：清空的那一段不顯示（票 14）。
     await page.goto(`/classes/${classSession.id}`);
-    await expect(page.getByRole("region", { name: "適合對象" })).toContainText("尚未提供");
+    await expect(page.getByRole("region", { name: "適合對象" })).toHaveCount(0);
     await expect(page.getByRole("region", { name: "準備事項" })).toContainText("新的準備事項");
 
     // 超過 500 字：server 擋下，不寫入。
