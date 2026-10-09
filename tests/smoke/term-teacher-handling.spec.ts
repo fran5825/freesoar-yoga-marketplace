@@ -107,6 +107,42 @@ test.describe("teacher decides a term enrollment (domain)", () => {
   });
 });
 
+test.describe("share a term link (UI)", () => {
+  test("a term_only series page copies the term page link, and a member can enroll the whole term from it", async ({ browser }, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium-desktop", "剪貼簿權限只在 desktop project 設定");
+    const id = runId(testInfo, "share");
+    const teacher = await seedTeacher(id);
+    const member = await seedMember(id, "share");
+    const { series } = await seedTerm(teacher.teacherProfileId, { mode: "term_only", count: 3, title: `分享期班 ${id}` });
+    const draft = await seedTerm(teacher.teacherProfileId, { open: false, title: `草稿期班 ${id}` });
+
+    const teacherContext = await browser.newContext();
+    await teacherContext.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await addAuthSessionCookie(teacherContext, teacher.sessionToken);
+    const page = await teacherContext.newPage();
+    await page.goto(`/teacher/classes/series/${series.id}`);
+    await expect(page.getByText(/這一期只收整期報名/)).toBeVisible();
+    await page.getByRole("button", { name: "複製期班報名連結" }).click();
+    await expect(page.getByRole("button", { name: "已複製連結" })).toBeVisible();
+    const copied = await page.evaluate(() => navigator.clipboard.readText());
+    expect(new URL(copied).pathname).toBe(`/classes/terms/${series.id}`);
+
+    await page.goto(`/teacher/classes/series/${draft.series.id}`);
+    await expect(page.getByText("開放報名後才能複製期班連結。")).toBeVisible();
+    await expect(page.getByRole("button", { name: "複製期班報名連結" })).toHaveCount(0);
+    await teacherContext.close();
+
+    const memberContext = await browser.newContext();
+    await addAuthSessionCookie(memberContext, member.sessionToken);
+    const memberPage = await memberContext.newPage();
+    await memberPage.goto(new URL(copied).pathname);
+    await memberPage.getByLabel(/我了解此課程非醫療行為/).check();
+    await memberPage.getByRole("button", { name: "報名整期（3 堂）" }).click();
+    await expect(memberPage.getByText("整期報名成功，共 3 堂。")).toBeVisible();
+    await memberContext.close();
+  });
+});
+
 test.describe("teacher term roster (UI)", () => {
   test("the series page lists term members and confirms one in a single click; the class page tags 整期 and links back", async ({ context, page }, testInfo) => {
     const id = runId(testInfo, "ui");
