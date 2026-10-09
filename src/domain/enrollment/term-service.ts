@@ -249,6 +249,9 @@ export type TeacherTermEnrollmentView = {
   // 尚未開始、仍有效的場次數；請假（已取消）的場次日期。
   activeUpcomingCount: number;
   leaveDates: Date[];
+  // enrollment-re-enrollment 票 04：管理員取消的場次、取消者沒有記錄（舊資料）的場次，與請假分開列。
+  adminCancelledDates: Date[];
+  unrecordedCancelDates: Date[];
   // 婉拒時的影響：會取消幾堂（整期新增、未開始、有效），幾堂恢復為單堂（併入的）。
   declineCancelCount: number;
   declineRestoreCount: number;
@@ -276,6 +279,7 @@ export async function listOwnTermEnrollmentsForTeacher(
           enrollments: {
             select: {
               status: true,
+              cancelledBy: true,
               seriesEnrollmentSource: true,
               classSession: { select: { startAt: true, status: true } },
             },
@@ -299,22 +303,28 @@ export async function listOwnTermEnrollmentsForTeacher(
       (enrollment) => enrollment.status === "pending" || enrollment.status === "confirmed",
     );
 
+    const cancelledDatesBy = (cancelledBy: "member" | "admin" | null) =>
+      (seriesEnrollment.status === "pending" || seriesEnrollment.status === "confirmed" ? seriesEnrollment.enrollments : [])
+        .filter(
+          (enrollment) =>
+            enrollment.status === "cancelled" &&
+            enrollment.cancelledBy === cancelledBy &&
+            enrollment.classSession.status !== "cancelled",
+        )
+        .map((enrollment) => enrollment.classSession.startAt)
+        .sort((a, b) => a.getTime() - b.getTime());
+
     return {
       id: seriesEnrollment.id,
       status: seriesEnrollment.status,
       notes: seriesEnrollment.notes,
       memberLabel: seriesEnrollment.user.name ?? seriesEnrollment.user.email ?? "會員",
       activeUpcomingCount: active.length,
-      // 整期仍有效、課程本身沒有取消，但這一堂的報名已取消：學員請假，或管理員取消了這一筆。
-      // 沒有記錄取消原因，畫面如實標成「請假或取消」。老師停課（整堂取消）、學員退出整期、
-      // 老師婉拒整期造成的取消都不列（2026-10-09 Codex review）。
-      leaveDates: (seriesEnrollment.status === "pending" || seriesEnrollment.status === "confirmed"
-        ? seriesEnrollment.enrollments
-        : []
-      )
-        .filter((enrollment) => enrollment.status === "cancelled" && enrollment.classSession.status !== "cancelled")
-        .map((enrollment) => enrollment.classSession.startAt)
-        .sort((a, b) => a.getTime() - b.getTime()),
+      // 整期仍有效、課程本身沒有取消、這一堂的報名已取消：依取消者分開列（spec 4.5）。
+      // 老師停課（整堂取消）、學員退出整期、老師婉拒整期造成的取消都不列。
+      leaveDates: cancelledDatesBy("member"),
+      adminCancelledDates: cancelledDatesBy("admin"),
+      unrecordedCancelDates: cancelledDatesBy(null),
       declineCancelCount: active.filter((enrollment) => enrollment.seriesEnrollmentSource === "term_created")
         .length,
       declineRestoreCount: seriesEnrollment.enrollments.filter(

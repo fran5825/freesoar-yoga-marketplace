@@ -280,6 +280,7 @@ export default async function AdminClassSessionDetailPage({
                       <span className="w-fit rounded-full bg-ink/10 px-2 py-0.5 text-xs font-medium text-ink-soft">
                         {enrollmentStatusLabels[entry.status] ?? entry.status}
                       </span>
+                      {entry.cancelReason ? <span className="text-xs text-ink-soft">（{entry.cancelReason}）</span> : null}
                     </div>
                     <p className="mt-1 min-w-0 wrap-anywhere text-ink-soft">{entry.memberEmail ?? "未提供 email"}</p>
                     {entry.notes ? (

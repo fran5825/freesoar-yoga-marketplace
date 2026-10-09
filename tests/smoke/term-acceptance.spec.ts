@@ -67,13 +67,13 @@ test.describe("codex review fixes", () => {
     expect((await cancelClassSessionForTeacher(teacher.teacherProfileId, sessions[0].id)).ok).toBe(true);
     await prisma.enrollment.updateMany({
       where: { userId: member.id, classSessionId: sessions[1].id },
-      data: { status: "cancelled" },
+      data: { status: "cancelled", cancelledBy: "member" },
     });
 
     await addAuthSessionCookie(context, teacher.sessionToken);
     await page.goto(`/teacher/classes/series/${series.id}`);
     const roster = page.locator("#term-enrollments");
-    await expect(roster).toContainText(`請假或取消：${formatTaipeiDatetime(sessions[1].startAt)}`);
+    await expect(roster).toContainText(`請假：${formatTaipeiDatetime(sessions[1].startAt)}`);
     await expect(roster).not.toContainText(formatTaipeiDatetime(sessions[0].startAt));
   });
 

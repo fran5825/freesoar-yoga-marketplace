@@ -14,6 +14,7 @@ import {
   cancelClassSessionForAdmin as cancelClassSessionForAdminCore,
   type CancelClassSessionForOrganizerResult,
 } from "./__internal__/cancel-class-session-core";
+import { describeEnrollmentCancelReason } from "@/domain/enrollment/cancel-reason";
 
 // D6（admin-class-enrollment-management）：Admin 總覽用，一次查詢回傳所有狀態的 class
 // session（不像 admin/demands 那樣只顯示單一「待處理」狀態——ClassSession 從來不需要
@@ -103,6 +104,8 @@ export type AdminClassSessionRosterEntry = {
   memberEmail: string | null;
   notes: string | null;
   status: EnrollmentStatus;
+  // enrollment-re-enrollment 票 04：已取消的報名顯示取消原因；沒取消就是 null。
+  cancelReason: string | null;
 };
 
 export type AdminClassSessionDetail = {
@@ -186,6 +189,9 @@ export async function getClassSessionDetailForAdmin(
           id: true,
           notes: true,
           status: true,
+          cancelledBy: true,
+          seriesEnrollmentId: true,
+          seriesEnrollment: { select: { status: true } },
           user: { select: { name: true, email: true } },
         },
         orderBy: { createdAt: "asc" },
@@ -214,6 +220,13 @@ export async function getClassSessionDetailForAdmin(
       memberEmail: enrollment.user.email,
       notes: enrollment.notes,
       status: enrollment.status,
+      cancelReason: describeEnrollmentCancelReason({
+        status: enrollment.status,
+        cancelledBy: enrollment.cancelledBy,
+        seriesEnrollmentId: enrollment.seriesEnrollmentId,
+        seriesEnrollmentStatus: enrollment.seriesEnrollment?.status ?? null,
+        classSessionStatus: classSession.status,
+      }),
     })),
   };
 }
