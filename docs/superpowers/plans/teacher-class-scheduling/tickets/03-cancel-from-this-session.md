@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** done（2026-10-05，待產品主人看畫面）
+**Status:** accepted（2026-10-05 實作；2026-10-09 產品主人看過驗收畫面包後回覆「排課 01–06 都通過」）
 
 **Workflow mode:** STANDARD
 

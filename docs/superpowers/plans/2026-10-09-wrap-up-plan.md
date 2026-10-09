@@ -22,4 +22,6 @@
 - 3：完成。老師排課 01–06 desktop／mobile 共 22 張截圖與驗收重點發布為私人頁面：https://claude.ai/artifact/1kut58HPAenJLBCMJMaYDg 。截圖用臨時 spec 與專屬 email 網域的示範資料產生，跑完已刪資料（殘留 0）與臨時 spec。另一個 session 寫了逐步操作版 `docs/visual-acceptance-checklist.md`，兩者可搭配看。
 - 5：完成。仍等產品主人：老師排課 01–06 畫面、學員 06 人工項目（真實 Google 首次建帳號、200% 文字、全程鍵盤）。仍延後：backlog 第 20 項（期班 07–13、團主 15b、email 連結）。
 
+- 驗收：產品主人 2026-10-09 回覆「排課 01–06 都通過」，六票與 README、spec 狀態改為 accepted。
+
 > Codex peer review：2026-10-09 10:1x 因 Codex 用量上限（13:46 恢復）未執行；產品主人指示恢復前先跳過，恢復後補審。
