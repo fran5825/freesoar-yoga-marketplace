@@ -1,4 +1,9 @@
-import type { ClassSessionOrigin, ClassSessionStatus, EnrollmentStatus } from "@prisma/client";
+import type {
+  ClassSessionOrigin,
+  ClassSessionStatus,
+  EnrollmentStatus,
+  SeriesEnrollmentStatus,
+} from "@prisma/client";
 
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
@@ -9,6 +14,12 @@ export type OwnEnrollment = {
   status: EnrollmentStatus;
   notes: string | null;
   createdAt: Date;
+  // teacher-class-scheduling 票 12：屬於整期報名時，「我的報名」把即將上課的場次合併成一張期班卡片。
+  seriesEnrollment: {
+    id: string;
+    status: SeriesEnrollmentStatus;
+    recurringClassSeries: { id: string; title: string };
+  } | null;
   classSession: {
     id: string;
     title: string;
@@ -34,6 +45,9 @@ export async function listOwnEnrollmentsForMember(): Promise<OwnEnrollment[]> {
       status: true,
       notes: true,
       createdAt: true,
+      seriesEnrollment: {
+        select: { id: true, status: true, recurringClassSeries: { select: { id: true, title: true } } },
+      },
       classSession: {
         select: {
           id: true,

@@ -25,7 +25,7 @@
 - [x] 09 請假與退出整期（2026-10-09；待 Codex 補審）
 - [x] 10 老師處理整期報名（2026-10-09；待 Codex 補審）
 - [x] 11 追加補課日期（2026-10-09，60 passed；待 Codex 補審）
-- [ ] 12 學員端呈現
+- [x] 12 學員端呈現（2026-10-09；待 Codex 補審）
 - [ ] 13 完整驗收與文件同步
 - [ ] 合併回 main、共用開發 DB migrate、push（依 G 的決定）——第一批 07+08 已完成 2026-10-09（push `89490e7`，共用開發 DB 已 migrate；合併時 origin 另有 15b 與 email 通知，合併後 92 passed）
 
@@ -48,7 +48,7 @@
 | [09 請假與退出](09-term-leave-and-withdraw.md) | 整期學員請假單場、退出整期 | 08 | HEAVY | yes | done（2026-10-09；待 Codex 補審、待畫面驗收） |
 | [10 老師處理整期報名](10-teacher-term-enrollment-handling.md) | 整期名單、整期確認一次 | 08 | HEAVY | yes | done（2026-10-09；待 Codex 補審、待畫面驗收） |
 | [11 補課日期](11-term-makeup-dates.md) | 期班追加日期、整期學員自動報上 | 08 | HEAVY | yes | done（2026-10-09；待 Codex 補審、待畫面驗收） |
-| [12 學員端呈現](12-member-term-display.md) | 期班一張卡片、同系列場次 | 08、09 | STANDARD | yes | draft |
+| [12 學員端呈現](12-member-term-display.md) | 期班一張卡片、同系列場次 | 08、09 | STANDARD | yes | done（2026-10-09；待 Codex 補審、待畫面驗收） |
 | [13 完整驗收](13-scheduling-acceptance.md) | S1–S23、RWD、文件同步 | 01–12 | STANDARD | yes | draft |
 
 ## HEAVY 票

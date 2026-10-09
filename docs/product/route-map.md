@@ -14,9 +14,9 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 | `/about` | **已落地**：Free Soar Yoga 品牌與 marketplace 說明 | Visitor |
 | `/teachers/join` | 老師加入與申請入口。**已擴充**（`teacher-join-gated-application` 已確認）：依登入狀態分支——未登入顯示品牌定位、審核流程、資料預覽、FAQ 與帶 `callbackUrl` 的登入 CTA（唯讀導覽，不渲染可填表單）；已登入才顯示完整申請表單（draft 儲存、送審、四種既有狀態顯示），行為與擴充前一致 | Visitor, Teacher |
 | `/organizers/request` | 團主提出需求入口 | Visitor, Organizer |
-| `/classes` | **已落地**（`teacher-initiated-open-classes` Slice D 已確認）：公開 class session 列表，任何人（含未登入 Visitor）都能瀏覽，可依課程類型／星期幾篩選；只顯示 `isPublic=true`、狀態符合、且授課老師 `approved` 的課程 | Visitor, Member |
+| `/classes` | **已落地**（`teacher-initiated-open-classes` Slice D 已確認）：公開 class session 列表，任何人（含未登入 Visitor）都能瀏覽，可依課程類型／星期幾篩選；只顯示 `isPublic=true`、狀態符合、且授課老師 `approved` 的課程。**票 12（`teacher-class-scheduling`，2026-10-09）**：公開期班合併成一張卡片連到 `/classes/terms/[id]`，可報名依期班報名方式判斷；星期篩選一律用每一場實際日期（票 11） | Visitor, Member |
 | `/classes/[classSessionId]` | class session 詳情、share link 與 enrollment 入口。**已落地並擴充（`teacher-initiated-open-classes` Slice D 已確認）**：依登入狀態分支——已登入沿用既有 `getClassSessionForMember()`（不檢查 `isPublic`，維持既有 share-link 查看模式不變）；未登入改走新的 `getPublicClassSessionDetail()`，只顯示公開條件符合的課程，顯示唯讀詳情＋「登入後報名」連結（不渲染報名表單），不符合公開條件一律回傳 not-found，不揭露存在性（票 13 起改為通用登入引導，見下方） | Visitor, Member |
-| `/classes/terms/[recurringClassSeriesId]` | **已落地（`teacher-class-scheduling` 票 08，2026-10-09）**：期班頁。顯示期間、上課時間、地點、老師、共幾堂／剩幾堂、報名方式與每一場（只列已開放／已完成，草稿只計數），提供「報名整期」；訪客看到公開期班與「登入並報名整期」（登入後回到同頁、由本人確認送出）。可見性比照單堂（見 `permissions.md` Member）。單堂課程頁屬於期班時顯示期班說明與連結；只收整期的期班單堂頁不提供報名 | Visitor, Member |
+| `/classes/terms/[recurringClassSeriesId]` | **已落地（`teacher-class-scheduling` 票 08，2026-10-09）**：期班頁。顯示期間、上課時間、地點、老師、共幾堂／剩幾堂、報名方式與每一場（只列已開放／已完成，草稿只計數），提供「報名整期」；訪客看到公開期班與「登入並報名整期」（登入後回到同頁、由本人確認送出）。可見性比照單堂（見 `permissions.md` Member）。單堂課程頁屬於期班時顯示期班說明與連結；只收整期的期班單堂頁不提供報名。票 12 起單堂課程頁也列出同系列其他尚未開始、學員看得到的場次 | Visitor, Member |
 | `/faq` | **已落地**：常見問題與信任說明；不建立付款、退款或取消政策 | Visitor |
 
 ## Auth Routes

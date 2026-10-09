@@ -218,6 +218,37 @@ function computeTermEnrollBlock(
   return null;
 }
 
+// teacher-class-scheduling 票 12：單堂課程頁列出同系列其他尚未開始的場次（規格 4.8、Q15）。
+// 只列學員本來就看得到的：已開放報名、老師已通過審核；訪客另外限公開場次（與公開詳情同一條件）。
+// 只回傳 id 與時間，不帶任何其他欄位。
+export async function listVisibleSiblingSessions(
+  classSessionId: string,
+  signedIn: boolean,
+): Promise<{ id: string; startAt: Date }[]> {
+  const current = await prisma.classSession.findUnique({
+    where: { id: classSessionId },
+    select: { recurringClassSeriesId: true },
+  });
+
+  if (!current?.recurringClassSeriesId) {
+    return [];
+  }
+
+  return prisma.classSession.findMany({
+    where: {
+      recurringClassSeriesId: current.recurringClassSeriesId,
+      id: { not: classSessionId },
+      status: "open_for_enrollment",
+      startAt: { gt: new Date() },
+      teacherProfile: { status: "approved" },
+      ...(signedIn ? {} : { isPublic: true }),
+    },
+    orderBy: { startAt: "asc" },
+    take: 8,
+    select: { id: true, startAt: true },
+  });
+}
+
 // 單堂課程頁用：這一場屬於哪個期班（只有期班才回傳）。
 export async function getTermSummaryForClassSession(
   classSessionId: string,
