@@ -153,14 +153,13 @@ export async function createOwnOrganizerProfileWithOrganization(
         const organizerProfile = await tx.organizerProfile.create({
           data: {
             userId: currentUser.id,
-            organizationId: organization.id,
             displayName: input.displayName as string,
           },
           select: organizerProfileSelect,
         });
 
-        // organizer-usability-redesign 票 02：第一個團體同時寫入 owner 與 legacy pointer，
-        // 之後的授權一律看 owner；同一個 transaction 內完成，失敗不留半筆。
+        // organizer-usability-redesign 票 02／15b：第一個團體寫入 owner，授權一律看 owner；
+        // 同一個 transaction 內完成，失敗不留半筆。
         await tx.organization.update({
           where: { id: organization.id },
           data: { ownerOrganizerProfileId: organizerProfile.id },

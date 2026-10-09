@@ -139,14 +139,11 @@ model AvailabilityException {
 model OrganizerProfile {
   id             String   @id @default(cuid())
   userId         String   @unique
-  organizationId String?
   displayName    String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   user               User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  // organizer-usability-redesign 票 02：legacy pointer（舊單團體畫面的預設團體），授權改看 Organization.ownerOrganizerProfileId；票 15 移除
-  organization       Organization?            @relation("OrganizerLegacyOrganization", fields: [organizationId], references: [id], onDelete: SetNull)
   ownedOrganizations Organization[]           @relation("OrganizationOwner")
   demandRequests     DemandRequest[]
   classSessions      ClassSession[]
@@ -166,7 +163,6 @@ model Organization {
   updatedAt               DateTime         @updatedAt
 
   ownerOrganizerProfile OrganizerProfile?        @relation("OrganizationOwner", fields: [ownerOrganizerProfileId], references: [id], onDelete: SetNull)
-  organizerProfiles     OrganizerProfile[]       @relation("OrganizerLegacyOrganization")
   demandRequests        DemandRequest[]
   classSessions         ClassSession[]
   classProposals        OrganizerClassProposal[]

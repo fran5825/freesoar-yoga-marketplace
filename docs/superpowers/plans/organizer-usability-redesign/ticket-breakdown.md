@@ -14,7 +14,7 @@
 
 | 票號／Title | Blocked by | What it delivers | Workflow mode | Human Gate |
 | --- | --- | --- | --- | --- |
-| [01：正式 contract 文件](tickets/01-approved-domain-contracts.md) | None | 讓開團、建團、合作邀請的已核准規則可由產品、工程與測試共同核對，先完成文件與 migration 設計再改程式。 | HEAVY | yes／需產品主人確認 |
+| [01：正式 contract 文件](tickets/01-approved-domain-contracts.md) | None | 讓開團、建團、合作邀請的已核准規則可由產品、工程與測試共同核對，先完成文件與 migration 設計再改程式。 | HEAVY | yes／需產品主人確認；2026-10-09 15a、15b 皆完成 |
 | [02：多團體 ownership 相容擴充](tickets/02-organization-ownership-expand.md) | 01 | 在多團體新流程尚未上線時，原有團主仍可註冊、提出需求與管理舊課程；資料安全地加入 owner 關聯。 | HEAVY | yes／需產品主人確認 |
 | [03：我的團體與首次建團](tickets/03-organization-management-onboarding.md) | 02 | 團主可以同帳號管理多個公司／社團，個人資料與每個團體的聯絡資料各自清楚；第一次建立仍用一頁完成。 | HEAVY | yes／需產品主人確認 |
 | [04：選團體、存需求草稿、補資料返回](tickets/04-demand-group-draft-return.md) | 03 | 團主選自己的團體填一頁需求，明確存草稿；缺聯絡資料時儲存後前往補資料，再回到同一筆繼續送審。 | HEAVY | yes／需產品主人確認 |

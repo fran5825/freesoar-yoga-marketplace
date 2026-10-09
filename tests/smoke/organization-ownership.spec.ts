@@ -23,7 +23,7 @@ test.afterAll(async () => {
 });
 
 test.describe("organization ownership smoke", () => {
-  test("does not expose an orphan group through a legacy pointer and can still use an owned group", async ({
+  test("does not expose an orphan group and can still use an owned group", async ({
     context,
     page,
   }, testInfo) => {
@@ -37,10 +37,6 @@ test.describe("organization ownership smoke", () => {
       contactEmail: `private-${id}@example.com`,
     });
     orphanOrganizationIds.push(organizer.organizationId);
-    // 15a 有意保留的 legacy 安全注入：pointer 不能洩漏 owner=null 的聯絡資料。
-    await prisma.organizerProfile.update({
-      where: { id: organizer.organizerProfileId }, data: { organizationId: organizer.organizationId },
-    });
     await prisma.organization.update({
       where: { id: organizer.organizationId }, data: { ownerOrganizerProfileId: null },
     });
@@ -90,19 +86,14 @@ test.describe("organization ownership smoke", () => {
 
     const profile = await prisma.organizerProfile.findFirstOrThrow({
       where: { user: { email } },
-      select: {
-        id: true,
-        organizationId: true,
-        organization: { select: { ownerOrganizerProfileId: true } },
-      },
+      select: { ownedOrganizations: { select: { name: true } } },
     });
 
-    // 相容期：legacy pointer 與 owner 指向同一個團體、同一位團主。
-    expect(profile.organizationId).not.toBeNull();
-    expect(profile.organization?.ownerOrganizerProfileId).toBe(profile.id);
+    // 票 15b 後只看 owner：剛建立的團體由這位團主擁有。
+    expect(profile.ownedOrganizations.map((organization) => organization.name)).toEqual([`Owner Org ${testRunId}`]);
   });
 
-  test("an organizer cannot edit or create demands for an organization they do not own, even via the legacy pointer", async ({
+  test("an organizer cannot edit or create demands for an organization they do not own", async ({
     context,
     page,
   }, testInfo) => {
@@ -134,12 +125,7 @@ test.describe("organization ownership smoke", () => {
       data: completeDemandRequestData({ title: `既有草稿 ${testRunId}` }),
     });
 
-    // 模擬資料不一致：A 的 legacy pointer 仍指向這個團體，但 owner 是 B。
-    // 15a 有意保留的 legacy 安全注入；一般 fixture 已不寫 pointer。
-    await prisma.organizerProfile.update({
-      where: { id: organizerA.organizerProfileId },
-      data: { organizationId: organizerA.organizationId },
-    });
+    // A 建過需求的團體改由 B 擁有。
     await prisma.organization.update({
       where: { id: organizerA.organizationId },
       data: { ownerOrganizerProfileId: organizerB.organizerProfileId },
