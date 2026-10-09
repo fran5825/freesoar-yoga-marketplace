@@ -4,7 +4,7 @@
 
 狀態：`approved-design`。Q1–Q28 由產品主人在 `/grill-with-docs` 訪談中全部確認採建議選項，並於 2026-10-04 確認整體理解。本文件是設計定案，**不是 Builder 授權**；實作依票券逐張經 Human Gate 放行。
 
-**2026-10-09 實際狀態：** 票 01–06 已完成並經產品主人畫面驗收；期班 07–12 同日重新啟動並實作完成，13（整合驗收）與畫面驗收進行中，見票券 README。
+**2026-10-09 實際狀態：** 票 01–06 已完成並經產品主人畫面驗收；期班相關票 07–13 由產品主人決定延後（`docs/backlog.md` 第 20 項）。同日產品主人改為另開長任務完成期班，並一次性放行 07–13 的 schema、推導規則 1／2／3／5／9／10 與通知沿用既有類型；票 07–12 已實作並 push（`89490e7`、`c4d09d9`），票 13 驗收見該票紀錄。實作與規格的差異：`Enrollment` 的整期來源 DB check 定為「有整期關聯就必有來源」（整期紀錄被刪時 FK SET NULL）；通知未新增 `NotificationType`。待 Codex 補審、待產品主人畫面驗收。
 
 相關文件：[名詞表](../context/glossary.md)（期班、整期報名、改課等）、[ADR 0005](../adr/0005-term-class-series-enrollment.md)、`docs/domain/data-model.md` 的 `ClassSession`／`RecurringClassSeries`、`docs/domain/state-machines.md`、`docs/teacher-usability-plan.md`。取代 backlog 第 11 項（老師編輯課程內容），並作為 backlog 第 18 項（團主一次安排多堂課）之後沿用的規則來源。
 

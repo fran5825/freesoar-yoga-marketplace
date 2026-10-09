@@ -26,8 +26,8 @@
 - [x] 10 老師處理整期報名（2026-10-09；待 Codex 補審）
 - [x] 11 追加補課日期（2026-10-09，60 passed；待 Codex 補審）
 - [x] 12 學員端呈現（2026-10-09；待 Codex 補審）
-- [ ] 13 完整驗收與文件同步
-- [ ] 合併回 main、共用開發 DB migrate、push（依 G 的決定）——第一批 07+08 已完成 2026-10-09（push `89490e7`，共用開發 DB 已 migrate；合併時 origin 另有 15b 與 email 通知，合併後 92 passed）
+- [x] 13 完整驗收與文件同步（2026-10-09；完整套件 1139 passed，4 個超時重跑通過；待 Codex 補審）
+- [x] 合併回 main、共用開發 DB migrate、push（依 G 的決定）——第三批 13 驗收與文件 2026-10-09 push；第二批 09–12 已 push 2026-10-09（`c4d09d9`，無新 migration）；第一批 07+08 已完成 2026-10-09（push `89490e7`，共用開發 DB 已 migrate；合併時 origin 另有 15b 與 email 通知，合併後 92 passed）
 
 進度紀錄（每完成一項補一行）：
 
@@ -49,7 +49,7 @@
 | [10 老師處理整期報名](10-teacher-term-enrollment-handling.md) | 整期名單、整期確認一次 | 08 | HEAVY | yes | done（2026-10-09；待 Codex 補審、待畫面驗收） |
 | [11 補課日期](11-term-makeup-dates.md) | 期班追加日期、整期學員自動報上 | 08 | HEAVY | yes | done（2026-10-09；待 Codex 補審、待畫面驗收） |
 | [12 學員端呈現](12-member-term-display.md) | 期班一張卡片、同系列場次 | 08、09 | STANDARD | yes | done（2026-10-09；待 Codex 補審、待畫面驗收） |
-| [13 完整驗收](13-scheduling-acceptance.md) | S1–S23、RWD、文件同步 | 01–12 | STANDARD | yes | draft |
+| [13 完整驗收](13-scheduling-acceptance.md) | S1–S23、RWD、文件同步 | 01–12 | STANDARD | yes | done（2026-10-09；待 Codex 補審、待畫面驗收） |
 
 ## HEAVY 票
 
