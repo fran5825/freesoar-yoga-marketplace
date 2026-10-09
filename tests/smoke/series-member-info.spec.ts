@@ -16,6 +16,7 @@ import {
 } from "./_helpers/demand-response-fixtures";
 import { futureDateString, futureWeekdayDateString } from "./_helpers/future-dates";
 import { addFixedDate, pickServiceType } from "./_helpers/class-form";
+import { waitForHydrated } from "./_helpers/hydration";
 import { selectFormTime } from "./_helpers/time-select";
 
 // member-flow-redesign 票 04：系列（每週固定、指定日期）的「適合對象」「準備事項」——建立時填寫、
@@ -188,6 +189,7 @@ test.describe("series member info", () => {
     await addAuthSessionCookie(context, teacher.sessionToken);
     for (const [index, title] of titles.entries()) {
       await page.goto("/teacher/classes/new");
+      await waitForHydrated(page.getByRole("button", { name: "指定日期", exact: true }));
       await page.getByRole("button", { name: "指定日期", exact: true }).click();
       await page.locator("#fixed-title").fill(title);
       await pickServiceType(page, "放鬆紓壓");
@@ -274,6 +276,7 @@ test.describe("series member info", () => {
 
     // 只改第一場。
     await page.goto(`/teacher/classes/${sessions[0].id}/edit`);
+    await waitForHydrated(page.locator("#suitableFor"));
     await expect(page.locator("#edit-scope-single")).toBeChecked();
     await expect(page.locator("#suitableFor")).toHaveValue("系列的適合對象");
     await page.locator("#suitableFor").fill("只有第一場的適合對象");
@@ -286,6 +289,7 @@ test.describe("series member info", () => {
 
     // 只改第一場時也能清空（只清這一場）。
     await page.goto(`/teacher/classes/${sessions[0].id}/edit`);
+    await waitForHydrated(page.locator("#suitableFor"));
     await page.locator("#preparationNotes").fill("");
     await page.getByRole("button", { name: "儲存修改" }).click();
     await expect(page).toHaveURL(new RegExp(`/teacher/classes/${sessions[0].id}\\?`));
@@ -295,6 +299,7 @@ test.describe("series member info", () => {
 
     // 從第二場起「改這一場和之後所有場次」：改準備事項、清空適合對象。
     await page.goto(`/teacher/classes/${sessions[1].id}/edit`);
+    await waitForHydrated(page.locator("#suitableFor"));
     await page.locator("#edit-scope-following").check();
     await expect(page.locator("#suitableFor")).toHaveValue("系列的適合對象");
     await page.locator("#suitableFor").fill("");
