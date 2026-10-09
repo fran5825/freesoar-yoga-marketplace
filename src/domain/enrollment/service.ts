@@ -184,7 +184,7 @@ export async function cancelOwnEnrollment(
       status: { in: ["confirmed", "pending"] },
       classSession: { startAt: { gt: new Date() } },
     },
-    data: { status: "cancelled" },
+    data: { status: "cancelled", cancelledBy: "member" },
   });
 
   if (updateResult.count > 0) {
@@ -419,7 +419,7 @@ export async function declinePendingEnrollmentForTeacher(
       seriesEnrollmentId: null,
       classSession: { teacherProfileId, startAt: { gt: new Date() } },
     },
-    data: { status: "cancelled" },
+    data: { status: "cancelled", cancelledBy: "teacher" },
   });
 
   if (updateResult.count > 0) {

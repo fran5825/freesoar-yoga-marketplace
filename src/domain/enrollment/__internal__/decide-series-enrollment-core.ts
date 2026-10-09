@@ -120,9 +120,15 @@ async function decide(
               status: { in: ["pending", "confirmed"] },
               classSession: { startAt: { gt: now } },
             },
-            data: { status: "cancelled" },
+            data: { status: "cancelled", cancelledBy: "teacher" },
           })
         ).count;
+        // enrollment-re-enrollment 票 01（spec 4.1）：已經請假的「併入單堂」逐場脫離整期後會變成單堂，
+        // 要先把取消者改為 system，否則會符合單堂重新報名條件而繞過「整期終結後不能重報」（R8）。
+        await tx.enrollment.updateMany({
+          where: { seriesEnrollmentId, seriesEnrollmentSource: "merged_single", status: "cancelled", cancelledBy: "member" },
+          data: { cancelledBy: "system" },
+        });
         restoredSingleCount = (
           await tx.enrollment.updateMany({
             where: { seriesEnrollmentId, seriesEnrollmentSource: "merged_single" },

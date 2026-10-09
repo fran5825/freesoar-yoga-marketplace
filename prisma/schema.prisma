@@ -418,6 +418,9 @@ model Enrollment {
   // 票 08：屬於整期報名時指向它，並記錄來源；單堂報名兩者皆為 NULL（DB check：同為 NULL 或同有值）。
   seriesEnrollmentId     String?
   seriesEnrollmentSource SeriesEnrollmentSource?
+  // enrollment-re-enrollment 票 01：這筆報名是誰取消的（ADR 0006）。只有 status = cancelled 時有值，
+  // 離開 cancelled 時清為 NULL（DB check）；舊資料為 NULL，顯示「原因未記錄」且不能重新報名。
+  cancelledBy            EnrollmentCancelledBy?
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
 
@@ -519,6 +522,15 @@ enum ClassSessionStatus {
   confirmed
   completed
   cancelled
+}
+
+// enrollment-re-enrollment 票 01：取消者。member＝學員自己取消或請假；teacher＝老師婉拒；admin＝管理員取消；
+// system＝整堂課被取消、學員退出整期、整期被婉拒時已終結的請假報名等連帶取消。
+enum EnrollmentCancelledBy {
+  member
+  teacher
+  admin
+  system
 }
 
 enum EnrollmentStatus {

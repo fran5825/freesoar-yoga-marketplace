@@ -150,7 +150,7 @@ async function cancelClassSessionCore(
       // 等待老師審核中的報名不該被遺留成孤兒資料，必須跟 confirmed 一起轉為 cancelled。
       const cancelledEnrollments = await tx.$queryRaw<{ userId: string }[]>`
           UPDATE "Enrollment"
-          SET "status" = 'cancelled'::"EnrollmentStatus", "updatedAt" = ${now}
+          SET "status" = 'cancelled'::"EnrollmentStatus", "cancelledBy" = 'system'::"EnrollmentCancelledBy", "updatedAt" = ${now}
           WHERE "classSessionId" = ${classSessionId}
             AND "status" = ANY(ARRAY['confirmed', 'pending']::"EnrollmentStatus"[])
           RETURNING "userId"

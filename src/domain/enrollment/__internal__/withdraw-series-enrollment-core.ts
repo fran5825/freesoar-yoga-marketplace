@@ -82,7 +82,7 @@ export async function withdrawSeriesEnrollmentForUser(
           status: { in: ["pending", "confirmed"] },
           classSession: { startAt: { gt: new Date() } },
         },
-        data: { status: "cancelled" },
+        data: { status: "cancelled", cancelledBy: "system" },
       });
 
       await tx.seriesEnrollment.update({
