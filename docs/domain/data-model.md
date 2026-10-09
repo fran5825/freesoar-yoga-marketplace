@@ -408,7 +408,7 @@ Fields:
 
 整期關聯（`teacher-class-scheduling` 票 08，migration `20261009024811_series_enrollment`）：DB check `Enrollment_series_source_check`——有 `seriesEnrollmentId` 就一定要有 `seriesEnrollmentSource`；應用層一律同時設定或清除兩者（整期紀錄被刪時 FK SET NULL，殘留的來源無害）。屬於整期的逐場報名，老師不能個別確認／婉拒（server 端拒絕，錯誤碼 `enrollment_in_term`），交由票 10 的整期操作；學員取消其中一場就是「請假」（票 09）。「只收整期」期班的場次，單場報名 server 端拒絕（`term_only_series`）。
 
-取消者（`enrollment-re-enrollment` 票 01，ADR 0006，migration `20261009163320_enrollment_cancelled_by`）：additive 欄位與 enum，DB check `Enrollment_cancelled_by_check`——`cancelledBy` 有值時 `status` 必為 `cancelled`；狀態離開 `cancelled`（重新報名、取消請假）時應用層一併清為 `NULL`。所有寫入 `cancelled` 的地方都要同時寫取消者（共 8 處：學員取消／請假、老師婉拒單堂、老師婉拒整期、管理員取消、團主與老師各一個整堂課取消核心〔raw SQL〕、學員退出整期）；舊的已取消紀錄維持 `NULL`（顯示「原因未記錄」，不能重新報名）。老師婉拒整期時，脫離整期的 `merged_single` 逐場若已是學員請假，同一動作改為 `system`，避免單堂化之後繞過「整期終結後不能重報」。唯一約束 `@@unique([classSessionId, userId])` 不變。
+取消者（`enrollment-re-enrollment` 票 01，ADR 0006，migration `20261009163320_enrollment_cancelled_by`）：additive 欄位與 enum，DB check `Enrollment_cancelled_by_check`——`cancelledBy` 有值時 `status` 必為 `cancelled`；狀態離開 `cancelled`（重新報名、取消請假）時應用層一併清為 `NULL`。所有寫入 `cancelled` 的地方都要同時寫取消者（共 8 處：學員取消／請假、老師婉拒單堂、老師婉拒整期、管理員取消、團主與老師各一個整堂課取消核心〔raw SQL〕、學員退出整期）；舊的已取消紀錄維持 `NULL`（顯示「原因未記錄」，不能重新報名）。老師婉拒整期時，脫離整期的 `merged_single` 逐場若已是學員請假，同一動作改為 `system`，避免單堂化之後繞過「整期終結後不能重報」。唯一約束 `@@unique([classSessionId, userId])` 不變，重新報名與取消請假沿用同一筆紀錄（`cancelled` 改回有效狀態並清 `cancelledBy`）。「占用名額」不再只是 `pending + confirmed`：`term_only` 期班請假中的報名也算占用（定義在程式 `seat-occupancy.ts`，不另存欄位）。
 
 `consentedAt`（`enrollment` 已確認）：非 nullable，記錄使用者確認「了解此課程非醫療行為」的時間點；V1 唯一的建立路徑必定顯式寫入，不是選填的 UX 防誤觸欄位。
 

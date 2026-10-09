@@ -275,7 +275,7 @@ Future / admin-only 後續能力：
 - **跳過 `pending`**（D1）：建立當下的原子檢查（capacity／重複報名）已經涵蓋完整設計裡 `pending → confirmed` 的唯一前置條件，沒有獨立業務動作需要一個中繼狀態，對齊本專案一貫的簡化先例。
 - **`consentedAt` 非 nullable**（D6）：spec 明確要求「記錄」basic consent，這不是本專案其他確認 checkbox（`confirmReject`/`confirmSelect`/`confirmCreate`）那種純 UX 防誤觸，是需要留存的紀錄。（2026-10-04 老師 usability 票 01：老師單堂建課的 `confirmCreate` 勾選已改成「建立前核對」摘要；團主建課與老師系列建課仍用勾選。轉換規則不變。）
 - **取消也受 `startAt` 限制**（D14，與建立、開放報名一致）：取消一堂已經開始的課程的報名會抹除歷史報名紀錄，且讓這筆 enrollment 永遠無法銜接未來的 `confirmed → attended/no_show`，V1 課程開始後不提供自助取消。
-- **取消後不可重新報名**（D8）：`@@unique([classSessionId, userId])` 是資料庫層面唯一約束，只認這個組合本身是否已存在過，不分狀態。
+- ~~**取消後不可重新報名**（D8）：`@@unique([classSessionId, userId])` 是資料庫層面唯一約束，只認這個組合本身是否已存在過，不分狀態。~~ **修正（`enrollment-re-enrollment`，ADR 0006，2026-10-10）：學員自己取消的報名，開課前可以重新報名。** 唯一約束不變，改為沿用同一筆紀錄：`cancelled → confirmed／pending`，條件是 `Enrollment.cancelledBy = member`（取消者記錄，舊資料為 `NULL` 一律不能）、不屬於整期、課程開放且未開始、老師 `approved`、還有名額；需老師確認的課回到 `pending`（新申請）。老師婉拒（`teacher`）、管理員取消（`admin`）、整期退出或婉拒與整堂課取消造成的連帶取消（`system`）都不能重新報名。整期學員對某一堂請假（`cancelledBy = member` 且屬於整期）可以取消請假，回到原本的整期報名，狀態跟著整期（`term_and_single` 需有名額，`term_only` 名額已保留）；整期退出或被婉拒後不能。重新報名次數不限，覆寫 `notes` 與 `consentedAt`，通知沿用 `enrollment_confirmed`／`enrollment_pending_review`；取消請假不通知。詳見 `docs/specs/enrollment-re-enrollment-spec.md`。
 - ~~**Admin 不介入**（D10）：本輪 Enrollment 生命週期完全是 Member 與 Organizer/Teacher（唯讀 roster）的範圍。~~ **修正：`admin-class-enrollment-management` 一輪已經打破這個限制**——Admin 現在可以取消任何一筆 `confirmed` enrollment，資格條件跟 Member 自助取消完全相同（D4），只是不檢查 `userId` 擁有權。`Confirm enrollment`（`pending → confirmed`）與 `attended`/`no_show` 標記仍然完全不接線，這部分的「Admin 不介入」維持成立；只有「取消」這一種轉換打破了原本 D10 的範圍。
 - `pending`/`attended`/`no_show` 不接線，enum 值保留。
 

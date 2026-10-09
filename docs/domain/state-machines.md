@@ -224,7 +224,12 @@ no_show
 - **`(none) → confirmed`（原始行為，`requiresApproval = false` 時維持不變）**：建立時同一 transaction 內原子檢查 capacity 與重複報名，成功即直接寫入 `confirmed`，並寫入 `consentedAt`（D6，非 nullable）。
 - **`(none) → pending → confirmed`（`teacher-initiated-open-classes` 第一次真正接線 `pending`，Gate G2/G3）**：所屬 `ClassSession.requiresApproval = true` 時，新報名先落在 `pending`（而不是 `confirmed`），需要授課老師明確按「確認」才轉為 `confirmed`；容量計算把 `pending` 與 `confirmed` **合計**佔用名額（Gate G3 = A，保留席位等老師確認，不是先搶先贏）。老師「確認」／「拒絕」都受 `startAt` 時間邊界限制，跟既有取消/報名的時間 guard 保持一致的心智模型。
 - **`confirmed`／`pending → cancelled`**：與建立、開放報名一樣受 `startAt` 時間限制（D14）：課程開始後不提供自助取消，因為取消會抹除歷史報名紀錄，且讓這筆 enrollment 永遠無法銜接未來的 `confirmed → attended/no_show`。會員可自助取消自己還在 `pending` 的報名，不需要等老師處理；Admin 也可以取消任何人的 `pending` 報名（兩者原本都寫死只接受 `confirmed`，這一輪放寬為 `{ confirmed, pending }`）。老師「拒絕」`pending` 報名也會轉為 `cancelled`（reuse 既有值，不新增新的 enum）。課程整堂被取消時，該課程底下所有 `pending` 報名也一併轉為 `cancelled`（連帶取消同步涵蓋 `pending`，不只 `confirmed`）。
-- 取消後**不可**對同一 class session 重新報名（D8，`@@unique([classSessionId, userId])` 不分狀態）。
+- **重新報名與取消請假（`enrollment-re-enrollment`，ADR 0006，2026-10-10，取代原 D8「取消後不可重新報名」）**：`Enrollment.cancelledBy`（`member`／`teacher`／`admin`／`system`，舊資料 `NULL`）記錄是誰取消的。新增轉換：
+  - **`cancelled → confirmed／pending`（單堂重新報名）**：只有 `cancelledBy = member` 且不屬於整期的報名可以；開課前、課程開放、老師 `approved`、還有名額（占用名額，見下）；`requiresApproval` 為真回 `pending`（視為新申請）；沿用同一筆紀錄（`@@unique([classSessionId, userId])` 不變），覆寫 `notes` 與 `consentedAt`、清 `cancelledBy`。次數不限。
+  - **`cancelled → confirmed／pending`（整期取消請假）**：`cancelledBy = member` 且屬於整期、對應整期報名仍為 `pending`／`confirmed`；狀態跟著整期報名目前的狀態；`term_and_single` 需有名額，`term_only` 名額已保留；保留整期關聯與 `consentedAt`，不通知。整期 `withdrawn`／`declined` 之後不能。
+  - 老師婉拒、管理員取消、整期退出或婉拒連帶取消、整堂課取消、舊資料（`cancelledBy` 為 `NULL`）一律不能重新報名。老師婉拒整期時，脫離整期的併入單堂若已是請假，同一動作把 `cancelledBy` 改為 `system`。
+  - **占用名額**：`pending + confirmed`，加上 `term_only` 期班「請假中」的報名（`cancelled`、`member`、屬於仍有效的整期報名）；`term_and_single` 的請假名額釋出。定義集中在 `seat-occupancy.ts`，所有名額判斷共用。
+  - 鎖順序：單堂重新報名同新報名（`ClassSession` → `TeacherProfile`）；取消請假同整期報名（`RecurringClassSeries` → `ClassSession` → `TeacherProfile` → 該筆報名）。
 - **資格檢查（`teacher-initiated-open-classes` 第 9 節）**：不論 `requiresApproval` 為何，建立新報名前都會檢查授課老師 `TeacherProfile.status = 'approved'`，非 approved（含 `suspended`）回傳 `teacher_not_approved`，阻擋任何來源（公開瀏覽或已登入直連）的新報名；已經合法建立的既有報名不受影響（暫停不回溯）。這個檢查在同一個 transaction 內先鎖定 `TeacherProfile` row 才讀取 `status`，避免跟 Admin 執行 suspend 的獨立 `UPDATE` 產生 TOCTOU 競態。
 - `attended`/`no_show` enum 值保留但無對應 transition。
 
