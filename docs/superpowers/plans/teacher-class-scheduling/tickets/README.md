@@ -6,6 +6,8 @@
 
 **2026-10-09 畫面驗收包：** 票 01–06 的 desktop／mobile 截圖與驗收重點：https://claude.ai/artifact/1kut58HPAenJLBCMJMaYDg （私人頁面）。產品主人看過後再把各票標成已驗收。
 
+**2026-10-09 期班畫面驗收包：** 票 07–13 的流程截圖（老師建期班 → 學員報整期 → 老師確認 → 追加補課 → 請假／退出）與 375／1440 截圖、待決定事項：https://claude.ai/artifact/VBhxiXYCtsrg9Wcc6bwFAU （私人頁面）。產品主人看過後再把 07–13 標成已驗收。
+
 **2026-10-09 重新啟動：** 同日產品主人改為「另開長任務把期班做完」。在 worktree `.claude/worktrees/term-classes`（branch `worktree-term-classes`，基底 `61f3476`，已含學員流程 04）進行，使用獨立測試資料庫與 `PORT=3200`，不碰共用開發 DB。
 
 ### 期班長任務清單
