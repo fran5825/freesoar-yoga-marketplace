@@ -1628,7 +1628,7 @@ function MemberInfoFields({
           />
           <FieldError id={`${idPrefix}preparationNotes-error`} messages={errors.preparationNotes} />
         </div>
-        <p className="text-xs leading-5 text-ink-faint">學員會在課程頁看到這兩段；沒填的會顯示「尚未提供」。</p>
+        <p className="text-xs leading-5 text-ink-faint">學員會在課程頁看到這兩段；沒填的那一段不會顯示。</p>
       </div>
     </details>
   );
@@ -1637,7 +1637,7 @@ function MemberInfoFields({
 function memberInfoSummaryRow(label: string, value: string): SummaryRow {
   const length = value.trim().length;
 
-  return { label, value: length > 0 ? `已填寫（${length} 字）` : "未填寫，學員會看到「尚未提供」" };
+  return { label, value: length > 0 ? `已填寫（${length} 字）` : "未填寫，學員頁面不顯示" };
 }
 
 // 課程說明是選填，預設收起；展開狀態跨模式共用，已填內容或送出錯誤時會展開。

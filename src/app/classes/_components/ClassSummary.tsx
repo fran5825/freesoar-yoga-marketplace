@@ -1,12 +1,27 @@
-import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
+import { formatTaipeiDatetimeLocal } from "@/domain/class-session/timezone";
 import { getClassServiceTypes } from "@/domain/class-session/service-types-display";
 import type { PublicClassSessionDetail } from "@/domain/class-session/public-read-service";
 import { classDiscoveryWeekday } from "@/domain/class-session/class-discovery-filters";
 
-export function ClassSummary({ classSession }: { classSession: PublicClassSessionDetail & { organization?: { name: string } | null } }) {
+// teacher-class-scheduling 票 14（Q7）：上課時間改成一行「2026/10/12（週一）12:00–13:00」；
+// 屬於期班時另加「期間」（termPeriod，由頁面傳入）。
+export function classTimeLine(startAt: Date, endAt: Date): string {
+  const [date, start] = formatTaipeiDatetimeLocal(startAt).split("T");
+  const [, end] = formatTaipeiDatetimeLocal(endAt).split("T");
+
+  return `${date.replaceAll("-", "/")}（${classDiscoveryWeekday(startAt)}）${start}–${end}`;
+}
+
+export function ClassSummary({
+  classSession,
+  termPeriod = null,
+}: {
+  classSession: PublicClassSessionDetail & { organization?: { name: string } | null };
+  termPeriod?: string | null;
+}) {
   const items = [
-    ["開始時間", `${formatTaipeiDatetime(classSession.startAt)}・${classDiscoveryWeekday(classSession.startAt)}`],
-    ["結束時間", formatTaipeiDatetime(classSession.endAt)],
+    ...(termPeriod ? [["期間", termPeriod]] : []),
+    ["上課時間", classTimeLine(classSession.startAt, classSession.endAt)],
     ["地點", classSession.location],
     ["授課老師", classSession.teacherProfile.displayName ?? "老師"],
     ...(classSession.organization ? [["團體", classSession.organization.name]] : []),

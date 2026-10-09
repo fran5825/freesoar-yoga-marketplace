@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
 
 import { formatTaipeiDatetimeLocal, formatTaipeiShortDatetime } from "@/domain/class-session/timezone";
 import { getTermDetailForViewer, type TermDetail, type TermEnrollBlock } from "@/domain/enrollment/term-read-service";
@@ -8,10 +7,13 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { SignInOptions } from "../../../_components/sign-in-options";
 import { SiteShell } from "../../../_components/site-shell";
 import { EnrollmentStatusBadge } from "../../../member/_components/EnrollmentStatusBadge";
+import { ClassInfoSections } from "../../_components/ClassInfoSections";
+import { EnrollReveal, OptionalNotes } from "../../_components/EnrollReveal";
 import { enrollTermAction, signInToEnrollTermAction, withdrawTermAction } from "./actions";
 
-// teacher-class-scheduling 票 08：學員端的期班頁（規格 4.7、4.8）。顯示期間、全部可見日期、剩餘堂數與報名方式，
-// 提供「報名整期」；整期和單堂都收的期班，每一場可以點進單堂頁單獨報名。
+// teacher-class-scheduling 票 08：學員端的期班頁（規格 4.7、4.8）。
+// 票 14（2026-10-09 產品主人 Q3–Q13）：資訊卡只留期間、上課時間、地點、老師；「我要報名」在同一張卡內展開，
+// 報名結果也顯示在這張卡；每一堂清單預設收起；手機底部固定「我要報名」；沒填的說明卡不顯示。
 const buttonClass =
   "inline-flex min-h-11 w-full items-center justify-center rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay sm:w-fit";
 const cardClass = "min-w-0 rounded-2xl border border-ink/15 bg-white p-5 sm:p-6";
@@ -22,16 +24,26 @@ export default async function TermPage({
   searchParams,
 }: {
   params: Promise<{ recurringClassSeriesId: string }>;
-  searchParams?: Promise<{ result?: string; message?: string }>;
+  searchParams?: Promise<{ result?: string; message?: string; enroll?: string }>;
 }) {
   const [{ recurringClassSeriesId }, query, user] = await Promise.all([params, searchParams, getCurrentUser()]);
   const term = await getTermDetailForViewer(recurringClassSeriesId, user?.id ?? null);
 
   if (!term) {
-    notFound();
+    return (
+      <SiteShell
+        signedInArea="member"
+        publicMainClassName="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-5 py-8 sm:px-8"
+        signedInClassName="flex flex-col gap-6"
+      >
+        <TermUnavailable recurringClassSeriesId={recurringClassSeriesId} signedIn={Boolean(user)} />
+      </SiteShell>
+    );
   }
 
   const feedback = query?.result && query.message ? { success: query.result === "success", message: query.message } : null;
+  const canStartEnroll = !term.ownSeriesEnrollment && !term.termEnrollBlock;
+  const openForm = query?.enroll === "1" || (feedback !== null && !feedback.success);
 
   return (
     <SiteShell
@@ -39,121 +51,127 @@ export default async function TermPage({
       publicMainClassName="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-5 py-8 sm:px-8"
       signedInClassName="flex flex-col gap-6"
     >
-      <div className="grid min-w-0 gap-6">
+      <div className={canStartEnroll ? "grid min-w-0 gap-6 pb-24 sm:pb-0" : "grid min-w-0 gap-6"}>
         <Link className="w-fit py-2 text-sm text-clay underline" href="/classes">
           返回課程列表
         </Link>
-        <header className="border-b border-ink/15 pb-5">
-          <p className="inline-flex rounded-full bg-pine-tint px-3 py-1 text-sm font-medium text-pine-deep">
+        <header className="grid gap-3 border-b border-ink/15 pb-5">
+          <p className="w-fit rounded-full bg-pine-tint px-3 py-1 text-sm font-medium text-pine-deep">
             期班・共 {term.totalCount} 堂・剩 {term.remainingCount} 堂
           </p>
-          <h1 className="mt-3 min-w-0 break-words text-2xl font-semibold tracking-tight text-ink">{term.title}</h1>
-          <p className="mt-2 text-sm leading-6 text-ink-soft">
-            {term.termEnrollmentMode === "term_only" ? "只收整期報名" : "可以報整期，也可以只報其中幾堂"}
-            {term.requiresApproval ? "・報名需老師確認" : ""}
-          </p>
+          <h1 className="min-w-0 break-words text-2xl font-semibold tracking-tight text-ink">{term.title}</h1>
+          {term.serviceTypes.length + term.yogaStyles.length > 0 ? (
+            <ul aria-label="課程風格與瑜伽類型" className="flex flex-wrap gap-2">
+              {[...term.serviceTypes, ...term.yogaStyles].map((tag) => (
+                <li className="rounded-full border border-ink/15 px-3 py-0.5 text-xs text-ink-soft" key={tag}>
+                  {tag}
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </header>
 
-        {feedback ? (
-          <section
-            aria-live="polite"
-            className={
-              feedback.success
-                ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
-                : "rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
-            }
-          >
-            {feedback.message}
-            {feedback.success ? (
-              <>
-                {" "}
-                <Link className="font-medium underline" href="/member/enrollments">
-                  查看我的報名
-                </Link>
-              </>
-            ) : null}
-          </section>
-        ) : null}
+        <section aria-labelledby="term-summary-heading" className="scroll-mt-6 grid gap-5 rounded-2xl border border-pine/25 bg-white p-5 sm:p-6" id="enroll-term">
+          <h2 className="sr-only" id="term-summary-heading">
+            課程資訊與報名
+          </h2>
+          <TermFacts term={term} />
+          <div className="grid gap-4 border-t border-ink/10 pt-5">
+            <TermEnrollArea feedback={feedback} openForm={openForm} signedIn={Boolean(user)} term={term} />
+          </div>
+        </section>
 
-        <TermSummary term={term} />
-        <TermEnrollPanel signedIn={Boolean(user)} term={term} />
         <TermSessionList term={term} />
 
-        <section aria-labelledby="term-description-heading" className={cardClass}>
-          <h2 className="text-lg font-medium text-ink" id="term-description-heading">
-            課程說明
-          </h2>
-          <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-ink-soft">
-            {term.description || "尚未提供課程說明。"}
-          </p>
-        </section>
-        <section aria-labelledby="term-suitable-heading" className={cardClass}>
-          <h2 className="text-lg font-medium text-ink" id="term-suitable-heading">
-            適合對象
-          </h2>
-          <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-ink-soft">
-            {term.suitableFor || "尚未提供"}
-          </p>
-        </section>
-        <section aria-labelledby="term-preparation-heading" className={cardClass}>
-          <h2 className="text-lg font-medium text-ink" id="term-preparation-heading">
-            準備事項
-          </h2>
-          <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-ink-soft">
-            {term.preparationNotes || "尚未提供"}
-          </p>
-        </section>
+        <ClassInfoSections
+          description={term.description}
+          idPrefix="term-"
+          preparationNotes={term.preparationNotes}
+          suitableFor={term.suitableFor}
+        />
+
+        {canStartEnroll ? (
+          <a
+            className="fixed inset-x-0 bottom-0 z-20 border-t border-pine/20 bg-cream px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-center text-sm font-medium text-pine underline focus-visible:outline-2 focus-visible:outline-pine sm:hidden"
+            href="?enroll=1#enroll-term"
+          >
+            我要報名
+          </a>
+        ) : null}
       </div>
     </SiteShell>
   );
 }
 
-function TermSummary({ term }: { term: TermDetail }) {
+// 訪客讀不到（不公開、全是草稿等）時顯示登入引導，比照單堂頁不透露期班是否存在；已登入仍讀不到就說明。
+function TermUnavailable({ recurringClassSeriesId, signedIn }: { recurringClassSeriesId: string; signedIn: boolean }) {
+  return (
+    <div className="grid min-w-0 gap-6">
+      <Link className="w-fit py-2 text-sm text-clay underline" href="/classes">
+        返回課程列表
+      </Link>
+      <section className="grid gap-4 rounded-2xl border border-pine/25 bg-white p-5 sm:p-6">
+        <h1 className="text-2xl font-semibold tracking-tight text-ink">{signedIn ? "目前看不到這個期班" : "登入後查看這個期班"}</h1>
+        {signedIn ? (
+          <p className="text-sm leading-6 text-ink-soft">這個期班目前沒有開放，或連結已經失效。</p>
+        ) : (
+          <>
+            <p className="text-sm leading-6 text-ink-soft">
+              如果你是收到老師分享的期班連結，登入後就能看到上課時間與地點，並決定是否報名。第一次使用會自動建立帳號；報名要由你確認後才會送出。
+            </p>
+            <SignInOptions
+              action={signInToEnrollTermAction}
+              buttonClassName={buttonClass}
+              fields={{ recurringClassSeriesId }}
+              label={(provider) => `使用 ${provider} 登入查看`}
+            />
+          </>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function hasTimeException(term: TermDetail): boolean {
+  return term.sessions.some(
+    (session) =>
+      session.upcoming &&
+      (formatTaipeiDatetimeLocal(session.startAt).split("T")[1] !== term.startTime ||
+        formatTaipeiDatetimeLocal(session.endAt).split("T")[1] !== term.endTime),
+  );
+}
+
+function TermFacts({ term }: { term: TermDetail }) {
   const rows: { label: string; value: string }[] = [
     {
       label: "期間",
-      value:
-        term.firstStartAt && term.lastStartAt
-          ? `${shortDate(term.firstStartAt)} – ${shortDate(term.lastStartAt)}`
-          : "—",
+      value: term.firstStartAt && term.lastStartAt ? `${shortDate(term.firstStartAt)} – ${shortDate(term.lastStartAt)}` : "—",
     },
     {
       label: "上課時間",
-      // 只改某一堂的時間時，每一堂的實際時間列在下方清單（2026-10-09 Codex review）。
+      // 只改某一堂的時間時，每一堂的實際時間列在「查看每一堂」（2026-10-09 Codex review）。
       value: `${term.dayOfWeek === null ? "指定日期" : `每${dayOfWeekLabels[term.dayOfWeek]}`} ${term.startTime}–${term.endTime}${
-        term.sessions.some(
-          (session) =>
-            session.upcoming &&
-            (formatTaipeiDatetimeLocal(session.startAt).split("T")[1] !== term.startTime ||
-              formatTaipeiDatetimeLocal(session.endAt).split("T")[1] !== term.endTime),
-        )
-          ? "（部分堂次時間不同，以下方每一堂為準）"
-          : ""
+        hasTimeException(term) ? "（部分堂次時間不同，以每一堂為準）" : ""
       }`,
     },
     {
       label: "地點",
       value: term.sessions.some((session) => session.location !== term.location)
-        ? `${term.location}（部分堂次地點不同，標示在下方每一堂）`
+        ? `${term.location}（部分堂次地點不同，見每一堂）`
         : term.location,
     },
     { label: "老師", value: term.teacherDisplayName ?? "飛索老師" },
   ];
 
   return (
-    <section aria-labelledby="term-summary-heading" className={cardClass}>
-      <h2 className="text-lg font-medium text-ink" id="term-summary-heading">
-        課程資訊
-      </h2>
-      <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
-        {rows.map((row) => (
-          <div key={row.label}>
-            <dt className="text-ink-faint">{row.label}</dt>
-            <dd className="mt-1 break-words text-ink">{row.value}</dd>
-          </div>
-        ))}
-      </dl>
-    </section>
+    <dl className="grid gap-4 text-sm sm:grid-cols-2">
+      {rows.map((row) => (
+        <div className="min-w-0" key={row.label}>
+          <dt className="text-ink-faint">{row.label}</dt>
+          <dd className="mt-1 break-words text-base text-ink">{row.value}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -184,71 +202,99 @@ function blockMessage(block: TermEnrollBlock): string {
   }
 }
 
-function TermEnrollPanel({ term, signedIn }: { term: TermDetail; signedIn: boolean }) {
-  return (
-    <section
-      aria-labelledby="term-enroll-heading"
-      className="scroll-mt-6 grid gap-4 rounded-2xl border border-pine/25 bg-white p-5 sm:p-6"
-      id="enroll-term"
+function TermEnrollArea({
+  term,
+  signedIn,
+  feedback,
+  openForm,
+}: {
+  term: TermDetail;
+  signedIn: boolean;
+  feedback: { success: boolean; message: string } | null;
+  openForm: boolean;
+}) {
+  const hint = term.requiresApproval ? "需老師確認，確認一次就套用到整期" : "送出即成立";
+  const feedbackLine = feedback ? (
+    <p
+      aria-live="polite"
+      className={
+        feedback.success
+          ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
+          : "rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
+      }
     >
-      <h2 className="text-lg font-medium text-ink" id="term-enroll-heading">
-        {term.ownSeriesEnrollment ? "你的整期報名" : "報名整期"}
-      </h2>
-      {term.ownSeriesEnrollment ? (
+      {feedback.message}
+      {feedback.success ? (
         <>
-          <p className="text-sm leading-6 text-ink-soft">{seriesStatusCopy[term.ownSeriesEnrollment.status]}</p>
-          {term.ownSeriesEnrollment.status === "pending" || term.ownSeriesEnrollment.status === "confirmed" ? (
-            <>
-              <p className="text-sm leading-6 text-ink-soft">
-                某一堂不能來，點進那一堂按「請假這一堂」，其他堂照常。
-              </p>
-              <WithdrawTermForm seriesEnrollmentId={term.ownSeriesEnrollment.id} term={term} />
-            </>
-          ) : null}
+          {" "}
+          <Link className="font-medium underline" href="/member/enrollments">
+            查看我的報名
+          </Link>
         </>
-      ) : term.termEnrollBlock ? (
+      ) : null}
+    </p>
+  ) : null;
+
+  if (term.ownSeriesEnrollment) {
+    const active = term.ownSeriesEnrollment.status === "pending" || term.ownSeriesEnrollment.status === "confirmed";
+
+    return (
+      <>
+        <h3 className="text-base font-medium text-ink">你的整期報名</h3>
+        {feedbackLine}
+        <p className="text-sm leading-6 text-ink-soft">{seriesStatusCopy[term.ownSeriesEnrollment.status]}</p>
+        {active ? (
+          <>
+            <p className="text-sm leading-6 text-ink-soft">某一堂不能來，到「查看每一堂」點進那一堂按「請假這一堂」，其他堂照常。</p>
+            <WithdrawTermForm seriesEnrollmentId={term.ownSeriesEnrollment.id} term={term} />
+          </>
+        ) : null}
+      </>
+    );
+  }
+
+  if (term.termEnrollBlock) {
+    // Q12：不能報整期時不顯示按鈕，直接說原因。
+    return (
+      <>
+        {feedbackLine}
         <p className="text-sm leading-6 text-ink-soft">{blockMessage(term.termEnrollBlock)}</p>
-      ) : !signedIn ? (
+      </>
+    );
+  }
+
+  return (
+    <EnrollReveal defaultOpen={openForm} hint={hint}>
+      {feedbackLine}
+      {!signedIn ? (
         <>
           <p className="text-sm leading-6 text-ink-soft">
-            登入後即可{term.requiresApproval ? "送出整期報名申請，需老師確認才算成立" : "報名整期"}，會報上剩下的 {term.remainingCount}{" "}
-            堂。第一次使用會自動建立帳號；登入後會回到這個頁面，由你確認後才會送出。
+            登入後會報上剩下的 {term.remainingCount} 堂。第一次使用會自動建立帳號；登入後回到這裡，由你確認後才會送出。
           </p>
           <SignInOptions
             action={signInToEnrollTermAction}
             buttonClassName={buttonClass}
             fields={{ recurringClassSeriesId: term.id }}
-            label={(provider) => `使用 ${provider} 登入並報名整期`}
+            label={(provider) => `使用 ${provider} 登入並報名`}
           />
         </>
       ) : (
         <form action={enrollTermAction} className="grid gap-4">
           <input name="recurringClassSeriesId" type="hidden" value={term.id} />
           <p className="text-sm leading-6 text-ink-soft">
-            會報上剩下的 {term.remainingCount} 堂；已經單堂報名的場次會併入整期。
-            {term.requiresApproval ? "送出後等待老師確認，老師確認一次就套用到整期。" : ""}
+            報名整期會報上剩下的 {term.remainingCount} 堂{term.requiresApproval ? "，送出後等待老師確認" : ""}。已經單堂報名的場次會併入整期。
           </p>
-          <div>
-            <label className="text-sm font-medium text-ink" htmlFor="term-notes">
-              備註（選填）
-            </label>
-            <textarea
-              className="mt-2 min-h-20 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink focus-visible:outline-2 focus-visible:outline-pine"
-              id="term-notes"
-              maxLength={500}
-              name="notes"
-            />
-          </div>
+          <OptionalNotes id="term-notes" />
           <label className="flex items-start gap-3 text-sm leading-6 text-ink-soft">
             <input className="mt-1 size-4 shrink-0 accent-pine" name="basicConsent" required type="checkbox" value="yes" />
             我了解此課程非醫療行為，會依自身身體狀況參與。
           </label>
           <button className={buttonClass} type="submit">
-            {term.requiresApproval ? `送出整期報名申請（${term.remainingCount} 堂）` : `報名整期（${term.remainingCount} 堂）`}
+            {term.requiresApproval ? `送出整期報名申請（${term.remainingCount} 堂）` : `確認報名整期（${term.remainingCount} 堂）`}
           </button>
         </form>
       )}
-    </section>
+    </EnrollReveal>
   );
 }
 
@@ -256,8 +302,7 @@ function TermEnrollPanel({ term, signedIn }: { term: TermDetail; signedIn: boole
 function WithdrawTermForm({ term, seriesEnrollmentId }: { term: TermDetail; seriesEnrollmentId: string }) {
   const affected = term.sessions.filter(
     (session) =>
-      session.upcoming &&
-      (session.ownEnrollmentStatus === "pending" || session.ownEnrollmentStatus === "confirmed"),
+      session.upcoming && (session.ownEnrollmentStatus === "pending" || session.ownEnrollmentStatus === "confirmed"),
   );
 
   return (
@@ -294,40 +339,32 @@ function WithdrawTermForm({ term, seriesEnrollmentId }: { term: TermDetail; seri
   );
 }
 
+// Q11：預設收起，只列日期時段、自己的狀態、地點或時間不同的提示；不顯示人數。
 function TermSessionList({ term }: { term: TermDetail }) {
   return (
-    <section aria-labelledby="term-sessions-heading" className={cardClass}>
-      <h2 className="text-lg font-medium text-ink" id="term-sessions-heading">
-        這一期的每一堂
-      </h2>
+    <details className={cardClass}>
+      <summary className="cursor-pointer text-base font-medium text-ink">查看每一堂（共 {term.totalCount} 堂）</summary>
       {term.termEnrollmentMode === "term_and_single" ? (
-        <p className="mt-2 text-sm leading-6 text-ink-soft">只想上其中幾堂，可以點進該堂單獨報名。</p>
+        <p className="mt-3 text-sm leading-6 text-ink-soft">只想上其中幾堂，可以點進該堂單獨報名。</p>
       ) : null}
       <ul aria-label="這一期的上課日期" className="mt-3 grid gap-2">
         {term.sessions.map((session) => (
-          <li
-            className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-ink/10 px-4 py-3 text-sm"
-            key={session.id}
-          >
+          <li className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-ink/10 px-4 py-2 text-sm" key={session.id}>
             <Link className="min-h-11 py-2 font-medium text-ink underline-offset-4 hover:underline" href={`/classes/${session.id}`}>
               {formatTaipeiShortDatetime(session.startAt)}–{formatTaipeiDatetimeLocal(session.endAt).split("T")[1]}
             </Link>
+            <span className="flex flex-wrap items-center gap-2 text-ink-soft">
+              {session.ownEnrollmentStatus ? <EnrollmentStatusBadge status={session.ownEnrollmentStatus} /> : null}
+              {session.status === "completed" ? "已結束" : null}
+              {session.canEnrollSingle ? <span className="text-pine">可單堂報名</span> : null}
+            </span>
             {session.location !== term.location ? (
               <span className="w-full break-words text-ink-soft">這一堂地點：{session.location}</span>
             ) : null}
-            <span className="flex flex-wrap items-center gap-2 text-ink-soft">
-              {session.ownEnrollmentStatus ? <EnrollmentStatusBadge status={session.ownEnrollmentStatus} /> : null}
-              {session.status === "completed"
-                ? "已結束"
-                : `已報名 ${session.activeEnrollmentCount} / ${session.capacity} 人`}
-              {session.canEnrollSingle ? <span className="text-pine">・可單堂報名</span> : null}
-            </span>
           </li>
         ))}
       </ul>
-      {term.draftCount > 0 ? (
-        <p className="mt-3 text-sm leading-6 text-ink-faint">另有 {term.draftCount} 堂尚未開放報名。</p>
-      ) : null}
-    </section>
+      {term.draftCount > 0 ? <p className="mt-3 text-sm leading-6 text-ink-faint">另有 {term.draftCount} 堂尚未開放報名。</p> : null}
+    </details>
   );
 }

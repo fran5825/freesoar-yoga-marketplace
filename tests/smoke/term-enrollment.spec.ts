@@ -323,13 +323,17 @@ test.describe("term enrollment (UI)", () => {
     await page.goto(`/classes/terms/${series.id}`);
     await expect(page.getByRole("heading", { name: `公開期班 ${id}` })).toBeVisible();
     await expect(page.getByText("期班・共 3 堂・剩 3 堂")).toBeVisible();
-    await expect(page.getByRole("button", { name: /登入並報名整期/ }).first()).toBeVisible();
+    // 票 14：「我要報名」按下後才展開；每一堂清單預設收起。
+    await page.getByRole("button", { name: "我要報名" }).click();
+    await expect(page.getByRole("button", { name: /登入並報名/ }).first()).toBeVisible();
+    await page.getByText("查看每一堂（共 3 堂）").click();
     await expect(page.getByRole("list", { name: "這一期的上課日期" }).getByRole("listitem")).toHaveCount(3);
 
     await addAuthSessionCookie(context, member.sessionToken);
     await page.reload();
+    await page.getByRole("button", { name: "我要報名" }).click();
     await page.getByLabel(/我了解此課程非醫療行為/).check();
-    await page.getByRole("button", { name: "報名整期（3 堂）" }).click();
+    await page.getByRole("button", { name: "確認報名整期（3 堂）" }).click();
     await expect(page.getByText("整期報名成功，共 3 堂。")).toBeVisible();
     await expect(page.getByText("你已報名整期")).toBeVisible();
     expect(await prisma.enrollment.count({ where: { userId: member.id, status: "confirmed" } })).toBe(3);
@@ -341,15 +345,16 @@ test.describe("term enrollment (UI)", () => {
     const member = await seedMember(id, "ui-private");
     const { series, sessions } = await seedTerm(teacher.teacherProfileId, { mode: "term_only", title: `連結期班 ${id}` });
 
-    const visitorResponse = await page.goto(`/classes/terms/${series.id}`);
-    expect(visitorResponse?.status()).toBe(404);
+    // 票 14：訪客讀不到時顯示登入引導（比照單堂頁），不透露期班內容。
+    await page.goto(`/classes/terms/${series.id}`);
+    await expect(page.getByRole("heading", { name: "登入後查看這個期班" })).toBeVisible();
+    await expect(page.getByText(`連結期班 ${id}`)).toHaveCount(0);
 
+    // 票 14（Q1）：只收整期的單堂連結，還沒報名的學員直接轉到期班頁。
     await addAuthSessionCookie(context, member.sessionToken);
     await page.goto(`/classes/${sessions[0].id}`);
-    await expect(page.getByRole("heading", { name: `這堂課屬於期班「連結期班 ${id}」` })).toBeVisible();
-    await expect(page.getByRole("button", { name: "確認報名" })).toHaveCount(0);
-    await page.getByRole("link", { name: "前往期班頁報名整期" }).click();
-    await expect(page).toHaveURL(new RegExp(`/classes/terms/${series.id}`));
+    await expect(page).toHaveURL(new RegExp(`/classes/terms/${series.id}$`));
+    await expect(page.getByRole("heading", { name: `連結期班 ${id}` })).toBeVisible();
   });
 
   // 票 10 起單場頁不再顯示整期子報名的確認按鈕（改連到期班頁）；server 端的拒絕仍在

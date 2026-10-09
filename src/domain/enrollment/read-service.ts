@@ -71,7 +71,7 @@ export type MemberFacingClassSession = {
   id: string;
   title: string;
   description: string | null;
-  // member-flow 票 03：適合對象、準備事項（沒填是 null，畫面顯示「尚未提供」）。
+  // member-flow 票 03：適合對象、準備事項（沒填是 null；票 14 起畫面不顯示該段）。
   suitableFor: string | null;
   preparationNotes: string | null;
   serviceType: string | null;

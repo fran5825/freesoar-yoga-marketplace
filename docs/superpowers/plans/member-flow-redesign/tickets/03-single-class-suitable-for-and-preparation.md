@@ -102,3 +102,7 @@ Security self review：只新增老師自己課程的兩個文字欄位；寫入
 
 
 <!-- codex-peer-reviewed: 2026-10-05T13:55:06Z rounds=2 verdict=approved -->
+
+## 2026-10-09 規則變更（teacher-class-scheduling 票 14，Q6）
+
+產品主人於 `/grill-with-docs` 決定：課程說明、適合對象、準備事項**沒填就整張不顯示**，取代本票「沒填顯示『尚未提供』」的規則；單堂、期班、團主課程頁一致。老師端提示同步改為「未填寫，學員頁面不顯示這一項」。實作見 `src/app/classes/_components/ClassInfoSections.tsx`，測試 `class-member-info.spec.ts`、`series-member-info.spec.ts`、`term-enroll-simplify.spec.ts`。

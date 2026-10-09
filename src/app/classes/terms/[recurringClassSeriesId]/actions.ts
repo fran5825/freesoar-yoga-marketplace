@@ -11,7 +11,8 @@ import { rememberSignInReturn } from "@/lib/auth/sign-in-return";
 // teacher-class-scheduling 票 08：期班頁的整期報名。訪客先登入，回到同一個期班頁由本人確認送出。
 
 export async function signInToEnrollTermAction(formData: FormData): Promise<void> {
-  const destination = termHref(readFormString(formData, "recurringClassSeriesId"));
+  // 票 14（Q5）：登入回來時帶 enroll=1，期班頁直接展開報名表單，由本人確認送出。
+  const destination = `${termHref(readFormString(formData, "recurringClassSeriesId"))}?enroll=1`;
   const provider = parseSignInProvider(formData.get("provider"));
 
   if (!provider) {

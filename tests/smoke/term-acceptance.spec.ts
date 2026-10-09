@@ -94,9 +94,10 @@ test.describe("codex review fixes", () => {
 
     await addAuthSessionCookie(context, member.sessionToken);
     await page.goto(`/classes/terms/${series.id}`);
-    await expect(page.getByText("這一堂地點：台中市臨時教室")).toBeVisible();
     await expect(page.getByText(/部分堂次地點不同/)).toBeVisible();
-    await expect(page.getByText(/部分堂次時間不同，以下方每一堂為準/)).toBeVisible();
+    await expect(page.getByText(/部分堂次時間不同，以每一堂為準/)).toBeVisible();
+    await page.getByText("查看每一堂（共 10 堂）").click();
+    await expect(page.getByText("這一堂地點：台中市臨時教室")).toBeVisible();
 
     await page.goto(`/classes/${sessions[0].id}`);
     await expect(page.getByRole("list", { name: "同系列的其他場次" }).getByRole("link")).toHaveCount(9);

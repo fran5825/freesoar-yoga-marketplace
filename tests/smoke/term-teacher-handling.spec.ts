@@ -136,8 +136,9 @@ test.describe("share a term link (UI)", () => {
     await addAuthSessionCookie(memberContext, member.sessionToken);
     const memberPage = await memberContext.newPage();
     await memberPage.goto(new URL(copied).pathname);
+    await memberPage.getByRole("button", { name: "我要報名" }).click();
     await memberPage.getByLabel(/我了解此課程非醫療行為/).check();
-    await memberPage.getByRole("button", { name: "報名整期（3 堂）" }).click();
+    await memberPage.getByRole("button", { name: "確認報名整期（3 堂）" }).click();
     await expect(memberPage.getByText("整期報名成功，共 3 堂。")).toBeVisible();
     await memberContext.close();
   });

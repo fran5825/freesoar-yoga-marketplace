@@ -606,3 +606,5 @@ Output：繁體中文，Verdict（APPROVE / REQUEST CHANGES / REJECT）、Scope�
 
 <!-- review note: member-flow × teacher-scheduling reconciliation, reviewed as one unit with member-flow-redesign/ticket-breakdown.md -->
 <!-- codex-peer-reviewed: 2026-10-04T13:42:57Z rounds=2 verdict=approved -->
+
+> 2026-10-09 更新：上文「詳情清楚顯示『尚未提供』」已由 teacher-class-scheduling 票 14（Q6）改為沒填就不顯示該段，見學員流程票 03 末段。

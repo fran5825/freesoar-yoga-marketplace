@@ -301,7 +301,8 @@ export default async function RecurringClassSeriesPage({
                   {/* 複製與取消按鈕放在場次連結外面，避免連結裡再包按鈕。 */}
                   {occurrence.status === "open_for_enrollment" || isCancellableOccurrence(occurrence, now) ? (
                     <div className="flex flex-wrap gap-x-2 pl-3">
-                      {occurrence.status === "open_for_enrollment" ? (
+                      {/* 票 14（Q14）：只收整期的期班只留「複製期班報名連結」，不提供每一堂的連結。 */}
+                      {occurrence.status === "open_for_enrollment" && series.termEnrollmentMode !== "term_only" ? (
                         <CopyEnrollLinkButton
                           ariaLabel={`複製 ${formatTaipeiDatetime(occurrence.startAt)} 這一場的報名連結`}
                           className="min-h-11 rounded-full px-3 text-sm font-medium text-pine underline-offset-4 hover:underline"
@@ -373,7 +374,7 @@ export default async function RecurringClassSeriesPage({
           <div className="border-t border-ink/10 pt-3 text-sm leading-6" key={item.label}>
             <p className="font-medium text-ink">{item.label}</p>
             <p className="mt-1 whitespace-pre-wrap break-words text-ink-soft">
-              {item.value || "未填寫，學員會看到「尚未提供」。"}
+              {item.value || "未填寫，學員頁面不顯示這一項。"}
             </p>
           </div>
         ))}

@@ -40,6 +40,9 @@ export type TermDetail = {
   description: string | null;
   suitableFor: string | null;
   preparationNotes: string | null;
+  // 票 14（Q8）：課程風格、瑜伽類型改為標題下方標籤。
+  serviceTypes: string[];
+  yogaStyles: string[];
   location: string;
   startTime: string;
   endTime: string;
@@ -71,6 +74,9 @@ export async function getTermDetailForViewer(
       description: true,
       suitableFor: true,
       preparationNotes: true,
+      serviceType: true,
+      serviceTypes: true,
+      yogaStyles: true,
       location: true,
       startTime: true,
       endTime: true,
@@ -166,6 +172,8 @@ export async function getTermDetailForViewer(
     description: series.description,
     suitableFor: series.suitableFor,
     preparationNotes: series.preparationNotes,
+    serviceTypes: series.serviceTypes.length ? series.serviceTypes : series.serviceType ? [series.serviceType] : [],
+    yogaStyles: series.yogaStyles,
     location: series.location,
     startTime: series.startTime,
     endTime: series.endTime,
@@ -253,10 +261,14 @@ export async function listVisibleSiblingSessions(
   });
 }
 
-// 單堂課程頁用：這一場屬於哪個期班（只有期班才回傳）。
-export async function getTermSummaryForClassSession(
-  classSessionId: string,
-): Promise<{ id: string; title: string; termEnrollmentMode: TermEnrollmentMode; totalCount: number } | null> {
+// teacher-class-scheduling 票 14：單堂頁一次讀出這一堂所屬系列的資訊（是否期班、報名方式、堂數），
+// 讓不屬於系列的課（例如團主團課）只多一次輕量查詢，其餘期班相關查詢只在需要時才做。
+export type ClassSeriesContext = {
+  seriesId: string;
+  term: { id: string; title: string; termEnrollmentMode: TermEnrollmentMode; totalCount: number } | null;
+} | null;
+
+export async function getClassSeriesContext(classSessionId: string): Promise<ClassSeriesContext> {
   const row = await prisma.classSession.findUnique({
     where: { id: classSessionId },
     select: {
@@ -273,14 +285,15 @@ export async function getTermSummaryForClassSession(
   });
   const series = row?.recurringClassSeries;
 
-  if (!series || series.kind !== "term" || !series.termEnrollmentMode) {
+  if (!series) {
     return null;
   }
 
   return {
-    id: series.id,
-    title: series.title,
-    termEnrollmentMode: series.termEnrollmentMode,
-    totalCount: series._count.classSessions,
+    seriesId: series.id,
+    term:
+      series.kind === "term" && series.termEnrollmentMode
+        ? { id: series.id, title: series.title, termEnrollmentMode: series.termEnrollmentMode, totalCount: series._count.classSessions }
+        : null,
   };
 }
