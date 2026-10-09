@@ -1,7 +1,42 @@
 # Lightweight Payment v0 (Direct-to-Teacher Bank Transfer) — Draft Implementation Plan
 
 > Status: DRAFT — 待 Codex peer review 與產品主人多項決策；未授權 Builder 施工。
+> 判定（2026-10-09）：**未做。** `prisma/schema.prisma` 沒有任何付款欄位，程式裡也沒有 `markEnrollmentPaid` 之類的函式。
 > Date: 2026-08-03
+
+## 0. 2026-10-10 修訂（產品主人於 `/grill-with-docs` 決定，優先於下方 P4–P6 的原文）
+
+來源：[teacher-showcase-photos 票券總覽](teacher-showcase-photos/ticket-breakdown.md) 票 01。本修訂只覆蓋下列條款，其餘維持原文。尚未授權施工；動 schema、權限與 `Enrollment` 建立流程仍需逐票 Human Gate。
+
+| 條款 | 原文 | 修訂 |
+|---|---|---|
+| P5 價格來源 | 取自 `DemandResponse.proposedPrice` | 老師開課沒有需求，改為 `ClassSession` 新增可為空的文字欄位 `priceNote`（例如「單堂 600 元」）。團主媒合的課程沿用 `DemandResponse.proposedPrice`；兩者都沒有時顯示「請與老師確認實際金額」。仍不新增金額型別 |
+| 繳費規則（新增） | 沒有 | `TeacherProfile` 新增可為空的自由文字 `paymentRulesText`（繳費期限、取消與退費、請假規則）。**報名前**就顯示在課程頁，有填才顯示；編輯框提供可點選插入的範例句。繳費期限只是文字提醒，不自動取消報名（沿用本計畫「不做逾期自動取消」）。收款帳號 `paymentAccountInfo` 維持 P4：報名後才顯示快照 |
+| 規則快照（新增） | 沒有 | 與帳號一樣，報名當下把 `paymentRulesText` 複製成 `Enrollment.paymentRulesSnapshot`，學員之後在「我的報名」看到的是當時版本，老師事後修改不回溯 |
+| 老師聯絡方式（新增） | 老師資料沒有聯絡方式 | `TeacherProfile` 新增可為空的自由文字 `contactInfo`（Line ID、IG 或電話）。**不出現在公開頁或公開老師頁**，只在學員成功報名後，與收款帳號一起顯示（同樣在報名當下快照為 `Enrollment.contactInfoSnapshot`）。有填才顯示 |
+| P6 學員自報 | 刻意不做「後五碼／備註」表單 | **改為做**：已報名的學員可在「我的報名」填一個選填的文字欄位 `Enrollment.transferNote`（轉帳後五碼或備註，上限 100 字，純文字顯示），在 `paymentStatus` 仍為 `unpaid` 時可修改；老師與管理員的名單看得到；老師標記已收款後學員不能再改。仍不新增 `NotificationType`、不寄 email（老師看名單才知道）；團主不顯示此欄位 |
+| 其他 | – | 不新增任何狀態機、不改 `EnrollmentStatus`；`transferNote` 不影響報名或付款狀態，僅供老師對帳 |
+
+資料與權限影響：`ClassSession.priceNote`、`TeacherProfile.paymentRulesText`／`contactInfo`、`Enrollment.paymentRulesSnapshot`／`contactInfoSnapshot`／`transferNote`（均可為空，additive migration）。權限：學員只能寫自己報名的 `transferNote`；老師與管理員可讀；團主不可讀。需同步更新 `docs/domain/data-model.md`、`permissions.md`、`permissions-matrix.md`（各自在票 01 內與程式同一變更）。
+
+### 0.1 施工指令覆蓋與必須涵蓋的規則（回應 Codex 審查）
+
+**優先順序**：本節與下方 §4（範圍外）、§5（G3 舊價格來源）、§6（schema）、§7（allowlist）、各 Slice 與 §9 測試矩陣衝突時，一律以本節為準。**票 01 的第一步**是規劃步驟：把本節的決定逐項併回正文 §4–§9（schema、allowlist、Slice 拆分、測試矩陣），產出後重新 peer review，通過後才能交給 Builder；在此之前本計畫不可施工。
+
+**價格（`priceNote`）**
+- `RecurringClassSeries` 也新增可為空的 `priceNote`，作為系列預設；建立系列與「生成更多」時複製進每一場 `ClassSession.priceNote`；編輯「這場和之後所有場次」時一併更新。單堂課在建課／編輯頁直接填寫。
+- 已報名學員看到的金額是報名當下的快照：`Enrollment.priceNoteSnapshot`（報名當下複製自該場 `ClassSession.priceNote`；團主媒合課沿用 `DemandResponse.proposedPrice`）。老師之後改價只影響之後的新報名。
+
+**快照涵蓋所有報名建立路徑**（`paymentAccountInfoSnapshot`、`paymentRulesSnapshot`、`contactInfoSnapshot`、`priceNoteSnapshot`）：
+- 單堂：`create-enrollment-core.ts`。
+- 整期：`create-series-enrollment-core.ts` 以 `createMany` 建立多筆 `Enrollment`，每筆都要寫入同一份快照。
+- 補課與整期併入既有單堂報名：`add-makeup-session-core.ts` 與併入路徑沿用**該整期報名建立當下**的快照，不重新讀老師現在的資料。票 01 規劃步驟要決定快照存放位置（每筆 `Enrollment` 各一份，或存在 `SeriesEnrollment` 由底下報名共用），並對上述每條路徑各寫一個測試。
+- §7 allowlist 因此要加入上述三個建立函式與系列／課程編輯相關檔案，不再只限 `create-enrollment-core.ts`。
+
+**欄位權限（欄位級，不是頁面級）**
+- `contactInfoSnapshot`、`paymentRulesSnapshot`、`paymentAccountInfoSnapshot`：只有該筆報名的學員、授課老師、管理員可讀；所有 Organizer 的查詢與 DTO 一律不 `select` 這些欄位，並以測試確認團主讀不到。原 P9 的欄位揭露表要加入這些欄位。
+- `transferNote`：只有該筆報名學員可寫；老師、管理員可讀；團主不可讀。寫入必須是原子條件更新：`updateMany({ where: { id, userId, status: { in: ["pending", "confirmed"] }, paymentStatus: "unpaid" }, data: { transferNote } })` 並檢查 `count === 1`，取消的報名、已收款或已退款的報名不可寫；`count === 0` 回「付款狀態已更新，無法再修改」。驗證：去頭尾空白、上限 100 字、純文字顯示（不當 HTML 渲染）。
+- 測試要涵蓋：學員改別人的報名被拒、團主讀不到三類快照與 `transferNote`、老師標記已收款與學員修改同時發生時不得覆寫、取消的報名不能寫、系列改價不影響既有報名的快照。
 
 ## 1. Outcome
 
@@ -312,3 +347,4 @@ Stop and request direction if：
 - 無不相關檔案變更、無 schema 以外的狀態機改動、未 commit/push/deploy。
 
 <!-- codex-peer-reviewed: 2026-08-03T02:30:09Z rounds=6 verdict=approved -->
+<!-- codex-peer-reviewed (第 0 節修訂): 2026-10-09T18:06:53Z rounds=2 verdict=approved；正文 §4–§9 待票 01 第一步併回後重審 -->
