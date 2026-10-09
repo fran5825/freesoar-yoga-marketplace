@@ -74,6 +74,45 @@ export function createTermFixtures(testEmailDomain: string) {
     return { series, sessions };
   }
 
+  // class-discovery-series-cards：持續開課（預設每週三 19:00，公開且已開放報名），直接寫入並生成場次。
+  async function seedContinuous(
+    teacherProfileId: string,
+    options: { count?: number; capacity?: number; isPublic?: boolean; title?: string; dayOfWeek?: number; location?: string } = {},
+  ) {
+    const dayOfWeek = options.dayOfWeek ?? 3;
+    const series = await prisma.recurringClassSeries.create({
+      data: {
+        teacherProfileId,
+        title: options.title ?? "週三持續開課",
+        description: "系列說明文字",
+        suitableFor: "初學者",
+        preparationNotes: "帶毛巾",
+        serviceType: "放鬆紓壓",
+        serviceTypes: ["放鬆紓壓"],
+        yogaStyles: ["陰瑜伽"],
+        dayOfWeek,
+        startTime: "19:00",
+        endTime: "20:00",
+        location: options.location ?? "台北市持續教室",
+        capacity: options.capacity ?? 5,
+        isPublic: options.isPublic ?? true,
+        kind: "continuous",
+      },
+    });
+    await generateOccurrencesForSeries(
+      teacherProfileId,
+      series.id,
+      computeNextWeeklyOccurrenceDates(dayOfWeek, options.count ?? 10),
+      { openForEnrollment: true },
+    );
+    const sessions = await prisma.classSession.findMany({
+      where: { recurringClassSeriesId: series.id },
+      orderBy: { startAt: "asc" },
+    });
+
+    return { series, sessions };
+  }
+
   // 把某一場改成已開始（用來測「已上過的紀錄不受影響」）。
   async function markStarted(classSessionId: string) {
     await prisma.classSession.update({
@@ -96,7 +135,7 @@ export function createTermFixtures(testEmailDomain: string) {
     await prisma.user.deleteMany({ where: { email: { in: createdEmails } } });
   }
 
-  return { runId, seedTeacher, seedMember, seedTerm, markStarted, cleanup };
+  return { runId, seedTeacher, seedMember, seedTerm, seedContinuous, markStarted, cleanup };
 }
 
 export const noNotify = async () => {};

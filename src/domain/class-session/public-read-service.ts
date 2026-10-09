@@ -9,7 +9,9 @@ import type { ClassSessionOrigin, ClassSessionStatus, TermEnrollmentMode } from 
 
 import { prisma } from "@/lib/prisma";
 import { getClassAvailability } from "./availability";
+import { getClassServiceTypes } from "./service-types-display";
 import { taipeiDayOfWeek } from "./recurring-series-dates";
+import { sessionScheduleLabel, taipeiTimeRange, weeklyScheduleLabel } from "./schedule-label";
 import { matchesClassDiscoveryTime, type ClassDiscoveryFilters } from "./class-discovery-filters";
 
 export type PublicClassSessionListItem = {
@@ -169,7 +171,7 @@ export async function getPublicClassSessionListItems(
 //   - 篩選：期班只要有任一場尚未開始的場次符合篩選就顯示；卡片上的堂數一律是整期完整數字。
 //   - 可報名：只收整期 → 現在能不能報整期（剩下每一場都已開放且有空位）；整期和單堂都收 →
 //     能報整期或任一場還有單堂空位。預設排除額滿時依這個判斷。
-// 持續開課與單堂的公開場次維持逐場。
+// 持續開課同樣合併成一張系列卡（class-discovery-series-cards 票 02）；只有沒有系列的單堂維持逐場。
 export type PublicTermListItem = {
   id: string;
   title: string;
@@ -188,17 +190,37 @@ export type PublicTermListItem = {
   teacherProfile: { displayName: string | null };
 };
 
+// class-discovery-series-cards 票 02：持續開課在找課程只出現一張系列卡。卡片上的資料取自「下一堂」那一場
+// （預設＝第一個還有名額的場次；勾「包含已額滿」＝最近一場並標額滿），不用系列預設值。
+export type PublicSeriesListItem = {
+  // 系列 id；卡片連到 /classes/series/[id]。
+  id: string;
+  title: string;
+  origin: ClassSessionOrigin;
+  serviceType: string | null;
+  serviceTypes: string[];
+  yogaStyles: string[];
+  location: string;
+  scheduleLabel: string;
+  nextSessionId: string;
+  nextStartAt: Date;
+  nextRemainingSeats: number;
+  nextIsFull: boolean;
+  requiresApproval: boolean;
+  teacherProfile: { displayName: string | null };
+};
+
 export type PublicClassListEntry =
   | { kind: "session"; item: PublicClassSessionListItem }
-  | { kind: "term"; item: PublicTermListItem };
-
-const dayOfWeekLabels = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
+  | { kind: "term"; item: PublicTermListItem }
+  | { kind: "series"; item: PublicSeriesListItem };
 
 export async function getPublicClassListEntries(
   filters: PublicClassSessionListFilters = {},
 ): Promise<PublicClassListEntry[]> {
   const { rows, now, excludeFull } = await loadPublicRows(filters);
   const nextStartBySeries = new Map<string, Date>();
+  const continuousRowsBySeries = new Map<string, PublicRow[]>();
   const singleRows: PublicRow[] = [];
 
   for (const row of rows) {
@@ -206,6 +228,8 @@ export async function getPublicClassListEntries(
       if (!nextStartBySeries.has(row.recurringClassSeries.id)) {
         nextStartBySeries.set(row.recurringClassSeries.id, row.startAt);
       }
+    } else if (row.recurringClassSeries?.kind === "continuous") {
+      continuousRowsBySeries.set(row.recurringClassSeries.id, [...(continuousRowsBySeries.get(row.recurringClassSeries.id) ?? []), row]);
     } else {
       singleRows.push(row);
     }
@@ -267,7 +291,7 @@ export async function getPublicClassListEntries(
         serviceTypes: term.serviceTypes,
         yogaStyles: term.yogaStyles,
         location: term.location,
-        scheduleLabel: `${term.dayOfWeek === null ? "指定日期" : `每${dayOfWeekLabels[term.dayOfWeek]}`} ${term.startTime}–${term.endTime}`,
+        scheduleLabel: weeklyScheduleLabel(term.dayOfWeek, term.startTime, term.endTime),
         nextStartAt: nextStartBySeries.get(term.id) as Date,
         totalCount: term.classSessions.length,
         remainingCount: remaining.length,
@@ -283,13 +307,46 @@ export async function getPublicClassListEntries(
     excludeFull ? singleRows.filter((row) => isRowOpen(row, now)) : singleRows
   ).map((row) => ({ kind: "session", item: toPublicListItem(row, now) }));
 
-  return [...sessionEntries, ...termEntries].sort(
+  // 持續開課：已依篩選過濾的場次（rows 已依開始時間排序）。預設只看有名額 → 第一個有名額的場次，
+  // 沒有就不顯示；包含已額滿 → 最近一場。
+  const seriesEntries: PublicClassListEntry[] = [];
+
+  for (const [seriesId, seriesRows] of continuousRowsBySeries) {
+    const next = excludeFull ? seriesRows.find((row) => isRowOpen(row, now)) : seriesRows[0];
+
+    if (!next) {
+      continue;
+    }
+
+    const item = toPublicListItem(next, now);
+    seriesEntries.push({
+      kind: "series",
+      item: {
+        id: seriesId,
+        title: item.title,
+        origin: item.origin,
+        serviceType: item.serviceType,
+        serviceTypes: item.serviceTypes,
+        yogaStyles: item.yogaStyles,
+        location: item.location,
+        scheduleLabel: sessionScheduleLabel(item.startAt, item.endAt),
+        nextSessionId: item.id,
+        nextStartAt: item.startAt,
+        nextRemainingSeats: Math.max(item.capacity - item.activeEnrollmentCount, 0),
+        nextIsFull: item.capacity - item.activeEnrollmentCount <= 0,
+        requiresApproval: item.requiresApproval,
+        teacherProfile: item.teacherProfile,
+      },
+    });
+  }
+
+  return [...sessionEntries, ...termEntries, ...seriesEntries].sort(
     (a, b) => entryStartAt(a).getTime() - entryStartAt(b).getTime(),
   );
 }
 
 function entryStartAt(entry: PublicClassListEntry): Date {
-  return entry.kind === "term" ? entry.item.nextStartAt : entry.item.startAt;
+  return entry.kind === "session" ? entry.item.startAt : entry.item.nextStartAt;
 }
 
 // draft／狀態不符／非公開／老師已被暫停，一律回傳 null（not-found 語意），不揭露存在性差異
@@ -336,6 +393,157 @@ export async function getPublicClassSessionDetail(
   const { _count, status, ...fields } = row;
   return { ...fields, activeEnrollmentCount: _count.enrollments,
     canAcceptNewEnrollments: status === "open_for_enrollment" && getClassAvailability({ capacity: row.capacity, activeEnrollmentCount: _count.enrollments, startAt: row.startAt }).state === "open" };
+}
+
+// class-discovery-series-cards 票 01：持續開課的系列詳細頁（/classes/series/[id]）。
+// 標頭資訊取自「第一個還有名額的未來公開場次；全部額滿時取最近一場」，不用系列預設值——
+// 「改這場和之後所有場次」只改所選場次以後的紀錄，系列預設值可能和近期可報名的場次不一致。
+// 詳細頁沒有篩選條件，永遠用這條預設規則。找不到、不是持續開課、沒有任何公開場次一律回 null。
+export const SERIES_SHOW_DEFAULT = 8;
+export const SERIES_SHOW_STEP = 8;
+export const SERIES_SHOW_MAX = 200;
+
+// 網址參數 ?show=：不是正整數就退回預設，超過上限就取上限。
+export function parseSeriesShow(value: unknown): number {
+  const text = Array.isArray(value) ? value[0] : value;
+  if (typeof text !== "string" || !/^[1-9]\d{0,5}$/.test(text)) {
+    return SERIES_SHOW_DEFAULT;
+  }
+
+  return Math.min(Number(text), SERIES_SHOW_MAX);
+}
+
+export type PublicSeriesSessionRow = {
+  id: string;
+  startAt: Date;
+  endAt: Date;
+  remainingSeats: number;
+  // open＝可報名；full＝額滿；blocked＝目前不開放新報名（例如已確認但不收新報名）。
+  state: "open" | "full" | "blocked";
+  // 只有和標頭不同時才有值，列表用來加註「這一場的地點／時間不同」。
+  locationNote: string | null;
+  timeNote: string | null;
+};
+
+export type PublicSeriesDetail = {
+  id: string;
+  title: string;
+  description: string | null;
+  suitableFor: string | null;
+  preparationNotes: string | null;
+  serviceTypes: string[];
+  yogaStyles: string[];
+  location: string;
+  scheduleLabel: string;
+  origin: ClassSessionOrigin;
+  requiresApproval: boolean;
+  teacherProfile: { displayName: string | null };
+  headerSessionId: string;
+  headerIsFull: boolean;
+  sessions: PublicSeriesSessionRow[];
+  show: number;
+  hasMore: boolean;
+  // 已經列到 SERIES_SHOW_MAX 且後面還有場次：不再提供「看更多日期」。
+  capped: boolean;
+};
+
+export async function getPublicSeriesDetail(
+  recurringClassSeriesId: string,
+  options: { show?: number } = {},
+): Promise<PublicSeriesDetail | null> {
+  const show = Math.min(Math.max(Math.trunc(options.show ?? SERIES_SHOW_DEFAULT), 1), SERIES_SHOW_MAX);
+  const now = new Date();
+  // 只取判斷標頭與列表需要的欄位，最多 SERIES_SHOW_MAX + 1 筆，不讀整個系列。
+  const rows = await prisma.classSession.findMany({
+    where: {
+      recurringClassSeriesId,
+      recurringClassSeries: { kind: "continuous" },
+      isPublic: true,
+      status: { in: PUBLIC_STATUS_FILTER },
+      teacherProfile: { status: "approved" },
+      startAt: { gt: now },
+    },
+    select: {
+      id: true,
+      startAt: true,
+      endAt: true,
+      location: true,
+      capacity: true,
+      status: true,
+      _count: { select: { enrollments: { where: { status: { in: ["pending", "confirmed"] } } } } },
+    },
+    orderBy: { startAt: "asc" },
+    take: SERIES_SHOW_MAX + 1,
+  });
+
+  if (rows.length === 0) {
+    return null;
+  }
+
+  const stateOf = (row: (typeof rows)[number]): PublicSeriesSessionRow["state"] => {
+    const availability = getClassAvailability({ capacity: row.capacity, activeEnrollmentCount: row._count.enrollments, startAt: row.startAt, now });
+    if (availability.state === "full") {
+      return "full";
+    }
+
+    return row.status === "open_for_enrollment" && availability.state === "open" ? "open" : "blocked";
+  };
+  const headerRow = rows.find((row) => stateOf(row) === "open") ?? rows[0];
+  const header = await prisma.classSession.findUnique({
+    where: { id: headerRow.id },
+    select: {
+      title: true,
+      description: true,
+      suitableFor: true,
+      preparationNotes: true,
+      serviceType: true,
+      serviceTypes: true,
+      yogaStyles: true,
+      requiresApproval: true,
+      origin: true,
+      teacherProfile: { select: { displayName: true } },
+    },
+  });
+
+  if (!header) {
+    return null;
+  }
+
+  const headerTime = taipeiTimeRange(headerRow.startAt, headerRow.endAt);
+  const shown = rows.slice(0, show);
+
+  return {
+    id: recurringClassSeriesId,
+    title: header.title,
+    description: header.description,
+    suitableFor: header.suitableFor,
+    preparationNotes: header.preparationNotes,
+    serviceTypes: getClassServiceTypes(header),
+    yogaStyles: header.yogaStyles,
+    location: headerRow.location,
+    scheduleLabel: sessionScheduleLabel(headerRow.startAt, headerRow.endAt),
+    origin: header.origin,
+    requiresApproval: header.requiresApproval,
+    teacherProfile: header.teacherProfile,
+    headerSessionId: headerRow.id,
+    headerIsFull: stateOf(headerRow) === "full",
+    sessions: shown.map((row) => {
+      const time = taipeiTimeRange(row.startAt, row.endAt);
+
+      return {
+        id: row.id,
+        startAt: row.startAt,
+        endAt: row.endAt,
+        remainingSeats: Math.max(row.capacity - row._count.enrollments, 0),
+        state: stateOf(row),
+        locationNote: row.location === headerRow.location ? null : row.location,
+        timeNote: time === headerTime ? null : time,
+      };
+    }),
+    show,
+    hasMore: rows.length > show,
+    capped: show >= SERIES_SHOW_MAX && rows.length > SERIES_SHOW_MAX,
+  };
 }
 
 export async function getPublicClassYogaStyles(): Promise<string[]> {

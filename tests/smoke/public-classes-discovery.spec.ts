@@ -476,7 +476,7 @@ test.describe("public classes discovery smoke", () => {
     const openCard = page.getByRole("link", { name: new RegExp(`Open Seats ${testRunId}`) });
     const fullCard = page.getByRole("link", { name: new RegExp(`Full Class ${testRunId}`) });
     await expect(openCard).toContainText("老師開課");
-    await expect(openCard).toContainText("開放報名");
+    await expect(openCard).not.toContainText("開放報名"); // class-discovery-series-cards 票 03：列表預設只有可報名的課，不再重複標「開放報名」
     await expect(openCard).toContainText("剩 10 個名額");
     await expect(fullCard).toBeHidden();
     await page.getByText("更多篩選", { exact: true }).click();
