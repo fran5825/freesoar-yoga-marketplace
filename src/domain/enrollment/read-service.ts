@@ -3,11 +3,15 @@ import type {
   ClassSessionStatus,
   EnrollmentStatus,
   SeriesEnrollmentStatus,
+  TermEnrollmentMode,
 } from "@prisma/client";
 
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { getClassAvailability } from "@/domain/class-session/availability";
+
+import { getReEnrollState, type ReEnrollState } from "./re-enroll-eligibility";
+import { occupyingEnrollmentWhere } from "./seat-occupancy";
 
 export type OwnEnrollment = {
   id: string;
@@ -90,7 +94,9 @@ export type MemberFacingClassSession = {
   organization: { name: string } | null;
   teacherProfile: { displayName: string | null };
   // teacher-class-scheduling 票 09：屬於整期報名時有值（取消這一堂就是「請假」）。
-  ownEnrollment: { id: string; status: EnrollmentStatus; seriesEnrollmentId: string | null } | null;
+  // enrollment-re-enrollment 票 02：已取消的報名能不能重新報名，由 service layer 一次算好（spec 4.6）。
+  ownEnrollment: { id: string; status: EnrollmentStatus; seriesEnrollmentId: string | null; reEnroll: ReEnrollState } | null;
+  termEnrollmentMode: TermEnrollmentMode | null;
   requiresApproval: boolean;
   canAcceptNewEnrollments: boolean;
 };
@@ -128,9 +134,10 @@ export async function getClassSessionForMember(
       origin: true,
       organization: { select: { name: true } },
       teacherProfile: { select: { displayName: true, status: true } },
+      recurringClassSeries: { select: { kind: true, termEnrollmentMode: true } },
       _count: {
         select: {
-          enrollments: { where: { status: { in: ["pending", "confirmed"] } } },
+          enrollments: { where: occupyingEnrollmentWhere },
         },
       },
     },
@@ -140,17 +147,39 @@ export async function getClassSessionForMember(
     return null;
   }
 
-  const { _count, teacherProfile, ...classSessionFields } = classSession;
-  const ownEnrollment = await prisma.enrollment.findUnique({
+  const { _count, teacherProfile, recurringClassSeries, ...classSessionFields } = classSession;
+  const ownRow = await prisma.enrollment.findUnique({
     where: { classSessionId_userId: { classSessionId, userId: currentUser.id } },
-    select: { id: true, status: true, seriesEnrollmentId: true },
+    select: { id: true, status: true, seriesEnrollmentId: true, cancelledBy: true, seriesEnrollment: { select: { status: true } } },
   });
+  const termEnrollmentMode = recurringClassSeries?.kind === "term" ? recurringClassSeries.termEnrollmentMode : null;
+  const ownEnrollment = ownRow
+    ? {
+        id: ownRow.id,
+        status: ownRow.status,
+        seriesEnrollmentId: ownRow.seriesEnrollmentId,
+        reEnroll: getReEnrollState({
+          status: ownRow.status,
+          cancelledBy: ownRow.cancelledBy,
+          seriesEnrollmentId: ownRow.seriesEnrollmentId,
+          seriesEnrollmentStatus: ownRow.seriesEnrollment?.status ?? null,
+          termEnrollmentMode,
+          classStatus: classSession.status,
+          startAt: classSession.startAt,
+          capacity: classSession.capacity,
+          occupiedCount: _count.enrollments,
+          teacherApproved: teacherProfile.status === "approved",
+        }),
+      }
+    : null;
 
   return {
     ...classSessionFields,
     teacherProfile: { displayName: teacherProfile.displayName },
     canAcceptNewEnrollments: teacherProfile.status === "approved" && classSession.status === "open_for_enrollment" && getClassAvailability({ capacity: classSession.capacity, activeEnrollmentCount: _count.enrollments, startAt: classSession.startAt }).state === "open",
     activeEnrollmentCount: _count.enrollments,
+    // 整期的請假確認文字依期班報名方式不同（term_only／term_and_single）。
+    termEnrollmentMode,
     ownEnrollment,
   };
 }

@@ -129,8 +129,11 @@ export default async function AdminClassSessionDetailPage({
           <div className="min-w-0 sm:col-span-2">
             <dt className="font-medium text-ink">報名</dt>
             <dd className="mt-1 break-words leading-6 text-ink-soft">
-              已報名 {confirmedCount} 人・待老師確認 {pendingCount} 人・名額佔用 {confirmedCount + pendingCount}／{classSession.capacity}
+              已報名 {confirmedCount} 人・待老師確認 {pendingCount} 人・名額佔用 {classSession.occupiedSeatCount}／{classSession.capacity}
               <span className="block text-xs text-ink-faint">已報名與待老師確認都會佔用名額。</span>
+              {classSession.occupiedSeatCount > confirmedCount + pendingCount ? (
+                <span className="block text-xs text-ink-faint">只收整期的期班，請假中的名額保留給請假的人（目前保留 {classSession.occupiedSeatCount - confirmedCount - pendingCount} 個）。</span>
+              ) : null}
             </dd>
           </div>
         </dl>
@@ -280,6 +283,7 @@ export default async function AdminClassSessionDetailPage({
                       <span className="w-fit rounded-full bg-ink/10 px-2 py-0.5 text-xs font-medium text-ink-soft">
                         {enrollmentStatusLabels[entry.status] ?? entry.status}
                       </span>
+                      {entry.cancelReason ? <span className="text-xs text-ink-soft">（{entry.cancelReason}）</span> : null}
                     </div>
                     <p className="mt-1 min-w-0 wrap-anywhere text-ink-soft">{entry.memberEmail ?? "未提供 email"}</p>
                     {entry.notes ? (

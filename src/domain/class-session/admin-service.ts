@@ -14,6 +14,8 @@ import {
   cancelClassSessionForAdmin as cancelClassSessionForAdminCore,
   type CancelClassSessionForOrganizerResult,
 } from "./__internal__/cancel-class-session-core";
+import { describeEnrollmentCancelReason } from "@/domain/enrollment/cancel-reason";
+import { occupyingEnrollmentWhere } from "@/domain/enrollment/seat-occupancy";
 
 // D6（admin-class-enrollment-management）：Admin 總覽用，一次查詢回傳所有狀態的 class
 // session（不像 admin/demands 那樣只顯示單一「待處理」狀態——ClassSession 從來不需要
@@ -103,6 +105,8 @@ export type AdminClassSessionRosterEntry = {
   memberEmail: string | null;
   notes: string | null;
   status: EnrollmentStatus;
+  // enrollment-re-enrollment 票 04：已取消的報名顯示取消原因；沒取消就是 null。
+  cancelReason: string | null;
 };
 
 export type AdminClassSessionDetail = {
@@ -138,6 +142,8 @@ export type AdminClassSessionDetail = {
     contactPhone: string | null;
   } | null;
   roster: AdminClassSessionRosterEntry[];
+  // enrollment-re-enrollment 票 03：占用名額（含 term_only 期班請假中保留的名額），與報名時的名額規則一致。
+  occupiedSeatCount: number;
 };
 
 // 查無資料回傳 null（not-found 語意，比照既有 Organizer/Teacher 讀取函式的既有慣例）。
@@ -186,6 +192,9 @@ export async function getClassSessionDetailForAdmin(
           id: true,
           notes: true,
           status: true,
+          cancelledBy: true,
+          seriesEnrollmentId: true,
+          seriesEnrollment: { select: { status: true } },
           user: { select: { name: true, email: true } },
         },
         orderBy: { createdAt: "asc" },
@@ -198,6 +207,7 @@ export async function getClassSessionDetailForAdmin(
   }
 
   const { enrollments, demandRequest, teacherProfile, ...rest } = classSession;
+  const occupiedSeatCount = await prisma.enrollment.count({ where: { classSessionId, ...occupyingEnrollmentWhere } });
 
   // 第三批票 10：草稿是管理員看不到的資料。正常流程下課程不會連到草稿需求／草稿老師，但讀取層仍防守：
   // 草稿需求整筆不回傳（連程度都不露），草稿老師只留 id／status，不回傳姓名與 email。
@@ -208,12 +218,20 @@ export async function getClassSessionDetailForAdmin(
       teacherProfile.status === "draft"
         ? { ...teacherProfile, displayName: null, user: { email: null } }
         : teacherProfile,
+    occupiedSeatCount,
     roster: enrollments.map((enrollment) => ({
       id: enrollment.id,
       memberName: enrollment.user.name?.trim() || null,
       memberEmail: enrollment.user.email,
       notes: enrollment.notes,
       status: enrollment.status,
+      cancelReason: describeEnrollmentCancelReason({
+        status: enrollment.status,
+        cancelledBy: enrollment.cancelledBy,
+        seriesEnrollmentId: enrollment.seriesEnrollmentId,
+        seriesEnrollmentStatus: enrollment.seriesEnrollment?.status ?? null,
+        classSessionStatus: classSession.status,
+      }),
     })),
   };
 }

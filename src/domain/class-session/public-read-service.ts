@@ -14,6 +14,7 @@ import { taipeiDayOfWeek } from "./recurring-series-dates";
 import { sessionScheduleLabel, taipeiTimeRange, weeklyScheduleLabel } from "./schedule-label";
 import { formatTaipeiDatetimeLocal } from "./timezone";
 import { matchesClassDiscoveryTime, type ClassDiscoveryFilters } from "./class-discovery-filters";
+import { occupyingEnrollmentWhere } from "@/domain/enrollment/seat-occupancy";
 
 export type PublicClassSessionListItem = {
   id: string;
@@ -108,7 +109,7 @@ async function loadPublicRows(filters: PublicClassSessionListFilters) {
       recurringClassSeries: { select: { id: true, kind: true } },
       _count: {
         select: {
-          enrollments: { where: { status: { in: ["pending", "confirmed"] } } },
+          enrollments: { where: occupyingEnrollmentWhere },
         },
       },
     },
@@ -260,7 +261,7 @@ export async function getPublicClassListEntries(
               endAt: true,
               status: true,
               capacity: true,
-              _count: { select: { enrollments: { where: { status: { in: ["pending", "confirmed"] } } } } },
+              _count: { select: { enrollments: { where: occupyingEnrollmentWhere } } },
             },
           },
         },
@@ -394,7 +395,7 @@ export async function getPublicClassSessionDetail(
       teacherProfile: { select: { displayName: true } },
       _count: {
         select: {
-          enrollments: { where: { status: { in: ["pending", "confirmed"] } } },
+          enrollments: { where: occupyingEnrollmentWhere },
         },
       },
     },
@@ -484,7 +485,7 @@ export async function getPublicSeriesDetail(
       location: true,
       capacity: true,
       status: true,
-      _count: { select: { enrollments: { where: { status: { in: ["pending", "confirmed"] } } } } },
+      _count: { select: { enrollments: { where: occupyingEnrollmentWhere } } },
     },
     orderBy: { startAt: "asc" },
     take: SERIES_SHOW_MAX + 1,

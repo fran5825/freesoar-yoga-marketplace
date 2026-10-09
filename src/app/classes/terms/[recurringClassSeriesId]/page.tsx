@@ -196,7 +196,9 @@ function blockMessage(block: TermEnrollBlock): string {
     case "session_full":
       return `${formatTaipeiShortDatetime(block.startAt)} 那一堂已經額滿，暫時不能報整期。`;
     case "has_cancelled_enrollment":
-      return `你曾取消 ${formatTaipeiShortDatetime(block.startAt)} 的報名，這一期無法再報整期。`;
+      return block.reEnrollable
+        ? `你曾取消 ${formatTaipeiShortDatetime(block.startAt)} 的報名，請先到那一堂重新報名，再回來報整期。`
+        : `你曾取消 ${formatTaipeiShortDatetime(block.startAt)} 的報名，這一期無法再報整期。`;
     case "teacher_not_approved":
       return "這位老師目前無法接受新報名。";
   }

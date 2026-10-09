@@ -10,6 +10,7 @@ import type { EnrollmentStatus, SeriesEnrollmentStatus, TermEnrollmentMode } fro
 
 import { getClassAvailability } from "@/domain/class-session/availability";
 import { prisma } from "@/lib/prisma";
+import { occupyingEnrollmentWhere } from "./seat-occupancy";
 
 export type TermSessionView = {
   id: string;
@@ -31,7 +32,8 @@ export type TermEnrollBlock =
   | { reason: "no_remaining_sessions" }
   | { reason: "not_fully_open"; draftCount: number }
   | { reason: "session_full"; startAt: Date }
-  | { reason: "has_cancelled_enrollment"; startAt: Date }
+  // reEnrollable：那筆是學員自己取消的單堂報名，可以先到那一堂重新報名再回來報整期（R6）。
+  | { reason: "has_cancelled_enrollment"; startAt: Date; reEnrollable: boolean }
   | { reason: "teacher_not_approved" };
 
 export type TermDetail = {
@@ -95,7 +97,7 @@ export async function getTermDetailForViewer(
           status: true,
           location: true,
           capacity: true,
-          _count: { select: { enrollments: { where: { status: { in: ["pending", "confirmed"] } } } } },
+          _count: { select: { enrollments: { where: occupyingEnrollmentWhere } } },
         },
       },
     },
@@ -128,10 +130,15 @@ export async function getTermDetailForViewer(
   const ownEnrollments = userId
     ? await prisma.enrollment.findMany({
         where: { userId, classSessionId: { in: series.classSessions.map((session) => session.id) } },
-        select: { classSessionId: true, status: true },
+        select: { classSessionId: true, status: true, cancelledBy: true, seriesEnrollmentId: true },
       })
     : [];
   const ownBySession = new Map(ownEnrollments.map((enrollment) => [enrollment.classSessionId, enrollment.status]));
+  const reEnrollableSessions = new Set(
+    ownEnrollments
+      .filter((enrollment) => enrollment.status === "cancelled" && enrollment.cancelledBy === "member" && enrollment.seriesEnrollmentId === null)
+      .map((enrollment) => enrollment.classSessionId),
+  );
   const remaining = series.classSessions.filter((session) => session.startAt.getTime() > now.getTime());
   const draftCount = remaining.filter((session) => session.status === "draft").length;
 
@@ -188,7 +195,7 @@ export async function getTermDetailForViewer(
     lastStartAt: series.classSessions.at(-1)?.startAt ?? null,
     sessions,
     ownSeriesEnrollment,
-    termEnrollBlock: computeTermEnrollBlock(remaining, draftCount, ownBySession, teacherApproved),
+    termEnrollBlock: computeTermEnrollBlock(remaining, draftCount, ownBySession, teacherApproved, reEnrollableSessions),
   };
 }
 
@@ -198,6 +205,7 @@ function computeTermEnrollBlock(
   draftCount: number,
   ownBySession: Map<string, EnrollmentStatus>,
   teacherApproved: boolean,
+  reEnrollableSessions: Set<string>,
 ): TermEnrollBlock | null {
   if (remaining.length === 0) {
     return { reason: "no_remaining_sessions" };
@@ -219,7 +227,7 @@ function computeTermEnrollBlock(
     }
 
     if (own) {
-      return { reason: "has_cancelled_enrollment", startAt: session.startAt };
+      return { reason: "has_cancelled_enrollment", startAt: session.startAt, reEnrollable: reEnrollableSessions.has(session.id) };
     }
 
     if (session._count.enrollments >= session.capacity) {

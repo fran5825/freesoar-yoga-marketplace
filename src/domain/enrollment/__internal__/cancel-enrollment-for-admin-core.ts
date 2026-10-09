@@ -40,7 +40,7 @@ export async function cancelEnrollmentForAdminCore(
       status: { in: ["confirmed", "pending"] },
       classSession: { startAt: { gt: new Date() } },
     },
-    data: { status: "cancelled" },
+    data: { status: "cancelled", cancelledBy: "admin" },
   });
 
   if (updateResult.count > 0) {

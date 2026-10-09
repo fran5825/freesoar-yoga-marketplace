@@ -101,7 +101,7 @@ export async function cancelClassSessionForTeacherInTransaction(
   // 被遺留成孤兒資料。
   const cancelledEnrollments = await tx.$queryRaw<{ userId: string }[]>`
       UPDATE "Enrollment"
-      SET "status" = 'cancelled'::"EnrollmentStatus", "updatedAt" = ${now}
+      SET "status" = 'cancelled'::"EnrollmentStatus", "cancelledBy" = 'system'::"EnrollmentCancelledBy", "updatedAt" = ${now}
       WHERE "classSessionId" = ${classSessionId}
         AND "status" = ANY(ARRAY['confirmed', 'pending']::"EnrollmentStatus"[])
       RETURNING "userId"

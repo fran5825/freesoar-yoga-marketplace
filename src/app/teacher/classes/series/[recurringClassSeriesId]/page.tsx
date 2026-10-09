@@ -490,7 +490,17 @@ function TermEnrollmentsSection({
               ) : null}
               {item.leaveDates.length > 0 ? (
                 <p className="text-ink-soft">
-                  請假或取消：{item.leaveDates.map((date) => formatTaipeiDatetime(date)).join("、")}
+                  請假：{item.leaveDates.map((date) => formatTaipeiDatetime(date)).join("、")}
+                </p>
+              ) : null}
+              {item.adminCancelledDates.length > 0 ? (
+                <p className="text-ink-soft">
+                  管理員取消：{item.adminCancelledDates.map((date) => formatTaipeiDatetime(date)).join("、")}
+                </p>
+              ) : null}
+              {item.unrecordedCancelDates.length > 0 ? (
+                <p className="text-ink-soft">
+                  已取消（原因未記錄）：{item.unrecordedCancelDates.map((date) => formatTaipeiDatetime(date)).join("、")}
                 </p>
               ) : null}
               {item.status === "pending" ? (

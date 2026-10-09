@@ -17,6 +17,7 @@ import {
   confirmSeriesEnrollmentForTeacher,
   declineSeriesEnrollmentForTeacher,
 } from "./__internal__/decide-series-enrollment-core";
+import { restoreLeaveForUser, type RestoreLeaveErrorCode } from "./__internal__/restore-leave-core";
 import { withdrawSeriesEnrollmentForUser } from "./__internal__/withdraw-series-enrollment-core";
 import { type EnrollmentCreateInput, validateEnrollmentCreate } from "./validation";
 
@@ -68,7 +69,9 @@ export async function createOwnSeriesEnrollment(
     term_no_remaining_sessions: "這一期的課都已經開始或結束了，無法再報整期。",
     term_not_fully_open: "這一期還有場次尚未開放報名，全部開放後才能報整期。",
     term_session_full: `${at} 那一堂已經額滿，暫時不能報整期。`,
-    term_has_cancelled_enrollment: `你曾取消 ${at} 的報名，這一期無法再報整期。`,
+    term_has_cancelled_enrollment: result.reEnrollable
+      ? `你曾取消 ${at} 的報名，請先到那一堂重新報名，再回來報整期。`
+      : `你曾取消 ${at} 的報名，這一期無法再報整期。`,
     teacher_not_approved: "這位老師目前無法接受新報名。",
     create_failed: "整期報名暫時無法完成，請稍後再試。",
   };
@@ -109,6 +112,42 @@ export async function withdrawOwnSeriesEnrollment(
         ? "找不到這筆整期報名，或你沒有權限操作。"
         : "這筆整期報名已經退出或被婉拒，不能再退出。",
   };
+}
+
+// enrollment-re-enrollment 票 03：整期學員取消請假（本人）。規則與鎖都在 __internal__/restore-leave-core.ts。
+export type RestoreOwnLeaveResult = { ok: true; status: "pending" | "confirmed" } | { ok: false; code: RestoreLeaveErrorCode | "authentication_required"; message: string };
+
+export async function restoreOwnLeave(enrollmentId: string): Promise<RestoreOwnLeaveResult> {
+  let userId: string;
+
+  try {
+    userId = (await requireUser()).id;
+  } catch (error) {
+    if (error instanceof Error && error.message === "Authentication required") {
+      return { ok: false, code: "authentication_required", message: "請先登入後再取消請假。" };
+    }
+
+    throw error;
+  }
+
+  const result = await restoreLeaveForUser(userId, enrollmentId);
+
+  if (result.ok) {
+    return result;
+  }
+
+  const messages: Record<RestoreLeaveErrorCode, string> = {
+    enrollment_not_found: "找不到這筆報名，或你沒有權限操作。",
+    leave_not_restorable: "這筆報名不是請假，不能取消請假。",
+    series_enrollment_not_active: "你的整期報名已經退出或被婉拒，這一堂無法再報名。",
+    class_session_not_open: "這堂課程目前無法報名。",
+    class_session_already_started: "這堂課程已經開始，無法取消請假。",
+    teacher_not_approved: "這位老師目前無法接受新報名。",
+    leave_restore_session_full: "這一堂名額已被報滿，請聯絡老師。",
+    restore_failed: "取消請假暫時無法完成，請稍後再試。",
+  };
+
+  return { ok: false, code: result.code, message: messages[result.code] };
 }
 
 // teacher-class-scheduling 票 10：老師端的整期報名（own-scoped：系列必須是這位老師的）。
@@ -210,6 +249,9 @@ export type TeacherTermEnrollmentView = {
   // 尚未開始、仍有效的場次數；請假（已取消）的場次日期。
   activeUpcomingCount: number;
   leaveDates: Date[];
+  // enrollment-re-enrollment 票 04：管理員取消的場次、取消者沒有記錄（舊資料）的場次，與請假分開列。
+  adminCancelledDates: Date[];
+  unrecordedCancelDates: Date[];
   // 婉拒時的影響：會取消幾堂（整期新增、未開始、有效），幾堂恢復為單堂（併入的）。
   declineCancelCount: number;
   declineRestoreCount: number;
@@ -237,6 +279,7 @@ export async function listOwnTermEnrollmentsForTeacher(
           enrollments: {
             select: {
               status: true,
+              cancelledBy: true,
               seriesEnrollmentSource: true,
               classSession: { select: { startAt: true, status: true } },
             },
@@ -260,22 +303,28 @@ export async function listOwnTermEnrollmentsForTeacher(
       (enrollment) => enrollment.status === "pending" || enrollment.status === "confirmed",
     );
 
+    const cancelledDatesBy = (cancelledBy: "member" | "admin" | null) =>
+      (seriesEnrollment.status === "pending" || seriesEnrollment.status === "confirmed" ? seriesEnrollment.enrollments : [])
+        .filter(
+          (enrollment) =>
+            enrollment.status === "cancelled" &&
+            enrollment.cancelledBy === cancelledBy &&
+            enrollment.classSession.status !== "cancelled",
+        )
+        .map((enrollment) => enrollment.classSession.startAt)
+        .sort((a, b) => a.getTime() - b.getTime());
+
     return {
       id: seriesEnrollment.id,
       status: seriesEnrollment.status,
       notes: seriesEnrollment.notes,
       memberLabel: seriesEnrollment.user.name ?? seriesEnrollment.user.email ?? "會員",
       activeUpcomingCount: active.length,
-      // 整期仍有效、課程本身沒有取消，但這一堂的報名已取消：學員請假，或管理員取消了這一筆。
-      // 沒有記錄取消原因，畫面如實標成「請假或取消」。老師停課（整堂取消）、學員退出整期、
-      // 老師婉拒整期造成的取消都不列（2026-10-09 Codex review）。
-      leaveDates: (seriesEnrollment.status === "pending" || seriesEnrollment.status === "confirmed"
-        ? seriesEnrollment.enrollments
-        : []
-      )
-        .filter((enrollment) => enrollment.status === "cancelled" && enrollment.classSession.status !== "cancelled")
-        .map((enrollment) => enrollment.classSession.startAt)
-        .sort((a, b) => a.getTime() - b.getTime()),
+      // 整期仍有效、課程本身沒有取消、這一堂的報名已取消：依取消者分開列（spec 4.5）。
+      // 老師停課（整堂取消）、學員退出整期、老師婉拒整期造成的取消都不列。
+      leaveDates: cancelledDatesBy("member"),
+      adminCancelledDates: cancelledDatesBy("admin"),
+      unrecordedCancelDates: cancelledDatesBy(null),
       declineCancelCount: active.filter((enrollment) => enrollment.seriesEnrollmentSource === "term_created")
         .length,
       declineRestoreCount: seriesEnrollment.enrollments.filter(

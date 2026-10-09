@@ -128,7 +128,7 @@ for (const origin of ["organizer", "teacher"] as const) {
     await expect(page.locator('section[aria-live="polite"]')).toBeVisible();
     await expect(page.locator('section[aria-live="polite"]')).toContainText("報名已取消。");
     await expect(page.getByRole("region", { name: "你的報名狀態" })).toContainText("已取消");
-    await expect(page.getByRole("region", { name: "你的報名狀態" })).toContainText("無法再次報名");
+    await expect(page.getByRole("region", { name: "你的報名狀態" })).toContainText("可以重新報名");
     expect((await prisma.enrollment.findUniqueOrThrow({ where: { id: enrollment.id } })).status).toBe("cancelled");
     await screenshot(page, info, `${origin}-cancelled`);
     await keyboardActivate(page, page.getByRole("link", { name: "我的報名", exact: true }));

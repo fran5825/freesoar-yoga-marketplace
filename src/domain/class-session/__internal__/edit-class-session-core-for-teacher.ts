@@ -28,6 +28,7 @@ import {
   validateClassSessionCreate,
   type ClassSessionValidationError,
 } from "../validation";
+import { occupyingEnrollmentWhere } from "@/domain/enrollment/seat-occupancy";
 
 export type EditClassSessionForTeacherInput = {
   title?: string | null;
@@ -222,11 +223,14 @@ export async function editClassSessionForTeacher(
         select: { userId: true },
       });
 
-      if (next.capacity < activeEnrollments.length) {
+      // enrollment-re-enrollment 票 03：人數上限下限看「占用名額」，term_only 期班請假中的名額也要保留。
+      const occupiedCount = await tx.enrollment.count({ where: { classSessionId, ...occupyingEnrollmentWhere } });
+
+      if (next.capacity < occupiedCount) {
         throw new EditRejected({
           ok: false,
           code: "capacity_below_enrolled",
-          enrolledCount: activeEnrollments.length,
+          enrolledCount: occupiedCount,
         });
       }
 
