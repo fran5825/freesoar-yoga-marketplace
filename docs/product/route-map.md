@@ -79,6 +79,8 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 
 ## Admin Routes
 
+**2026-10-03 第二輪第一批**：導覽改為「工作總覽／老師／需求／課程與報名／團體」，沿用下列既有 routes。四列表以 `q` 搜尋、老師／需求／課程以 `status` 分類；詳情的 `returnTo` 只接受對應列表的搜尋／分類上下文。成功回列表的 `item` 提供剛處理資料入口，取消單筆報名仍留在課程詳情。不新增 admin 報名、學員或團體詳情 route。精準關聯條件與詳情重排仍待後續批次，已確認設計與驗收見 `docs/specs/admin-usability-redesign-spec.md`。
+
 | Route | 目的 |
 |---|---|
 | `/admin/dashboard` | **已落地**（`admin-dashboard` 已確認）：Admin dashboard；2026-09-26 起最上方為「待你處理」（待審老師、待審需求各最多 5 筆，直接連到詳情頁），下方為數字概況 |

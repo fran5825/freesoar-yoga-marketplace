@@ -172,7 +172,40 @@ Human commit / push gate
 - lint / typecheck / build / test 結果，或未執行原因。
 - Codex reviewer draft，如果有 source code 變更或風險中等以上。
 
+### 4.2A STANDARD 精簡執行
+
+適用於範圍與驗收已明確核准的 STANDARD 任務；只精簡重複讀取、prompt 與報告，不改風險分類或授權。以下規則是共用依據，其他 Harness 文件引用即可，不再各自複製完整內容。
+
+#### 按需讀檔與 prompt
+
+- 起手讀 `AGENTS.md`、權威 spec、plan／票券索引與當前票；本節在首次使用或規則變動時讀取。沒有票券時改讀該任務核准範圍；缺少必要授權則回 planning。
+- 只補讀與本票實際修改有關的 source、domain／permissions、品牌或測試設定。風險未定、治理變更、HEAVY 與實際交接，仍須讀相應規範。
+- 同一 session 已讀且未變的文件不重讀；檔案被其他 task 修改、context 壓縮後資訊不足或跨 session 時，重讀所需內容。
+- Prompt 只交代六項：目標、權威文件、核准範圍與禁止事項、驗證、停止條件、交付。引用 spec／acceptance criteria，不重述產品規則或塞入不適用的模板欄位。
+- 首次落實具體 allowed files；已有核准清單時引用它，後續票只記新增檔案／範圍差異。票券只有功能描述時不能假定已具備 source 清單；範圍外修改仍需核准。
+
+#### 每票紀錄與正式 packet
+
+- 在既有票券／plan 記錄每票約 3–5 行：完成項及修改檔案、checks 命令／結果或 log 位置、未驗證項／阻塞、self review 與 scope drift。必要證據可另存並引用，不為行數限制隱藏問題。
+- 同一已核准任務可維護一份累積 review packet；triage、planning、各票結果及證據可分節或引用原文件，不要求每票另建完整 packet。
+- 任務完成、實際移交或阻塞需人接手時，整理自足的正式 packet，包含本工作 diff／新增檔、驗證、限制及完整 Common Handoff Schema。獨立 Reviewer 的必要 findings／verdict 不省略。
+- 內部票進度不套 final report 的 L1／L2／L3 與 1／2 問題；對使用者的實際 final report 仍遵守 `AGENTS.md`。
+- 每票驗收後才標完成。只有多票明確獲准、依賴已滿足且未觸發停止條件，才接續下一票；短紀錄不構成新授權。
+
+#### 驗證安排
+
+- 每票依修改做必要 TypeScript、lint、outcome tests 與受影響 smoke；docs-only 用 diff／read-back，不機械套用程式 checks。
+- 正式 smoke 必須測目前 source：若測試以 `next start` 啟動，先完成有效 build，並確保使用該 build 的測試 server，不能重用仍提供舊產物的 server。
+- 先檢查 package scripts 的前置 hook；本 repo `npm run test:smoke` 已透過 `pretest:smoke` build，勿另先 build 一次。使用 `npx playwright test` 則須先 build；build 後 source 有變要重新建置，不以「只在特定票號 build」替代。
+- 同一版本已通過的 checks 不重跑，除非新修改、失敗或未解疑慮影響它；最終 build 與必要完整旅程驗收仍須有有效結果，不能把未執行或舊版本結果寫成通過。
+- 每票檢查修改畫面的手機／電腦、鍵盤及關鍵錯誤；同頁連續修改可在已核准的驗證安排中集中完整多寬度 QA，完成時仍須提供規格要求的 RWD 證據。既有 prompt／票券明列的必跑 checks 不自動刪除或延後。
+- 使用隔離的本機測試 port，保留其他 task 程序與資料；外部失敗如實記錄，不能為通過 checks 修改未核准區域。
+
+本節不放寬 Auth、schema／migration、permissions、state machine、通知、production、套件、deploy、V1 scope 或 commit／push 邊界；不得以 STANDARD 精簡取代 HEAVY planning 或產品決策。
+
 ### 4.3 Heavy Mode
+
+上述 STANDARD 精簡規則不適用於 HEAVY 的 planning、Human Gate 或必要驗證要求。
 
 #### 適用情況
 
@@ -220,6 +253,17 @@ Human push gate
 - 必須取得產品主人明確 approve 才能實作。
 - 建議使用 isolated worktree。
 - 不得自動 commit / push。
+
+### 4.3A 已核准 HEAVY 多票紀錄
+
+適用於已有 planning／產品主人決策、明確多票接續授權與逐票範圍的任務。只減少重複敘述，不套用 STANDARD 的風險豁免，不縮減 HEAVY 所需 review 材料、驗證或 Human Gate。
+
+- 任務起手讀權威 spec、索引與涉及的治理規範；當票核對核准引用、allowed files、風險、依賴、checks／rollback。已讀且未變的內容可引用，缺少上下文或外部變更時補讀。
+- 原決策覆蓋當票時引用 decision record，不重問同項批准；決策紀錄不完整、新模型／權限／state 選擇、資料庫操作未明確授權或範圍變更仍停在 Human Gate。
+- 每票在既有 plan／ticket 記完成項、修改檔案、checks／log、未驗證項、self review／scope drift，以及 decision／review／patch 引用；必要內容不能為了行數限制省略。累積 packet 可分節保留每票完整證據，無須重抄 spec 或另建同樣的 packet。
+- 內部短進度不是 final report；正式 Human Gate、獨立 review、任務完成、實際移交或阻塞需人接手時，提供自足材料與完整 Common Handoff Schema。可以引用完整 patch／log／既有決策，但不能只交摘要讓 Reviewer 猜測。
+- 獨立 review 不得以 Builder self review 代替；每票核准、依賴、必要 checks 與 review 均滿足，且沒有停止條件，才可依原多票授權接續。需人參與的 gate 未完成時不得先做下一票。
+- 保留當票既定 checks；僅依修改檢查受影響畫面，完整 RWD 的集中安排須符合已核准驗證計畫。不得以精簡名義測舊 build、略過並發／權限測試或取消明列必跑 checks。
 
 ### 4.4 Planning-only Mode
 
@@ -283,6 +327,8 @@ Brand / low-pressure UX risk 不一定升級為 Heavy，但必須在 ChatGPT gov
 ## 6. Human Gate Rules
 
 以下情況必須停下來等產品主人決策：
+
+已有明確批准且覆蓋當票的事項依 4.3A 引用原決策；仍須核對全部前置與操作授權。下列 gate 不因縮短紀錄而取消，也不因曾核准另一張票就視為已放行。
 
 - ChatGPT verdict 是 `HUMAN_DECISION_REQUIRED`。
 - Risk level 是 medium、medium-high 或 high。
@@ -365,3 +411,25 @@ Next action:
 - Standard workflow 通常對應 standard slice。
 - Heavy workflow 通常需要 micro slice。
 - Planning-only 通常用來把過大的需求拆成 micro / standard / batch slice。
+
+## 10. 未 commit 的 Baseline 與 Patch
+
+此處為差異保存的共用規則，不要求 commit，也不授權 reset、clean、stash、還原或覆寫其他工作。
+
+1. 任務起手記錄 repo／branch／HEAD、working tree 路徑與既有 dirty／untracked 狀態，區分授權修改與僅供背景的檔案。僅在已明確授權且能安全保留既有變更時，於 dirty workspace 繼續。
+2. 使用獨立 local-only run 目錄，保存 allowed files 的 task-start 快照；每票修改前另存 ticket-start 快照。Manifest 記相對路徑、是否存在與 checksum，新增 allowed file 須在第一次修改前加入，不能事後補造基線。
+3. 保留檔案原位元組；涵蓋原有未提交內容。以 ticket-start→ticket-end 產生逐票 patch，以 task-start→task-end 產生累積 patch。新增、刪除、改名及原有 untracked 檔需有明確前後狀態，不能只用 HEAD→working tree 認領全部變更。
+4. 可使用 `git diff --no-index -- <before> <after>` 或等效前後比較，不修改 index；此命令 exit 1 表示有差異，exit 大於 1 才是執行錯誤。原始完整 patch、檔案映射及 checks 保存為證據，Reviewer 能找到並讀取。
+5. 寫入前核對檔案仍符合當票預期版本；發現同檔外部修改、無法確認 hunk 來源或缺少 baseline 時，停止受影響修改並協調，不把混合 diff 冒稱精準歸因。快照不是鎖，也不會自動隔離其他程序。
+6. 不備份整個 workspace，不收錄 `.env`、secret、credentials、DB 資料／dump 或無關檔案；排除清單不影響工作範圍與秘密存取規則。保存位置與多任務規則見 [本機 run 規格](ai-runs-current-spec.md)。
+
+## 11. Migration 操作授權
+
+核准 schema／模型設計不等於核准 DB mutation。完整欄位填法見 [Builder prompt 模板](ai-runs-current-templates/03-approved-builder-prompt.md)；未填或未確認視為未授權。
+
+- 產生 migration、套用 migration、backfill／seed 分別列核准範圍、確切命令／參數、目標與前置條件；產生 migration 若需 DB／shadow DB 也適用，不能因是產生 SQL 就假設沒有環境影響。
+- 目標以不含 credentials 的 DB identifier、用途、隔離證據及產品主人批准記錄辨識；執行前確認實際目標與核准者一致。不能只用 localhost、dev 字樣、獨立 port 或檔名判定安全，也不在報告輸出連線字串或 `.env` 內容。
+- 區分 disposable fixture DB、可能含真實資料的開發 DB、preview／production；shadow DB 若使用，亦須確認隔離與操作範圍。共享 smoke DB 或 worker 串行不等於 disposable DB。
+- 列出 SQL review、資料完整性／歧義檢查、必要備份或重建方式、rollback 限制、有效 checks。schema migration 通過不代表 backfill 已授權或安全。
+- 目標不明或不同、歷史 drift、reset／資料損失提示、owner 歧義、SQL 超出核准範圍時停止。不得自動答應 reset、加破壞性 flag、改用 db push、切 DB 或修改 migration history 來通過。
+- 未授權 production／真實資料 mutation、破壞性 contract、環境設定、秘密存取或 commit／push／deploy 維持原 gate；此規格只界定批准如何記錄，沒有預先放行任何命令或資料庫。

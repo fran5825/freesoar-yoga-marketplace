@@ -39,18 +39,19 @@ Codex 收到後，必須依本文件執行，不可直接假設可以修改檔�
 
 ---
 
-## 3. 必讀文件
+## 3. 按需讀取文件
 
-每次任務最少要先讀：
+所有任務先讀 `AGENTS.md`。已核准 STANDARD 任務再讀權威 spec、plan／票券索引與當前票；首次使用或規則有變時讀 `docs/harness/risk-based-workflow.md` 的「STANDARD 精簡執行」。同一 session 已讀且未變的內容不重讀，缺少上下文或同檔有外部修改時再讀。
 
-- `AGENTS.md`
+尚未分類、治理流程變更或 HEAVY 任務，依涉及邊界補讀以下相關規範；正式 packet／交接時讀 packet spec，無須在每張內部票開工重讀整個 Harness：
+
 - `docs/harness/README.md`
 - `docs/harness/controlled-automation-loop.md`
 - `docs/harness/workflow.md`
 - `docs/harness/risk-based-workflow.md`
 - `docs/harness/review-packet-spec.md`
 
-依任務類型補讀相關 docs / source files：
+依實際修改補讀相關 docs / source files，不因目錄存在而全讀：
 
 - Brand / copy / public UX：補讀 `docs/context/*`、相關 route / component。
 - Marketplace domain：補讀 `docs/domain/*`、`docs/scope/*`、相關 service / validation。
@@ -86,6 +87,8 @@ git status -sb
 - 建議下一步
 
 不得在不乾淨的 working tree 上自行混入新變更。
+
+若已明確批准在保留既有修改的前提下完成指定範圍，可依 `docs/harness/risk-based-workflow.md` 的「未 commit 的 Baseline 與 Patch」保存起手／逐票證據再執行；不要求先 commit 所有既有工作。無法確認同檔修改來源或安全保留時仍停止，快照不會授予新範圍或隔離其他 task。
 
 ---
 
@@ -251,7 +254,7 @@ Planning Report 至少包含：
 ## 8. Builder Prompt Draft
 - 可交給 Codex Builder 的最小 prompt draft：
 
-Builder Prompt Draft 的最後必須固定包含：
+Builder Prompt Draft 的最後必須固定包含以下要求；STANDARD 精簡 prompt 可明確引用可讀的已核准 prompt／模板，不在每張內部票重貼全文：
 
 Output Report Requirement:
 完成後請不要 commit / push，並回報：
@@ -295,6 +298,12 @@ Codex 可以將該任務視為 Level 2 candidate。
 - allowed files / forbidden files 摘要
 
 確認沒有 high-risk 未授權事項後，才可開始修改檔案。
+
+已核准 STANDARD 多票任務只在開始落實一次分類與具體範圍，後續票記錄差異；範圍／風險有變或缺少必要 allowed files 時再補齊。逐票只保留短紀錄，任務完成、實際移交或阻塞需人接手時輸出累積完整 packet。此方式不取代多票授權或高風險 Human Gate。
+
+已核准 HEAVY 多票依 `docs/harness/risk-based-workflow.md` 的「已核准 HEAVY 多票紀錄」引用原決策與累積證據；正式 gate／review／交接時輸出自足材料。每票核准、依賴、必要 checks 與獨立 review 未滿足時不得接續，不以精簡規則取代 HEAVY planning。
+
+涉及 migration 時，核准 prompt 必須按 Builder 模板的 Database Operation Authorization 分別填妥產生、套用與 backfill 授權；schema 核准不代表任意本機 DB 可操作。目標／shadow DB 未確認、reset／資料損失提示或越界時停止；本段本身不放行資料庫命令。
 
 如果任務牽涉 Auth / Prisma / DB mutation / permissions / state machine / public UX change / payment / admin review / package / env / deploy / CI，仍必須停下來等 human gate，除非 approved prompt 已明確授權該範圍。
 
@@ -477,6 +486,8 @@ human gate 結果應明確記錄為：
 
 如果是 untracked 新檔，`git diff` 可能不會顯示，應使用：
 
+有既有修改或逐票需求時，優先按上述 baseline 規則產出前後 patch。下例僅適用於起點不存在的新檔；既有 untracked 檔不能當成從空白新建。Windows 使用適用的空檔比較方式，不將 `/dev/null` 當成必須建立的路徑。
+
 ```bash
 git diff --no-index -- /dev/null path/to/new-file.md
 ```
@@ -501,6 +512,8 @@ git diff --no-index -- /dev/null path/to/new-file.md
 - 不可自行新增 native mobile app。
 - 不可移除 Free Soar brand context。
 - Codex 依本文件產出的 prompt、report、review packet 與 human decision questions 必須以繁體中文為主；技術名詞、檔案路徑、指令與程式碼可保留英文。
+
+「不可以自動 migration」指沒有明確操作授權時不得執行；產品主人已批准具體命令、目標與前置時，才可在該範圍執行。DB 授權的完整欄位與停止條件以 `docs/harness/risk-based-workflow.md`「Migration 操作授權」為準；不放寬 production、破壞性操作、commit／push 或 deploy gate。
 
 ---
 

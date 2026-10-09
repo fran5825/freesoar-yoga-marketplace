@@ -36,11 +36,23 @@ Review packet 的目的，是讓 ChatGPT 不依賴長 session 記憶，也不只
 | Heavy | Triage Packet, Planning Review Packet, Builder Review Packet, Final Review Packet, Human Decision Record |
 | Planning-only | Triage Packet, Planning Review Packet |
 
+此表列必要 review 材料，不表示每張內部票都要另產生四份文件。已核准 STANDARD 任務依 `risk-based-workflow.md` 的「STANDARD 精簡執行」：每票短紀錄，可用一份累積 packet 分節保留 triage／planning／驗證材料；任務完成、實際移交或阻塞需人接手時才整理完整自足 packet。HEAVY 所需 human decision record 與獨立 review 不變。
+
+內部票最小紀錄：完成項／修改檔案、checks 命令及結果或 log 位置、未驗證項／阻塞、self review／scope drift。原 spec、approved prompt 與證據可引用，不要逐票複製；短紀錄不取代實際檢查、diff 或最終驗收。
+
+已核准 HEAVY 多票依 `risk-based-workflow.md` 的「已核准 HEAVY 多票紀錄」累積完整證據；Human Gate、獨立 review、任務完成／移交／阻塞時提供自足 packet，不逐票複製相同內容。獨立 review 的 findings／verdict 與 human decision record 必須可追溯，不能用短紀錄取代。
+
+Diff 證據依同文件的「未 commit 的 Baseline 與 Patch」：標明比較起點與範圍，完整 patch 可另存並引用可讀位置，包含新增／刪除／改名與原有 untracked 檔。`git status`／HEAD diff 只作 repo 背景，不能把其他任務變更算成本工作；若 Reviewer 無法取得完整 patch 或決策／checks，仍屬材料不足。
+
 ## 2A. Common Handoff Schema
 
 所有 Builder Review Packet、Reviewer output、Final Review output 都應包含完整 handoff section，讓每一輪完成後都能交代下一棒。此規則適用於 completed、partially completed、blocked、no-op 與 planning-only。
 
 一般 final report 可使用 `docs/harness/next-step-handoff-levels.md` 定義的 Lightweight Final Report Schema，以保留 L1 快速處理小問題的彈性；正式 review packet / handoff packet 則必須使用下列完整 Common Handoff Schema。
+
+同一 STANDARD 任務內的票券短紀錄不是正式 handoff，無須逐票重複本 schema；在真正完成、移交或阻塞 packet 中提供一次完整欄位。若當票本身就是獨立任務的結束或交接，仍須提供。
+
+符合 HEAVY 多票規則的內部短進度亦不逐票套本 schema；正式 review／Human Gate 與交接仍須提供。縮短敘述不改獨立 review 的時機或原批准要求。
 
 Handoff section 必填欄位：
 

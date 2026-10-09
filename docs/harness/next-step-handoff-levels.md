@@ -127,6 +127,8 @@ Recommended Next Step:
 
 Full handoff packets include Builder Review Packet, Reviewer output, Final Review output, and any handoff packet intended for another Codex task or human gate.
 
+同一已核准 STANDARD 任務內的票券短進度不是 final report 或 handoff packet，不逐票列本 schema 或詢問 1／2。對使用者的實際 final report、任務完成／移交／阻塞 packet 仍按本文件輸出。STANDARD Builder prompt 可使用 `ai-runs-current-templates/03-approved-builder-prompt.md` 的六項精簡版本，引用必要權威文件，不重述 spec。
+
 ## 5. Execution Location Rule
 
 Codex should suggest where the next step should run:

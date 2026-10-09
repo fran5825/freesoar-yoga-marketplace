@@ -65,6 +65,8 @@
 
 ### 6. 團主開團流程重新設計（規劃中，2026-09-21）
 
+- 2026-10-03 第二輪：Q1–Q19 已核准，包含多團體與已有老師直接開團；以 [新規格](specs/organizer-usability-redesign-spec.md)及[分批計畫](superpowers/plans/2026-10-03-organizer-usability-redesign-plan.md)為準，正執行 to-tickets。下列「尚未回覆」保留為舊規劃歷史，不再是本輪阻擋。
+
 - 2026-09-25 起改照 `docs/organizer-usability-plan.md` 分 5 批做；票 01–11 已全部實作（2026-09-25），待你看過畫面；email 通知、通知未讀數等後續見第 10 項。
 
 - 詳細規劃見 `docs/organizer-flow-redesign-plan.md`：一個團主要能建立多個組織、`/organizers/request` 依登入與團主資料狀態顯示不同內容、服務類型要不要套用老師擅長的四大分類、期望地點改回自由輸入地址、行銷首屏文案整合。
@@ -72,6 +74,8 @@
 - 會動到資料庫結構（`Organization`／`OrganizerProfile` 的關聯），屬於需要先取得明確確認才能動工的改動。
 
 ### 8. 一個團主管理多個組織（2026-09-25 從團主流程整理中拆出）
+
+- 2026-10-03：已納入團主 usability redesign，Q18 核准 owner 關聯 additive expand／backfill／contract，Q19 核准分批實作。新 owner 欄位為 `ownerOrganizerProfileId`，舊 `organizationId` 先保留相容，歧義回填停止回報；以下為 2026-09-25 歷史，不另開重複實作。
 
 - 現況：`OrganizerProfile` 一人一筆，且只綁一個 `Organization`。同一個人若要幫多個單位（公司社團、朋友的瑜伽社）開團，目前做不到。
 - 已決定：**不跟 2026-09-25 的團主流程／排版整理一起做**（那次先用單一組織把流程理順），改成獨立工項，因為會動資料庫結構。
@@ -157,6 +161,40 @@
 - 想法：按鈕文字改成「登入／註冊」，只改公開頁 header 的一個字串，不動登入流程。
 - 要注意：手機版 header 空間較窄，改完要看手機畫面會不會擠；相關 smoke 測試若比對按鈕文字「登入」要一起更新。
 
+### 17. 管理員指派與權限設定（2026-10-03，從 admin usability 第二輪拆出）
+
+- [ ] 規劃管理員身分的授予／撤銷，以及誰能查看或操作哪些功能。產品主人要求先列 backlog；不與本次 admin 營運後台的流程、資訊架構與排版優化一起實作。
+- 現況：管理員以 `User.isAdmin` 判斷，正式 `/admin/*` 沒有管理員指派或權限設定 UI。既有角色切換只是切換已具備的身分，不能授予管理權限。
+- 待產品主人決策：是否允許既有管理員授權其他管理員、誰有授權與撤權資格、是否維持單一 admin capability，以及是否需要操作紀錄。這些是待討論選項，尚未核准任何新能力。
+- 設計與安全邊界：啟動前須檢視 Auth／session、role／permission model、server-side permission checks，並討論撤權生效與最後一位管理員的保護；若需要 schema 變更，須說明 migration 與資料影響。
+- 此項需先做 planning 與 security review，由產品主人確認後才可實作；不因列入 backlog 就放行進階企業權限或擴大 V1 scope。
+- 相關文件：`docs/engineering/first-admin-strategy.md`、`docs/domain/permissions.md`、`docs/admin-usability-plan.md` 的第二輪訪談紀錄。
+
+### 18. 團主一次安排多堂課（2026-10-03）
+
+- 2026-10-04：老師端已定案「期班／整期報名」規則（[規格](specs/teacher-class-scheduling-spec.md)、[ADR 0005](adr/0005-term-class-series-enrollment.md)）；本項之後沿用同一套模型，下方「團員整期或逐堂報名」等待決策可參考。
+
+- [ ] 支援團主一次安排多堂課，減少逐堂重填老師、團體、地點與課程內容。產品主人於 Q18／Q19 回覆時提出，需求已記錄，具體系列規則尚未核准。
+- 建議順序：先完成 [團主單堂 usability redesign](specs/organizer-usability-redesign-spec.md) 的多團體、合作邀請、老師確認、開放報名與分享驗收，再啟動此項 planning。多堂不是改成多筆 insert 就完成；需要處理部分日期衝突、版本與確認、報名及取消的一致性。
+- 待決策：每週固定／指定日期／兩者皆可；老師整批確認或逐堂確認；團員整期或逐堂報名；部分衝突全部阻擋或允許部分成立；修改與取消單堂／整批的規則、通知與過期日期處理。
+- 既有老師 recurring series 是查證起點，不能直接複用成團主權限或替代合作確認。沿用 approved 老師與 own-scoped 團體邊界，不附帶開放站外老師、付款／退款自動化或企業權限。
+- Workflow mode：HEAVY；Human Gate：yes／需產品主人確認。可能涉及 Prisma schema、migration、permission、state machine 與核心報名流程；先提出選項、資料影響、驗證與 rollback，再實作。
+- 本次 to-tickets 不包含系列實作；是否提前排入本輪仍由產品主人決定，記入 backlog 不代表已批准全部細節。
+
+### 19. 建課核心的 `create_failed` 沒有留下原因（2026-10-04，學員流程票 02 review 發現）
+
+- [ ] `create-teacher-class-session-core.ts`、`create-class-session-core.ts` 在交易出錯時一律回 `create_failed`，原本的錯誤沒有記錄。測試在資料庫忙碌時（其他工作階段同時跑測試）偶爾出現 `create_failed`，無法判斷是交易逾時、鎖等待還是其他錯誤。
+- 建議：在回 `create_failed` 前用 `console.error` 記下原始錯誤（不含個資）；必要時再評估交易 `maxWait`／`timeout`。動到建課核心，需另開票。
+
+### 20. 收尾時延後的項目（2026-10-09 產品主人決定「期班延後」）
+
+為了盡快收尾，以下項目先不做，之後再挑：
+
+- [ ] **期班（老師排課票 07–13）**：持續開課／期班、整期報名、請假與退出、老師處理整期報名、補課日期、學員端呈現、整合驗收。7 張票都還是 `draft`；票 07 已有開工前設計與 2026-10-06 的 A–E 決定，重啟時沿用。規格與票券見 `docs/superpowers/plans/teacher-class-scheduling/tickets/README.md`。
+- [ ] **團主組織舊欄位移除（團主改版票 15b）**：刪除舊的 organization pointer 欄位與 migration，屬破壞性操作，需另外放行。15a 已完成。
+- [ ] **學員課程詳情手機第一屏（學員易用性票 02 未達成項）**：公開 header 在手機佔掉約 470px，時間、地點、老師要往下捲；要改共用的 `public-header.tsx`。
+- [ ] **email 通知按鈕連結（團主易用性票 11 未完成項）**：要先有寄信功能（Resend），見 `docs/superpowers/plans/2026-08-01-transactional-email-plan.md`。
+
 ### 4. 新增 LINE 與 Facebook 登入
 
 - 目前只有 Google（`src/auth.ts` 的 `providers`）。
@@ -166,6 +204,14 @@
   - 去 Meta 開發者後台建立 App，取得金鑰；Meta 需要隱私權政策網址（相依第 3 項）。
 - 注意：LINE 不一定會提供 email，但資料庫的 `User.email` 目前是唯一欄位，實作時要處理沒有 email 的情況。
 - 登入頁（`src/app/sign-in/page.tsx`）已經是品牌風格，新增按鈕只需要放在同一張卡片內。
+- 2026-10-05 補充（學員流程票 05 討論）：
+  - 票 05 會把登入按鈕做成共用的「登入選項」元件（課程頁與 `/sign-in` 共用），依「目前開放的登入方式」清單畫按鈕；新增登入方式時加進清單即可，兩頁同時更新。
+  - 回程 cookie、callback 安全檢查、取消或失敗後的友善頁面，都跟用哪種方式登入無關，之後加 LINE、Facebook 時可以直接沿用。
+  - 各種登入方式之後要注意的事：
+    - **LINE、Facebook**：Auth.js 都有現成的設定，大部分是加設定和申請金鑰（見上方前置）。LINE 不一定提供 email，但資料庫規定每個帳號的 email 不能重複，要處理沒有 email 的帳號。
+    - **Email 登入**：Auth.js 會寄一封含登入連結的信，要先接好寄信服務（技術清單上的 Resend）。學員要離開網站去收信，回程網址要寫在信裡的連結上，不只靠 cookie。
+    - **手機登入**：已決定不做「手機加密碼」（見「已決定不做」）。若改做「簡訊驗證碼」，Auth.js 沒有內建，要接第三方簡訊服務，每封簡訊都要付費，真的要做時要另外評估費用。
+    - **同一個人用不同方式登入**：例如先用 Google、後來改用 LINE，系統預設會當成兩個不同的帳號，報名紀錄也會分開。要不要合併成一個帳號，是加第二種登入方式時一定要先決定的產品決策。
 
 ## 已決定不做
 

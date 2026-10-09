@@ -347,6 +347,8 @@ Codex 不可以自動執行：
 
 ## 10. Review Packet 要求
 
+此處「完成」以核准任務或實際交接為單位。已核准 STANDARD 多票任務依 `risk-based-workflow.md` 的「STANDARD 精簡執行」逐票保留短紀錄，任務完成、移交或阻塞需人接手時再整理累積 packet；不因每張內部票完成而重建相同報告。此安排不省略以下材料、不改 gate，也不自動授權下一票。
+
 Builder 完成後必須輸出 Builder Review Packet。至少包含：
 
 1. Task request
@@ -367,7 +369,7 @@ Final review 必須看過 diff。沒有 diff 就沒有 final approval。
 
 ## 10A. Builder Prompt Draft 固定結尾要求
 
-所有 Planning / Orchestrator 產出的 Builder Prompt Draft，最後都必須固定包含以下段落，且不得刪改為較弱版本：
+除下述 STANDARD 可讀引用方式外，所有 Planning / Orchestrator 產出的 Builder Prompt Draft，最後都必須固定包含以下段落，且不得刪改為較弱版本：
 
 ```text
 Output Report Requirement:
@@ -381,6 +383,8 @@ Output Report Requirement:
 ```
 
 若 Builder Prompt Draft 缺少此段，ChatGPT governance review 或 RD review 應要求補齊後才可進 Builder。
+
+STANDARD 精簡 prompt 可引用已核准 prompt 或模板中的完整 Output Report Requirement，不必在每張內部票再貼一次；引用文件必須可讀且要求明確。上述完整輸出仍在任務完成、實際移交或阻塞時交付，不以 3–5 行進度紀錄替代。
 
 ## 11. Commit / Push Governance
 

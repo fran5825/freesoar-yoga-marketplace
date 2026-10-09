@@ -96,7 +96,33 @@ docs/harness/ai-runs-current-templates/
   06-human-decision-record.md
 ```
 
-建議每次開始新任務時，先清空或封存 local `.ai-runs/current/`，再手動複製以上模板到 `.ai-runs/current/` 填寫。
+單一任務可沿用上述 flat 結構；有其他 task 或需保存 baseline 時，使用獨立 `.ai-runs/current/<run-id>/`，在自己的 run 內複製模板。不要清空或覆寫共享 current／其他 run；清理與封存仍須另有明確授權。
+
+---
+
+## Baseline 與多任務證據
+
+共用操作規則見 [risk-based workflow](risk-based-workflow.md#10-未-commit-的-baseline-與-patch)，此處只定義保存位置，不新增 capture 工具、commit 或資料庫授權。
+
+```txt
+.ai-runs/current/<run-id>/
+  baseline-manifest.json
+  initial-status.txt
+  initial-head.txt
+  baseline/task-start/<allowed-relative-path>
+  baseline/ticket-<id>-start/<allowed-relative-path>
+  snapshots/ticket-<id>-end/<allowed-relative-path>
+  patches/ticket-<id>.patch
+  patches/task.patch
+  checks/
+  04-builder-review-packet.md
+```
+
+- run-id 使用不碰撞的任務／日期／識別值；baseline 保存原有檔案位元組，manifest 包含路徑、存在與否、checksum、各比較起點。新增檔用不存在的起點紀錄，改名／刪除保留映射，不事後補造 baseline。
+- 只保存已允許修改的必要檔案與證據，不遞迴複製 workspace、讀取／保存 `.env`、credentials、個資、DB dump 或無關資料。檔案不適合保存時停止並提出安全證據方式，不以備份名義讀取秘密。
+- 逐票與累積完整 patch 分開保存；正式 packet 引用 Reviewer 可取得的位置。換機／跨 session 移交須確認證據仍可讀，不能只有失效的本機路徑。
+- 同檔外部修改無法歸因時停止受影響寫入；快照不等於 worktree／DB 隔離，不自動回復 baseline 或覆寫他人工作。
+- 長任務進度仍寫在既有 plan／ticket；累積 review 材料可放本 run。不要把本機證據誤寫成已核准 decision、通過的 review 或正式產品文件。
 
 ---
 

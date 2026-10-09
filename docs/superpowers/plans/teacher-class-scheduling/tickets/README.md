@@ -2,6 +2,8 @@
 
 日期：2026-10-04。產品主人以「票照這樣切」核准 13 票拆分與依賴；全部維持 `draft`，尚未授權 source Builder、commit／push 或部署。
 
+**2026-10-09 更新：** 產品主人為了盡快收尾，決定**期班（票 07–13）延後**，記在 `docs/backlog.md` 第 20 項。票 01–06 照常收尾驗收；07–13 維持 `draft`，重啟前不要開工。
+
 來源：[規格](../../../../specs/teacher-class-scheduling-spec.md)（Q1–Q28、情境 S1–S23）、[ADR 0005](../../../../adr/0005-term-class-series-enrollment.md)。
 
 ## 票券索引

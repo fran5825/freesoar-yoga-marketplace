@@ -2,6 +2,8 @@
 
 Every non-trivial feature must follow the same workflow.
 
+已核准 STANDARD 任務的讀檔、prompt 與紀錄依 `docs/harness/risk-based-workflow.md`「STANDARD 精簡執行」。Spec → plan → build → test → review → ship 階段不省略，但不要求在同一任務的每張內部票重讀規範或重建完整報告。
+
 Docs convention:
 
 - Use English kebab-case for file and folder names under `docs/`.
@@ -106,7 +108,9 @@ Before implementation, Builder should follow the approved Builder prompt. If `.a
 
 Reusable run folder templates can be copied from `docs/harness/ai-runs-current-templates/`; the filled `.ai-runs/current/` folder remains local-only and should not be committed.
 
-All Builder Prompt Drafts must end with the fixed Output Report Requirement:
+Builder Prompt Drafts must include the fixed Output Report Requirement, directly or through the STANDARD reference option below:
+
+STANDARD 精簡 prompt 可明確引用已核准 prompt／模板的以下要求；每票用短紀錄，完整輸出在任務完成或實際交接時交付。
 
 ```txt
 Output Report Requirement:
@@ -129,6 +133,8 @@ Run appropriate tests:
 - Integration tests if domain logic changed
 - Playwright smoke test for key flows
 
+Checks 依修改與既有核准驗證安排執行；production smoke 使用最新 source 的 build。先確認 scripts 前置 hook，避免重複 build；不能將舊 server／產物測試當成本次通過。每票局部畫面檢查與最終完整 RWD 的安排見「STANDARD 精簡執行」。
+
 ## 6. Review
 
 Run reviews. For ChatGPT / Codex handoff, use `docs/harness/review-packet-spec.md`.
@@ -145,6 +151,8 @@ Review scope:
 - Packet completeness review: changed files, diff, checks, human decision record when needed
 
 Builder completion must include a Builder Review Packet using `docs/harness/builder-review-packet-template.md`.
+
+STANDARD 的內部票進度只需短紀錄及必要證據；上項完整 packet 在核准任務完成、實際移交或阻塞需人接手時產出。若單票本身是完整任務，仍在該票結束時交付 packet。
 
 Minimum packet requirements:
 

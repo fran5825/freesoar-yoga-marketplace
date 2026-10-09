@@ -14,6 +14,8 @@
 
 每次 Codex Builder 完成實作後，都必須輸出 Builder Review Packet。
 
+此處「完成」以核准任務或正式 gate／review／交接為單位。STANDARD 與已核准 HEAVY 多票的內部進度依 [risk-based workflow](risk-based-workflow.md) 保留短紀錄與累積證據，不每票重建相同 packet；HEAVY 的 Human Gate、獨立 review 與必要驗證不變。
+
 適用於：
 
 - docs 修改
@@ -59,10 +61,10 @@
 
 ## 4. Changed Files
 
-列出所有變更檔案：
+列出本任務實際變更檔案；repo status 另作背景，不把所有 dirty／untracked 檔認領為本任務：
 
 ```txt
-[貼上 git status --short]
+[本任務檔案清單；另引用起手 status／baseline manifest]
 ```
 
 檔案說明：
@@ -73,11 +75,15 @@
 
 請提供完整 diff。
 
+未 commit 或有既有修改時，依 [Baseline 與 Patch 規則](risk-based-workflow.md#10-未-commit-的-baseline-與-patch) 比較 task-start／ticket-start 與成果。提供完整 patch 的可讀路徑、比較起點、檔案映射與既有變更說明；包含新增／刪除／改名及原有 untracked，不以完整 HEAD diff 混入其他工作。
+
 ```diff
-[貼上 git diff 或 git diff --cached]
+[貼上本工作完整 diff，或引用可讀的完整 patch；標明 baseline]
 ```
 
 若 diff 太長，請至少提供：
+
+原始完整 patch 必須另存供 Reviewer 讀取；以下只是回覆中的摘要，不能只保存重點片段：
 
 1. `git diff --stat`
 2. 每個變更檔案的重點 diff
@@ -192,3 +198,5 @@ Builder Review Packet 屬於正式 handoff packet，必須使用 `docs/harness/r
 若 `Suggested next prompt` 不是 `None`，final report 最後必須用 1 / 2 選項格式詢問產品主人要在目前 task 執行該 prompt，或開新 task 執行該 prompt；不得自動建立新 task。
 
 如果沒有下一步，必須寫 `None`，並說明為什麼可以停止。
+
+````
