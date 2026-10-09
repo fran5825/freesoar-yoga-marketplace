@@ -6,6 +6,7 @@ import type { SeriesEnrollmentStatus } from "@prisma/client";
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
+import { addMakeupSessionForTeacher } from "@/domain/class-session/__internal__/add-makeup-session-core";
 import { formatTaipeiShortDatetime } from "@/domain/class-session/timezone";
 
 import {
@@ -159,6 +160,46 @@ export async function decideSeriesEnrollmentAsTeacher(
         ? `已婉拒整期報名，取消 ${result.affectedCount} 堂；學員原本單堂報名的 ${result.restoredSingleCount} 堂恢復為單堂。`
         : `已婉拒整期報名，取消 ${result.affectedCount} 堂。`,
   };
+}
+
+// teacher-class-scheduling 票 11：老師追加補課日期（規則與鎖在 add-makeup-session-core.ts）。
+export async function addMakeupSessionAsTeacher(
+  recurringClassSeriesId: string,
+  date: string,
+): Promise<DecideOwnSeriesEnrollmentResult> {
+  const teacherProfileId = await resolveTeacherProfileId();
+
+  if (!teacherProfileId) {
+    return { ok: false, message: "找不到你的老師資料。" };
+  }
+
+  const result = await addMakeupSessionForTeacher(teacherProfileId, recurringClassSeriesId, date);
+
+  if (result.ok) {
+    const opened = result.openedForEnrollment ? "已開放報名" : "目前是草稿";
+    return {
+      ok: true,
+      message:
+        result.autoEnrolledCount > 0
+          ? `已追加補課（${opened}），${result.autoEnrolledCount} 位整期學員自動報上並收到通知。`
+          : `已追加補課（${opened}）。`,
+    };
+  }
+
+  const messages: Record<typeof result.code, string> = {
+    series_not_found: "找不到這個期班，或你沒有權限操作。",
+    series_not_term: "只有期班可以追加補課日期；持續開課請用「生成更多」。",
+    date_invalid: "請選擇補課日期。",
+    date_not_future: "補課日期必須在未來。",
+    too_many_sessions: "尚未開始的場次合計最多 26 堂，不能再追加。",
+    capacity_below_term_members: `名額上限容不下全部 ${result.termMemberCount ?? 0} 位整期學員，請先調高人數上限再追加。`,
+    teacher_schedule_conflict: result.conflictTitle
+      ? `這個時段跟你的「${result.conflictTitle}」衝突，沒有建立。`
+      : "這個時段跟你其他課程衝突，沒有建立。",
+    teacher_not_approved: "老師資格暫停期間不能追加補課。",
+  };
+
+  return { ok: false, message: messages[result.code] };
 }
 
 export type TeacherTermEnrollmentView = {

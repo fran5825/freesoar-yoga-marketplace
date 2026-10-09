@@ -105,7 +105,6 @@ export async function getPublicClassSessionListItems(
       requiresApproval: true,
       origin: true,
       teacherProfile: { select: { displayName: true } },
-      recurringClassSeries: { select: { dayOfWeek: true } },
       _count: {
         select: {
           enrollments: { where: { status: { in: ["pending", "confirmed"] } } },
@@ -115,13 +114,12 @@ export async function getPublicClassSessionListItems(
     orderBy: { startAt: "asc" },
   });
 
+  // teacher-class-scheduling 票 11：一律用每一場實際上課日期判斷星期（補課可能在別的星期），
+  // 不再優先採用系列的 dayOfWeek。
   const byDayOfWeek =
     filters.dayOfWeek === undefined
       ? rows
-      : rows.filter((row) => {
-          const effectiveDayOfWeek = row.recurringClassSeries?.dayOfWeek ?? taipeiDayOfWeek(row.startAt);
-          return effectiveDayOfWeek === filters.dayOfWeek;
-        });
+      : rows.filter((row) => taipeiDayOfWeek(row.startAt) === filters.dayOfWeek);
 
   const timed = discovery ? byDayOfWeek.filter(row => matchesClassDiscoveryTime(row.startAt, discovery, now)) : byDayOfWeek;
   const filtered = (discovery ? !discovery.includeFull : filters.availableOnly)

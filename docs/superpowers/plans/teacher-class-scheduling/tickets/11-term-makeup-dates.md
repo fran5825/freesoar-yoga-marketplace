@@ -31,3 +31,12 @@
 
 <!-- review note: member-flow × teacher-scheduling reconciliation, reviewed as one unit with member-flow-redesign/ticket-breakdown.md -->
 <!-- codex-peer-reviewed: 2026-10-04T13:42:57Z rounds=2 verdict=approved -->
+
+## 實作紀錄（2026-10-09，Claude，worktree `term-classes`）
+
+**Status：done（待 Codex 補審；待產品主人看畫面）**。推導規則 2、3 已於 2026-10-09 一次性放行。
+
+- 核心 `src/domain/class-session/__internal__/add-makeup-session-core.ts`：鎖本人系列（own-scope 在 WHERE）→ 鎖內重讀設定、尚未開始未取消的場次（追加後 ≤ 26）、有效整期學員（人數 > 名額上限就拒絕，規則 3）→ 撞課檢查（系列 → 老師，回傳撞到的課名）→ 建立場次（沿用系列設定含公開設定與學員資訊；剩下場次都已開放時直接開放，規則 2）→ 有效整期學員自動報上（沿用各自整期狀態，來源 term_created）。commit 後才發通知（老師「課程已建立」、每位自動報上的學員一則）。只限期班；持續開課回 `series_not_term`。
+- 系列頁（期班）新增「追加補課日期」；錯誤訊息說明撞到哪堂課、名額不足人數、26 堂上限。
+- 公開找課的星期篩選改為一律用每一場實際上課日期（`public-read-service.ts`），不再優先用系列 `dayOfWeek`。
+- 測試 `term-makeup.spec.ts`：追加＋沿用設定＋自動報上（confirmed／pending 各自沿用）＋通知數、草稿期班的補課是草稿、他人與持續開課被拒、名額不足、撞課（含課名）、26 上限含兩次同時追加只成功一筆、追加與整期報名交錯時新學員也報上補課、追加與退出整期交錯後沒有殘留有效報名（票 09 留下的項目）、週四補課在週二期班的星期篩選、UI 追加。連同找課與系列舊測試 desktop＋mobile **60 passed / 0 failed**。

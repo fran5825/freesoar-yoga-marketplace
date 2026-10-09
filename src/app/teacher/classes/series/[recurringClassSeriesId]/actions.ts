@@ -9,7 +9,7 @@ import {
   generateMoreOccurrencesForTeacher,
   openAllDraftOccurrencesForTeacher,
 } from "@/domain/class-session/service";
-import { decideSeriesEnrollmentAsTeacher } from "@/domain/enrollment/term-service";
+import { addMakeupSessionAsTeacher, decideSeriesEnrollmentAsTeacher } from "@/domain/enrollment/term-service";
 
 export async function generateMoreOccurrencesAction(formData: FormData): Promise<void> {
   const recurringClassSeriesId = readFormString(formData, "recurringClassSeriesId");
@@ -117,6 +117,17 @@ export async function decideTermEnrollmentAction(formData: FormData): Promise<vo
   revalidatePath(`/teacher/classes/series/${recurringClassSeriesId}`);
   revalidatePath("/teacher/classes");
   revalidatePath("/teacher/dashboard");
+
+  redirectWithFeedback(recurringClassSeriesId, result.ok ? "success" : "error", result.message);
+}
+
+// teacher-class-scheduling 票 11：期班追加補課日期。
+export async function addMakeupSessionAction(formData: FormData): Promise<void> {
+  const recurringClassSeriesId = readFormString(formData, "recurringClassSeriesId");
+  const result = await addMakeupSessionAsTeacher(recurringClassSeriesId, readFormString(formData, "date"));
+
+  revalidatePath(`/teacher/classes/series/${recurringClassSeriesId}`);
+  revalidatePath("/teacher/classes");
 
   redirectWithFeedback(recurringClassSeriesId, result.ok ? "success" : "error", result.message);
 }

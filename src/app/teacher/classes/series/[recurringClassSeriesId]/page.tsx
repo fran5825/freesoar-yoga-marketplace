@@ -26,6 +26,7 @@ import { ConfirmActionDialog } from "../../_components/ConfirmActionDialog";
 import { CopyEnrollLinkButton } from "../../_components/CopyEnrollLinkButton";
 import { teacherClassDetailHref } from "../../_lib/return-context";
 import {
+  addMakeupSessionAction,
   cancelRecurringClassSeriesAction,
   decideTermEnrollmentAction,
   generateMoreOccurrencesAction,
@@ -183,6 +184,43 @@ export default async function RecurringClassSeriesPage({
 
       {termEnrollments ? (
         <TermEnrollmentsSection seriesId={series.id} termEnrollments={termEnrollments} />
+      ) : null}
+
+      {isTerm ? (
+        <section
+          aria-labelledby="makeup-title"
+          className="grid scroll-mt-6 gap-3 rounded-2xl border border-ink/15 bg-white p-5 sm:p-6"
+          id="makeup"
+        >
+          <h2 className="text-lg font-medium text-ink" id="makeup-title">
+            追加補課日期
+          </h2>
+          <p className="text-sm leading-6 text-ink-soft">
+            補課沿用這一期目前的時間（{series.startTime}–{series.endTime}）、地點與名額。整期學員會自動報上並收到通知；不能來的人可以自行請假。
+            這一期已全部開放報名時，補課也直接開放。尚未開始的場次合計最多 26 堂。
+          </p>
+          <form action={addMakeupSessionAction} className="flex flex-wrap items-end gap-3">
+            <input name="recurringClassSeriesId" type="hidden" value={series.id} />
+            <div>
+              <label className="text-sm font-medium text-ink" htmlFor="makeup-date">
+                補課日期
+              </label>
+              <input
+                className="mt-2 block min-h-11 rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm text-ink focus-visible:outline-2 focus-visible:outline-pine"
+                id="makeup-date"
+                name="date"
+                required
+                type="date"
+              />
+            </div>
+            <button
+              className="min-h-11 rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep"
+              type="submit"
+            >
+              追加補課
+            </button>
+          </form>
+        </section>
       ) : null}
 
       <section
