@@ -1079,6 +1079,9 @@ export async function createOwnRecurringClassSeriesForTeacher(
       capacity: validation.normalized.capacity,
       requiresApproval: validation.normalized.requiresApproval,
       isPublic: validation.normalized.isPublic,
+      // 票 07：型態與期班報名方式建立後不能改（推導規則 7）。
+      kind: validation.normalized.kind,
+      termEnrollmentMode: validation.normalized.termEnrollmentMode,
     },
     select: { id: true },
   });
@@ -1198,11 +1201,13 @@ export async function generateMoreOccurrencesForTeacher(
     };
   }
 
-  if (series.dayOfWeek === null) {
+  // 票 07：只有持續開課可以生成更多；期班（含所有指定日期系列）堂數建立時固定（Q20）。
+  // 型態建立後不能改，所以在鎖外判斷即可。
+  if (series.kind !== "continuous" || series.dayOfWeek === null) {
     return {
       ok: false,
       code: "series_not_recurring",
-      message: "固定期課程系列不支援「生成更多」，日期在建立當下已經一次到位。",
+      message: "期班的堂數在建立時就固定了，不能生成更多；要續開請建立新的一期。",
     };
   }
 
@@ -1220,8 +1225,16 @@ export async function generateMoreOccurrencesForTeacher(
 
       return computeNextWeeklyOccurrenceDates(dayOfWeek, count, latestOccurrence?.startAt);
     },
-    { openForEnrollment: options.openForEnrollment === true },
+    { openForEnrollment: options.openForEnrollment === true, requireContinuous: true },
   );
+
+  if (!result.ok && result.code === "series_not_continuous") {
+    return {
+      ok: false,
+      code: "series_not_recurring",
+      message: "期班的堂數在建立時就固定了，不能生成更多；要續開請建立新的一期。",
+    };
+  }
 
   if (!result.ok) {
     return {

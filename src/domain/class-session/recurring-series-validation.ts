@@ -2,6 +2,8 @@
 // description／serviceType／location／capacity 這五個欄位的規則與上限，刻意直接沿用
 // validation.ts（單堂建課）已經驗證過的常數與規則，不重新發明一份可能漂移的第二版規則。
 // startTime／endTime 的 HH:mm 格式檢查比照 teacher-availability/validation.ts 的既有慣例。
+import type { RecurringClassSeriesKind, TermEnrollmentMode } from "@prisma/client";
+
 import {
   checkYogaStyles,
   normalizeYogaStyles,
@@ -50,6 +52,11 @@ export type RecurringSeriesInput = {
   // teacher-class-scheduling 票 06：系列的公開設定，預設僅透過連結招募（false）。
   isPublic?: boolean | null;
   mode?: string | null;
+  // teacher-class-scheduling 票 07：每週固定選「continuous」持續開課或「term」期班（沒帶視為持續開課）；
+  // 指定日期一律是期班，忽略這個欄位。
+  seriesKind?: string | null;
+  // 期班的報名方式；沒帶時預設「整期和單堂都收」（2026-10-06 產品主人決定 A）。持續開課忽略。
+  termEnrollmentMode?: string | null;
   // mode === "weekly"
   dayOfWeek?: number | null;
   generateCount?: number | null;
@@ -77,6 +84,8 @@ export type RecurringSeriesValidationErrorCode =
   | "end_time_invalid"
   | "time_range_invalid"
   | "mode_invalid"
+  | "series_kind_invalid"
+  | "term_enrollment_mode_invalid"
   | "day_of_week_invalid"
   | "generate_count_invalid"
   | "start_date_invalid"
@@ -98,6 +107,8 @@ export type RecurringSeriesValidationError = {
     | "startTime"
     | "endTime"
     | "mode"
+    | "seriesKind"
+    | "termEnrollmentMode"
     | "dayOfWeek"
     | "generateCount"
     | "startDate"
@@ -120,7 +131,12 @@ type NormalizedBaseFields = {
   capacity: number;
   requiresApproval: boolean;
   isPublic: boolean;
+  kind: RecurringClassSeriesKind;
+  // kind === "continuous" 時一律為 null（對應 DB check）。
+  termEnrollmentMode: TermEnrollmentMode | null;
 };
+
+export const DEFAULT_TERM_ENROLLMENT_MODE: TermEnrollmentMode = "term_and_single";
 
 export type RecurringSeriesSchedule =
   | { mode: "weekly"; dayOfWeek: number; generateCount: number; startDate: string | null }
@@ -255,6 +271,44 @@ export function validateRecurringSeriesInput(
 
   let schedule: RecurringSeriesSchedule;
 
+  // 票 07：指定日期一律是期班；每週固定由老師選，沒帶視為持續開課（舊表單、直接呼叫）。
+  const rawSeriesKind =
+    typeof input.seriesKind === "string" && input.seriesKind.trim().length > 0
+      ? input.seriesKind.trim()
+      : "continuous";
+  let kind: RecurringClassSeriesKind = "continuous";
+
+  if (input.mode === "fixed_dates") {
+    kind = "term";
+  } else if (rawSeriesKind === "continuous" || rawSeriesKind === "term") {
+    kind = rawSeriesKind;
+  } else {
+    errors.push({
+      field: "seriesKind",
+      code: "series_kind_invalid",
+      message: "請選擇持續開課或期班。",
+    });
+  }
+
+  let termEnrollmentMode: TermEnrollmentMode | null = null;
+
+  if (kind === "term") {
+    const rawMode =
+      typeof input.termEnrollmentMode === "string" ? input.termEnrollmentMode.trim() : "";
+
+    if (rawMode.length === 0) {
+      termEnrollmentMode = DEFAULT_TERM_ENROLLMENT_MODE;
+    } else if (rawMode === "term_only" || rawMode === "term_and_single") {
+      termEnrollmentMode = rawMode;
+    } else {
+      errors.push({
+        field: "termEnrollmentMode",
+        code: "term_enrollment_mode_invalid",
+        message: "請選擇期班的報名方式。",
+      });
+    }
+  }
+
   if (input.mode === "weekly") {
     const dayOfWeek =
       typeof input.dayOfWeek === "number" ? input.dayOfWeek : Number(input.dayOfWeek);
@@ -363,6 +417,8 @@ export function validateRecurringSeriesInput(
       capacity: input.capacity as number,
       requiresApproval: input.requiresApproval === true,
       isPublic: input.isPublic === true,
+      kind,
+      termEnrollmentMode,
     },
     schedule,
   };

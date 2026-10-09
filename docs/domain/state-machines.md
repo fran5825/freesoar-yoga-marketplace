@@ -150,6 +150,8 @@ Rules:
 
 **系列改課（`teacher-class-scheduling` 票 05，已落地 2026-10-05）**：同樣不新增狀態或轉換。老師改系列中的某一場時選擇範圍：(1)「只改這場」——規則與票 04 單堂改課相同，只改這一場，系列設定不變；(2)「改這場和之後所有場次」——套用到這一場與之後所有尚未開始、未取消的場次，每一場維持原本的日期、只套用新的上課時段，並同步更新 `RecurringClassSeries` 的設定，之後「生成更多」與追加的場次沿用。批次中任一場撞課，或新的人數上限低於任一場的 `pending + confirmed`，整批都不改（推導規則 4）。批次鎖定順序：`RecurringClassSeries` → 各場 `ClassSession`（依 id 排序）→ `TeacherProfile`；「只改這場」沿用票 04 的「場次 → 老師」。不能改星期幾。
 
+**期班（`teacher-class-scheduling` 票 07，已落地 2026-10-09）**：`ClassSession` 不新增狀態或轉換。系列多了型態（持續開課／期班）與期班報名方式，兩者建立後都不能改（推導規則 7），沒有轉換。期班不能「生成更多」（server 端拒絕）。期班的公開設定整期一致（推導規則 8）：期班場次改 `isPublic`（不論「只改這場」或「改這場和之後」），都套用到這一期所有尚未開始的 `draft`／`open_for_enrollment` 場次與系列本身；此時「只改這場」也先鎖 `RecurringClassSeries`，再依 id 鎖這一期的場次，最後鎖 `TeacherProfile`。整期報名的狀態在票 08 起記於下方 `SeriesEnrollment`。
+
 **已落地（票 09）：團主直接開團（`organizer_direct`，organizer-usability-redesign）**：新增 `(none) → open_for_enrollment` 這條建立路徑。團主對已確認的 `OrganizerClassProposal` 按「開放報名」時，在同一個 transaction 建立課程並直接開放，不先建 `draft`。建立之後沿用同一套狀態機（`open_for_enrollment → completed`、`open_for_enrollment → cancelled`），由團主 own-scoped 操作；老師端的開放、取消、完成在 server 端限定 `origin = teacher_initiated`（票 09 已補上）。細節見 `docs/specs/organizer-usability-redesign-spec.md` 第 13.5–13.6 節。
 
 ## OrganizerClassProposal Status
@@ -233,3 +235,18 @@ Rules:
 - Cancel rules depend on policy.
 - V1 primarily supports confirmed and cancelled.
 - Full teacher attendance workflow is not V1.
+- **整期報名的逐場報名（`teacher-class-scheduling` 票 08 起）**：狀態轉換與單堂相同，但 `pending → confirmed`／`pending → cancelled` 不能由老師逐場操作（server 端拒絕），只能透過整期確認／婉拒（票 10）一次套用；學員取消其中一場（請假）沿用 `→ cancelled`。
+
+## SeriesEnrollment Status
+
+**已落地（票 08 建立；票 09 退出、票 10 確認／婉拒）**，`teacher-class-scheduling`，設計見 ADR 0005。
+
+```text
+(none) → pending → confirmed        （需確認的期班；老師整期確認一次）
+(none) → confirmed                   （不需確認的期班）
+pending → declined                   （老師整期婉拒，票 10）
+pending／confirmed → withdrawn       （學員退出整期，票 09）
+```
+
+- `declined`、`withdrawn` 為終態；同一學員對同一期班不能再建立第二筆（推導規則 5）。
+- 與逐場報名的連動：整期確認 → 底下尚未開始的 `pending` 逐場改 `confirmed`；整期婉拒 → `term_created` 的未開始逐場改 `cancelled`、`merged_single` 脫離整期恢復為單堂並保留狀態（推導規則 9）；退出整期 → 底下尚未開始的逐場改 `cancelled`，已開始或完成的不變。所有轉換都先鎖 `RecurringClassSeries`。

@@ -8,6 +8,7 @@ import {
 } from "@/app/organizer/classes/_components/status-labels";
 import {
   getOwnRecurringClassSeriesDetailForTeacher,
+  type RecurringClassSeriesDetail,
   type RecurringClassSeriesOccurrence,
 } from "@/domain/class-session/read-service";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
@@ -77,6 +78,10 @@ export default async function RecurringClassSeriesPage({
   const openableDrafts = series.occurrences.filter(
     (occurrence) => occurrence.status === "draft" && occurrence.startAt.getTime() > now,
   );
+  // 票 07：期班標示實際堂數（不含已取消）；只有持續開課可以生成更多。
+  const isTerm = series.kind === "term";
+  const termSessionCount = series.occurrences.filter((occurrence) => occurrence.status !== "cancelled").length;
+  const canGenerateMore = series.kind === "continuous" && series.dayOfWeek !== null;
 
   return (
     <div className="flex flex-col gap-6 sm:gap-8">
@@ -91,13 +96,23 @@ export default async function RecurringClassSeriesPage({
         <h1 className="mt-1 min-w-0 break-words text-3xl font-semibold tracking-tight text-ink">
           {series.title}
         </h1>
+        <p className="mt-3 inline-flex rounded-full bg-pine-tint px-3 py-1 text-sm font-medium text-pine-deep">
+          {isTerm
+            ? `期班・共 ${termSessionCount} 堂・${termEnrollmentModeLabel(series.termEnrollmentMode)}`
+            : "持續開課"}
+        </p>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
           {series.dayOfWeek === null
-            ? `指定日期系列——${series.startTime}–${series.endTime}，日期在建立時已經一次決定，不支援生成更多。`
-            : `每週固定系列——每${dayOfWeekLabels[series.dayOfWeek]} ${series.startTime}–${series.endTime}。`}
+            ? `指定日期——${series.startTime}–${series.endTime}，堂數在建立時已經固定，不能生成更多。`
+            : isTerm
+              ? `每週固定——每${dayOfWeekLabels[series.dayOfWeek]} ${series.startTime}–${series.endTime}，堂數在建立時已經固定，不能生成更多；要續開請建立新的一期。`
+              : `每週固定——每${dayOfWeekLabels[series.dayOfWeek]} ${series.startTime}–${series.endTime}。`}
         </p>
         <p className="mt-1 max-w-2xl text-sm leading-6 text-ink-soft">
-          每一場都是獨立的課，學員一場一場報名、你也一場一場處理報名；草稿可以用「全部開放報名」一次開放。{series.isPublic
+          {isTerm
+            ? "期班的公開設定整期一致，改任何一場都會套用到這一期所有尚未開始的場次。"
+            : "每一場都是獨立的課，學員一場一場報名、你也一場一場處理報名。"}
+          草稿可以用「全部開放報名」一次開放。{series.isPublic
             ? "這個系列設定為公開，作為新場次的預設。"
             : "這個系列僅透過連結招募，作為新場次的預設。"}
           已生成場次依各場的公開設定；公開、開放報名且尚未開始的場次才會列在公開課程列表。開放報名的場次可以複製報名連結傳給學員（學員需先登入）。
@@ -220,7 +235,7 @@ export default async function RecurringClassSeriesPage({
                       {isCancellableOccurrence(occurrence, now) ? (
                         <CancelFromHereDialog
                           affected={occurrencesFromHere(series.occurrences, occurrence, now)}
-                          canGenerateMore={series.dayOfWeek !== null}
+                          canGenerateMore={canGenerateMore}
                           fromClassSessionId={occurrence.id}
                           recurringClassSeriesId={series.id}
                           seriesTitle={series.title}
@@ -288,7 +303,7 @@ export default async function RecurringClassSeriesPage({
         ))}
       </section>
 
-      {series.dayOfWeek !== null ? (
+      {canGenerateMore && series.dayOfWeek !== null ? (
         <section
           className="grid scroll-mt-6 gap-3 rounded-2xl border border-ink/15 bg-white p-5 sm:p-6"
           id="generate-more"
@@ -350,6 +365,10 @@ export default async function RecurringClassSeriesPage({
       ) : null}
     </div>
   );
+}
+
+function termEnrollmentModeLabel(mode: RecurringClassSeriesDetail["termEnrollmentMode"]): string {
+  return mode === "term_only" ? "只收整期" : "整期和單堂都收";
 }
 
 function isCancellableOccurrence(occurrence: RecurringClassSeriesOccurrence, now: number): boolean {

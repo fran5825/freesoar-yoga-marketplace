@@ -9,10 +9,12 @@ import { cancelEnrollmentFromClassAction, enrollAction, signInToEnrollAction } f
 
 const buttonClass = "inline-flex min-h-11 w-full items-center justify-center rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay sm:w-fit";
 
-export function ClassEnrollmentPanel({ classSession, signedIn, returnTo }: {
+export function ClassEnrollmentPanel({ classSession, signedIn, returnTo, termOnlyHref = null }: {
   classSession: PublicClassSessionDetail | MemberFacingClassSession;
   signedIn: boolean;
   returnTo: string;
+  // teacher-class-scheduling 票 08：只收整期的期班，單堂頁不提供報名，改引導到期班頁。
+  termOnlyHref?: string | null;
 }) {
   const ownEnrollment = "ownEnrollment" in classSession ? classSession.ownEnrollment : null;
   const availability = getClassAvailability(classSession);
@@ -30,6 +32,9 @@ export function ClassEnrollmentPanel({ classSession, signedIn, returnTo }: {
         <EnrollmentStatusBadge status={ownEnrollment.status} />
         <p className="text-sm leading-6 text-ink-soft">{ownEnrollment.status === "pending" ? "你的報名已送出，老師確認後才算成立，確認結果會顯示在「通知」。" : ownEnrollment.status === "cancelled" ? "這筆報名已取消，無法再次報名此課程。" : "報名已成立，請依課程時間與地點準時參加。"}</p>
         {["pending", "confirmed"].includes(ownEnrollment.status) && !hasStarted ? <CancelEnrollmentForm action={cancelWithContext} classSessionId={classSession.id} enrollmentId={ownEnrollment.id} /> : null}
+      </> : termOnlyHref ? <>
+        <p className="text-sm leading-6 text-ink-soft">這個期班只收整期報名，請到期班頁報名整期。</p>
+        <Link className={buttonClass} href={termOnlyHref}>前往期班頁報名整期</Link>
       </> : !classSession.canAcceptNewEnrollments ? <>
         <p className="text-sm leading-6 text-ink-soft">{hasStarted ? "這堂課程目前無法報名，可能已經開始。" : full ? "這堂課名額已滿。你可以回到課程列表看看其他課程。" : "這堂課目前不開放報名。你可以看看其他課程。"}</p>
         <Link className="w-fit py-2 text-sm text-clay underline" href={returnTo}>看看其他課程</Link>

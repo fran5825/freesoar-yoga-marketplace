@@ -1,4 +1,10 @@
-import type { ClassSessionOrigin, ClassSessionStatus, EnrollmentStatus } from "@prisma/client";
+import type {
+  ClassSessionOrigin,
+  ClassSessionStatus,
+  EnrollmentStatus,
+  RecurringClassSeriesKind,
+  TermEnrollmentMode,
+} from "@prisma/client";
 
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
@@ -255,6 +261,9 @@ export type RecurringClassSeriesDetail = {
   requiresApproval: boolean;
   // 票 06：系列的公開設定（之後生成的場次沿用）。
   isPublic: boolean;
+  // 票 07：系列型態與期班報名方式（continuous 時為 null）。
+  kind: RecurringClassSeriesKind;
+  termEnrollmentMode: TermEnrollmentMode | null;
   occurrences: RecurringClassSeriesOccurrence[];
 };
 
@@ -291,6 +300,8 @@ export async function getOwnRecurringClassSeriesDetailForTeacher(
       capacity: true,
       requiresApproval: true,
       isPublic: true,
+      kind: true,
+      termEnrollmentMode: true,
       serviceTypes: true,
       yogaStyles: true,
       classSessions: {

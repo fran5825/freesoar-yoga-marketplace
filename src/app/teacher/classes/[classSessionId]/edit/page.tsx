@@ -122,7 +122,9 @@ export default async function EditClassSessionPage({ params }: EditClassSessionP
             requiresApproval: classSession.requiresApproval,
             isPublic: classSession.isPublic,
             enrolledCount: classSession.enrollments.length,
-            series: series ? { id: series.id, title: series.title, following } : undefined,
+            series: series
+              ? { id: series.id, title: series.title, following, isTerm: series.kind === "term" }
+              : undefined,
           }}
         />
       )}

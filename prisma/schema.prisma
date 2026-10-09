@@ -20,6 +20,7 @@ model User {
   teacherProfile          TeacherProfile?
   organizerProfile        OrganizerProfile?
   enrollments             Enrollment[]
+  seriesEnrollments       SeriesEnrollment[]
   notifications           Notification[]
   reviews                 Review[]
   // organizer-usability-redesign 票 05：確認過的合作邀請（確認者）
@@ -241,29 +242,82 @@ enum ClassSessionOrigin {
 // 使用；固定期課程（例如連續 4 週的特定日期組合）由 Builder 在生成時直接寫入每筆
 // ClassSession 的 startAt/endAt，series 本身不需要記錄每一個具體日期。
 model RecurringClassSeries {
-  id               String   @id @default(cuid())
-  teacherProfileId String
-  title            String
-  description      String?
-  suitableFor      String? // 2026-10-06 member-flow 票 04：適合對象，系列預設值，生成場次時複製到每一場；最多 500 字（應用層限制）
-  preparationNotes String? // 2026-10-06 member-flow 票 04：準備事項，規則同 suitableFor
-  serviceType      String? // 主要課程風格＝serviceTypes 的第一個（公開篩選與舊資料相容用）
-  serviceTypes     String[] @default([]) // 2026-09-26 課程風格可多選（最多 3 個），沿用需求 serviceTypes 的做法
-  yogaStyles       String[] @default([]) // 2026-09-26 瑜伽風格（老師建課必填，可多選＋自訂），來源同老師「擅長類型」標籤
-  dayOfWeek        Int? // 0（週日）–6，對齊既有 TeacherAvailability 慣例；固定期課程可為 null
-  startTime        String // "HH:mm"
-  endTime          String // "HH:mm"
-  location         String
-  capacity         Int
-  requiresApproval Boolean  @default(false)
-  isPublic         Boolean  @default(false) // teacher-class-scheduling 票 06：系列的公開設定，生成與追加的場次沿用；既有系列為 false（僅透過連結招募）
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                 String                   @id @default(cuid())
+  teacherProfileId   String
+  title              String
+  description        String?
+  suitableFor        String? // 2026-10-06 member-flow 票 04：適合對象，系列預設值，生成場次時複製到每一場；最多 500 字（應用層限制）
+  preparationNotes   String? // 2026-10-06 member-flow 票 04：準備事項，規則同 suitableFor
+  serviceType        String? // 主要課程風格＝serviceTypes 的第一個（公開篩選與舊資料相容用）
+  serviceTypes       String[]                 @default([]) // 2026-09-26 課程風格可多選（最多 3 個），沿用需求 serviceTypes 的做法
+  yogaStyles         String[]                 @default([]) // 2026-09-26 瑜伽風格（老師建課必填，可多選＋自訂），來源同老師「擅長類型」標籤
+  dayOfWeek          Int? // 0（週日）–6，對齊既有 TeacherAvailability 慣例；固定期課程可為 null
+  startTime          String // "HH:mm"
+  endTime            String // "HH:mm"
+  location           String
+  capacity           Int
+  requiresApproval   Boolean                  @default(false)
+  isPublic           Boolean                  @default(false) // teacher-class-scheduling 票 06：系列的公開設定，生成與追加的場次沿用；既有系列為 false（僅透過連結招募）
+  // teacher-class-scheduling 票 07：系列型態與期班報名方式，建立後不能改（推導規則 7）。
+  // DB check：continuous 時 termEnrollmentMode 必為 NULL；term 時必有值。
+  kind               RecurringClassSeriesKind @default(continuous)
+  termEnrollmentMode TermEnrollmentMode?
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
 
-  teacherProfile TeacherProfile @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
-  classSessions  ClassSession[]
+  teacherProfile    TeacherProfile     @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
+  classSessions     ClassSession[]
+  seriesEnrollments SeriesEnrollment[]
 
   @@index([teacherProfileId])
+}
+
+// teacher-class-scheduling 票 08（ADR 0005）：整期報名紀錄。每一場仍是各自的 Enrollment，
+// 屬於整期的那幾筆用 Enrollment.seriesEnrollmentId 指回這裡。
+// 同一位學員對同一期班只能有一筆（含已退出，推導規則 5）。
+model SeriesEnrollment {
+  id                     String                 @id @default(cuid())
+  recurringClassSeriesId String
+  userId                 String
+  status                 SeriesEnrollmentStatus
+  notes                  String?
+  consentedAt            DateTime
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+
+  recurringClassSeries RecurringClassSeries @relation(fields: [recurringClassSeriesId], references: [id], onDelete: Cascade)
+  user                 User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enrollments          Enrollment[]
+
+  @@unique([recurringClassSeriesId, userId])
+  @@index([userId])
+}
+
+// pending：需確認的期班等老師確認；confirmed：成立；declined：老師婉拒（票 10）；withdrawn：學員退出整期（票 09）。
+enum SeriesEnrollmentStatus {
+  pending
+  confirmed
+  declined
+  withdrawn
+}
+
+// 屬於整期報名的每一場報名，記錄它是報整期時新增的，還是報整期前就存在、被併入的單堂報名
+// （推導規則 9：整期被婉拒時，前者取消、後者脫離整期恢復為單堂）。
+enum SeriesEnrollmentSource {
+  term_created
+  merged_single
+}
+
+// teacher-class-scheduling 票 07：持續開課（可一直生成更多）／期班（堂數建立時固定）。
+enum RecurringClassSeriesKind {
+  continuous
+  term
+}
+
+// teacher-class-scheduling 票 07：期班的報名方式，只有 kind = term 時有值。
+enum TermEnrollmentMode {
+  term_only
+  term_and_single
 }
 
 model ClassSession {
@@ -359,19 +413,24 @@ model OrganizerClassProposal {
 }
 
 model Enrollment {
-  id             String           @id @default(cuid())
-  classSessionId String
-  userId         String
-  status         EnrollmentStatus @default(confirmed)
-  notes          String?
-  consentedAt    DateTime
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  id                     String                  @id @default(cuid())
+  classSessionId         String
+  userId                 String
+  status                 EnrollmentStatus        @default(confirmed)
+  notes                  String?
+  consentedAt            DateTime
+  // 票 08：屬於整期報名時指向它，並記錄來源；單堂報名兩者皆為 NULL（DB check：同為 NULL 或同有值）。
+  seriesEnrollmentId     String?
+  seriesEnrollmentSource SeriesEnrollmentSource?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
 
-  classSession ClassSession @relation(fields: [classSessionId], references: [id], onDelete: Cascade)
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classSession     ClassSession      @relation(fields: [classSessionId], references: [id], onDelete: Cascade)
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  seriesEnrollment SeriesEnrollment? @relation(fields: [seriesEnrollmentId], references: [id], onDelete: SetNull)
 
   @@unique([classSessionId, userId])
+  @@index([seriesEnrollmentId])
   @@index([classSessionId])
   @@index([userId])
   @@index([status])
@@ -396,15 +455,15 @@ model Review {
 }
 
 model Notification {
-  id        String              @id @default(cuid())
-  userId    String
-  type      NotificationType
-  channel   NotificationChannel
-  title     String
-  body      String
-  status    NotificationStatus  @default(pending)
-  createdAt DateTime            @default(now())
-  sentAt    DateTime?
+  id         String                  @id @default(cuid())
+  userId     String
+  type       NotificationType
+  channel    NotificationChannel
+  title      String
+  body       String
+  status     NotificationStatus      @default(pending)
+  createdAt  DateTime                @default(now())
+  sentAt     DateTime?
   // organizer-usability-redesign 票 12（spec 13.7，產品主人 2026-10-05 確認方案 A）：
   // targetType＋targetId 讓通知直達單筆（連結由 server 依白名單推導，不存網址）；
   // eventKey 防止同一事件重試時重複發送（邀請 id＋transitionSeq＋收件人）。舊通知三欄皆為空。

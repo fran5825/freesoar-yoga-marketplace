@@ -36,6 +36,7 @@ Can:
 - Enroll in class sessions
 - View own enrollments
 - Cancel own enrollment if policy allows
+- **已落地（`teacher-class-scheduling` 票 08，2026-10-09）：Enroll in a whole term（報名整期）**：學員本人（userId 由 session 解析，不接受表單傳入）可以報名期班整期。期班頁可見性比照單堂：訪客只看得到公開、老師已通過審核且有已開放場次的期班；已登入學員拿到連結就能看（至少一場已開放或已完成），或自己已有整期報名。期班頁只逐場列出已開放、已完成的場次，草稿只計入堂數。報名規則與鎖都在 server 端（見 `data-model.md` 的 `SeriesEnrollment`）；「只收整期」的期班，單場報名 server 端拒絕。
 
 Cannot:
 
@@ -120,6 +121,8 @@ Security review required when changing:
 - Teacher approval
 - Enrollment capacity
 - Payment-related code
+
+**`teacher-class-scheduling` 票 07–08 touch 到 `Permissions`、`Enrollment capacity`（2026-10-09，產品主人一次性放行）**：票 07 只新增系列型態與期班報名方式（own-scoped 建立，期班拒絕生成更多在系列鎖內檢查），期班公開設定整期一致的批次更新沿用老師 own-scope 鎖查詢。票 08 新增學員 own-scoped 整期報名：名額在場次鎖內檢查（`pending + confirmed` 合計）、鎖順序系列 → 場次 → 老師、老師資格在鎖內讀取；屬於整期的逐場報名老師不能個別確認／婉拒（`seriesEnrollmentId IS NULL` 寫在 updateMany 條件）。
 
 **`teacher-class-scheduling` 票 04 touch 到 `Permissions`、`Teacher approval`、`Enrollment capacity` 三項（2026-10-05 開工前 review，見 `docs/superpowers/plans/teacher-class-scheduling/tickets/04-single-class-edit.md` 的「開工前安全檢查」）**：新增老師 own-scoped 改課；單場開放報名補上 approved 檢查；人數上限調小時須在課程鎖內與報名數比對，不得低於 `pending + confirmed`。
 

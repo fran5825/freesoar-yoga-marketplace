@@ -90,13 +90,18 @@ type SharedFields = {
   requiresApproval: boolean;
   isPublic: boolean;
   openForEnrollment: boolean; // 系列：建立後直接開放報名（teacher-class-scheduling 票 01）
+  termEnrollmentMode: TermEnrollmentModeValue; // 期班報名方式（票 07；每週期班與指定日期共用）
 };
+
+type SeriesKindValue = "continuous" | "term";
+type TermEnrollmentModeValue = "term_only" | "term_and_single";
 
 type ModeFields = {
   date: string; // 單堂：上課日期
   dayOfWeek: string; // 每週固定：星期幾
   startDate: string; // 每週固定：選填的起始日期
-  generateCount: string; // 每週固定：首次生成場次
+  seriesKind: SeriesKindValue; // 每週固定：持續開課或期班（票 07）；指定日期一律是期班
+  generateCount: string; // 每週固定：持續開課為首次生成場次，期班為這一期的堂數
   fixedDates: string[]; // 指定日期：已選的日期清單（YYYY-MM-DD，已排序）
 };
 
@@ -115,12 +120,15 @@ const initialShared: SharedFields = {
   requiresApproval: false,
   isPublic: false,
   openForEnrollment: false,
+  // 2026-10-06 產品主人決定 A：預設「整期和單堂都收」。
+  termEnrollmentMode: "term_and_single",
 };
 
 const initialModeFields: ModeFields = {
   date: "",
   dayOfWeek: "",
   startDate: "",
+  seriesKind: "continuous",
   generateCount: "8",
   fixedDates: [],
 };
@@ -141,12 +149,14 @@ const sharedKeyToErrorField: Record<keyof SharedFields, CreateClassFormField | n
   requiresApproval: null,
   isPublic: null,
   openForEnrollment: null,
+  termEnrollmentMode: null,
 };
 
 const modeFieldToErrorField: Record<keyof ModeFields, CreateClassFormField> = {
   date: "date",
   dayOfWeek: "dayOfWeek",
   startDate: "startDate",
+  seriesKind: "generateCount",
   generateCount: "generateCount",
   fixedDates: "dates",
 };
@@ -238,6 +248,8 @@ export type EditClassInitial = {
     id: string;
     title: string;
     following: { date: string; enrolledCount: number }[];
+    // 票 07：期班的公開設定整期一致（推導規則 8），畫面要說明。
+    isTerm?: boolean;
   };
 };
 
@@ -585,6 +597,20 @@ export function ClassSessionCreateForm({
       : "每一場會先存成草稿，之後可以在系列頁按「全部開放報名」一次開放；開放報名前不會列在公開課程列表。",
     "如果某個日期跟你其他課程的時段衝突，那一天會跳過不建立，建立後會列出來。",
   ];
+  // teacher-class-scheduling 票 07：期班的提醒（推導規則 7、8；Q20）。
+  const isWeeklyTerm = modeFields.seriesKind === "term";
+  const termEnrollmentModeSummaryRow: SummaryRow = {
+    label: "期班報名方式",
+    value: termEnrollmentModeLabels[shared.termEnrollmentMode],
+  };
+  const termSummaryNotes = [
+    "期班的堂數建立後就固定，不能生成更多；要續開請建立新的一期。",
+    "型態與期班報名方式建立後不能修改。公開設定整期一致，改任何一場都會套用到這一期所有尚未開始的場次。",
+    shared.openForEnrollment
+      ? "每一場建立後直接開放報名。"
+      : "每一場會先存成草稿；全部開放報名後，學員才能報整期。",
+    "如果某個日期跟你其他課程的時段衝突，那一天會跳過不建立，建立後會列出實際堂數。",
+  ];
 
   const formErrorBanner = bannerState ? (
     <div
@@ -779,6 +805,11 @@ export function ClassSessionCreateForm({
           {edit ? (
             <FormSection title="報名設定">
               <PublicListingField {...sharedFieldProps} />
+              {edit.series?.isTerm ? (
+                <p className="text-sm leading-6 text-ink-soft" id="term-visibility-note">
+                  這是期班，公開設定整期一致：不論選哪個修改範圍，都會套用到這一期所有尚未開始的場次。
+                </p>
+              ) : null}
               <div className="rounded-xl border border-ink/15 bg-cream px-4 py-3 text-sm leading-6 text-ink-soft">
                 <p>報名方式：{edit.requiresApproval ? "需要你確認才算報名成功" : "報名送出即成立"}</p>
                 <p className="mt-1 text-xs leading-5 text-ink-faint">報名方式目前不能在這裡修改。</p>
@@ -973,9 +1004,13 @@ export function ClassSessionCreateForm({
               ) : null}
               <FieldError id="weekly-startDate-error" messages={fieldErrors.startDate} />
             </div>
+            <SeriesKindField
+              onChange={(value) => updateModeField("seriesKind", value)}
+              value={modeFields.seriesKind}
+            />
             <div>
               <label className={labelClassName} htmlFor="weekly-generateCount">
-                首次要生成幾場
+                {isWeeklyTerm ? "這一期共幾堂" : "首次要生成幾場"}
               </label>
               <input
                 {...errorAttributes("weekly-generateCount-error", fieldErrors.generateCount)}
@@ -992,7 +1027,9 @@ export function ClassSessionCreateForm({
                 value={modeFields.generateCount}
               />
               <p className="mt-1 text-xs leading-5 text-ink-faint">
-                之後可以在系列管理頁手動生成更多場次，目前不支援自動無上限延伸。
+                {isWeeklyTerm
+                  ? "堂數建立後就固定，不能再生成更多；要續開請建立新的一期。之後可以追加補課日期。"
+                  : "之後可以在系列管理頁手動生成更多場次，目前不支援自動無上限延伸。"}
               </p>
               <FieldError id="weekly-generateCount-error" messages={fieldErrors.generateCount} />
             </div>
@@ -1010,6 +1047,7 @@ export function ClassSessionCreateForm({
             <CapacityField {...sharedFieldProps} error={fieldErrors.capacity} idPrefix="weekly-" />
           </FormSection>
           <FormSection title="報名設定">
+            {isWeeklyTerm ? <TermEnrollmentModeField {...sharedFieldProps} idPrefix="weekly-" /> : null}
             <PublicListingField {...sharedFieldProps} idPrefix="weekly-" />
             <RequiresApprovalField {...sharedFieldProps} idPrefix="weekly-" />
             <OpenForEnrollmentField {...sharedFieldProps} idPrefix="weekly-" />
@@ -1017,10 +1055,14 @@ export function ClassSessionCreateForm({
           <ClassCreateSummary
             dates={weeklyDates}
             datesPlaceholder="選好星期幾、起始日期與場次後，會列出實際的上課日期"
-            notes={seriesSummaryNotes}
-            rows={seriesSummaryRows("每週固定", [
-              { label: "起始規則", value: weeklyStartRule },
-            ])}
+            notes={isWeeklyTerm ? termSummaryNotes : seriesSummaryNotes}
+            rows={seriesSummaryRows(
+              isWeeklyTerm ? `每週固定・期班，共 ${modeFields.generateCount || "—"} 堂` : "每週固定・持續開課",
+              [
+                { label: "起始規則", value: weeklyStartRule },
+                ...(isWeeklyTerm ? [termEnrollmentModeSummaryRow] : []),
+              ],
+            )}
           />
           {submitArea("建立課程系列")}
         </form>
@@ -1084,6 +1126,7 @@ export function ClassSessionCreateForm({
             <CapacityField {...sharedFieldProps} error={fieldErrors.capacity} idPrefix="fixed-" />
           </FormSection>
           <FormSection title="報名設定">
+            <TermEnrollmentModeField {...sharedFieldProps} idPrefix="fixed-" />
             <PublicListingField {...sharedFieldProps} idPrefix="fixed-" />
             <RequiresApprovalField {...sharedFieldProps} idPrefix="fixed-" />
             <OpenForEnrollmentField {...sharedFieldProps} idPrefix="fixed-" />
@@ -1091,8 +1134,10 @@ export function ClassSessionCreateForm({
           <ClassCreateSummary
             dates={modeFields.fixedDates}
             datesPlaceholder="在月曆上點選上課日期後，會列在這裡"
-            notes={seriesSummaryNotes}
-            rows={seriesSummaryRows("指定日期", [])}
+            notes={termSummaryNotes}
+            rows={seriesSummaryRows(`指定日期・期班，共 ${modeFields.fixedDates.length} 堂`, [
+              termEnrollmentModeSummaryRow,
+            ])}
           />
           {submitArea("建立課程系列")}
         </form>
@@ -1700,6 +1745,71 @@ function PublicListingField({ idPrefix = "", shared, updateShared }: FieldProps)
         onChange={() => updateShared("isPublic", true)}
         title="列在公開課程列表"
         value="yes"
+      />
+    </fieldset>
+  );
+}
+
+const termEnrollmentModeLabels: Record<TermEnrollmentModeValue, string> = {
+  term_and_single: "整期和單堂都收",
+  term_only: "只收整期",
+};
+
+// teacher-class-scheduling 票 07：每週固定的系列型態。指定日期一律是期班，不顯示這組選項。
+function SeriesKindField({
+  value,
+  onChange,
+}: {
+  value: SeriesKindValue;
+  onChange: (value: SeriesKindValue) => void;
+}) {
+  return (
+    <fieldset className="grid min-w-0 gap-2">
+      <legend className={labelClassName}>課程型態</legend>
+      <ChoiceOption
+        checked={value === "continuous"}
+        description="常態班，之後可以一直生成更多場次。"
+        id="weekly-seriesKind-continuous"
+        name="seriesKind"
+        onChange={() => onChange("continuous")}
+        title="持續開課"
+        value="continuous"
+      />
+      <ChoiceOption
+        checked={value === "term"}
+        description="固定堂數的一期課，學員可以一次報名整期。"
+        id="weekly-seriesKind-term"
+        name="seriesKind"
+        onChange={() => onChange("term")}
+        title="期班"
+        value="term"
+      />
+    </fieldset>
+  );
+}
+
+// teacher-class-scheduling 票 07：期班的報名方式，建立後不能改（推導規則 7）。
+function TermEnrollmentModeField({ idPrefix = "", shared, updateShared }: FieldProps) {
+  return (
+    <fieldset className="grid min-w-0 gap-2">
+      <legend className={labelClassName}>期班報名方式</legend>
+      <ChoiceOption
+        checked={shared.termEnrollmentMode === "term_and_single"}
+        description="學員可以報整期，也可以只報其中幾堂。"
+        id={`${idPrefix}termEnrollmentMode-term_and_single`}
+        name="termEnrollmentMode"
+        onChange={() => updateShared("termEnrollmentMode", "term_and_single")}
+        title={termEnrollmentModeLabels.term_and_single}
+        value="term_and_single"
+      />
+      <ChoiceOption
+        checked={shared.termEnrollmentMode === "term_only"}
+        description="學員只能一次報整期，適合公司課或需要連續上課的主題。"
+        id={`${idPrefix}termEnrollmentMode-term_only`}
+        name="termEnrollmentMode"
+        onChange={() => updateShared("termEnrollmentMode", "term_only")}
+        title={termEnrollmentModeLabels.term_only}
+        value="term_only"
       />
     </fieldset>
   );

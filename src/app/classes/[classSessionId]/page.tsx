@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getClassSessionForMember } from "@/domain/enrollment/read-service";
+import { getTermSummaryForClassSession } from "@/domain/enrollment/term-read-service";
 import { getPublicClassSessionDetail } from "@/domain/class-session/public-read-service";
 import { getClassAvailability } from "@/domain/class-session/availability";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -32,7 +33,10 @@ export default async function MemberClassSessionPage({ params, searchParams }: {
   if (!classSession) notFound();
   const feedback = query?.result && query.message ? { success: query.result === "success", message: query.message } : null;
   const ownEnrollment = "ownEnrollment" in classSession ? classSession.ownEnrollment : null;
-  const canEnroll = classSession.canAcceptNewEnrollments && !ownEnrollment;
+  // teacher-class-scheduling 票 08：屬於期班時引導到期班頁；只收整期的期班不提供單堂報名。
+  const term = await getTermSummaryForClassSession(classSession.id);
+  const termOnly = term?.termEnrollmentMode === "term_only";
+  const canEnroll = classSession.canAcceptNewEnrollments && !ownEnrollment && !termOnly;
   const availability = getClassAvailability(classSession);
   return (
     <SiteShell signedInArea="member" publicMainClassName="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-5 py-8 sm:px-8" signedInClassName="flex flex-col gap-6">
@@ -45,7 +49,18 @@ export default async function MemberClassSessionPage({ params, searchParams }: {
         </header>
         {feedback ? <section aria-live="polite" className={feedback.success ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900" : "rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"}>{feedback.message}{feedback.success ? <> <Link className="font-medium underline" href="/member/enrollments">查看我的報名</Link></> : null}</section> : null}
         <ClassSummary classSession={classSession} />
-        <ClassEnrollmentPanel classSession={classSession} signedIn={Boolean(user)} returnTo={returnTo} />
+        {term ? (
+          <section aria-labelledby="term-notice-heading" className="grid gap-2 rounded-2xl border border-pine/25 bg-pine-tint p-5 sm:p-6">
+            <h2 id="term-notice-heading" className="text-lg font-medium text-ink">這堂課屬於期班「{term.title}」</h2>
+            <p className="text-sm leading-6 text-ink-soft">
+              這一期共 {term.totalCount} 堂，{termOnly ? "只收整期報名。" : "可以報整期，也可以只報這一堂。"}
+            </p>
+            <Link className="w-fit py-2 text-sm font-medium text-pine underline" href={`/classes/terms/${term.id}`}>
+              查看期班與報名整期
+            </Link>
+          </section>
+        ) : null}
+        <ClassEnrollmentPanel classSession={classSession} signedIn={Boolean(user)} returnTo={returnTo} termOnlyHref={termOnly && term ? `/classes/terms/${term.id}` : null} />
         <section aria-labelledby="description-heading" className="min-w-0 rounded-2xl border border-ink/15 bg-white p-5 sm:p-6"><h2 id="description-heading" className="text-lg font-medium text-ink">課程說明</h2><p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-ink-soft">{classSession.description || "尚未提供課程說明。"}</p></section>
         {/* member-flow 票 03：適合對象、準備事項，接在課程說明之後；舊課與團主課沒有資料時顯示「尚未提供」。 */}
         <section aria-labelledby="suitable-for-heading" className="min-w-0 rounded-2xl border border-ink/15 bg-white p-5 sm:p-6"><h2 id="suitable-for-heading" className="text-lg font-medium text-ink">適合對象</h2><p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-ink-soft">{classSession.suitableFor || "尚未提供"}</p></section>

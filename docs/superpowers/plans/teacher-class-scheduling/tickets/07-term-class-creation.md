@@ -75,3 +75,14 @@
 **2026-10-06 產品主人決定：A–E 照建議。** 期班報名方式預設「整期和單堂都收」；票 07 完成後只在本機 commit，等票 08 完成再一起 push；等學員流程票 04 合併進 main 後才開工；型態與報名方式建立後不能改；期班公開設定整期一致。
 
 <!-- codex-peer-reviewed: 2026-10-04T13:42:57Z rounds=2 verdict=approved -->
+
+## 實作紀錄（2026-10-09，Claude，worktree `term-classes`）
+
+**Status：done（待 Codex 補審；待產品主人看畫面）**
+
+- Schema／migration `20261009022844_term_class_series_kind`：`RecurringClassSeriesKind`、`TermEnrollmentMode`、`kind`／`termEnrollmentMode` 與 DB check；回填：指定日期 → term + term_and_single，每週固定 → continuous。於獨立測試 DB 以兩筆舊式系列實測回填結果正確，並確認 check 擋下「期班沒有報名方式」。
+- 建立表單：每週固定新增「課程型態」（持續開課／期班），期班時堂數欄位改為「這一期共幾堂」；每週期班與指定日期新增「期班報名方式」（預設整期和單堂都收）；摘要與建立訊息顯示實際堂數（「期班已建立，共 N 堂」）。
+- 期班不能生成更多：`generateOccurrencesForSeries` 新增 `requireContinuous`，在系列鎖內檢查型態；系列頁不顯示生成更多；老師總覽提醒只列持續開課。
+- 推導規則 8：期班場次改 `isPublic`（只改這場或改這場和之後）都套用到整期未開始的草稿／開放場次與系列；鎖順序 系列 → 場次（依 id）→ 老師。改課頁對期班顯示說明。
+- 文件：`data-model.md`、`state-machines.md`。
+- 測試：新增 `term-class-creation.spec.ts`（驗證、DB check、生成更多拒絕、提醒、公開設定整期一致與持續開課對照、三種建立 UI、改課頁說明）；更新三個斷言指定日期建立訊息的舊測試。`PORT=3200`、獨立測試 DB：tsc、eslint 通過；10 個 spec desktop＋mobile **134 passed / 0 failed**。

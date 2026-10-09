@@ -2,7 +2,7 @@
 // 讓老師總覽提醒「生成更多」。只讀取，不改資料。
 // 不依賴登入狀態（呼叫端傳入 teacherProfileId），讓測試能直接驗證；對外的登入與老師狀態檢查在
 // read-service.ts 的 listOwnWeeklySeriesNeedingMoreForTeacher。
-// 指定日期系列（dayOfWeek 為 null）不能生成更多，所以不提醒；票 07 加上系列型態後改為「只針對持續開課」。
+// 票 07：只針對持續開課；期班（含所有指定日期系列）不能生成更多，所以不提醒。
 
 import { prisma } from "@/lib/prisma";
 
@@ -22,7 +22,7 @@ export async function listWeeklySeriesNeedingMoreForTeacherProfile(
   now: Date = new Date(),
 ): Promise<WeeklySeriesNeedingMore[]> {
   const seriesList = await prisma.recurringClassSeries.findMany({
-    where: { teacherProfileId, dayOfWeek: { not: null } },
+    where: { teacherProfileId, kind: "continuous", dayOfWeek: { not: null } },
     orderBy: { createdAt: "asc" },
     select: {
       id: true,
