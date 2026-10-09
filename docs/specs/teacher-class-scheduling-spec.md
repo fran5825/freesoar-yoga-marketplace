@@ -4,6 +4,8 @@
 
 狀態：`approved-design`。Q1–Q28 由產品主人在 `/grill-with-docs` 訪談中全部確認採建議選項，並於 2026-10-04 確認整體理解。本文件是設計定案，**不是 Builder 授權**；實作依票券逐張經 Human Gate 放行。
 
+**2026-10-09 實際狀態：** 票 01–06 已完成，待產品主人看畫面；期班相關票 07–13 由產品主人決定延後（`docs/backlog.md` 第 20 項）。
+
 相關文件：[名詞表](../context/glossary.md)（期班、整期報名、改課等）、[ADR 0005](../adr/0005-term-class-series-enrollment.md)、`docs/domain/data-model.md` 的 `ClassSession`／`RecurringClassSeries`、`docs/domain/state-machines.md`、`docs/teacher-usability-plan.md`。取代 backlog 第 11 項（老師編輯課程內容），並作為 backlog 第 18 項（團主一次安排多堂課）之後沿用的規則來源。
 
 ## 1. 目標與範圍

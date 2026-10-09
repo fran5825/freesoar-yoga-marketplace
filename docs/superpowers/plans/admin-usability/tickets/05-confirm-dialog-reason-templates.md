@@ -6,6 +6,8 @@
 
 **Status:** done（2026-09-26；範本文字待 Franz 確認）
 
+**2026-10-09 收尾更新：** 本票的管理後台已由第二輪改版（`admin-usability-redesign` 票 01–14）取代並延續；產品主人 2026-10-06 已驗收票 14 整條工作路徑的畫面，不再單獨驗收本票畫面。
+
 **Workflow mode:** STANDARD
 
 **Human Gate:** no

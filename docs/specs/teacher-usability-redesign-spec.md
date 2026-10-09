@@ -4,6 +4,8 @@
 
 狀態：`awaiting-shared-understanding`。Q1–Q20 已由產品主人全部確認採 A，沒有尚待選擇的產品分支；八票拆分已核准並發布為 draft，整體 shared understanding 與第一票執行確認尚未取得。此文件供整體檢視，**不是 Approved Builder prompt，也不自動授權程式實作**。
 
+**2026-10-09 實際狀態：** 八票（01–08）已全部實作完成（2026-10-04），見 `docs/superpowers/plans/teacher-usability-redesign/tickets/README.md`。上方狀態為歷史紀錄。
+
 2026-10-04 更新：產品主人已授權逐票實作 01–08（見票券 README「執行授權紀錄」）；八票已全部完成，驗收證據見 `docs/superpowers/plans/teacher-usability-redesign/08-builder-review-packet.md`。
 
 決策來源：`docs/teacher-usability-plan.md` 第二輪訪談紀錄。第一輪歷史描述不代表目前程式現況；相衝突的呈現決策由第二輪已確認項目取代。
