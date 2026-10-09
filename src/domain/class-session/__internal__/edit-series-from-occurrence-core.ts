@@ -22,6 +22,7 @@ import {
   validateClassSessionCreate,
   type ClassSessionValidationError,
 } from "../validation";
+import { occupyingEnrollmentWhere } from "@/domain/enrollment/seat-occupancy";
 
 export type EditSeriesFromOccurrenceInput = {
   title?: string | null;
@@ -223,7 +224,7 @@ export async function editSeriesFromOccurrenceForTeacher(
           }
 
           const activeCount = await tx.enrollment.count({
-            where: { classSessionId: target.id, status: { in: ["pending", "confirmed"] } },
+            where: { classSessionId: target.id, ...occupyingEnrollmentWhere },
           });
 
           if (next.capacity < activeCount) {

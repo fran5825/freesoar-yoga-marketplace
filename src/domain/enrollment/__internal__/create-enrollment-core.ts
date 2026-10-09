@@ -8,6 +8,7 @@ import type { NotificationType } from "@prisma/client";
 import { notifyUsers } from "@/domain/notification/create";
 import type { NotificationPayload, NotificationRecipient } from "@/domain/notification/types";
 import { prisma } from "@/lib/prisma";
+import { occupyingEnrollmentWhere } from "../seat-occupancy";
 
 // 供 D4 端到端失敗隔離測試注入：預設值就是「解析收件人 + 呼叫 notifyUsers」的真正邏輯
 // （見下方呼叫處），測試可傳入一個保證丟出例外的假函式，驗證 trigger 呼叫端外層的
@@ -185,7 +186,7 @@ export async function createEnrollmentForUser(
       }
 
       const activeCount = await tx.enrollment.count({
-        where: { classSessionId, status: { in: ["confirmed", "pending"] } },
+        where: { classSessionId, ...occupyingEnrollmentWhere },
       });
 
       if (activeCount >= classSession.capacity) {

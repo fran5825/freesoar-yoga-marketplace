@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 
 import { signIn } from "@/auth";
 import { cancelOwnEnrollment, createOwnEnrollment } from "@/domain/enrollment/service";
-import { createOwnSeriesEnrollment } from "@/domain/enrollment/term-service";
+import { createOwnSeriesEnrollment, restoreOwnLeave } from "@/domain/enrollment/term-service";
 import { parseSignInProvider } from "@/lib/auth/sign-in-providers";
 import { rememberSignInReturn } from "@/lib/auth/sign-in-return";
 import { classDetailHref, safeClassReturnPath } from "@/lib/navigation/class-return-path";
@@ -124,6 +124,22 @@ export async function cancelEnrollmentFromClassAction(formData: FormData): Promi
     formData.get("leave") === "yes" ? "已請假這一堂，整期的其他堂照常。" : "報名已取消。",
     readFormString(formData, "returnTo"),
   );
+}
+
+// enrollment-re-enrollment 票 03：整期學員在這一堂的頁面取消請假；規則與本人檢查全部在 restoreOwnLeave。
+export async function restoreLeaveFromClassAction(formData: FormData): Promise<void> {
+  const classSessionId = readFormString(formData, "classSessionId");
+  const result = await restoreOwnLeave(readFormString(formData, "enrollmentId"));
+
+  revalidatePath(`/classes/${classSessionId}`);
+  revalidatePath("/member/enrollments");
+  revalidatePath("/member/dashboard");
+
+  if (!result.ok) {
+    redirectWithFeedback(classSessionId, "error", result.message, readFormString(formData, "returnTo"));
+  }
+
+  redirectWithFeedback(classSessionId, "success", "已取消請假，這一堂照常上課。", readFormString(formData, "returnTo"));
 }
 
 function readFormString(formData: FormData, name: string): string {

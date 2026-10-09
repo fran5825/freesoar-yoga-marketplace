@@ -17,6 +17,7 @@ import {
   confirmSeriesEnrollmentForTeacher,
   declineSeriesEnrollmentForTeacher,
 } from "./__internal__/decide-series-enrollment-core";
+import { restoreLeaveForUser, type RestoreLeaveErrorCode } from "./__internal__/restore-leave-core";
 import { withdrawSeriesEnrollmentForUser } from "./__internal__/withdraw-series-enrollment-core";
 import { type EnrollmentCreateInput, validateEnrollmentCreate } from "./validation";
 
@@ -68,7 +69,9 @@ export async function createOwnSeriesEnrollment(
     term_no_remaining_sessions: "這一期的課都已經開始或結束了，無法再報整期。",
     term_not_fully_open: "這一期還有場次尚未開放報名，全部開放後才能報整期。",
     term_session_full: `${at} 那一堂已經額滿，暫時不能報整期。`,
-    term_has_cancelled_enrollment: `你曾取消 ${at} 的報名，這一期無法再報整期。`,
+    term_has_cancelled_enrollment: result.reEnrollable
+      ? `你曾取消 ${at} 的報名，請先到那一堂重新報名，再回來報整期。`
+      : `你曾取消 ${at} 的報名，這一期無法再報整期。`,
     teacher_not_approved: "這位老師目前無法接受新報名。",
     create_failed: "整期報名暫時無法完成，請稍後再試。",
   };
@@ -109,6 +112,42 @@ export async function withdrawOwnSeriesEnrollment(
         ? "找不到這筆整期報名，或你沒有權限操作。"
         : "這筆整期報名已經退出或被婉拒，不能再退出。",
   };
+}
+
+// enrollment-re-enrollment 票 03：整期學員取消請假（本人）。規則與鎖都在 __internal__/restore-leave-core.ts。
+export type RestoreOwnLeaveResult = { ok: true; status: "pending" | "confirmed" } | { ok: false; code: RestoreLeaveErrorCode | "authentication_required"; message: string };
+
+export async function restoreOwnLeave(enrollmentId: string): Promise<RestoreOwnLeaveResult> {
+  let userId: string;
+
+  try {
+    userId = (await requireUser()).id;
+  } catch (error) {
+    if (error instanceof Error && error.message === "Authentication required") {
+      return { ok: false, code: "authentication_required", message: "請先登入後再取消請假。" };
+    }
+
+    throw error;
+  }
+
+  const result = await restoreLeaveForUser(userId, enrollmentId);
+
+  if (result.ok) {
+    return result;
+  }
+
+  const messages: Record<RestoreLeaveErrorCode, string> = {
+    enrollment_not_found: "找不到這筆報名，或你沒有權限操作。",
+    leave_not_restorable: "這筆報名不是請假，不能取消請假。",
+    series_enrollment_not_active: "你的整期報名已經退出或被婉拒，這一堂無法再報名。",
+    class_session_not_open: "這堂課程目前無法報名。",
+    class_session_already_started: "這堂課程已經開始，無法取消請假。",
+    teacher_not_approved: "這位老師目前無法接受新報名。",
+    leave_restore_session_full: "這一堂名額已被報滿，請聯絡老師。",
+    restore_failed: "取消請假暫時無法完成，請稍後再試。",
+  };
+
+  return { ok: false, code: result.code, message: messages[result.code] };
 }
 
 // teacher-class-scheduling 票 10：老師端的整期報名（own-scoped：系列必須是這位老師的）。

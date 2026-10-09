@@ -21,6 +21,7 @@ import type { NotificationPayload, NotificationRecipient } from "@/domain/notifi
 import { prisma } from "@/lib/prisma";
 
 import { termNotificationTitle } from "../term-enrollment-copy";
+import { occupyingEnrollmentWhere } from "../seat-occupancy";
 
 export type CreateSeriesEnrollmentErrorCode =
   | "series_not_found"
@@ -46,6 +47,8 @@ export type CreateSeriesEnrollmentResult =
       code: CreateSeriesEnrollmentErrorCode;
       // term_session_full／term_has_cancelled_enrollment：哪一場造成的，讓畫面說清楚。
       sessionStartAt?: Date;
+      // term_has_cancelled_enrollment：那筆是學員自己取消的單堂報名（可以先到那一堂重新報名，R6）。
+      reEnrollable?: boolean;
     };
 
 export type SeriesEnrollmentHooks = {
@@ -165,8 +168,8 @@ export async function createSeriesEnrollmentForUser(
         const sessionIds = byStart.map((session) => session.id);
         // 鎖住這位學員在這些場次的既有報名：讀到 pending／confirmed 之後到併入之前，學員取消或老師婉拒
         // 都要等這筆 transaction 結束，避免把剛取消的報名併入整期（推導規則 9；2026-10-09 Codex review）。
-        const ownEnrollments = await tx.$queryRaw<{ id: string; classSessionId: string; status: string }[]>`
-          SELECT "id", "classSessionId", "status" FROM "Enrollment"
+        const ownEnrollments = await tx.$queryRaw<{ id: string; classSessionId: string; status: string; cancelledBy: string | null; seriesEnrollmentId: string | null }[]>`
+          SELECT "id", "classSessionId", "status", "cancelledBy", "seriesEnrollmentId" FROM "Enrollment"
           WHERE "userId" = ${userId} AND "classSessionId" = ANY(${sessionIds})
           ORDER BY "id"
           FOR UPDATE
@@ -176,7 +179,7 @@ export async function createSeriesEnrollmentForUser(
         const ownBySession = new Map(ownEnrollments.map((enrollment) => [enrollment.classSessionId, enrollment]));
         const activeCounts = await tx.enrollment.groupBy({
           by: ["classSessionId"],
-          where: { classSessionId: { in: sessionIds }, status: { in: ["pending", "confirmed"] } },
+          where: { classSessionId: { in: sessionIds }, ...occupyingEnrollmentWhere },
           _count: { _all: true },
         });
         const activeBySession = new Map(activeCounts.map((row) => [row.classSessionId, row._count._all]));
@@ -198,6 +201,7 @@ export async function createSeriesEnrollmentForUser(
               ok: false,
               code: "term_has_cancelled_enrollment",
               sessionStartAt: session.startAt,
+              reEnrollable: own.cancelledBy === "member" && own.seriesEnrollmentId === null,
             });
           }
 

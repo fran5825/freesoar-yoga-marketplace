@@ -6,12 +6,15 @@ export function CancelEnrollmentForm({
   enrollmentId,
   classSessionId,
   variant = "cancel",
+  termMode = null,
 }: {
   action: (formData: FormData) => Promise<void>;
   enrollmentId: string;
   classSessionId?: string;
   // teacher-class-scheduling 票 09：整期學員取消其中一堂就是「請假」，其他堂照常。
   variant?: "cancel" | "leave";
+  // enrollment-re-enrollment 票 03：請假的說明依期班報名方式不同（只收整期保留名額，整期和單堂都收則釋出給單堂）。
+  termMode?: "term_only" | "term_and_single" | null;
 }) {
   const isLeave = variant === "leave";
 
@@ -28,7 +31,9 @@ export function CancelEnrollmentForm({
         {isLeave ? <input name="leave" type="hidden" value="yes" /> : null}
         <p className="text-sm font-medium leading-6 text-amber-900">
           {isLeave
-            ? "請假後這一堂的名額會釋出，之後無法再報這一堂；整期的其他堂照常。"
+            ? termMode === "term_only"
+              ? "請假後，這一堂會標示為請假；整期的其他堂照常。開課前可以取消請假。"
+              : "請假後，這一堂的名額會開放給單堂報名；整期的其他堂照常。開課前、名額還在時可以取消請假。"
             : "取消後，開課前可以重新報名；名額被報滿則不能。"}
         </p>
         <label className="flex items-start gap-2 text-sm leading-6 text-ink-soft">
