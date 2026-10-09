@@ -10,6 +10,7 @@ import type { ClassSessionOrigin, ClassSessionStatus, TermEnrollmentMode } from 
 import { prisma } from "@/lib/prisma";
 import { getClassAvailability } from "./availability";
 import { taipeiDayOfWeek } from "./recurring-series-dates";
+import { formatTaipeiDatetimeLocal } from "./timezone";
 import { matchesClassDiscoveryTime, type ClassDiscoveryFilters } from "./class-discovery-filters";
 
 export type PublicClassSessionListItem = {
@@ -198,22 +199,23 @@ export async function getPublicClassListEntries(
   filters: PublicClassSessionListFilters = {},
 ): Promise<PublicClassListEntry[]> {
   const { rows, now, excludeFull } = await loadPublicRows(filters);
-  const nextStartBySeries = new Map<string, Date>();
+  // 每個期班「符合篩選的最近一場」，卡片的時間與地點用這一場（只改這場時可能與系列預設不同）。
+  const nextRowBySeries = new Map<string, PublicRow>();
   const singleRows: PublicRow[] = [];
 
   for (const row of rows) {
     if (row.recurringClassSeries?.kind === "term") {
-      if (!nextStartBySeries.has(row.recurringClassSeries.id)) {
-        nextStartBySeries.set(row.recurringClassSeries.id, row.startAt);
+      if (!nextRowBySeries.has(row.recurringClassSeries.id)) {
+        nextRowBySeries.set(row.recurringClassSeries.id, row);
       }
     } else {
       singleRows.push(row);
     }
   }
 
-  const terms = nextStartBySeries.size
+  const terms = nextRowBySeries.size
     ? await prisma.recurringClassSeries.findMany({
-        where: { id: { in: [...nextStartBySeries.keys()] }, kind: "term" },
+        where: { id: { in: [...nextRowBySeries.keys()] }, kind: "term" },
         select: {
           id: true,
           title: true,
@@ -231,6 +233,7 @@ export async function getPublicClassListEntries(
             where: { status: { not: "cancelled" } },
             select: {
               startAt: true,
+              endAt: true,
               status: true,
               capacity: true,
               _count: { select: { enrollments: { where: { status: { in: ["pending", "confirmed"] } } } } },
@@ -258,17 +261,28 @@ export async function getPublicClassListEntries(
       continue;
     }
 
+    const nextRow = nextRowBySeries.get(term.id) as PublicRow;
+
     termEntries.push({
       kind: "term",
       item: {
         id: term.id,
         title: term.title,
-        serviceType: term.serviceType,
-        serviceTypes: term.serviceTypes,
-        yogaStyles: term.yogaStyles,
-        location: term.location,
-        scheduleLabel: `${term.dayOfWeek === null ? "指定日期" : `每${dayOfWeekLabels[term.dayOfWeek]}`} ${term.startTime}–${term.endTime}`,
-        nextStartAt: nextStartBySeries.get(term.id) as Date,
+        // 風格、地點、下一堂時間都取「符合篩選的最近一場」，與篩選結果一致（只改這場時可能與系列預設不同）。
+        serviceType: nextRow.serviceType,
+        serviceTypes: nextRow.serviceTypes,
+        yogaStyles: nextRow.yogaStyles,
+        location: nextRow.location,
+        scheduleLabel: `${term.dayOfWeek === null ? "指定日期" : `每${dayOfWeekLabels[term.dayOfWeek]}`} ${term.startTime}–${term.endTime}${
+          remaining.some(
+            (session) =>
+              formatTaipeiDatetimeLocal(session.startAt).split("T")[1] !== term.startTime ||
+              formatTaipeiDatetimeLocal(session.endAt).split("T")[1] !== term.endTime,
+          )
+            ? "（部分堂次時間不同）"
+            : ""
+        }`,
+        nextStartAt: nextRow.startAt,
         totalCount: term.classSessions.length,
         remainingCount: remaining.length,
         termEnrollmentMode: term.termEnrollmentMode,

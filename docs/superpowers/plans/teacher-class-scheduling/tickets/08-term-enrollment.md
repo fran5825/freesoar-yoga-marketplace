@@ -31,7 +31,7 @@
 
 ## 實作紀錄（2026-10-09，Claude，worktree `term-classes`）
 
-**Status：done（待 Codex 補審；待產品主人看畫面）**。2026-10-09 產品主人一次性放行 07–13 的 schema、推導規則 1／5／9 與通知沿用既有類型。
+**Status：done（Codex 補審通過（2026-10-09，4 輪）；待產品主人看畫面）**。2026-10-09 產品主人一次性放行 07–13 的 schema、推導規則 1／5／9 與通知沿用既有類型。
 
 - Schema／migration `20261009024811_series_enrollment`：`SeriesEnrollment`（pending／confirmed／declined／withdrawn，`@@unique([recurringClassSeriesId, userId])`）、`Enrollment.seriesEnrollmentId`（FK SetNull）＋`seriesEnrollmentSource`（term_created／merged_single），DB check：有整期關聯就必有來源。
 - 核心 `src/domain/enrollment/__internal__/create-series-enrollment-core.ts`：鎖序 系列 → 剩餘場次（依 id）→ 老師；取得場次鎖後才確認狀態、名額與既有報名；尚有草稿拒絕（規則 1）、任一需新增的場次滿額拒絕（Q24）、同一學員同一期班只能一筆含已退出（規則 5）、既有 pending／confirmed 單堂併入保留狀態不占新名額、曾取消某場拒絕（規則 9）。通知沿用 `enrollment_confirmed`／`enrollment_pending_review`，課名「（整期 N 堂）」，一次一則（需確認時老師一則）。

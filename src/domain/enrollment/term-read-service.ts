@@ -18,6 +18,8 @@ export type TermSessionView = {
   status: "open_for_enrollment" | "completed";
   // 讀取當下尚未開始（畫面元件不能自己呼叫 Date.now）。
   upcoming: boolean;
+  // 這一堂實際的地點（只改這場時可能與系列預設不同；2026-10-09 Codex review）。
+  location: string;
   capacity: number;
   activeEnrollmentCount: number;
   ownEnrollmentStatus: EnrollmentStatus | null;
@@ -85,6 +87,7 @@ export async function getTermDetailForViewer(
           startAt: true,
           endAt: true,
           status: true,
+          location: true,
           capacity: true,
           _count: { select: { enrollments: { where: { status: { in: ["pending", "confirmed"] } } } } },
         },
@@ -148,6 +151,7 @@ export async function getTermDetailForViewer(
         endAt: session.endAt,
         status: session.status,
         upcoming: session.startAt.getTime() > now.getTime(),
+        location: session.location,
         capacity: session.capacity,
         activeEnrollmentCount: session._count.enrollments,
         ownEnrollmentStatus,
@@ -243,8 +247,8 @@ export async function listVisibleSiblingSessions(
       teacherProfile: { status: "approved" },
       ...(signedIn ? {} : { isPublic: true }),
     },
+    // 不截斷：規格 4.8 要列出同系列其他可見、尚未開始的場次（期班最多 26 堂；2026-10-09 Codex review）。
     orderBy: { startAt: "asc" },
-    take: 8,
     select: { id: true, startAt: true },
   });
 }

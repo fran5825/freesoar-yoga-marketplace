@@ -9,6 +9,8 @@
 //   4. 鎖 TeacherProfile 並確認 approved。
 //   5. 尚有草稿就不能報整期（推導規則 1）；任一場需新增報名但已滿，整期都不能報（Q24）。
 //   6. 已有 pending／confirmed 單堂報名的場次併入、保留原狀態，不重複算名額；曾取消過的場次讓整期不能報（推導規則 9）。
+//      讀取前先 `FOR UPDATE` 鎖住這位學員在這些場次的報名（鎖序：系列 → 場次 → 老師 → 學員既有報名；
+//      學員取消、老師婉拒、管理員取消與整堂取消都不會在持有報名鎖後再去鎖場次或老師，不會形成循環）。
 //   7. 建立整期報名與新增的逐場報名（來源 term_created），併入的改記為 merged_single。
 // commit 之後才發一則通知（Q27）；通知失敗不影響報名結果。
 
@@ -51,6 +53,8 @@ export type SeriesEnrollmentHooks = {
   // 已讀取場次清單、尚未取得場次鎖之前（測試用來證明「讀取後最後一席被單場報名占走」時不會超收）。
   onBeforeSessionLock?: () => void | Promise<void>;
   onSessionsLockAcquired?: () => void | Promise<void>;
+  // 已鎖住並讀取學員既有報名、尚未併入時（測試用來證明同時取消會等到併入之後）。
+  onOwnEnrollmentsLocked?: () => void | Promise<void>;
 };
 
 export type NotifyFn = (
@@ -159,10 +163,16 @@ export async function createSeriesEnrollmentForUser(
         }
 
         const sessionIds = byStart.map((session) => session.id);
-        const ownEnrollments = await tx.enrollment.findMany({
-          where: { userId, classSessionId: { in: sessionIds } },
-          select: { id: true, classSessionId: true, status: true },
-        });
+        // 鎖住這位學員在這些場次的既有報名：讀到 pending／confirmed 之後到併入之前，學員取消或老師婉拒
+        // 都要等這筆 transaction 結束，避免把剛取消的報名併入整期（推導規則 9；2026-10-09 Codex review）。
+        const ownEnrollments = await tx.$queryRaw<{ id: string; classSessionId: string; status: string }[]>`
+          SELECT "id", "classSessionId", "status" FROM "Enrollment"
+          WHERE "userId" = ${userId} AND "classSessionId" = ANY(${sessionIds})
+          ORDER BY "id"
+          FOR UPDATE
+        `;
+
+        await hooks?.onOwnEnrollmentsLocked?.();
         const ownBySession = new Map(ownEnrollments.map((enrollment) => [enrollment.classSessionId, enrollment]));
         const activeCounts = await tx.enrollment.groupBy({
           by: ["classSessionId"],

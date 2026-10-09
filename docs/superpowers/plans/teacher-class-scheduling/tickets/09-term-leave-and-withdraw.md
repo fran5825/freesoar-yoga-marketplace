@@ -26,7 +26,7 @@
 
 ## 實作紀錄（2026-10-09，Claude，worktree `term-classes`）
 
-**Status：done（待 Codex 補審；待產品主人看畫面）**。推導規則 5、10 已於 2026-10-09 一次性放行。
+**Status：done（Codex 補審通過（2026-10-09，4 輪）；待產品主人看畫面）**。推導規則 5、10 已於 2026-10-09 一次性放行。
 
 - 請假：沿用既有 `cancelOwnEnrollment`（只取消這一堂、整期報名維持有效、名額釋出），單堂頁對整期子報名改顯示「請假這一堂」與說明（`CancelEnrollmentForm` 新增 `variant="leave"`）。
 - 退出整期：`src/domain/enrollment/__internal__/withdraw-series-enrollment-core.ts`，先鎖系列再鎖整期報名列（本人 own-scope），尚未開始的 pending／confirmed 逐場改 cancelled，已開始／完成的不動，整期改 `withdrawn`；之後再報整期被拒（推導規則 5）。只通知學員本人一則（推導規則 10）。

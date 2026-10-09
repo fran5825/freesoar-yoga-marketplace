@@ -85,7 +85,7 @@ Can:
 - View own calendar
 - Enroll in class sessions only through the same User's Member capability
 - **已落地（`teacher-class-scheduling` 票 04，2026-10-05）：Edit own single class session（改課）**：approved 老師可以修改自己開的單堂課（`origin = teacher_initiated`、不屬於系列、`draft`／`open_for_enrollment`、`startAt` 尚未到達）的標題、說明、課程風格、瑜伽類型、時間、地點與人數上限。所有條件都在 server 端檢查（own-scope 寫在鎖查詢的 WHERE、origin 與狀態在鎖內確認、老師狀態在鎖內讀取），不只靠 UI 隱藏。改時間或地點時通知該場 `pending`／`confirmed` 學員；不能改「是否需要確認報名」；不能改團主媒合的課；暫停中的老師不能改。系列場次的改課在票 05，公開設定的修改在票 06。
-- **已落地（`teacher-class-scheduling` 票 05，2026-10-05）：Edit own series class sessions（系列改課）**：approved 老師可以改自己系列中尚未開始的場次，選「只改這場」或「改這場和之後所有場次」（後者同時更新自己的 `RecurringClassSeries` 設定）。系列 own-scope 寫在系列鎖查詢的 WHERE，每一場的條件（屬於這個系列、`teacher_initiated`、`draft`／`open_for_enrollment`、未開始）在鎖內重新檢查；不能改星期幾、公開設定與「是否需要確認報名」。
+- **已落地（`teacher-class-scheduling` 票 05，2026-10-05）：Edit own series class sessions（系列改課）**：approved 老師可以改自己系列中尚未開始的場次，選「只改這場」或「改這場和之後所有場次」（後者同時更新自己的 `RecurringClassSeries` 設定）。系列 own-scope 寫在系列鎖查詢的 WHERE，每一場的條件（屬於這個系列、`teacher_initiated`、`draft`／`open_for_enrollment`、未開始）在鎖內重新檢查；不能改星期幾與「是否需要確認報名」。（票 05 當時也不能改公開設定；**票 06 起可以改公開設定**，持續開課依改課範圍套用；**票 07 起期班的公開設定整期一致**，不論範圍都套用到這一期所有尚未開始的草稿／開放場次與系列，先鎖系列再依 id 鎖場次。）
 - **已落地（`teacher-class-scheduling` 票 10，2026-10-09）：Confirm / decline own term enrollments（整期報名）**：老師只能讀、確認、婉拒自己期班的整期報名（系列 `teacherProfileId` 寫在讀取與鎖查詢的 WHERE）。整期名單只含學員姓名或 email、狀態、備註、請假日期，與單場名單同一範圍。屬於整期的逐場報名不能在單場個別確認／婉拒。
 - **已核准・未實作（organizer-usability-redesign）**：查看自己收到的團主合作邀請，確認最新版本或附原因婉拒；確認需要 `approved` 且排課無衝突。確認授課不會取得團主課程的開放、修改、取消、完成或名單管理權。同一個帳號可以另外建立團主資料與團體，approved 資格只限制授課、不限制建團。
 

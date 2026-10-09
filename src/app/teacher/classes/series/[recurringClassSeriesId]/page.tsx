@@ -462,7 +462,7 @@ function TermEnrollmentsSection({
               ) : null}
               {item.leaveDates.length > 0 ? (
                 <p className="text-ink-soft">
-                  請假：{item.leaveDates.map((date) => formatTaipeiDatetime(date)).join("、")}
+                  請假或取消：{item.leaveDates.map((date) => formatTaipeiDatetime(date)).join("、")}
                 </p>
               ) : null}
               {item.status === "pending" ? (

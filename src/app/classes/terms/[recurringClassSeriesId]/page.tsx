@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { formatTaipeiShortDatetime } from "@/domain/class-session/timezone";
+import { formatTaipeiDatetimeLocal, formatTaipeiShortDatetime } from "@/domain/class-session/timezone";
 import { getTermDetailForViewer, type TermDetail, type TermEnrollBlock } from "@/domain/enrollment/term-read-service";
 import { getCurrentUser } from "@/lib/auth/session";
 
@@ -119,9 +119,24 @@ function TermSummary({ term }: { term: TermDetail }) {
     },
     {
       label: "上課時間",
-      value: `${term.dayOfWeek === null ? "指定日期" : `每${dayOfWeekLabels[term.dayOfWeek]}`} ${term.startTime}–${term.endTime}`,
+      // 只改某一堂的時間時，每一堂的實際時間列在下方清單（2026-10-09 Codex review）。
+      value: `${term.dayOfWeek === null ? "指定日期" : `每${dayOfWeekLabels[term.dayOfWeek]}`} ${term.startTime}–${term.endTime}${
+        term.sessions.some(
+          (session) =>
+            session.upcoming &&
+            (formatTaipeiDatetimeLocal(session.startAt).split("T")[1] !== term.startTime ||
+              formatTaipeiDatetimeLocal(session.endAt).split("T")[1] !== term.endTime),
+        )
+          ? "（部分堂次時間不同，以下方每一堂為準）"
+          : ""
+      }`,
     },
-    { label: "地點", value: term.location },
+    {
+      label: "地點",
+      value: term.sessions.some((session) => session.location !== term.location)
+        ? `${term.location}（部分堂次地點不同，標示在下方每一堂）`
+        : term.location,
+    },
     { label: "老師", value: term.teacherDisplayName ?? "飛索老師" },
   ];
 
@@ -295,8 +310,11 @@ function TermSessionList({ term }: { term: TermDetail }) {
             key={session.id}
           >
             <Link className="min-h-11 py-2 font-medium text-ink underline-offset-4 hover:underline" href={`/classes/${session.id}`}>
-              {formatTaipeiShortDatetime(session.startAt)}
+              {formatTaipeiShortDatetime(session.startAt)}–{formatTaipeiDatetimeLocal(session.endAt).split("T")[1]}
             </Link>
+            {session.location !== term.location ? (
+              <span className="w-full break-words text-ink-soft">這一堂地點：{session.location}</span>
+            ) : null}
             <span className="flex flex-wrap items-center gap-2 text-ink-soft">
               {session.ownEnrollmentStatus ? <EnrollmentStatusBadge status={session.ownEnrollmentStatus} /> : null}
               {session.status === "completed"

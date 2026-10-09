@@ -251,6 +251,49 @@ test.describe("term enrollment (domain)", () => {
     expect(await prisma.seriesEnrollment.count({ where: { userId: termMember.id } })).toBe(0);
   });
 
+  // 2026-10-09 Codex review：讀到既有單堂報名之後、併入之前的取消，必須等到整期報名 commit 之後才生效
+  // （變成整期底下的請假），不能讓已取消的報名被併入整期。
+  test("a single enrollment cancelled while the term enrollment holds it waits until the merge commits", async ({}, testInfo) => {
+    const id = runId(testInfo, "merge-race");
+    const teacher = await seedTeacher(id);
+    const member = await seedMember(id, "a");
+    const { series, sessions } = await seedTerm(teacher.teacherProfileId, { title: "併入時取消" });
+    const single = await createEnrollmentForUser(member.id, sessions[1].id, { notes: null });
+    const singleId = single.ok ? single.enrollmentId : "";
+    let cancel: Promise<unknown> | null = null;
+    let statusWhileHeld: string | null = null;
+
+    const result = await createSeriesEnrollmentForUser(
+      member.id,
+      series.id,
+      { notes: null },
+      {
+        onOwnEnrollmentsLocked: async () => {
+          // PrismaPromise 要呼叫 then 才會真的送出查詢；這裡立刻送出，讓取消在報名鎖還在時就開始等待。
+          cancel = prisma.enrollment
+            .updateMany({
+              where: { id: singleId, status: { in: ["pending", "confirmed"] } },
+              data: { status: "cancelled" },
+            })
+            .then((result) => result);
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          // 另一個連線的一般讀取不會被擋：沒有鎖的話取消早已 commit，這裡會讀到 cancelled。
+          statusWhileHeld = (await prisma.enrollment.findUniqueOrThrow({ where: { id: singleId } })).status;
+        },
+      },
+      noNotify,
+    );
+    await cancel;
+
+    expect(result).toMatchObject({ ok: true, mergedCount: 1 });
+    expect(statusWhileHeld).toBe("confirmed");
+    // 取消發生在併入之後：這一堂成為整期底下的請假，整期仍有效。
+    expect(await prisma.enrollment.findUniqueOrThrow({ where: { id: singleId } })).toMatchObject({
+      status: "cancelled",
+      seriesEnrollmentSource: "merged_single",
+    });
+  });
+
   test("two term enrollments for the last seats run one after the other and never overbook", async ({}, testInfo) => {
     const id = runId(testInfo, "parallel");
     const teacher = await seedTeacher(id);
