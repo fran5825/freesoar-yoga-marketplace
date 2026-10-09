@@ -5,7 +5,7 @@
 // 集合，不揭露 organizerProfileId／organizationId／demandRequestId 這些內部關聯 id（即使值是
 // null，也不該讓型別結構暗示內部設計給未登入訪客）。
 
-import type { ClassSessionOrigin, ClassSessionStatus } from "@prisma/client";
+import type { ClassSessionOrigin, ClassSessionStatus, TermEnrollmentMode } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { getClassAvailability } from "./availability";
@@ -62,13 +62,9 @@ export type PublicClassSessionDetail = {
 
 const PUBLIC_STATUS_FILTER: ClassSessionStatus[] = ["open_for_enrollment", "confirmed"];
 
-// 星期幾篩選：若這場來自常規課程系列，用 series 本身記錄的 dayOfWeek（穩定，不受回填/例外
-// 影響）；否則直接從 startAt 用 Asia/Taipei 推算。這個判斷刻意在應用層做，不下推成資料庫端的
-// 日期運算——目前公開列表的資料量級不需要，且不同來源（series vs 單堂）的「星期幾」語意本來
-// 就分開儲存，在 SQL 裡合併判斷反而更難讀。
-export async function getPublicClassSessionListItems(
-  filters: PublicClassSessionListFilters = {},
-): Promise<PublicClassSessionListItem[]> {
+// 篩選後、尚未依名額排除的公開場次（逐場列表與期班卡片共用同一套篩選）。星期幾與時段在應用層判斷，
+// 一律用每一場實際上課日期（票 11），目前公開列表的資料量級不需要下推成資料庫端的日期運算。
+async function loadPublicRows(filters: PublicClassSessionListFilters) {
   const now = new Date();
   const discovery = filters.discovery;
   const rows = await prisma.classSession.findMany({
@@ -105,7 +101,8 @@ export async function getPublicClassSessionListItems(
       requiresApproval: true,
       origin: true,
       teacherProfile: { select: { displayName: true } },
-      recurringClassSeries: { select: { dayOfWeek: true } },
+      // 票 12：期班的場次在找課程合併成一張卡片；只取型態與 id，不回傳給訪客的單場 DTO。
+      recurringClassSeries: { select: { id: true, kind: true } },
       _count: {
         select: {
           enrollments: { where: { status: { in: ["pending", "confirmed"] } } },
@@ -115,30 +112,23 @@ export async function getPublicClassSessionListItems(
     orderBy: { startAt: "asc" },
   });
 
+  // teacher-class-scheduling 票 11：一律用每一場實際上課日期判斷星期（補課可能在別的星期），
+  // 不再優先採用系列的 dayOfWeek。
   const byDayOfWeek =
     filters.dayOfWeek === undefined
       ? rows
-      : rows.filter((row) => {
-          const effectiveDayOfWeek = row.recurringClassSeries?.dayOfWeek ?? taipeiDayOfWeek(row.startAt);
-          return effectiveDayOfWeek === filters.dayOfWeek;
-        });
+      : rows.filter((row) => taipeiDayOfWeek(row.startAt) === filters.dayOfWeek);
 
   const timed = discovery ? byDayOfWeek.filter(row => matchesClassDiscoveryTime(row.startAt, discovery, now)) : byDayOfWeek;
-  const filtered = (discovery ? !discovery.includeFull : filters.availableOnly)
-    ? timed.filter(
-        (row) =>
-          getClassAvailability({
-            capacity: row.capacity,
-            activeEnrollmentCount: row._count.enrollments,
-            startAt: row.startAt,
-            now,
-          }).state === "open",
-      )
-    : timed;
 
-  // 明確逐欄位挑選,而不是 destructure 掉 recurringClassSeries 再 spread 剩下的——那個內部
-  // 欄位只是用來算 dayOfWeek,回傳給訪客的 DTO 本來就不該含有任何關聯 id 的痕跡。
-  return filtered.map((row) => ({
+  return { rows: timed, now, excludeFull: Boolean(discovery ? !discovery.includeFull : filters.availableOnly) };
+}
+
+type PublicRow = Awaited<ReturnType<typeof loadPublicRows>>["rows"][number];
+
+function toPublicListItem(row: PublicRow, now: Date): PublicClassSessionListItem {
+  // 明確逐欄位挑選，不把 recurringClassSeries 等內部欄位帶給訪客。
+  return {
     id: row.id,
     title: row.title,
     serviceType: row.serviceType,
@@ -153,7 +143,153 @@ export async function getPublicClassSessionListItems(
     canAcceptNewEnrollments: row.status === "open_for_enrollment" && getClassAvailability({ capacity: row.capacity, activeEnrollmentCount: row._count.enrollments, startAt: row.startAt, now }).state === "open",
     origin: row.origin,
     teacherProfile: row.teacherProfile,
-  }));
+  };
+}
+
+function isRowOpen(row: PublicRow, now: Date): boolean {
+  return (
+    getClassAvailability({
+      capacity: row.capacity,
+      activeEnrollmentCount: row._count.enrollments,
+      startAt: row.startAt,
+      now,
+    }).state === "open"
+  );
+}
+
+export async function getPublicClassSessionListItems(
+  filters: PublicClassSessionListFilters = {},
+): Promise<PublicClassSessionListItem[]> {
+  const { rows, now, excludeFull } = await loadPublicRows(filters);
+
+  return (excludeFull ? rows.filter((row) => isRowOpen(row, now)) : rows).map((row) => toPublicListItem(row, now));
+}
+
+// teacher-class-scheduling 票 12：找課程的卡片。一個公開期班只顯示一張（規格 4.8、Q27）：
+//   - 篩選：期班只要有任一場尚未開始的場次符合篩選就顯示；卡片上的堂數一律是整期完整數字。
+//   - 可報名：只收整期 → 現在能不能報整期（剩下每一場都已開放且有空位）；整期和單堂都收 →
+//     能報整期或任一場還有單堂空位。預設排除額滿時依這個判斷。
+// 持續開課與單堂的公開場次維持逐場。
+export type PublicTermListItem = {
+  id: string;
+  title: string;
+  serviceType: string | null;
+  serviceTypes: string[];
+  yogaStyles: string[];
+  location: string;
+  scheduleLabel: string;
+  // 符合篩選的最近一場，用來排序與顯示「下一堂」。
+  nextStartAt: Date;
+  totalCount: number;
+  remainingCount: number;
+  termEnrollmentMode: TermEnrollmentMode;
+  requiresApproval: boolean;
+  canEnroll: boolean;
+  teacherProfile: { displayName: string | null };
+};
+
+export type PublicClassListEntry =
+  | { kind: "session"; item: PublicClassSessionListItem }
+  | { kind: "term"; item: PublicTermListItem };
+
+const dayOfWeekLabels = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
+
+export async function getPublicClassListEntries(
+  filters: PublicClassSessionListFilters = {},
+): Promise<PublicClassListEntry[]> {
+  const { rows, now, excludeFull } = await loadPublicRows(filters);
+  const nextStartBySeries = new Map<string, Date>();
+  const singleRows: PublicRow[] = [];
+
+  for (const row of rows) {
+    if (row.recurringClassSeries?.kind === "term") {
+      if (!nextStartBySeries.has(row.recurringClassSeries.id)) {
+        nextStartBySeries.set(row.recurringClassSeries.id, row.startAt);
+      }
+    } else {
+      singleRows.push(row);
+    }
+  }
+
+  const terms = nextStartBySeries.size
+    ? await prisma.recurringClassSeries.findMany({
+        where: { id: { in: [...nextStartBySeries.keys()] }, kind: "term" },
+        select: {
+          id: true,
+          title: true,
+          serviceType: true,
+          serviceTypes: true,
+          yogaStyles: true,
+          location: true,
+          dayOfWeek: true,
+          startTime: true,
+          endTime: true,
+          termEnrollmentMode: true,
+          requiresApproval: true,
+          teacherProfile: { select: { displayName: true } },
+          classSessions: {
+            where: { status: { not: "cancelled" } },
+            select: {
+              startAt: true,
+              status: true,
+              capacity: true,
+              _count: { select: { enrollments: { where: { status: { in: ["pending", "confirmed"] } } } } },
+            },
+          },
+        },
+      })
+    : [];
+
+  const termEntries: PublicClassListEntry[] = [];
+
+  for (const term of terms) {
+    if (!term.termEnrollmentMode) {
+      continue;
+    }
+
+    const remaining = term.classSessions.filter((session) => session.startAt.getTime() > now.getTime());
+    const hasSpace = (session: (typeof remaining)[number]) =>
+      session.status === "open_for_enrollment" && session._count.enrollments < session.capacity;
+    const canEnrollTerm = remaining.length > 0 && remaining.every(hasSpace);
+    const canEnrollSingle = term.termEnrollmentMode === "term_and_single" && remaining.some(hasSpace);
+    const canEnroll = term.termEnrollmentMode === "term_only" ? canEnrollTerm : canEnrollTerm || canEnrollSingle;
+
+    if (excludeFull && !canEnroll) {
+      continue;
+    }
+
+    termEntries.push({
+      kind: "term",
+      item: {
+        id: term.id,
+        title: term.title,
+        serviceType: term.serviceType,
+        serviceTypes: term.serviceTypes,
+        yogaStyles: term.yogaStyles,
+        location: term.location,
+        scheduleLabel: `${term.dayOfWeek === null ? "指定日期" : `每${dayOfWeekLabels[term.dayOfWeek]}`} ${term.startTime}–${term.endTime}`,
+        nextStartAt: nextStartBySeries.get(term.id) as Date,
+        totalCount: term.classSessions.length,
+        remainingCount: remaining.length,
+        termEnrollmentMode: term.termEnrollmentMode,
+        requiresApproval: term.requiresApproval,
+        canEnroll,
+        teacherProfile: term.teacherProfile,
+      },
+    });
+  }
+
+  const sessionEntries: PublicClassListEntry[] = (
+    excludeFull ? singleRows.filter((row) => isRowOpen(row, now)) : singleRows
+  ).map((row) => ({ kind: "session", item: toPublicListItem(row, now) }));
+
+  return [...sessionEntries, ...termEntries].sort(
+    (a, b) => entryStartAt(a).getTime() - entryStartAt(b).getTime(),
+  );
+}
+
+function entryStartAt(entry: PublicClassListEntry): Date {
+  return entry.kind === "term" ? entry.item.nextStartAt : entry.item.startAt;
 }
 
 // draft／狀態不符／非公開／老師已被暫停，一律回傳 null（not-found 語意），不揭露存在性差異

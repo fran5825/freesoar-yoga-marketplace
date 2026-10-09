@@ -377,7 +377,7 @@ test.describe("teacher single-class creation usability (ticket 01)", () => {
     await expect(page.locator("#fixed-time-error")).toHaveCount(0);
     await expect(summary(page)).toContainText("20:00–21:00");
     await page.getByRole("button", { name: "建立課程系列" }).click();
-    await expect(page.getByText(/課程系列已建立，共生成 2 場/)).toBeVisible();
+    await expect(page.getByText(/期班已建立，共 2 堂/)).toBeVisible();
 
     const sessions = await prisma.classSession.findMany({
       where: { teacherProfileId: teacher.teacherProfileId },

@@ -287,7 +287,7 @@ test.describe("teacher recurring class series smoke", () => {
     await page.getByText("哈達瑜伽", { exact: true }).click();
     await page.getByRole("button", { name: "建立課程系列" }).click();
 
-    await expect(page.getByText(/共生成 2 場/)).toBeVisible();
+    await expect(page.getByText(/期班已建立，共 2 堂/)).toBeVisible();
     await expect(page.getByText(new RegExp(dates.second))).toBeVisible();
     await expect(page.getByText("已生成場次（2）")).toBeVisible();
     // dayOfWeek === null（固定期），「生成更多」表單不該出現。

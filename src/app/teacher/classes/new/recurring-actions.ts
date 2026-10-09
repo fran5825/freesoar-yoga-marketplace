@@ -32,6 +32,9 @@ export async function createOwnRecurringClassSeriesAction(
     requiresApproval: formData.get("requiresApproval") === "yes",
     isPublic: formData.get("isPublic") === "yes",
     mode,
+    // 票 07：每週固定才送型態；指定日期在 domain 一律視為期班。
+    seriesKind: mode === "weekly" ? readFormString(formData, "seriesKind") : undefined,
+    termEnrollmentMode: readFormString(formData, "termEnrollmentMode"),
     dayOfWeek: mode === "weekly" ? readFormNumber(formData, "dayOfWeek") : undefined,
     generateCount: mode === "weekly" ? readFormNumber(formData, "generateCount") : undefined,
     startDate: mode === "weekly" ? readFormString(formData, "startDate") : undefined,
@@ -77,6 +80,7 @@ export async function createOwnRecurringClassSeriesAction(
         result.createdClassSessionIds.length,
         result.skipped,
         formData.get("openForEnrollment") === "yes",
+        mode === "fixed_dates" || readFormString(formData, "seriesKind") === "term",
       ),
     )}`,
   );
@@ -90,16 +94,19 @@ function buildCreatedMessage(
   createdCount: number,
   skipped: { date: string }[],
   openedForEnrollment: boolean,
+  isTerm: boolean,
 ): string {
   const nextStep = openedForEnrollment ? OPENED_NEXT_STEP_MESSAGE : DRAFT_NEXT_STEP_MESSAGE;
+  // 票 07：期班的摘要寫實際堂數（撞課跳過的不算）。
+  const created = isTerm ? `期班已建立，共 ${createdCount} 堂` : `課程系列已建立，共生成 ${createdCount} 場`;
 
   if (skipped.length === 0) {
-    return `課程系列已建立，共生成 ${createdCount} 場。${nextStep}`;
+    return `${created}。${nextStep}`;
   }
 
   const skippedDates = skipped.map((occurrence) => occurrence.date).join("、");
 
-  return `課程系列已建立，共生成 ${createdCount} 場；以下日期因時段衝突未生成：${skippedDates}。${nextStep}`;
+  return `${created}；以下日期因時段衝突未生成：${skippedDates}。${nextStep}`;
 }
 
 function readFormString(formData: FormData, name: string): string {

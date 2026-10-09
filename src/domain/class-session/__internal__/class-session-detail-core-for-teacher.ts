@@ -29,7 +29,7 @@ export const teacherFacingClassSessionSelect = {
   requiresApproval: true,
   demandRequest: { select: { targetLevel: true } },
   organization: { select: { name: true } },
-  recurringClassSeries: { select: { title: true } },
+  recurringClassSeries: { select: { title: true, kind: true } },
   // 只含 confirmed／pending 的報名（其他狀態不含）。
   enrollments: {
     where: { status: { in: ["confirmed", "pending"] } },
@@ -37,6 +37,8 @@ export const teacherFacingClassSessionSelect = {
       id: true,
       status: true,
       notes: true,
+      // teacher-class-scheduling 票 10：標示整期或單堂；整期的逐場報名不能在單場個別確認。
+      seriesEnrollmentId: true,
       user: { select: { name: true, email: true } },
     },
   },

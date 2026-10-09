@@ -1,4 +1,10 @@
-import type { ClassSessionOrigin, ClassSessionStatus, EnrollmentStatus } from "@prisma/client";
+import type {
+  ClassSessionOrigin,
+  ClassSessionStatus,
+  EnrollmentStatus,
+  RecurringClassSeriesKind,
+  TermEnrollmentMode,
+} from "@prisma/client";
 
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
@@ -127,13 +133,16 @@ export type TeacherFacingClassSession = {
   organization: { name: string } | null;
   // Slice E：統一列表要顯示常規/固定期課程系列的名稱，不是只顯示一個沒有名字的 id——
   // recurringClassSeriesId 本身不足以讓老師分辨「這是哪一個系列」。
-  recurringClassSeries: { title: string } | null;
+  // teacher-class-scheduling 票 10：kind 讓名單標示整期或單堂。
+  recurringClassSeries: { title: string; kind: RecurringClassSeriesKind } | null;
   // teacher-initiated-open-classes 第 8 節（Gate G2/G3）：涵蓋 pending，讓老師端 roster 能
   // 看到並操作等待審核的報名；status 一起帶出讓 UI 分辨要不要顯示確認/拒絕按鈕。
   enrollments: {
     id: string;
     status: EnrollmentStatus;
     notes: string | null;
+    // 票 10：屬於整期報名時有值；整期的逐場報名不能在單場個別確認。
+    seriesEnrollmentId: string | null;
     user: { name: string | null; email: string | null };
   }[];
   reviews: {
@@ -255,6 +264,9 @@ export type RecurringClassSeriesDetail = {
   requiresApproval: boolean;
   // 票 06：系列的公開設定（之後生成的場次沿用）。
   isPublic: boolean;
+  // 票 07：系列型態與期班報名方式（continuous 時為 null）。
+  kind: RecurringClassSeriesKind;
+  termEnrollmentMode: TermEnrollmentMode | null;
   occurrences: RecurringClassSeriesOccurrence[];
 };
 
@@ -291,6 +303,8 @@ export async function getOwnRecurringClassSeriesDetailForTeacher(
       capacity: true,
       requiresApproval: true,
       isPublic: true,
+      kind: true,
+      termEnrollmentMode: true,
       serviceTypes: true,
       yogaStyles: true,
       classSessions: {

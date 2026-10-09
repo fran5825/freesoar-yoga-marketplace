@@ -23,9 +23,14 @@ import { parseTaipeiDatetimeLocal } from "../timezone";
 
 export type OccurrenceSkip = { date: string; reason: "teacher_schedule_conflict" };
 
+export type GenerateOccurrencesErrorCode =
+  | "series_not_found"
+  | "teacher_not_approved"
+  | "series_not_continuous";
+
 export type GenerateOccurrencesResult =
   | { ok: true; createdClassSessionIds: string[]; skipped: OccurrenceSkip[] }
-  | { ok: false; code: "series_not_found" | "teacher_not_approved" };
+  | { ok: false; code: GenerateOccurrencesErrorCode };
 
 export type OccurrenceDatesResolver = (
   tx: Prisma.TransactionClient,
@@ -35,6 +40,8 @@ export type OccurrenceDatesResolver = (
 export type GenerateOccurrencesOptions = {
   // 建立後直接開放報名（票 01 的「建立後全部開放報名」勾選框）。
   openForEnrollment?: boolean;
+  // 票 07：「生成更多」只限持續開課，鎖內確認系列型態（期班回 series_not_continuous）。
+  requireContinuous?: boolean;
   // 供 Playwright 併發測試在「已取得系列鎖」之後插入同步點。
   onSeriesLockAcquired?: () => void | Promise<void>;
   // 供測試在「場次都已寫入、transaction 尚未 commit」時插入動作（例如拋錯驗證 rollback 不發通知）。
@@ -52,7 +59,7 @@ type GenerateInTransactionOutcome =
       created: CreatedClassSessionNotice[];
       skipped: OccurrenceSkip[];
     }
-  | { ok: false; code: "series_not_found" | "teacher_not_approved" };
+  | { ok: false; code: GenerateOccurrencesErrorCode };
 
 export async function generateOccurrencesForSeries(
   teacherProfileId: string,
@@ -84,6 +91,10 @@ export async function generateOccurrencesForSeries(
 
         if (series.teacherProfile.status !== "approved") {
           return { ok: false, code: "teacher_not_approved" };
+        }
+
+        if (options.requireContinuous && series.kind !== "continuous") {
+          return { ok: false, code: "series_not_continuous" };
         }
 
         const resolvedDates =

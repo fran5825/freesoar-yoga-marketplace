@@ -23,3 +23,13 @@
 - [ ] Smoke 測試覆蓋請假、退出、退出後再報被拒、他人拒絕、已開始場次不受影響、退出與追加補課交錯後沒有殘留有效報名；tsc、lint、受影響 smoke 通過；RWD 檢查。
 
 <!-- codex-peer-reviewed: 2026-10-04T00:20:22Z rounds=4 verdict=approved -->
+
+## 實作紀錄（2026-10-09，Claude，worktree `term-classes`）
+
+**Status：done（待 Codex 補審；待產品主人看畫面）**。推導規則 5、10 已於 2026-10-09 一次性放行。
+
+- 請假：沿用既有 `cancelOwnEnrollment`（只取消這一堂、整期報名維持有效、名額釋出），單堂頁對整期子報名改顯示「請假這一堂」與說明（`CancelEnrollmentForm` 新增 `variant="leave"`）。
+- 退出整期：`src/domain/enrollment/__internal__/withdraw-series-enrollment-core.ts`，先鎖系列再鎖整期報名列（本人 own-scope），尚未開始的 pending／confirmed 逐場改 cancelled，已開始／完成的不動，整期改 `withdrawn`；之後再報整期被拒（推導規則 5）。只通知學員本人一則（推導規則 10）。
+- 期班頁：已報名整期時顯示「退出整期…」，確認前列出會取消的場次並要求勾選確認。
+- 測試 `term-leave-withdraw.spec.ts`：退出取消未開始、保留已開始、狀態 withdrawn、重複退出與再報整期被拒、他人無法退出、通知只給本人；UI 請假與退出。8 passed。
+- 「退出與追加補課交錯後沒有殘留有效報名」的交錯測試在票 11 補（追加補課完成後才能測）。

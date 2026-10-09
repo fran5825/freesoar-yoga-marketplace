@@ -68,7 +68,12 @@ export async function cancelEnrollmentFromClassAction(formData: FormData): Promi
     redirectWithFeedback(classSessionId, "error", result.message, readFormString(formData, "returnTo"));
   }
 
-  redirectWithFeedback(classSessionId, "success", "報名已取消。", readFormString(formData, "returnTo"));
+  redirectWithFeedback(
+    classSessionId,
+    "success",
+    formData.get("leave") === "yes" ? "已請假這一堂，整期的其他堂照常。" : "報名已取消。",
+    readFormString(formData, "returnTo"),
+  );
 }
 
 function readFormString(formData: FormData, name: string): string {

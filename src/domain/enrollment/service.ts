@@ -18,6 +18,7 @@ export type CreateOwnEnrollmentErrorCode =
   | "class_session_full"
   | "already_enrolled"
   | "teacher_not_approved"
+  | "term_only_series"
   | "enrollment_create_failed";
 
 export type CreateOwnEnrollmentResult =
@@ -87,6 +88,14 @@ export async function createOwnEnrollment(
       ok: false,
       code: "class_session_not_found",
       message: "找不到這堂課程。",
+    };
+  }
+
+  if (result.code === "term_only_series") {
+    return {
+      ok: false,
+      code: "term_only_series",
+      message: "這個期班只收整期報名，請到期班頁報名整期。",
     };
   }
 
@@ -234,6 +243,7 @@ export async function cancelOwnEnrollment(
 // 處理、課程就這樣開始了，此時確認/拒絕都不再有意義，統一擋下比放行更安全。
 export type ConfirmPendingEnrollmentForTeacherErrorCode =
   | "authentication_required"
+  | "enrollment_in_term"
   | "teacher_profile_required"
   | "enrollment_not_found"
   | "enrollment_not_pending"
@@ -282,6 +292,8 @@ export async function confirmPendingEnrollmentForTeacher(
     where: {
       id: enrollmentId,
       status: "pending",
+      // teacher-class-scheduling 票 08：屬於整期報名的逐場報名不能個別確認／婉拒（交由整期操作）。
+      seriesEnrollmentId: null,
       classSession: { teacherProfileId, startAt: { gt: new Date() } },
     },
     data: { status: "confirmed" },
@@ -310,7 +322,7 @@ export async function confirmPendingEnrollmentForTeacher(
 
   const enrollment = await prisma.enrollment.findFirst({
     where: { id: enrollmentId, classSession: { teacherProfileId } },
-    select: { status: true, classSession: { select: { startAt: true } } },
+    select: { status: true, seriesEnrollmentId: true, classSession: { select: { startAt: true } } },
   });
 
   if (!enrollment) {
@@ -326,6 +338,14 @@ export async function confirmPendingEnrollmentForTeacher(
       ok: false,
       code: "class_session_already_started",
       message: "這堂課程已經開始，無法確認報名。",
+    };
+  }
+
+  if (enrollment.seriesEnrollmentId) {
+    return {
+      ok: false,
+      code: "enrollment_in_term",
+      message: "這筆報名屬於整期報名，請到期班頁一次處理整期報名。",
     };
   }
 
@@ -346,6 +366,7 @@ export async function confirmPendingEnrollmentForTeacher(
 
 export type DeclinePendingEnrollmentForTeacherErrorCode =
   | "authentication_required"
+  | "enrollment_in_term"
   | "teacher_profile_required"
   | "enrollment_not_found"
   | "enrollment_not_pending"
@@ -394,6 +415,8 @@ export async function declinePendingEnrollmentForTeacher(
     where: {
       id: enrollmentId,
       status: "pending",
+      // teacher-class-scheduling 票 08：屬於整期報名的逐場報名不能個別確認／婉拒（交由整期操作）。
+      seriesEnrollmentId: null,
       classSession: { teacherProfileId, startAt: { gt: new Date() } },
     },
     data: { status: "cancelled" },
@@ -424,7 +447,7 @@ export async function declinePendingEnrollmentForTeacher(
 
   const enrollment = await prisma.enrollment.findFirst({
     where: { id: enrollmentId, classSession: { teacherProfileId } },
-    select: { status: true, classSession: { select: { startAt: true } } },
+    select: { status: true, seriesEnrollmentId: true, classSession: { select: { startAt: true } } },
   });
 
   if (!enrollment) {
@@ -440,6 +463,14 @@ export async function declinePendingEnrollmentForTeacher(
       ok: false,
       code: "class_session_already_started",
       message: "這堂課程已經開始，無法拒絕報名。",
+    };
+  }
+
+  if (enrollment.seriesEnrollmentId) {
+    return {
+      ok: false,
+      code: "enrollment_in_term",
+      message: "這筆報名屬於整期報名，請到期班頁一次處理整期報名。",
     };
   }
 

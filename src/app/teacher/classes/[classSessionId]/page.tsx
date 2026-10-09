@@ -113,6 +113,8 @@ export default async function TeacherClassSessionDetailPage({
   const pendingEnrollments = classSession.enrollments.filter(
     (enrollment) => enrollment.status === "pending",
   );
+  // teacher-class-scheduling 票 10：期班的場次，名單標示整期或單堂。
+  const isTermSession = classSession.recurringClassSeries?.kind === "term";
   const nextStep = getTeacherClassNextStep({
     status: classSession.status,
     origin: classSession.origin,
@@ -240,12 +242,26 @@ export default async function TeacherClassSessionDetailPage({
                   className="min-w-0 rounded-2xl border border-amber-200 bg-amber-50/60 p-3 text-sm"
                   key={enrollment.id}
                 >
-                  <p className="min-w-0 break-words font-medium text-ink">{memberName}</p>
+                  <p className="min-w-0 break-words font-medium text-ink">
+                    {memberName}
+                    {isTermSession ? <EnrollmentSourceTag isTerm={Boolean(enrollment.seriesEnrollmentId)} /> : null}
+                  </p>
                   {enrollment.notes ? (
                     <p className="mt-1 min-w-0 whitespace-pre-wrap break-words text-ink-soft">
                       {enrollment.notes}
                     </p>
                   ) : null}
+                  {enrollment.seriesEnrollmentId && classSession.recurringClassSeriesId ? (
+                    <p className="mt-2 text-ink-soft">
+                      整期報名要一次確認或婉拒：
+                      <Link
+                        className="ml-1 font-medium text-pine underline"
+                        href={`/teacher/classes/series/${classSession.recurringClassSeriesId}#term-enrollments`}
+                      >
+                        到期班頁處理
+                      </Link>
+                    </p>
+                  ) : (
                   <div className="mt-2 flex flex-wrap gap-2">
                     <form action={confirmPendingEnrollmentAction}>
                       <input name="enrollmentId" type="hidden" value={enrollment.id} />
@@ -277,6 +293,7 @@ export default async function TeacherClassSessionDetailPage({
                       <p>婉拒後這筆報名會取消，學員會收到通知；之後無法再恢復這筆報名。</p>
                     </ConfirmActionDialog>
                   </div>
+                  )}
                 </li>
               );
             })}
@@ -300,6 +317,7 @@ export default async function TeacherClassSessionDetailPage({
                 >
                   <p className="min-w-0 break-words font-medium text-ink">
                     {enrollment.user.name ?? enrollment.user.email ?? "會員"}
+                    {isTermSession ? <EnrollmentSourceTag isTerm={Boolean(enrollment.seriesEnrollmentId)} /> : null}
                   </p>
                   {enrollment.notes ? (
                     <p className="mt-1 min-w-0 whitespace-pre-wrap break-words text-ink-soft">
@@ -549,6 +567,14 @@ export default async function TeacherClassSessionDetailPage({
         </section>
       ) : null}
     </div>
+  );
+}
+
+function EnrollmentSourceTag({ isTerm }: { isTerm: boolean }) {
+  return (
+    <span className="ml-2 rounded-full bg-pine-tint px-2 py-0.5 text-xs font-normal text-pine-deep">
+      {isTerm ? "整期" : "單堂"}
+    </span>
   );
 }
 

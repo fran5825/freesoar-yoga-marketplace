@@ -106,6 +106,15 @@ export async function editSeriesFromOccurrenceForTeacher(
 
         await hooks?.onSeriesLockAcquired?.();
 
+        // 票 07（推導規則 8）：期班的公開設定整期一致——連這一場之前、尚未開始的場次也一起改。
+        const seriesKind = (
+          await tx.recurringClassSeries.findUniqueOrThrow({
+            where: { id: recurringClassSeriesId },
+            select: { kind: true },
+          })
+        ).kind;
+        const applyVisibilityToWholeTerm = seriesKind === "term" && typeof input.isPublic === "boolean";
+
         const fromSession = await tx.classSession.findFirst({
           where: { id: fromClassSessionId, recurringClassSeriesId, teacherProfileId },
           select: { startAt: true, status: true, origin: true },
@@ -127,18 +136,22 @@ export async function editSeriesFromOccurrenceForTeacher(
         }
 
         // 鎖住「這一場起」尚未開始的草稿／開放報名場次（依 id 排序，與其他批次操作同一順序）。
-        const targets = await tx.$queryRaw<
+        // 期班改公開設定時，改為鎖住整期尚未開始的場次，內容類修改仍只套用「這一場起」。
+        const lockedSessions = await tx.$queryRaw<
           { id: string; startAt: Date; endAt: Date; location: string; origin: string }[]
         >`
           SELECT "id", "startAt", "endAt", "location", "origin" FROM "ClassSession"
           WHERE "recurringClassSeriesId" = ${recurringClassSeriesId}
             AND "teacherProfileId" = ${teacherProfileId}
             AND "status" = ANY(ARRAY['draft', 'open_for_enrollment']::"ClassSessionStatus"[])
-            AND "startAt" >= ${fromSession.startAt}
+            AND "startAt" >= ${applyVisibilityToWholeTerm ? new Date(0) : fromSession.startAt}
             AND "startAt" > ${new Date()}
           ORDER BY "id"
           FOR UPDATE
         `;
+        const targets = lockedSessions.filter(
+          (session) => session.startAt.getTime() >= fromSession.startAt.getTime(),
+        );
 
         const lockedTeacher = await tx.$queryRaw<{ status: string }[]>`
           SELECT "status" FROM "TeacherProfile" WHERE "id" = ${teacherProfileId} FOR UPDATE
@@ -259,6 +272,13 @@ export async function editSeriesFromOccurrenceForTeacher(
               capacity: next.capacity,
               ...(typeof input.isPublic === "boolean" ? { isPublic: input.isPublic } : {}),
             },
+          });
+        }
+
+        if (applyVisibilityToWholeTerm) {
+          await tx.classSession.updateMany({
+            where: { id: { in: lockedSessions.map((session) => session.id) } },
+            data: { isPublic: input.isPublic as boolean },
           });
         }
 

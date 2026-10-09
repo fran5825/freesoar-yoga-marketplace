@@ -13,6 +13,8 @@
 //   4. 驗證欄位（沿用建立單堂的規則）；時間有變才跑撞課檢查（排除自己）。
 //   5. 人數上限不得低於 pending + confirmed（在課程鎖內計數，新報名無法插隊）。
 // 鎖定順序「場次 → 老師」與單場報名相同（docs/specs/teacher-class-scheduling-spec.md 第 6 節）。
+// 票 07（推導規則 8）：期班的公開設定整期一致。期班場次帶 isPublic 時，先鎖系列、依 id 鎖住這一期
+// 所有未開始的草稿／開放場次，再照常鎖這一場與老師（系列 → 場次 → 老師），公開設定套用到整期與系列。
 // 改課不改變任何狀態；已報名的報名原樣保留。改時間或地點時，commit 之後通知該場 pending／confirmed 學員。
 //
 // 不依賴登入狀態（呼叫端傳入 teacherProfileId），讓測試能直接驗證；登入檢查在 service.ts。
@@ -91,8 +93,38 @@ export async function editClassSessionForTeacher(
 ): Promise<EditClassSessionForTeacherResult> {
   let notice: ChangeNotice;
 
+  // 場次所屬系列與系列型態建立後都不會變，可以在鎖外先讀，用來決定要不要先鎖系列。
+  const termSeriesId =
+    typeof input.isPublic === "boolean"
+      ? (
+          await prisma.classSession.findFirst({
+            where: { id: classSessionId, teacherProfileId, recurringClassSeries: { kind: "term" } },
+            select: { recurringClassSeriesId: true },
+          })
+        )?.recurringClassSeriesId ?? null
+      : null;
+
   try {
     notice = await prisma.$transaction(async (tx): Promise<ChangeNotice> => {
+      let termSessionIds: string[] = [];
+
+      if (termSeriesId) {
+        await tx.$queryRaw`
+          SELECT "id" FROM "RecurringClassSeries"
+          WHERE "id" = ${termSeriesId} AND "teacherProfileId" = ${teacherProfileId}
+          FOR UPDATE
+        `;
+        const termSessions = await tx.$queryRaw<{ id: string }[]>`
+          SELECT "id" FROM "ClassSession"
+          WHERE "recurringClassSeriesId" = ${termSeriesId}
+            AND "status" = ANY(ARRAY['draft', 'open_for_enrollment']::"ClassSessionStatus"[])
+            AND "startAt" > ${new Date()}
+          ORDER BY "id"
+          FOR UPDATE
+        `;
+        termSessionIds = termSessions.map((session) => session.id);
+      }
+
       const locked = await tx.$queryRaw<
         {
           id: string;
@@ -215,6 +247,17 @@ export async function editClassSessionForTeacher(
           ...(typeof input.isPublic === "boolean" ? { isPublic: input.isPublic } : {}),
         },
       });
+
+      if (termSeriesId && typeof input.isPublic === "boolean") {
+        await tx.classSession.updateMany({
+          where: { id: { in: termSessionIds } },
+          data: { isPublic: input.isPublic },
+        });
+        await tx.recurringClassSeries.update({
+          where: { id: termSeriesId },
+          data: { isPublic: input.isPublic },
+        });
+      }
 
       return {
         title: next.title,

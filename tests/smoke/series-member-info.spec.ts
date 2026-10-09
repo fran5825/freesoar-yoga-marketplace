@@ -203,7 +203,7 @@ test.describe("series member info", () => {
         await page.locator("#fixed-preparationNotes").fill("指定日期的準備事項");
       }
       await page.getByRole("button", { name: "建立課程系列" }).click();
-      await expect(page.getByText(/課程系列已建立/)).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByText(/期班已建立/)).toBeVisible({ timeout: 15_000 });
     }
 
     const filled = await prisma.recurringClassSeries.findFirstOrThrow({ where: { title: titles[0] } });

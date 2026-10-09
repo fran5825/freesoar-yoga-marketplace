@@ -38,6 +38,7 @@ export type CreateEnrollmentForUserErrorCode =
   | "class_session_full"
   | "already_enrolled"
   | "teacher_not_approved"
+  | "term_only_series"
   | "create_failed";
 
 export type CreateEnrollmentForUserResult =
@@ -76,6 +77,13 @@ class AlreadyEnrolledError extends Error {
   constructor() {
     super("User already has an enrollment for this class session");
     this.name = "AlreadyEnrolledError";
+  }
+}
+
+class TermOnlySeriesError extends Error {
+  constructor() {
+    super("This term only accepts whole-term enrollment");
+    this.name = "TermOnlySeriesError";
   }
 }
 
@@ -142,6 +150,16 @@ export async function createEnrollmentForUser(
 
       if (classSession.startAt.getTime() <= Date.now()) {
         throw new ClassSessionAlreadyStartedError();
+      }
+
+      // teacher-class-scheduling 票 08：「只收整期」的期班不提供單堂報名。系列與報名方式建立後不會變，
+      // 讀取不需要鎖系列（單場報名維持「場次 → 老師」，不鎖系列）。
+      const termOnly = await tx.classSession.count({
+        where: { id: classSessionId, recurringClassSeries: { kind: "term", termEnrollmentMode: "term_only" } },
+      });
+
+      if (termOnly > 0) {
+        throw new TermOnlySeriesError();
       }
 
       const lockedTeacherProfile = await tx.$queryRaw<{ status: string }[]>`
@@ -239,6 +257,10 @@ export async function createEnrollmentForUser(
 
     if (error instanceof TeacherNotApprovedError) {
       return { ok: false, code: "teacher_not_approved" };
+    }
+
+    if (error instanceof TermOnlySeriesError) {
+      return { ok: false, code: "term_only_series" };
     }
 
     if (error instanceof ClassSessionFullError) {

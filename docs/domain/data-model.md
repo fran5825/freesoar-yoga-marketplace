@@ -336,10 +336,14 @@ Fields:
 - capacity
 - requiresApproval（`Boolean @default(false)`，套用到這個系列底下生成的每一場）
 - isPublic（`Boolean @default(false)`，公開或僅透過連結招募的系列預設；生成與生成更多沿用）
+- kind（2026-10-09 新增，`RecurringClassSeriesKind`：`continuous` 持續開課／`term` 期班，預設 `continuous`；建立後不能改）
+- termEnrollmentMode（2026-10-09 新增，nullable `TermEnrollmentMode`：`term_only` 只收整期／`term_and_single` 整期和單堂都收；只有期班有值，建立後不能改）
 - createdAt
 - updatedAt
 
 Phase 2 schema notes：
+
+- **已落地（`teacher-class-scheduling` 票 07，2026-10-09，migration `20261009022844_term_class_series_kind`）**：新增 `kind` 與 `termEnrollmentMode`。資料庫檢查規則 `RecurringClassSeries_term_enrollment_mode_check`：`kind = continuous` 時 `termEnrollmentMode` 必為 NULL，`kind = term` 時必有值。舊資料回填：`dayOfWeek IS NULL`（指定日期）→ `term` + `term_and_single`；每週固定 → `continuous`（規格 Q21）。建立規則：每週固定由老師選持續開課或期班（期班的首次生成場數就是這一期的堂數 1–26），指定日期一律是期班；期班報名方式預設 `term_and_single`。只有持續開課可以「生成更多」（server 端拒絕期班），老師總覽的「生成更多」提醒也只針對持續開課。期班的公開設定整期一致（推導規則 8）：改任何一場的 `isPublic`，不論選哪個範圍，都套用到這一期所有尚未開始的草稿／開放場次與系列本身；鎖定順序為系列 → 這一期場次（依 id）→ 老師。Rollback：刪除檢查規則、兩個欄位與兩個 enum，場次與報名不受影響。
 
 - 2026-09-26：每週固定模式可選填「起始日期」（不存欄位，只影響首次生成）：起始日期須晚於今天，且必須剛好是選定的 `dayOfWeek`（前後端都檢查，錯誤碼 `start_date_weekday_mismatch`），第一場就是這一天；不填則沿用原本「從明天起最近的一個」。固定期模式改用三個月月曆直接點選多天（最多 26 天，今天與過去不能選），送出格式不變。
 - 固定期課程（例如連續 4 週的特定日期組合）不在這個 model 記錄每一個具體日期——生成時由呼叫端直接提供明確日期清單，逐筆寫入對應 `ClassSession.startAt`/`endAt`，系列本身只保留 `startTime`/`endTime` 這組共用的時鐘時間。
@@ -396,8 +400,12 @@ Fields:
 - status
 - notes
 - consentedAt
+- seriesEnrollmentId（2026-10-09 新增，nullable FK → `SeriesEnrollment`，`onDelete: SetNull`；屬於整期報名時才有值）
+- seriesEnrollmentSource（2026-10-09 新增，nullable `SeriesEnrollmentSource`：`term_created` 報整期時新增／`merged_single` 報整期前已存在、被併入的單堂報名）
 - createdAt
 - updatedAt
+
+整期關聯（`teacher-class-scheduling` 票 08，migration `20261009024811_series_enrollment`）：DB check `Enrollment_series_source_check`——有 `seriesEnrollmentId` 就一定要有 `seriesEnrollmentSource`；應用層一律同時設定或清除兩者（整期紀錄被刪時 FK SET NULL，殘留的來源無害）。屬於整期的逐場報名，老師不能個別確認／婉拒（server 端拒絕，錯誤碼 `enrollment_in_term`），交由票 10 的整期操作；學員取消其中一場就是「請假」（票 09）。「只收整期」期班的場次，單場報名 server 端拒絕（`term_only_series`）。
 
 `consentedAt`（`enrollment` 已確認）：非 nullable，記錄使用者確認「了解此課程非醫療行為」的時間點；V1 唯一的建立路徑必定顯式寫入，不是選填的 UX 防誤觸欄位。
 
@@ -406,6 +414,29 @@ Phase 2 schema notes（`teacher-initiated-open-classes` 已確認）：
 - 新報名的初始 `status` 依所屬 `ClassSession.requiresApproval` 決定：`false`（既有行為，維持不變）→ 直接 `confirmed`；`true` → 先落在 `pending`，需要授課老師明確確認才轉為 `confirmed`，或老師拒絕/會員自助取消/課程被整堂取消時轉為 `cancelled`。
 - 容量計算（Gate G3 = A）：`pending` 與 `confirmed` **合計**佔用名額（保留席位等老師確認），不是只算 `confirmed`。
 - `pending` 報名的資格檢查與 `teacher_initiated` 課程的建立資格檢查共用同一個手法：在同一個 transaction 內先鎖定 `TeacherProfile` row（`FOR UPDATE`）才讀取 `status`，避免跟 Admin 執行 suspend 的獨立 `UPDATE` 產生 TOCTOU 競態；`teacher_not_approved` 錯誤碼阻擋任何來源（公開瀏覽或已登入直連）對非 `approved` 老師課程的**新**報名，不回溯撤銷已經合法建立的既有報名。
+
+## SeriesEnrollment
+
+**已落地**（`teacher-class-scheduling` 票 08，2026-10-09，migration `20261009024811_series_enrollment`；設計見 ADR 0005）。代表「某位學員報名了某個期班」。每一場仍是各自的 `Enrollment`，名額、出席、取消都以單場為單位；屬於整期的那幾筆 `Enrollment` 用 `seriesEnrollmentId` 指回這裡。
+
+Fields:
+
+- id
+- recurringClassSeriesId（FK → `RecurringClassSeries`，`onDelete: Cascade`；只會是 `kind = term` 的系列，由應用層保證）
+- userId（FK → `User`，`onDelete: Cascade`）
+- status（`SeriesEnrollmentStatus`：`pending` 等老師確認／`confirmed`／`declined` 老師婉拒／`withdrawn` 學員退出）
+- notes（選填，最多 500 字，同單堂報名）
+- consentedAt
+- createdAt
+- updatedAt
+
+Rules：
+
+- `@@unique([recurringClassSeriesId, userId])`：同一位學員對同一期班只能有一筆，含已退出、已婉拒的（推導規則 5）。
+- 報整期：報上所有尚未開始、未取消的場次；尚有草稿不能報（推導規則 1）；需新增報名的每一場都要有空位（Q24）；已有 `pending`／`confirmed` 單堂報名的場次併入並保留狀態，不重複算名額；某場曾取消過就不能報整期（推導規則 9）。
+- 初始狀態依系列 `requiresApproval`：需確認 → 整期與新增的逐場報名都是 `pending`；否則都是 `confirmed`。
+- 鎖定順序：`RecurringClassSeries` → 剩餘場次（依 id）→ `TeacherProfile`；取得場次鎖後才確認名額與既有報名。
+- 通知沿用 `enrollment_confirmed`／`enrollment_pending_review`，課名帶「（整期 N 堂）」，一次整期報名只發一則（需確認時老師也收到一則）。
 
 ## PaymentIntent
 

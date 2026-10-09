@@ -1,4 +1,9 @@
-import type { ClassSessionOrigin, ClassSessionStatus, EnrollmentStatus } from "@prisma/client";
+import type {
+  ClassSessionOrigin,
+  ClassSessionStatus,
+  EnrollmentStatus,
+  SeriesEnrollmentStatus,
+} from "@prisma/client";
 
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
@@ -9,6 +14,12 @@ export type OwnEnrollment = {
   status: EnrollmentStatus;
   notes: string | null;
   createdAt: Date;
+  // teacher-class-scheduling 票 12：屬於整期報名時，「我的報名」把即將上課的場次合併成一張期班卡片。
+  seriesEnrollment: {
+    id: string;
+    status: SeriesEnrollmentStatus;
+    recurringClassSeries: { id: string; title: string };
+  } | null;
   classSession: {
     id: string;
     title: string;
@@ -34,6 +45,9 @@ export async function listOwnEnrollmentsForMember(): Promise<OwnEnrollment[]> {
       status: true,
       notes: true,
       createdAt: true,
+      seriesEnrollment: {
+        select: { id: true, status: true, recurringClassSeries: { select: { id: true, title: true } } },
+      },
       classSession: {
         select: {
           id: true,
@@ -75,7 +89,8 @@ export type MemberFacingClassSession = {
   // 消費頁面需自行提供中性 fallback 文案（不假設一律有團體名稱）。
   organization: { name: string } | null;
   teacherProfile: { displayName: string | null };
-  ownEnrollment: { id: string; status: EnrollmentStatus } | null;
+  // teacher-class-scheduling 票 09：屬於整期報名時有值（取消這一堂就是「請假」）。
+  ownEnrollment: { id: string; status: EnrollmentStatus; seriesEnrollmentId: string | null } | null;
   requiresApproval: boolean;
   canAcceptNewEnrollments: boolean;
 };
@@ -128,7 +143,7 @@ export async function getClassSessionForMember(
   const { _count, teacherProfile, ...classSessionFields } = classSession;
   const ownEnrollment = await prisma.enrollment.findUnique({
     where: { classSessionId_userId: { classSessionId, userId: currentUser.id } },
-    select: { id: true, status: true },
+    select: { id: true, status: true, seriesEnrollmentId: true },
   });
 
   return {
