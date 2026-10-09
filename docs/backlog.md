@@ -193,7 +193,13 @@
 - [ ] **期班（老師排課票 07–13）**：持續開課／期班、整期報名、請假與退出、老師處理整期報名、補課日期、學員端呈現、整合驗收。7 張票都還是 `draft`；票 07 已有開工前設計與 2026-10-06 的 A–E 決定，重啟時沿用。規格與票券見 `docs/superpowers/plans/teacher-class-scheduling/tickets/README.md`。
 - [x] **團主組織舊欄位移除（團主改版票 15b）**：2026-10-09 完成，見票 15。
 - [x] **email 通知按鈕連結（團主易用性票 11 未完成項）**：2026-10-09 隨寄信功能完成。
-- [ ] **開通真實寄信**：申請 Resend 帳號、驗證網域、把設定填進 `.env` 後實測一次，步驟見 `docs/superpowers/plans/2026-08-01-transactional-email-plan.md`「啟用步驟」。
+- [ ] **開通真實寄信（你要做的，2026-10-09 決定之後再做）**：寄信程式已完成，目前 `EMAIL_DELIVERY_MODE` 沒設定＝不寄信，只發站內通知。照下面做完就能寄出第一封信：
+  1. 到 [resend.com](https://resend.com) 註冊，在 Domains 加入你的網域，照指示設定 DNS，等狀態變成 Verified。
+  2. 在 Resend 建立 API key。**不要貼在對話裡。**
+  3. 打開專案的 `.env`，自己填：`EMAIL_DELIVERY_MODE="allowlist"`、`RESEND_API_KEY="你的金鑰"`、`EMAIL_FROM="飛索 <notifications@你的網域>"`、`EMAIL_ALLOWED_RECIPIENTS="你自己的信箱"`。
+  4. 跟 Claude 說「Resend 設定好了，寄一封測試信給我」，確認收到信、按鈕能回到正確頁面。
+  5. 正式上線前才改成 `live`，並把 `APP_BASE_URL` 設成正式網址（https）。要停用時改回 `disabled`，站內通知不受影響。
+  - 信件長相已在 2026-10-09 用預覽確認過版面；Resend 免費方案每天 100 封，測試夠用。詳細設計見 `docs/superpowers/plans/2026-08-01-transactional-email-plan.md`。
 
 ### 4. 新增 LINE 與 Facebook 登入
 
