@@ -6,6 +6,8 @@
 
 **Status:** partially done（2026-09-25，email 部分另議）
 
+**2026-10-09 實際狀態：** 站內通知連結已完成；email 連結因尚無寄信功能，移到 `docs/backlog.md` 第 20 項，本票視為結案。
+
 **Workflow mode:** STANDARD
 
 **Human Gate:** no

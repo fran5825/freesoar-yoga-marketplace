@@ -2,6 +2,8 @@
 
 日期：2026-10-03。狀態：**Q1–Q19 與 15 張切票已核准。01 docs contract 已完成（2026-10-04，見 spec 第 13 節）；程式票依相依分批進行中。**
 
+**2026-10-09 實際狀態：** 票 01–14 與 15a 已完成；15b（刪除舊 pointer 欄位）延後，見 `docs/backlog.md` 第 20 項。
+
 規格：[Organizer Usability Redesign Spec](../../specs/organizer-usability-redesign-spec.md)。[訪談決策](../../organizer-usability-plan.md)與[名詞表](../../context/glossary.md)保留產品主人已確認內容。
 
 2026-10-07 進度：15a 已核准並實作 owner-derived default（`createdAt asc`／`id asc`）、owner-only fixtures 與 admin owner 摘要，bootstrap 暫留雙寫。驗證／獨立 review 與 scoped fixture DB 授權紀錄集中於[票 15](organizer-usability-redesign/tickets/15-organization-legacy-contract.md)；schema 未變更，15b recovery／migration 仍 blocked。下方批次規劃保留歷史設計，15a 相容狀態以 spec 13.1 為準。

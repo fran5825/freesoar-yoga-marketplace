@@ -4,6 +4,8 @@
 
 狀態：`tickets-published-draft-awaiting-builder-approval`。Q1–Q20 已確認採 A；產品主人以「1」核准在目前 task 發布已提案八票。票券與第一票候選 prompt 完成，尚未實作；整體 shared understanding 與個票 Builder 尚待確認。本次不授權程式、commit／push 或部署。
 
+**2026-10-09 實際狀態：** 八票已全部實作完成（2026-10-04）。上方狀態為歷史紀錄。
+
 ## 1. 規格與決策來源
 
 - `docs/specs/teacher-usability-redesign-spec.md`：完整呈現規則、領域邊界與驗收條件。

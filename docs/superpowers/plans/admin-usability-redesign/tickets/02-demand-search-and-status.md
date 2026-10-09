@@ -4,7 +4,7 @@
 
 **Blocked by:** 01：沿用已驗證的共用列表與返回模式。
 
-**Status:** implemented-awaiting-owner-review
+**Status:** accepted（2026-10-04 畫面驗收通過，見本資料夾 README；之後也包含在票 14 整條工作路徑並於 2026-10-06 驗收。2026-10-09 收尾時同步本欄；原狀態 implemented-awaiting-owner-review）
 
 **Workflow mode:** STANDARD
 
