@@ -2,7 +2,7 @@
 
 日期：2026-10-03。狀態：**Q1–Q19 與 15 張切票已核准。01 docs contract 已完成（2026-10-04，見 spec 第 13 節）；程式票依相依分批進行中。**
 
-**2026-10-09 實際狀態：** 票 01–14 與 15a 已完成；15b（刪除舊 pointer 欄位）延後，見 `docs/backlog.md` 第 20 項。
+**2026-10-09 實際狀態：** 票 01–15（含 15a、15b）全部完成；15b 已刪除舊 pointer 欄位並套用到本機開發庫。
 
 規格：[Organizer Usability Redesign Spec](../../specs/organizer-usability-redesign-spec.md)。[訪談決策](../../organizer-usability-plan.md)與[名詞表](../../context/glossary.md)保留產品主人已確認內容。
 

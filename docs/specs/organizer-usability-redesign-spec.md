@@ -210,15 +210,13 @@
 
 ```prisma
 model OrganizerProfile {
-  organizationId     String?        // legacy pointer：15a 暫留 bootstrap 雙寫，15b 另核准後移除
-  organization       Organization?  @relation("OrganizerLegacyOrganization", fields: [organizationId], references: [id], onDelete: SetNull)
+  // 票 15b（2026-10-09）已移除 legacy organizationId 與 OrganizerLegacyOrganization 關聯
   ownedOrganizations Organization[] @relation("OrganizationOwner")
 }
 
 model Organization {
   ownerOrganizerProfileId String?
   ownerOrganizerProfile   OrganizerProfile?  @relation("OrganizationOwner", fields: [ownerOrganizerProfileId], references: [id], onDelete: SetNull)
-  organizerProfiles       OrganizerProfile[] @relation("OrganizerLegacyOrganization") // 既有欄位名不變，降低票 02 的改動範圍
   @@index([ownerOrganizerProfileId])
 }
 ```
@@ -244,6 +242,7 @@ model Organization {
 - 表單預選優先序保持：本人擁有的 requested ID → 本人擁有的既有 draft organization → derived default → null；不把已存草稿或歷史 FK 改成 default。admin 團主摘要只看 owner，不合併 legacy pointer 連結的其他人。
 - 票 03–05 已把團體管理、需求與邀請選團體改用 owner。15a 一般 fixtures 只寫／查 owner；有意的 bootstrap 雙寫斷言、錯 owner／孤立團體 legacy 注入安全測試暫留，完整清單與驗證／獨立 review 狀態見票 15。
 - **票 15b contract**：15a 完整驗證與獨立 review 後，再移除 bootstrap writer、`OrganizerProfile.organizationId` 與兩側 legacy relation。仍待 recovery 決策、transaction／寫入隔離 SQL review、disposable DB 故障演練與確切 DB 操作授權；不能從 owner 承諾還原每筆原 pointer（含 null），不能把 15a 授權當成刪欄位授權。
+- **2026-10-09 已完成 15b**：產品主人選 R1（套用前保存每筆原值）並同意演練後套用本機開發庫。Docker 臨時庫演練故障退回、成功套用與還原皆通過後，已套用到本機開發庫；團體、owner 與需求／課程的團體對應前後一致。
 
 **Rollback**：票 02 的 expand 只新增欄位，舊資料不動。在票 03 開放建立第二個團體之前，可以用一個 forward migration 刪掉 owner 欄位、回到原狀，沒有資料損失。**一旦有團主建立了第二個團體**，刪 owner 欄位就會失去「第二個團體屬於誰」的資訊，之後只能往前修，不能回退。這個截止點寫在票 02／03 的紀錄裡。
 

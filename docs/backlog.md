@@ -191,8 +191,9 @@
 為了盡快收尾，以下項目先不做，之後再挑：
 
 - [ ] **期班（老師排課票 07–13）**：持續開課／期班、整期報名、請假與退出、老師處理整期報名、補課日期、學員端呈現、整合驗收。7 張票都還是 `draft`；票 07 已有開工前設計與 2026-10-06 的 A–E 決定，重啟時沿用。規格與票券見 `docs/superpowers/plans/teacher-class-scheduling/tickets/README.md`。
-- [ ] **團主組織舊欄位移除（團主改版票 15b）**：刪除舊的 organization pointer 欄位與 migration，屬破壞性操作，需另外放行。15a 已完成。
-- [ ] **email 通知按鈕連結（團主易用性票 11 未完成項）**：要先有寄信功能（Resend），見 `docs/superpowers/plans/2026-08-01-transactional-email-plan.md`。
+- [x] **團主組織舊欄位移除（團主改版票 15b）**：2026-10-09 完成，見票 15。
+- [x] **email 通知按鈕連結（團主易用性票 11 未完成項）**：2026-10-09 隨寄信功能完成。
+- [ ] **開通真實寄信**：申請 Resend 帳號、驗證網域、把設定填進 `.env` 後實測一次，步驟見 `docs/superpowers/plans/2026-08-01-transactional-email-plan.md`「啟用步驟」。
 
 ### 4. 新增 LINE 與 Facebook 登入
 

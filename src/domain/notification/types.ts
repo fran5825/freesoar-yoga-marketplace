@@ -1,5 +1,8 @@
 import type { NotificationTargetType } from "@prisma/client";
 
+import type { EmailConfig } from "./email-config";
+import type { EmailTransport } from "./email-transport";
+
 // affected_member：class_session_cancelled 專用，區別於 counterpart（授課 Teacher）——
 // 同一個事件需要對 Teacher 與被連帶取消的 Member 各自給不同文案，不能共用 counterpart。
 // affected_responder：demand_request_cancelled 專用，代表因連帶取消而被轉為 declined
@@ -29,6 +32,8 @@ export type NotificationRecipient = {
 // `${eventKeyBase}:${userId}`，重試時資料庫的 unique 限制擋下第二筆，視為已發送。
 export type NotifyOptions = {
   eventKeyBase?: string;
+  // transactional-email：只給測試用，換掉 email 設定與寄信出口；正式流程一律讀環境設定。
+  email?: { config?: EmailConfig; transport?: EmailTransport };
 };
 
 // 各 NotificationType 的文案函式（見 copy.ts）依需要挑選這裡的欄位使用，

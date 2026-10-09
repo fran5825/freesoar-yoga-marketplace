@@ -4,7 +4,7 @@
 
 **Blocked by:** 15a 前置已完成；15b 仍受票 14 的前置處置、recovery／SQL review／演練與確切 DB 授權阻擋。票 14 的真機鍵盤未驗證及既有失敗項須保留追蹤／接受紀錄，不能僅依 done 標籤宣稱全部 gate 通過。
 
-**Status:** 15a done；15b blocked（2026-10-07：15a 實作／checks 完成，獨立 review 第 1 輪發現 F1 混合 patch 歸屬問題；補件後同一 reviewer 第 2 輪 APPROVE、F1 解除。僅完成非破壞性 15a，不執行刪欄位、migration、commit 或 push；15b 前置與 Human Gate 仍未完成。）
+**Status:** 15a done；15b done（2026-10-09：產品主人選 R1、同意 Docker 臨時庫演練後套用本機開發庫；演練與套用完成，受影響 smoke 結果見末節）
 
 **Workflow mode:** HEAVY
 
@@ -407,3 +407,17 @@ R1 的 exact recovery 僅承諾尚未重新開放寫入且逐筆 profile／organ
 - 產品主人最新要求「請盡快收尾」；立即停止診斷與重試，只保存本run packet／task-relative patch／hash evidence，不啟動reviewer或下一切片。
 - [x] 保存本次成功／失敗結果、self review、baseline／patch／完整Builder closeout；native與獨立review維持未完成。
 - 15a done保留；15b contract未執行。未連DB、不做realexport／migration、不commit／push／deploy；本task停止於此。
+
+## 15b 執行紀錄（2026-10-09，Claude）
+
+產品主人決定：Recovery 採 **R1**（套用前保存每筆原值）；**先在 Docker 臨時庫演練，通過後套用本機開發庫**。沒有正式環境。
+
+- [x] 程式：移除 `organizer-profile/service.ts` 首次建立時寫 pointer 的 1 處；schema 移除 `OrganizerProfile.organizationId` 與兩側 `OrganizerLegacyOrganization` 關聯。拿掉後 `tsc` 0 錯誤；raw SQL 搜尋沒有其他依賴。
+- [x] 測試：`organization-ownership.spec.ts` 移除兩處 pointer 安全注入（原本要驗的「看不到／改不到別人的團體」照常驗）、bootstrap 測試改驗新團主擁有剛建立的團體；`admin-organizations.spec.ts` 移除第二位團主的 pointer。兩個測試名稱去掉 legacy pointer 字樣。
+- [x] Migration `20261009120000_drop_organizer_profile_legacy_organization`：明列 `BEGIN`／`COMMIT`、`LOCK TABLE ... ACCESS EXCLUSIVE`、`RAISE NOTICE` 只記筆數（R1 已保存原值，不阻擋），再 DROP FK 與欄位。
+- [x] R1 程式：`prisma/recovery/organizer-15b/snapshot-organizer-pointer.mjs`（只存 id）、`restore-organizer-pointer.mjs`（檢查 DB 名稱一致、加回欄位與原 FK、逐筆寫回並比對）。
+- [x] Docker `postgres:16` 臨時庫演練（`.ai-runs/organizer-15b/rehearse.sh`）：套用前 28 個 migrations；情境含正常、pointer 為空、指向別人的團體、指向無 owner 團體。第一個 DROP 後注入錯誤 → 欄位與 FK 都還在（整批退回）；實際 `prisma migrate deploy` 成功、欄位移除、`migrate status` 無 drift；團體 id／owner 對照前後相同；還原 4 筆 mismatched=0。容器已移除。
+- [x] 本機開發庫 `freesoar_yoga_marketplace_dev`：套用前確認只有本 migration 未套用、沒有執行中的 dev server；快照存 `.ai-runs/organizer-15b/dev-snapshot-20261009-105653.json`（1 位團主、1 筆 pointer）；`migrate deploy` 成功；團體數、無 owner 數、團主數，以及團體 owner、需求與課程的團體對應 hash 前後完全相同。
+- 還原方式：`node prisma/recovery/organizer-15b/restore-organizer-pointer.mjs <快照檔>`，再 `git revert` 15b 的 commit；`_prisma_migrations` 紀錄需另外處理，不自動 `migrate resolve`。
+- 注意：在本次之前就啟動、仍在執行的 dev server 用的是舊版 Prisma client，讀團主資料會出錯，重開即可。
+- [x] 受影響 smoke（`PORT=3100 CI=1`，沿用 15a 範圍：`organizer.*`、`organization-ownership`、`admin-organizations`、`notifications-area`、`review-average-rating-display`、`member-dashboard`，desktop＋mobile）：276 passed／1 failed／1 skipped（17.6m）。失敗為 mobile `organizer-demand.spec.ts:395` 送出後 5 秒內未見提示（desktop 同案例通過）；重新 build 後單獨重跑 desktop＋mobile 皆通過，判定為負載下逾時，與 15b 無關。`npm run lint` 通過。

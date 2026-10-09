@@ -6,7 +6,7 @@
 
 **Status:** partially done（2026-09-25，email 部分另議）
 
-**2026-10-09 實際狀態：** 站內通知連結已完成；email 連結因尚無寄信功能，移到 `docs/backlog.md` 第 20 項，本票視為結案。
+**2026-10-09 實際狀態：** 站內通知連結已完成；email 連結已隨寄信功能完成（按鈕連 `/sign-in?callbackUrl=<目標頁>`，未登入者登入後回到該頁，見 `docs/superpowers/plans/2026-08-01-transactional-email-plan.md` 2026-10-09 實作紀錄）。真實寄送待產品主人準備 Resend。
 
 **Workflow mode:** STANDARD
 

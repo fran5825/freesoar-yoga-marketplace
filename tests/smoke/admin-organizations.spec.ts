@@ -172,7 +172,7 @@ test.describe("admin organizations smoke", () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 
-  test("shows only the owner and ignores an unrelated legacy pointer", async ({
+  test("shows only the owner, not another organizer", async ({
     context,
     page,
   }, testInfo) => {
@@ -203,11 +203,10 @@ test.describe("admin organizations smoke", () => {
     await prisma.organizerProfile.create({
       data: {
         userId: userTwoId,
-        organizationId: organization.id,
         displayName: `Organizer Two ${runId}`,
       },
     });
-    // 15a 有意保留的 legacy 安全 fixture：另一位團主的 pointer 不授予管理者身分。
+    // 只有 owner 會列為這個團體的團主；另一位團主不會。
     await prisma.organization.update({
       where: { id: organization.id },
       data: { ownerOrganizerProfileId: owner.id },

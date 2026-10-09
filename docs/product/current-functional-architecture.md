@@ -297,7 +297,7 @@ flowchart LR
     CURRENT --> C8["老師自建課程<br/>單堂／常規／固定期／<br/>報名審核機制／雙重預約衝突檢查"]
     CURRENT --> C9["公開課程列表與詳情<br/>/classes，Visitor 可瀏覽"]
 
-    GAP --> G2["Email notification 尚未接線<br/>目前只有 in_app"]
+    GAP --> G2["Email 程式已完成<br/>預設不寄，待接 Resend 帳號"]
     GAP --> G3["Basic class reminder 尚未接線"]
     GAP --> G4["完整 mobile-first／RWD<br/>仍需系統性驗證"]
     GAP --> G5["正式註冊入口 /sign-up<br/>目前尚無 page"]
@@ -351,7 +351,7 @@ flowchart LR
 - 課程取消會連帶取消其下所有 `confirmed`／`pending` Enrollment；DemandRequest 取消則會連帶 decline 其下尚有效的老師回覆。
 - Enrollment 建立時**依課程設定**成為 `confirmed`（既有行為）或 `pending`（新——課程設定「需要老師確認」時），並原子檢查容量（`pending`＋`confirmed` 合計）與重複報名；課程開始後不可自助取消，`pending` 報名也受同一時間限制。老師可在自己課程的報名清單確認或拒絕 `pending` 報名。
 - 評價只開放給已完成課程中仍為 `confirmed` 的報名者，每位使用者每堂課只能提交一次。
-- 通知目前只接線 `channel="in_app"`；`email`、`line`、`sms` 是 reserved enum，不能解讀成已提供的功能。
+- 通知寫入 `channel="in_app"`；`email` 已實作（2026-10-09），由 `EMAIL_DELIVERY_MODE` 控制，預設 `disabled` 不寄，尚未接上真實 Resend 帳號。`line`、`sms` 仍是 reserved enum，不能解讀成已提供的功能。
 - TeacherAvailability 與 AvailabilityException 已能維護，但目前不會在媒合或 ClassSession 建立時自動阻擋排程衝突（這與上方「雙重預約衝突檢查」是不同機制——後者比對的是同一位老師的其他 `ClassSession` 時段，不是 `TeacherAvailability` 宣告的可授課時段；老師自建課程會提示自己宣告的可授課時段，但不強制限制在該時段內建課）。
 
 ## 維護規則

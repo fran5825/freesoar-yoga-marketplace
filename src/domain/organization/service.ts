@@ -181,7 +181,7 @@ export async function createOwnOrganization(
       };
     }
 
-    // owner 一律由 server 寫入，不接受 client 指定；legacy pointer 不動（只有第一個團體會設定）。
+    // owner 一律由 server 寫入，不接受 client 指定。
     const organization = await prisma.organization.create({
       data: { ...toOrganizationData(input), ownerOrganizerProfileId: profile.id },
       select: { id: true },

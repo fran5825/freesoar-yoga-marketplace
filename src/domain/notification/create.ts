@@ -3,6 +3,7 @@ import { Prisma, type NotificationType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 import { buildNotificationCopy } from "./copy";
+import { deliverEmailChannel } from "./email-channel";
 import { inAppNotificationSender, type NotificationSender } from "./sender";
 import type { NotificationPayload, NotificationRecipient, NotifyOptions } from "./types";
 
@@ -14,6 +15,8 @@ import type { NotificationPayload, NotificationRecipient, NotifyOptions } from "
 // 失敗轉 failed；單一收件人的例外絕不中斷其他收件人，也絕不外溢給呼叫端。
 // organizer-usability-redesign 票 12：收件人可帶 target（直達單筆）；options.eventKeyBase 讓
 // 同一事件重試不重複——eventKey 已存在（unique 衝突）就視為已發送，不再呼叫 sender。
+// transactional-email：站內通知全部處理完後，再依寄送規則與 EMAIL_DELIVERY_MODE 寄 email（見 email-channel.ts）；
+// email 任何失敗都不影響站內通知，也不外溢給呼叫端。
 export async function notifyUsers(
   type: NotificationType,
   recipients: NotificationRecipient[],
@@ -101,5 +104,11 @@ export async function notifyUsers(
         error,
       });
     }
+  }
+
+  try {
+    await deliverEmailChannel(type, deduped, payload, options);
+  } catch (error) {
+    console.error("[notification:email] unexpected failure", { type, error });
   }
 }
