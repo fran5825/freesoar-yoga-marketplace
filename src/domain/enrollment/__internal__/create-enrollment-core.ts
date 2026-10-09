@@ -41,9 +41,18 @@ export type CreateEnrollmentForUserErrorCode =
   | "term_only_series"
   | "create_failed";
 
+// enrollment-re-enrollment 票 02：已有報名但不能重新報名時，說明原因，讓畫面與訊息依原因顯示（spec 4.6）。
+export type AlreadyEnrolledReason =
+  | "active"
+  | "member_in_term"
+  | "teacher"
+  | "admin"
+  | "system"
+  | "unknown";
+
 export type CreateEnrollmentForUserResult =
   | { ok: true; enrollmentId: string; status: "confirmed" | "pending" }
-  | { ok: false; code: CreateEnrollmentForUserErrorCode };
+  | { ok: false; code: CreateEnrollmentForUserErrorCode; alreadyEnrolledReason?: AlreadyEnrolledReason };
 
 class ClassSessionNotFoundError extends Error {
   constructor() {
@@ -74,7 +83,7 @@ class ClassSessionFullError extends Error {
 }
 
 class AlreadyEnrolledError extends Error {
-  constructor() {
+  constructor(public readonly reason: AlreadyEnrolledReason = "active") {
     super("User already has an enrollment for this class session");
     this.name = "AlreadyEnrolledError";
   }
@@ -104,7 +113,8 @@ class TeacherNotApprovedError extends Error {
 //     新報名，不論報名者是透過公開瀏覽還是已登入直連——但這個檢查只在「新建立報名」這個時間
 //     點生效，不回溯撤銷 suspend 生效前已經合法建立的報名；
 // (e) pending + confirmed 合計數量 < capacity（Gate G3 = A，pending 佔用名額）；
-// (f) 尚無 (classSessionId, userId) 的既有 enrollment（任何狀態，D8）；
+// (f) 尚無 (classSessionId, userId) 的既有 enrollment；若有，只有「學員自己取消、不屬於整期」的可以重新報名
+//     （ADR 0006 取代 D8：更新同一筆，不新增）；
 // (g) 建立 enrollment，依 requiresApproval 決定初始狀態是 confirmed 或 pending，寫入
 //     consentedAt（D6）。
 // 檢查順序刻意如此（open_for_enrollment → 時間 → 資格 → capacity → 重複報名），比照
@@ -184,16 +194,40 @@ export async function createEnrollmentForUser(
 
       const existingEnrollment = await tx.enrollment.findUnique({
         where: { classSessionId_userId: { classSessionId, userId } },
-        select: { id: true },
+        select: { id: true, status: true, cancelledBy: true, seriesEnrollmentId: true },
       });
-
-      if (existingEnrollment) {
-        throw new AlreadyEnrolledError();
-      }
 
       const resolvedStatus: "pending" | "confirmed" = classSession.requiresApproval
         ? "pending"
         : "confirmed";
+
+      if (existingEnrollment) {
+        // enrollment-re-enrollment 票 02（ADR 0006、spec 4.2）：只有「學員自己取消、不屬於整期」的報名可以重新報名，
+        // 沿用同一筆紀錄改回有效狀態（覆寫備註與同意時間、清掉取消者）；整期的請假走 restoreLeave。
+        // 其他一律維持已報名／不能重新報名，並說明原因。
+        if (existingEnrollment.status !== "cancelled") {
+          throw new AlreadyEnrolledError("active");
+        }
+
+        if (existingEnrollment.cancelledBy === "member" && existingEnrollment.seriesEnrollmentId !== null) {
+          throw new AlreadyEnrolledError("member_in_term");
+        }
+
+        if (existingEnrollment.cancelledBy !== "member") {
+          throw new AlreadyEnrolledError(existingEnrollment.cancelledBy ?? "unknown");
+        }
+
+        const reEnrolled = await tx.enrollment.updateMany({
+          where: { id: existingEnrollment.id, status: "cancelled", cancelledBy: "member", seriesEnrollmentId: null },
+          data: { status: resolvedStatus, cancelledBy: null, notes: input.notes, consentedAt: new Date() },
+        });
+
+        if (reEnrolled.count === 0) {
+          throw new AlreadyEnrolledError("active");
+        }
+
+        return { enrollmentId: existingEnrollment.id, status: resolvedStatus };
+      }
 
       const enrollment = await tx.enrollment.create({
         data: {
@@ -268,7 +302,7 @@ export async function createEnrollmentForUser(
     }
 
     if (error instanceof AlreadyEnrolledError) {
-      return { ok: false, code: "already_enrolled" };
+      return { ok: false, code: "already_enrolled", alreadyEnrolledReason: error.reason };
     }
 
     if (isUniqueConstraintViolation(error)) {

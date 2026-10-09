@@ -124,10 +124,19 @@ export async function createOwnEnrollment(
   }
 
   if (result.code === "already_enrolled") {
+    const messages = {
+      active: "你已經報名過這堂課程了。",
+      member_in_term: "這一堂是整期報名的請假，請在這一堂的頁面取消請假。",
+      teacher: "老師婉拒了這次報名，無法重新報名。",
+      admin: "這筆報名已由管理員取消，無法重新報名。",
+      system: "這筆報名已取消，無法再次報名此課程。",
+      unknown: "這筆報名已取消，無法再次報名此課程。",
+    } as const;
+
     return {
       ok: false,
       code: "already_enrolled",
-      message: "你已經報名過這堂課程了。",
+      message: messages[result.alreadyEnrolledReason ?? "active"],
     };
   }
 

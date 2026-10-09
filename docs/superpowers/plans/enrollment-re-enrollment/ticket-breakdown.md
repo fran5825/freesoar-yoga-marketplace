@@ -7,7 +7,7 @@
 | # | 票 | Mode | Human Gate | Blocked by | Status |
 |---|----|------|-----------|-----------|--------|
 | 01 | 記錄是誰取消的（schema 與所有取消寫入處） | HEAVY | yes（已放行 schema） | – | 完成（2026-10-10） |
-| 02 | 單堂重新報名 | HEAVY | yes（動報名 state machine，已放行） | 01 | draft |
+| 02 | 單堂重新報名 | HEAVY | yes（動報名 state machine，已放行） | 01 | 完成（2026-10-10） |
 | 03 | 取消請假與名額占用規則 | HEAVY | yes（動名額與 state machine，已放行） | 01 | draft |
 | 04 | 老師名單與管理員顯示取消原因 | STANDARD | no | 01 | draft |
 | 05 | 驗收與文件同步 | STANDARD | no | 02、03、04 | draft |

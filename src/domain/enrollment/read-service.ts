@@ -9,6 +9,8 @@ import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { getClassAvailability } from "@/domain/class-session/availability";
 
+import { getSingleReEnrollState, type ReEnrollState } from "./re-enroll-eligibility";
+
 export type OwnEnrollment = {
   id: string;
   status: EnrollmentStatus;
@@ -90,7 +92,8 @@ export type MemberFacingClassSession = {
   organization: { name: string } | null;
   teacherProfile: { displayName: string | null };
   // teacher-class-scheduling 票 09：屬於整期報名時有值（取消這一堂就是「請假」）。
-  ownEnrollment: { id: string; status: EnrollmentStatus; seriesEnrollmentId: string | null } | null;
+  // enrollment-re-enrollment 票 02：已取消的報名能不能重新報名，由 service layer 一次算好（spec 4.6）。
+  ownEnrollment: { id: string; status: EnrollmentStatus; seriesEnrollmentId: string | null; reEnroll: ReEnrollState } | null;
   requiresApproval: boolean;
   canAcceptNewEnrollments: boolean;
 };
@@ -128,6 +131,7 @@ export async function getClassSessionForMember(
       origin: true,
       organization: { select: { name: true } },
       teacherProfile: { select: { displayName: true, status: true } },
+      recurringClassSeries: { select: { kind: true, termEnrollmentMode: true } },
       _count: {
         select: {
           enrollments: { where: { status: { in: ["pending", "confirmed"] } } },
@@ -140,11 +144,29 @@ export async function getClassSessionForMember(
     return null;
   }
 
-  const { _count, teacherProfile, ...classSessionFields } = classSession;
-  const ownEnrollment = await prisma.enrollment.findUnique({
+  const { _count, teacherProfile, recurringClassSeries, ...classSessionFields } = classSession;
+  const ownRow = await prisma.enrollment.findUnique({
     where: { classSessionId_userId: { classSessionId, userId: currentUser.id } },
-    select: { id: true, status: true, seriesEnrollmentId: true },
+    select: { id: true, status: true, seriesEnrollmentId: true, cancelledBy: true },
   });
+  const ownEnrollment = ownRow
+    ? {
+        id: ownRow.id,
+        status: ownRow.status,
+        seriesEnrollmentId: ownRow.seriesEnrollmentId,
+        reEnroll: getSingleReEnrollState({
+          status: ownRow.status,
+          cancelledBy: ownRow.cancelledBy,
+          seriesEnrollmentId: ownRow.seriesEnrollmentId,
+          classStatus: classSession.status,
+          startAt: classSession.startAt,
+          capacity: classSession.capacity,
+          activeEnrollmentCount: _count.enrollments,
+          teacherApproved: teacherProfile.status === "approved",
+          termOnly: recurringClassSeries?.kind === "term" && recurringClassSeries.termEnrollmentMode === "term_only",
+        }),
+      }
+    : null;
 
   return {
     ...classSessionFields,

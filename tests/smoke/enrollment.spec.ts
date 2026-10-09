@@ -294,7 +294,7 @@ test.describe("enrollment smoke", () => {
     expect(first.ok).toBe(true);
 
     const duplicate = await createEnrollmentForUser(memberA, classSessionId, { notes: null });
-    expect(duplicate).toEqual({ ok: false, code: "already_enrolled" });
+    expect(duplicate).toEqual({ ok: false, code: "already_enrolled", alreadyEnrolledReason: "active" });
 
     if (first.ok) {
       await prisma.enrollment.update({
@@ -304,7 +304,8 @@ test.describe("enrollment smoke", () => {
     }
 
     const reEnroll = await createEnrollmentForUser(memberA, classSessionId, { notes: null });
-    expect(reEnroll).toEqual({ ok: false, code: "already_enrolled" });
+    // 舊資料沒有取消者（NULL）：不能重新報名（ADR 0006，spec 4.1）。
+    expect(reEnroll).toEqual({ ok: false, code: "already_enrolled", alreadyEnrolledReason: "unknown" });
 
     const otherMemberTakesFreedCapacity = await createEnrollmentForUser(
       memberB,
@@ -483,7 +484,7 @@ test.describe("enrollment smoke", () => {
     await page.goto(`/classes/${classSessionId}`);
     await expect(page.getByText("剩 1 個名額")).toBeVisible();
     await page.getByText("取消報名…").click();
-    await expect(page.getByText("取消後無法再次報名此課程。")).toBeVisible();
+    await expect(page.getByText("取消後，開課前可以重新報名；名額被報滿則不能。")).toBeVisible();
     await page.getByRole("checkbox", { name: "我確認要取消這則報名。" }).check();
     await page.getByRole("button", { name: "確認取消" }).click();
 

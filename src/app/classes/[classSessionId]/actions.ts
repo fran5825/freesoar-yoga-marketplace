@@ -53,7 +53,9 @@ export async function enrollAction(formData: FormData): Promise<void> {
   redirectWithFeedback(
     classSessionId,
     "success",
-    result.status === "pending" ? "報名已送出，等待老師確認。" : "報名成功。",
+    formData.get("reEnroll") === "1"
+      ? result.status === "pending" ? "重新報名已送出，等待老師確認。" : "已重新報名。"
+      : result.status === "pending" ? "報名已送出，等待老師確認。" : "報名成功。",
     readFormString(formData, "returnTo"),
   );
 }
