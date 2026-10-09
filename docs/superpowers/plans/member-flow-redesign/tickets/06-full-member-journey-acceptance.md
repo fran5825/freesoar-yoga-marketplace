@@ -4,7 +4,7 @@
 
 **Blocked by:** 02、04、05
 
-**Status:** 未完成（2026-10-09 短路徑：9 個 spec desktop＋mobile 136 passed／2 failed；失敗的 `series-member-info` 單獨重跑 16/16、repeat×3 48/48 通過，但 desktop :264 存入新舊文字相接，可能是頁面未就緒時輸入的真實問題，根因未查明。真實 Google 首次建帳號、200% 文字、全程鍵盤未驗收。Codex review 2026-10-09 更正原「自動化驗收通過」）
+**Status:** 未完成（2026-10-09：`series-member-info` 兩項失敗已查明是測試在頁面 hydrate 前操作，加 `waitForHydrated` 後兩種螢幕皆通過；重跑 9 個 spec 時 desktop `member-journey-acceptance:73` 團主課的鍵盤旅程不穩定（單獨重跑 4 次失敗 3 次、失敗位置每次不同），原因未查明。真實 Google 首次建帳號、200% 文字、全程鍵盤人工驗收未做）
 
 **Workflow mode:** STANDARD
 
@@ -130,3 +130,10 @@ Recommended Next Step（僅記錄，不執行）：
 - 結果：136 passed／2 failed（11.3m）。兩項都在 `series-member-info.spec.ts`：desktop :264 存入值變成新舊文字相接（`只有第一場的適合對象系列的適合對象`），mobile :183 摺疊區 summary 一直不穩定可點。
 - 原判定為負載下的 flaky（2026-10-09 Codex review 指出證據不足，已撤回此判定）：DB 閒置時單獨重跑該檔 16/16，`--repeat-each=3` 48/48 通過；未改產品 source 或測試。推測是長時間整套執行時頁面尚未 hydrate 完就操作表單；之後若再出現，再評估在這兩處等待表單可互動。
 - 未驗收（需產品主人或真實裝置）：真實 Google 首次建帳號、200% 文字放大、全程鍵盤、真實裝置鍵盤。列入 `docs/superpowers/plans/2026-10-09-wrap-up-plan.md` 畫面驗收清單。
+
+## `series-member-info` 失敗根因（2026-10-09，Claude）
+
+- 重現：把 `/_next/static/chunks/**` 延遲 3 秒模擬慢裝置，在 React 接上表單前操作。Playwright `fill` 的全選沒生效，「新的」被插到舊值前面，變成「新的系列的適合對象」；同情境下模擬真人「Ctrl+A 後打字」得到正確的「新的」，接上後也沒被改掉。**判定為測試在 hydration 前操作，不是使用者會遇到的存錯問題。** mobile :183 同類：hydration 前點「指定日期」分頁沒作用，欄位一直沒出現。
+- 修正（只改測試）：新增 `tests/smoke/_helpers/hydration.ts` 的 `waitForHydrated(locator)`（等 DOM 節點出現 `__reactProps`），用在 `series-member-info.spec.ts` 三次打開改課頁與點「指定日期」之前。
+- 驗證：同樣延遲 3 秒、先 `waitForHydrated` 再 `fill`，值正確；重新 build 後 9 個 spec＋驗證共 140 項：137 passed／2 failed／1 skipped。原失敗的 :184、:266 在 desktop 與 mobile 都通過。
+- 新失敗：mobile `series-member-info:140` 打開課程頁時 `ERR_ABORTED`，單獨重跑 2 次通過，判定為偶發網路中斷。desktop `member-journey-acceptance:73`（團主課）單獨重跑 4 次失敗 3 次，失敗在三個不同位置（「我的報名」沒換頁、「確認報名」後沒出現成功訊息、200% 文字截圖前的橫向捲軸檢查）；老師課同一流程都通過。另以 390px＋200% 直接開頁面量測，團主課與老師課都沒有橫向捲軸。今天早上整套執行時此測試通過，之間合併了期班 07–12（改過課程詳情頁與我的報名），是否相關未查明，記在 `docs/backlog.md` 第 20 項。

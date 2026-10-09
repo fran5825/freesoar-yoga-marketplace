@@ -26,4 +26,6 @@
 
 > Codex peer review：上午因用量上限先跳過，15:3x 補審，3 輪後 APPROVED（更正第 1、2 項為部分完成）。
 
+- 1（續，2026-10-09 下午）：`series-member-info` 失敗查明為測試在 hydration 前操作，加 `waitForHydrated` 修正並通過；新發現 `member-journey-acceptance:73` 團主課鍵盤旅程不穩定，第 1 項仍未完成，見票 06 與 backlog 第 20 項。
+
 <!-- codex-peer-reviewed: 2026-10-09T07:42:31Z rounds=3 verdict=approved -->

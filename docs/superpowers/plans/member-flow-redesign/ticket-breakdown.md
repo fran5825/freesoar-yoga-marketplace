@@ -11,7 +11,7 @@
 | 03 | [單堂課的適合對象與準備事項](tickets/03-single-class-suitable-for-and-preparation.md) | HEAVY | yes | – | 完成（2026-10-05） |
 | 04 | [系列課（每週固定與指定日期）沿用課程資訊](tickets/04-recurring-series-class-info.md) | HEAVY | yes | 03 | 整合 runtime／獨立 review 通過（Webpack、164/164）；未提交 |
 | 05 | [從課程直接 Google 登入](tickets/05-direct-google-sign-in-from-class.md) | HEAVY | yes | – | 驗收完成（2026-10-05，`048b878`） |
-| 06 | [完整學員旅程 usability 驗收](tickets/06-full-member-journey-acceptance.md) | STANDARD | no | 02、04、05 | 未完成（2026-10-09 短路徑 136/138，2 項 `series-member-info` 失敗待查；人工畫面項目待產品主人） |
+| 06 | [完整學員旅程 usability 驗收](tickets/06-full-member-journey-acceptance.md) | STANDARD | no | 02、04、05 | 未完成（2026-10-09：`series-member-info` 失敗已查明並修正測試；`member-journey-acceptance` 團主課鍵盤旅程不穩定待查；人工畫面項目待產品主人） |
 
 需要產品主人親自放行的 HEAVY 票：01、03、04、05。
 
