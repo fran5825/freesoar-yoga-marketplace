@@ -245,6 +245,8 @@ model RecurringClassSeries {
   teacherProfileId String
   title            String
   description      String?
+  suitableFor      String? // 2026-10-06 member-flow 票 04：適合對象，系列預設值，生成場次時複製到每一場；最多 500 字（應用層限制）
+  preparationNotes String? // 2026-10-06 member-flow 票 04：準備事項，規則同 suitableFor
   serviceType      String? // 主要課程風格＝serviceTypes 的第一個（公開篩選與舊資料相容用）
   serviceTypes     String[] @default([]) // 2026-09-26 課程風格可多選（最多 3 個），沿用需求 serviceTypes 的做法
   yogaStyles       String[] @default([]) // 2026-09-26 瑜伽風格（老師建課必填，可多選＋自訂），來源同老師「擅長類型」標籤

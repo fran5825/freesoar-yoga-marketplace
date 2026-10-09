@@ -21,6 +21,8 @@ export async function createOwnRecurringClassSeriesAction(
   const input: RecurringSeriesInput = {
     title: readFormString(formData, "title"),
     description: readFormString(formData, "description"),
+    suitableFor: readFormString(formData, "suitableFor"),
+    preparationNotes: readFormString(formData, "preparationNotes"),
     serviceTypes: readServiceTypesFromForm(formData),
     yogaStyles: readYogaStylesFromForm(formData),
     startTime: readFormString(formData, "startTime"),

@@ -98,8 +98,9 @@ export default async function RecurringClassSeriesPage({
         </p>
         <p className="mt-1 max-w-2xl text-sm leading-6 text-ink-soft">
           每一場都是獨立的課，學員一場一場報名、你也一場一場處理報名；草稿可以用「全部開放報名」一次開放。{series.isPublic
-            ? "這個系列設定為公開：開放報名的場次會列在公開課程列表，也可以複製報名連結傳給學員。"
-            : "這個系列僅透過連結招募：場次不會列在公開課程列表，開放報名的場次可以複製報名連結傳給學員（學員需先登入）。"}
+            ? "這個系列設定為公開，作為新場次的預設。"
+            : "這個系列僅透過連結招募，作為新場次的預設。"}
+          已生成場次依各場的公開設定；公開、開放報名且尚未開始的場次才會列在公開課程列表。開放報名的場次可以複製報名連結傳給學員（學員需先登入）。
           {series.requiresApproval ? "新報名需要你確認才算成立。" : "新報名送出即成立。"}
         </p>
       </header>
@@ -151,9 +152,7 @@ export default async function RecurringClassSeriesPage({
                 ))}
               </ul>
               <p>
-                {series.isPublic
-                  ? "開放後學員就能透過報名連結報名，這些場次也會列在公開課程列表。"
-                  : "開放後學員就能透過報名連結報名；這些場次不會列在公開課程列表。"}
+                開放後學員就能透過報名連結報名；各場原有的公開設定會保留，設為公開且符合公開條件的場次才會列在公開課程列表。
               </p>
             </ConfirmActionDialog>
           </div>
@@ -275,6 +274,18 @@ export default async function RecurringClassSeriesPage({
             {series.description}
           </p>
         ) : null}
+        {/* member-flow 票 04：系列上的兩段，之後生成的場次會沿用；已生成的各場可能各自改過。 */}
+        {[
+          { label: "適合對象", value: series.suitableFor },
+          { label: "準備事項", value: series.preparationNotes },
+        ].map((item) => (
+          <div className="border-t border-ink/10 pt-3 text-sm leading-6" key={item.label}>
+            <p className="font-medium text-ink">{item.label}</p>
+            <p className="mt-1 whitespace-pre-wrap break-words text-ink-soft">
+              {item.value || "未填寫，學員會看到「尚未提供」。"}
+            </p>
+          </div>
+        ))}
       </section>
 
       {series.dayOfWeek !== null ? (

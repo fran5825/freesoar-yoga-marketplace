@@ -194,20 +194,18 @@ export default async function TeacherClassSessionDetailPage({
           {classSession.description}
         </p>
       ) : null}
-      {/* member-flow 票 03：學員會在課程頁看到這兩段。系列場次要等 member-flow 票 04 才能填，沒有內容時不顯示。 */}
+      {/* member-flow 票 03／04：學員會在課程頁看到這兩段；單堂與系列場次都可以填。 */}
       {[
         { label: "適合對象", value: classSession.suitableFor },
         { label: "準備事項", value: classSession.preparationNotes },
-      ]
-        .filter((item) => item.value || !classSession.recurringClassSeriesId)
-        .map((item) => (
-          <div className="border-t border-ink/10 pt-3 text-sm leading-6" key={item.label}>
-            <p className="font-medium text-ink">{item.label}</p>
-            <p className="mt-1 whitespace-pre-wrap break-words text-ink-soft">
-              {item.value || "未填寫，學員會看到「尚未提供」。"}
-            </p>
-          </div>
-        ))}
+      ].map((item) => (
+        <div className="border-t border-ink/10 pt-3 text-sm leading-6" key={item.label}>
+          <p className="font-medium text-ink">{item.label}</p>
+          <p className="mt-1 whitespace-pre-wrap break-words text-ink-soft">
+            {item.value || "未填寫，學員會看到「尚未提供」。"}
+          </p>
+        </div>
+      ))}
 
     </section>
   );

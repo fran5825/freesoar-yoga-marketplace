@@ -77,3 +77,50 @@
 - 執行時誤停了另一個工作階段在 3200 埠的測試伺服器（已向產品主人說明並記入記憶）；之後改用 3300 埠。
 
 <!-- codex-peer-reviewed: 2026-10-04T00:20:21Z rounds=4 verdict=approved -->
+
+## 公開設定 × 學員資訊整合（2026-10-06）
+
+產品主人於目前 task 選擇 1，核准隔離 worktree 的第一階段檔案整合；未授權 DB、回寫來源工作目錄、commit／push 或部署。本節是整合紀錄，不把來源票的既有 checks 當作整合後驗收。
+
+- [x] 保存兩來源與 task-start baseline、checksum、完整來源差異。
+- [x] 整合 schema、validation、action、生成、兩種改課範圍、DTO 與 UI；保留兩份 migration 原位元組。
+- [x] 解決表單摘要與 data-model 的兩處文字合併衝突，修正過時改課文案與註解。
+- [x] 補公開設定 × 學員資訊交叉測試（本階段只完成測試程式，未執行 DB smoke）。
+- [x] Prisma validate／generate、TypeScript、ESLint 通過；10 個不依賴 Prisma／DB 的純函式情境通過，scope／self review 完成。
+- [x] 第二階段另取得 A 方案授權，於專屬 DB 完成完整 build、138 smoke 與 24 個 RWD 畫面狀態；第一階段本身未授權 DB。
+- [x] 獨立 Reviewer 第一階段初審、P2 修正及再審。
+- [x] 第二階段完整驗證完成（詳見下節）；不自動進票 07。
+- [ ] 產品主人實際畫面驗收與回寫來源工作目錄放行。
+
+### 第一階段續接（2026-10-06）
+
+- 產品主人確認目前僅有共用開發 DB；未視為 DB 操作授權。本輪仍未連線 DB、執行 build／fixtures／smoke／RWD。
+- 獨立 Reviewer 首次因用量限制未產出結果；產品主人說「請繼續」後續接一次，完成初審，提出一項 P2：系列公開預設不能宣告所有既有場次的公開狀態。
+- [x] 修正系列頁 header 與「全部開放報名」dialog，區分新場次預設及各場公開設定；保留 only-this／較早場次的例外，不改 DTO、permission 或 public-read。
+- [x] 補公開與不公開系列各一個混合值 UI 回歸測試程式，驗證文案、批次開放保留各場值及公開列表僅含公開場次；尚未執行 DB smoke。
+- [x] 最小修正後 TypeScript／ESLint 通過；證據脚本首次觸發 lint 的 CommonJS import 錯誤，已改 ES modules 並重跑通過，未修改或放寬 lint 設定。
+- [x] 最小修正後 diff checks／Reviewer 再審：APPROVE 僅限第一階段 source 與非 DB 交付；沒有新的 blocking finding，詳見本 run 的 `07-reviewer-final.md`。
+- [x] 具體化獨立 PostgreSQL 測試 DB、指定命令、fixtures 範圍與清理方案；僅草稿，尚待批准，見本 run 的 `06-isolated-db-validation-plan.md`。
+
+證據目錄：`.ai-runs/series-integration-1791245052403`（local-only）；目前狀態：整合候選已完成隔離驗證，尚未回寫 main 或其他工作目錄。
+
+### 第二階段隔離驗證（2026-10-06）
+
+產品主人選擇 1，核准 A 方案與完整驗證草稿；核准紀錄與前後 baseline 存於本 run 的 `09-approved-phase-two.md`／`phase-two`。本階段不改 source，不使用共用 DB，不 commit／push。
+
+- [x] Docker local named-pipe／Linux、資源名稱與 port、candidate／來源 checksum 前置核對。
+- [x] 建立專屬 container／volume／空 DB；核對 identifier、label、loopback port 與 mount。
+- [x] 28 份既有 migration deploy／status、Prisma generate、三個系列欄位與預設檢查通過。
+- [x] 指定 9 份 smoke（pretest 含本輪 build）：138/138 通過，desktop／mobile、workers=1，詳見 `phase-two/build-and-smoke.log`。
+- [x] 首輪 RWD 停止原因已記錄：額外腳本第一個斷言誤以為摘要顯示全文，實際顯示已填寫字數；未判定為產品錯誤，當時完整 RWD 未完成。
+- [x] 已停止驗證並清理本次 server／container／volume；產品 source 未變，失敗證據另凍結於 `phase-two/rwd-attempt-1`。
+- [x] 修正 local-only RWD 腳本斷言，直接驗證欄位全文與摘要兩個字數提示；不改產品 UI 或 source、不重跑已通過 smoke。重跑草稿與後續授權分別保存為 `11-rwd-resume-draft.md`、`12-approved-rwd-resume.md`。
+- [x] 產品主人在失敗說明後明確說「請繼續」，放行原 A 方案下的最小 RWD 續接；證據另存 `phase-two/rwd-attempt-2`，保留首輪 138 smoke／build 與失敗紀錄。
+
+- [x] 續接於重新建立的專屬空 DB 完成 28 份 migration deploy／status，沿用 hash 相同的 build 與 138 smoke 證據。
+- [x] 375／768／1440 各 8 個狀態，共 24 個畫面：建立每週／指定日期、時間錯誤、修改單場／之後場次、系列、確認 dialog、訪客課程頁；皆無橫向溢出、無 pageerror。各寬度驗證時間錯誤保留已填資訊、Tab／Enter／Escape 與 dialog 焦點。
+- [x] 實際檢視手機錯誤表單／確認視窗、桌面改之後場次、平板訪客頁截圖，未發現本切片阻塞性版面或品牌問題；這不取代產品主人驗收。
+- [x] 續接完成後清理本次 server／container／volume，未使用共用開發 DB。
+- [x] 第二階段證據獨立複審：APPROVE、無 blocking findings；確認 138 smoke、24 個 RWD 狀態、frozen source／migration、來源完整性與清理證據。詳見本 run 的 `14-reviewer-phase-two-final.md`。不等同回寫來源或正式上線批准。
+
+第一階段歷史 checks 使用 bundled Node 24.19.0；Prisma validate／generate 只使用 process-local 靜態佔位 URL（port 1），當時不連線 DB、不建立 env 檔。TypeScript 與 npm run lint 全部通過，未改設定以排除錯誤。當時 DB smoke、完整 build、RWD 尚未執行；第二階段授權與實際驗證結果見上節。兩份 migration 原位元組保留，已審查 manifest／完整 patch 另行凍結，第一階段審查後產品 source 未改，只有本票治理紀錄與 local-only QA 腳本／證據更新。

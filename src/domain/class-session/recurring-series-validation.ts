@@ -14,8 +14,10 @@ import { isValidServiceType, MAX_SERVICE_TYPES } from "@/domain/demand-request/s
 import {
   CAPACITY_MAX,
   CAPACITY_MIN,
+  checkMemberInfoLength,
   DESCRIPTION_MAX_LENGTH,
   LOCATION_MAX_LENGTH,
+  normalizeMemberInfoText,
   TITLE_MAX_LENGTH,
 } from "./validation";
 
@@ -32,6 +34,9 @@ export const FIXED_DATES_COUNT_MAX = 26;
 export type RecurringSeriesInput = {
   title?: string | null;
   description?: string | null;
+  // member-flow 票 04：適合對象、準備事項，選填；規則與單堂相同（validation.ts 的共用 helper）。
+  suitableFor?: string | null;
+  preparationNotes?: string | null;
   serviceType?: string | null;
   serviceTypes?: string[] | null;
   yogaStyles?: string[] | null;
@@ -58,6 +63,8 @@ export type RecurringSeriesValidationErrorCode =
   | "title_required"
   | "title_too_long"
   | "description_too_long"
+  | "suitable_for_too_long"
+  | "preparation_notes_too_long"
   | "service_type_required"
   | "service_type_invalid"
   | "service_type_too_many"
@@ -82,6 +89,8 @@ export type RecurringSeriesValidationError = {
   field:
     | "title"
     | "description"
+    | "suitableFor"
+    | "preparationNotes"
     | "serviceType"
     | "yogaStyles"
     | "location"
@@ -100,6 +109,8 @@ export type RecurringSeriesValidationError = {
 type NormalizedBaseFields = {
   title: string;
   description: string | null;
+  suitableFor: string | null;
+  preparationNotes: string | null;
   serviceType: string;
   serviceTypes: string[];
   yogaStyles: string[];
@@ -133,6 +144,8 @@ export function validateRecurringSeriesInput(
     typeof input.description === "string" && input.description.trim().length > 0
       ? input.description.trim()
       : null;
+  const normalizedSuitableFor = normalizeMemberInfoText(input.suitableFor);
+  const normalizedPreparationNotes = normalizeMemberInfoText(input.preparationNotes);
   const normalizedServiceTypes = normalizeYogaStyles(
     input.serviceTypes && input.serviceTypes.length > 0
       ? input.serviceTypes
@@ -161,6 +174,15 @@ export function validateRecurringSeriesInput(
       code: "description_too_long",
       message: `課程說明不可超過 ${DESCRIPTION_MAX_LENGTH} 個字。`,
     });
+  }
+
+  for (const issue of [
+    checkMemberInfoLength("suitableFor", normalizedSuitableFor),
+    checkMemberInfoLength("preparationNotes", normalizedPreparationNotes),
+  ]) {
+    if (issue) {
+      errors.push(issue);
+    }
   }
 
   if (normalizedServiceTypes.length === 0) {
@@ -330,6 +352,8 @@ export function validateRecurringSeriesInput(
     normalized: {
       title: normalizedTitle,
       description: normalizedDescription,
+      suitableFor: normalizedSuitableFor,
+      preparationNotes: normalizedPreparationNotes,
       serviceType: normalizedServiceType,
       serviceTypes: normalizedServiceTypes,
       yogaStyles: normalizedYogaStyles,

@@ -2,7 +2,7 @@
 
 日期：2026-10-03（Asia/Taipei）
 
-狀態：Q1–Q14、完整方案與第一批 Builder 範圍已由產品主人選擇「1」確認；第一批已進入實作。第二、三批尚未執行。下方訪談階段的 gate／未修改記錄為歷史，最新結果見文件末尾 Builder Review Packet。
+狀態（2026-10-09 Codex 收尾）：Q1–Q14 已確認；票 01、02、03、05 已完成且對應 commit 已包含於目前 main。票 04 已接回 main working tree，Webpack fresh build、164/164 smoke 與獨立 review APPROVE；尚未提交。票 06 維持未完成：第一輪 168/174 smoke 通過，修正測試後續跑 build 遭 Windows 路徑過長阻擋；短路徑已備妥但未執行。依產品主人要求，本輪停止自動重試與新增檢查，不 commit／push、不接續其他票；下一次工作僅限「使用短路徑完成票 06 驗收」。最新狀態、既有資源清理與證據限制以 `docs/superpowers/plans/member-flow-redesign/ticket-breakdown.md` 與票 06 末尾收尾紀錄為準；下方訪談與第一批 packet 保留為歷史，不將舊的「尚未開始」當成目前進度。
 
 ## 任務與方法
 

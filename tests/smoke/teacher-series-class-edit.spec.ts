@@ -364,6 +364,8 @@ test.describe("series class edit (UI)", () => {
     await page.goto(`/teacher/classes/${sessions[0].id}/edit`);
     await page.locator("#capacity").fill("4");
     await page.getByRole("button", { name: "儲存修改" }).click();
+    // 等存檔完成、跳回課程詳情頁再換頁，否則換頁可能打斷還沒寫完的存檔。
+    await expect(page).toHaveURL(new RegExp(`/teacher/classes/${sessions[0].id}\\?`));
     await page.goto(`/teacher/classes/series/${series.id}`);
     await expect(page.locator(`#class-${sessions[0].id}`)).toContainText("已報名 0 / 4 人");
     await expect(page.locator(`#class-${sessions[1].id}`)).toContainText("已報名 0 / 10 人");

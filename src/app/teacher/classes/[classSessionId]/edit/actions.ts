@@ -33,7 +33,7 @@ export async function editOwnClassSessionAction(
     result = await editOwnClassSessionForTeacher(classSessionId, {
       title: readFormString(formData, "title"),
       description: readFormString(formData, "description"),
-      // member-flow 票 03：系列場次「只改這一場」的表單不顯示這兩欄，沒送出就不帶，核心會保留原值。
+      // member-flow 票 03／04：表單都會送出這兩欄；沒送出（例如舊表單或直接呼叫）就不帶，核心會保留原值。
       suitableFor: readOptionalFormString(formData, "suitableFor"),
       preparationNotes: readOptionalFormString(formData, "preparationNotes"),
       serviceTypes: readServiceTypesFromForm(formData),
@@ -95,6 +95,8 @@ async function editFollowingSessions(
     result = await editOwnSeriesFromOccurrenceForTeacher(recurringClassSeriesId, classSessionId, {
       title: readFormString(formData, "title"),
       description: readFormString(formData, "description"),
+      suitableFor: readOptionalFormString(formData, "suitableFor"),
+      preparationNotes: readOptionalFormString(formData, "preparationNotes"),
       serviceTypes: readServiceTypesFromForm(formData),
       yogaStyles: readYogaStylesFromForm(formData),
       startTime,

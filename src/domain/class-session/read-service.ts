@@ -241,6 +241,9 @@ export type RecurringClassSeriesDetail = {
   id: string;
   title: string;
   description: string | null;
+  // member-flow 票 04：系列上的適合對象、準備事項（生成新場次時複製）。
+  suitableFor: string | null;
+  preparationNotes: string | null;
   serviceType: string | null;
   serviceTypes: string[];
   yogaStyles: string[];
@@ -278,6 +281,8 @@ export async function getOwnRecurringClassSeriesDetailForTeacher(
       id: true,
       title: true,
       description: true,
+      suitableFor: true,
+      preparationNotes: true,
       serviceType: true,
       dayOfWeek: true,
       startTime: true,

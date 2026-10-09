@@ -2,7 +2,7 @@
 //
 // 套用到選定的這一場與之後所有尚未開始、未取消（草稿／開放報名）的場次：每一場維持原本的日期，
 // 只套用新的上課時段；內容、地點、人數上限每一場都改。成功後同步更新 RecurringClassSeries 的設定，
-// 之後「生成更多」與追加的場次沿用。不能改日期與星期（產品主人決定），不能改公開設定與是否需要確認報名。
+// 之後「生成更多」與追加的場次沿用。不能改日期與星期（產品主人決定），不能改是否需要確認報名；公開設定依票 06 與學員資訊一起按範圍更新。
 //
 // 推導規則 4：任一場撞課，或新的人數上限低於任一場的 pending + confirmed，整批都不寫，並回報是哪一天。
 //
@@ -26,6 +26,9 @@ import {
 export type EditSeriesFromOccurrenceInput = {
   title?: string | null;
   description?: string | null;
+  // member-flow 票 04：沒帶（undefined）就不改——系列與各場保留各自原本的值；要清空請傳空字串或 null。
+  suitableFor?: string | null;
+  preparationNotes?: string | null;
   serviceTypes?: string[] | null;
   yogaStyles?: string[] | null;
   // 新的上課時段（台北時間 HH:mm），套用到每一場原本的日期。
@@ -161,6 +164,8 @@ export async function editSeriesFromOccurrenceForTeacher(
             {
               title: input.title,
               description: input.description,
+              suitableFor: input.suitableFor,
+              preparationNotes: input.preparationNotes,
               serviceTypes: input.serviceTypes,
               yogaStyles: input.yogaStyles,
               startAt: `${date}T${input.startTime ?? ""}`,
@@ -232,6 +237,11 @@ export async function editSeriesFromOccurrenceForTeacher(
         }
 
         const next = normalized.normalized;
+        // member-flow 票 04：只有收到的欄位才寫入（場次與系列都一樣）。
+        const memberInfoUpdate = {
+          ...(input.suitableFor !== undefined ? { suitableFor: next.suitableFor } : {}),
+          ...(input.preparationNotes !== undefined ? { preparationNotes: next.preparationNotes } : {}),
+        };
 
         for (const item of planned) {
           await tx.classSession.update({
@@ -239,6 +249,7 @@ export async function editSeriesFromOccurrenceForTeacher(
             data: {
               title: next.title,
               description: next.description,
+              ...memberInfoUpdate,
               serviceType: next.serviceType,
               serviceTypes: next.serviceTypes,
               yogaStyles: next.yogaStyles,
@@ -256,6 +267,7 @@ export async function editSeriesFromOccurrenceForTeacher(
           data: {
             title: next.title,
             description: next.description,
+            ...memberInfoUpdate,
             serviceType: next.serviceType,
             serviceTypes: next.serviceTypes,
             yogaStyles: next.yogaStyles,

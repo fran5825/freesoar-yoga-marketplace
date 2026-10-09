@@ -87,7 +87,7 @@ Phase 1 schema notes（`organizer-demand-request-foundation` D1/D2/D3 已確認�
 
 - 實際 Prisma schema 以 `displayName`（必填）作為 organizer 顯示名稱／聯絡窗口稱謂，**不新增** `title` / `phone` 欄位（reconcile 早期設計稿）。若未來需要聯絡電話，走 `Organization.contactPhone`（見下）或 `User.phone`，不在 `OrganizerProfile` 重複存放。
 - `userId` 為 `@unique`：V1 一個 `User` 至多一個 `OrganizerProfile`。
-- `organizationId` 為單一 nullable FK：V1 一個 `OrganizerProfile` 至多一個 `Organization`，不支援多對多。**已核准・未實作（organizer-usability-redesign）**：改由 `Organization.ownerOrganizerProfileId` 表達一位團主擁有多個團體（見下方 Organization 說明）；這個欄位降級為相容期的 legacy pointer，票 15 移除。
+- `organizationId` 是保留於 schema 的 legacy nullable FK，不代表團主只能擁有一個團體。多團體 ownership 已由 `Organization.ownerOrganizerProfileId` 表達（票 02–03）。票 15a 將一般 runtime 讀取改用 owner-derived default，首次 bootstrap 暫留雙寫；15b 刪欄位另受 Human Gate 阻擋。
 - **Organizer capability bootstrap 例外**：任何 signed-in user 皆可自助建立自己的 `OrganizerProfile` + `Organization`（比照 `TeacherProfile` 的 onboarding 模式），不需要 Admin 指派或審核；建立後僅能管理自己的 own 資料。詳見 `docs/domain/permissions-matrix.md` 與 `docs/product/route-map.md` 的對應標注。
 - 建立流程一律「新建專屬 `Organization`」，V1 不提供搜尋/加入既有組織的協作邀請（non-goal，屬 enterprise 協作範疇）。
 - **Edit（`organizer-profile-edit` 已確認）**：已建立 `OrganizerProfile` 的 Organizer 可以在 `/organizer/profile` 編輯 `displayName`（沿用建立時的必填規則）。`id`／`userId`／`organizationId`／`createdAt`／`updatedAt` 不可由 Organizer 編輯。因為 `OrganizerProfile` 沒有狀態機（不像 `TeacherProfile` 需要 Admin 審核才能進入 `approved`），這個編輯能力不需要任何狀態閘門——只要有自己的 `OrganizerProfile` 就能隨時編輯。不新增 notification。
@@ -123,13 +123,13 @@ Phase 1 schema notes（`organizer-demand-request-foundation` D4 已確認）：
 - `area` / `address` 為 V1 optional / deferred 欄位，可留空，不阻擋任何流程。
 - `contactEmail` 只做「非空 + 基本 email 形狀」驗證，不做寄送驗證；`contactPhone` 只做「非空 + 長度界線」驗證，不做電信驗證。
 
-**多團體 owner（organizer-usability-redesign，Q18：A）**：schema 與回填**已落地（票 02，migration `20261004000000_organization_owner_expand`）**；我的團體新增／編輯**已落地（票 03，`src/domain/organization/service.ts`）**；需求與邀請選擇團體仍是已核准・未實作（票 04–05）。完整 contract 見 `docs/specs/organizer-usability-redesign-spec.md` 第 13.1 節。
+**多團體 owner（organizer-usability-redesign，Q18：A）**：schema 與回填**已落地（票 02，migration `20261004000000_organization_owner_expand`）**；我的團體新增／編輯**已落地（票 03，`src/domain/organization/service.ts`）**；需求與邀請選擇團體已落地（票 04–05）。票 15a 的 owner-derived default 已實作，驗證／獨立 review 狀態見票 15；schema 仍在 expand 狀態。完整 contract 見 `docs/specs/organizer-usability-redesign-spec.md` 第 13.1 節。
 
 - 一位團主可以擁有多個團體：新增 `Organization.ownerOrganizerProfileId`（nullable FK、`onDelete: SetNull`、有 index），反向集合為 `OrganizerProfile.ownedOrganizations`。Prisma relation name 用 `OrganizationOwner`；既有 legacy 關聯改名為 `OrganizerLegacyOrganization`，只是 Prisma 層的命名，資料庫不變。
 - 不做多人共管、移交或團體刪除；新建團體一律由 server 寫入 owner，client 不能指定或修改。
 - 第一個團體在首次建立團主資料時要填完整聯絡資料；之後新增的團體可以先存未完整的資料，但需求送審或合作邀請送出前必須補齊。
 - 舊資料回填 owner 時，如果有一個團體對應到兩位以上的團主，migration 會整個失敗並回報，不挑第一人；找不到 owner 的團體保持 null，只有 admin 看得到。
-- 相容期：授權一律看 owner；`OrganizerProfile.organizationId` 只當舊畫面的預設團體，等所有呼叫點遷移完（票 15）才移除。票 02 已把首次建立團主資料改成同時寫入 owner，團體更新與需求草稿存檔改用 owner 判斷權限。
+- 票 15a：授權與一般 runtime 讀取一律看 owner；預設團體為本人 owned organizations 的 `createdAt asc`、同時間 `id asc` 第一筆。本人擁有的 requested ID 與既有 draft 團體優先，不重寫歷史 FK。context／list／detail 使用一致排序；admin 團主摘要只顯示 owner，孤立團體維持 admin-only。首次 bootstrap 在同一 transaction 暫留 owner＋legacy pointer 雙寫；一般 fixtures 只寫 owner，bootstrap 雙寫及 legacy 不一致安全測試例外見票 15。15b 尚未核准，不移除 schema／relation，不回填 pointer。
 - 不新增歷史聯絡資料 snapshot：需求與課程繼續引用團體目前的名稱與聯絡資料。
 
 ## ServiceType
@@ -280,7 +280,7 @@ Fields:
 - requiresApproval（新欄位，`Boolean @default(false)`；`true` 時新報名先落在 `Enrollment.status = "pending"`，需要老師確認才轉為 `confirmed`，見下方 `Enrollment` 說明與 Gate G2/G3）
 - title
 - description
-- suitableFor（2026-10-05 新增，nullable text：「適合對象／程度」，老師選填、最多 500 字（應用層限制），trim 後空字串存 null。目前可在老師「建立單堂課」與「改不屬於系列的單堂課」填寫；系列建立與系列場次修改由 member-flow 票 04 補上。舊課、團主媒合課與團主直接開課維持 null，不回填，學員課程頁顯示「尚未提供」。migration `20261005200000_class_session_member_info`，來源 `docs/superpowers/plans/member-flow-redesign/tickets/03-single-class-suitable-for-and-preparation.md`）
+- suitableFor（2026-10-05 新增，nullable text：「適合對象／程度」，老師選填、最多 500 字（應用層限制），trim 後空字串存 null。可在老師建立單堂課、改單堂課、建立系列（由系列複製到每一場，見 `RecurringClassSeries`）與改系列場次時填寫：「只改這一場」只改該場；「改這一場和之後所有場次」改該場、之後未開始未取消的場次與系列本身（2026-10-06 member-flow 票 04）。舊課、團主媒合課與團主直接開課維持 null，不回填，學員課程頁顯示「尚未提供」。migration `20261005200000_class_session_member_info`，來源 `docs/superpowers/plans/member-flow-redesign/tickets/03-single-class-suitable-for-and-preparation.md`）
 - preparationNotes（2026-10-05 新增，規則同 suitableFor：「準備事項」，老師選填、最多 500 字。改課時修改這兩欄不通知已報名學員）
 - serviceType（主要課程風格，＝serviceTypes 的第一個）
 - serviceTypes（2026-09-26 新增，`String[] @default([])`：課程風格，可多選最多 3 個，值須落在 `service-types.ts` 清單內）
@@ -324,6 +324,8 @@ Fields:
 - teacherProfileId
 - title
 - description（選填）
+- suitableFor（2026-10-06 新增，nullable text：「適合對象」，選填、最多 500 字，規則同 `ClassSession.suitableFor`；生成場次時複製到每一場，「生成更多」也沿用。migration `20261006100000_recurring_series_member_info`，來源 `docs/superpowers/plans/member-flow-redesign/tickets/04-recurring-series-class-info.md`）
+- preparationNotes（2026-10-06 新增，「準備事項」，規則同 suitableFor）
 - serviceType（選填；主要課程風格）
 - serviceTypes（2026-09-26 新增，課程風格可多選，見上方 ClassSession 說明）
 - yogaStyles（2026-09-26 新增，瑜伽類型，建立系列時必填）
@@ -333,6 +335,7 @@ Fields:
 - location
 - capacity
 - requiresApproval（`Boolean @default(false)`，套用到這個系列底下生成的每一場）
+- isPublic（`Boolean @default(false)`，公開或僅透過連結招募的系列預設；生成與生成更多沿用）
 - createdAt
 - updatedAt
 
@@ -340,9 +343,9 @@ Phase 2 schema notes：
 
 - 2026-09-26：每週固定模式可選填「起始日期」（不存欄位，只影響首次生成）：起始日期須晚於今天，且必須剛好是選定的 `dayOfWeek`（前後端都檢查，錯誤碼 `start_date_weekday_mismatch`），第一場就是這一天；不填則沿用原本「從明天起最近的一個」。固定期模式改用三個月月曆直接點選多天（最多 26 天，今天與過去不能選），送出格式不變。
 - 固定期課程（例如連續 4 週的特定日期組合）不在這個 model 記錄每一個具體日期——生成時由呼叫端直接提供明確日期清單，逐筆寫入對應 `ClassSession.startAt`/`endAt`，系列本身只保留 `startTime`/`endTime` 這組共用的時鐘時間。
-- 沒有 `status`／`isPublic` 欄位：「取消系列」等同於「取消它底下所有還來得及取消的場次」，series 這一列本身仍會保留，之後仍可用「生成更多」再生成新的未來場次（僅限每週固定模式）；`isPublic` 只存在於每一筆獨立 `ClassSession`，系列生成的每一場目前一律預設 `isPublic = false`（V1 的刻意簡化，系列本身沒有能設定公開性的欄位/UI，且 `ClassSession` 建立後無法事後修改可見性）。
+- 系列沒有 `status` 欄位：「取消系列」等同於取消底下仍可取消的場次，系列列保留；每週固定系列仍可生成更多。系列的 `isPublic`、`suitableFor`、`preparationNotes` 是新場次的預設值；既有場次可以依改課範圍保留各自的例外，公開列表仍以場次的 `isPublic` 與既有公開資格判斷。
 - **已落地（`teacher-class-scheduling` 票 06，2026-10-06，migration `20261005214134_recurring_series_is_public`）**：新增 `isPublic Boolean @default(false)`——系列的公開設定（「公開列在找課程」或「僅透過連結招募」），建立系列時選，之後生成或追加的場次沿用；既有系列 migration 後一律為 `false`，行為不變。取代下方「系列本身沒有能設定公開性的欄位／`ClassSession` 建立後無法事後修改可見性」的限制：單堂與系列場次建立後都可以改 `isPublic`（持續開課依改課範圍；期班整期一致在票 07）。
-- **已落地（`teacher-class-scheduling` 票 05，2026-10-05）**：系列改課選「改這場和之後所有場次」時，會同步更新這個 model 的 `title`／`description`／`serviceType(s)`／`yogaStyles`／`startTime`／`endTime`／`location`／`capacity`，之後生成或追加的場次沿用；`dayOfWeek` 不可改。不新增欄位。各場的人數上限可能因「只改這場」而與系列不同，畫面上每一場的名額分母一律讀該場自己的 `capacity`。
+- **已落地（`teacher-class-scheduling` 票 05，2026-10-05）**：系列改課選「改這場和之後所有場次」時，會同步更新這個 model 的 `title`／`description`／`suitableFor`／`preparationNotes`（2026-10-06 member-flow 票 04 起）／`serviceType(s)`／`yogaStyles`／`startTime`／`endTime`／`location`／`capacity`，之後生成或追加的場次沿用；`dayOfWeek` 不可改。不新增欄位。各場的人數上限可能因「只改這場」而與系列不同，畫面上每一場的名額分母一律讀該場自己的 `capacity`。
 - `onDelete: Cascade` 從 `TeacherProfile` 指向這個 model；`onDelete: SetNull` 從這個 model 指向底下生成的 `ClassSession`（見上方 `ClassSession.recurringClassSeriesId`）。
 
 ## OrganizerClassProposal

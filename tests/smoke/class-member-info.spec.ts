@@ -292,7 +292,9 @@ test.describe("single class member info", () => {
     expect(await prisma.notification.count({ where: { userId: member.userId } })).toBe(0);
   });
 
-  test("series: creating a series and editing an occurrence (either scope) never shows the fields; 只改這一場 keeps existing values", async ({ context, page }, testInfo) => {
+  // member-flow 票 04 起：系列建立兩種模式與改系列場次也顯示這兩欄（細節見 series-member-info.spec.ts）；
+  // 這裡保留「只改這一場」不清掉既有內容的回歸檢查。
+  test("series forms show the fields with mode-prefixed ids; 只改這一場 without touching them keeps existing values", async ({ context, page }, testInfo) => {
     const id = runId(testInfo, "series");
     const teacher = await seedTeacher(id);
     const series = await prisma.recurringClassSeries.create({
@@ -318,18 +320,15 @@ test.describe("single class member info", () => {
     await addAuthSessionCookie(context, teacher.sessionToken);
     await page.goto("/teacher/classes/new");
     await expect(page.locator("#suitableFor")).toHaveCount(1);
-    for (const modeLabel of ["每週固定", "指定日期"]) {
+    for (const [modeLabel, prefix] of [["每週固定", "weekly-"], ["指定日期", "fixed-"]] as const) {
       await page.getByRole("button", { name: modeLabel, exact: true }).click();
-      await expect(page.locator("#suitableFor")).toHaveCount(0);
-      await expect(page.locator("#preparationNotes")).toHaveCount(0);
+      await expect(page.locator(`#${prefix}suitableFor`)).toHaveCount(1);
+      await expect(page.locator(`#${prefix}preparationNotes`)).toHaveCount(1);
     }
 
     await page.goto(`/teacher/classes/${occurrence.id}/edit`);
     await expect(page.locator("#edit-scope-single")).toBeChecked();
-    await expect(page.locator("#suitableFor")).toHaveCount(0);
-    await page.locator("#edit-scope-following").check();
-    await expect(page.locator("#suitableFor")).toHaveCount(0);
-    await page.locator("#edit-scope-single").check();
+    await expect(page.locator("#suitableFor")).toHaveValue("系列既有的適合對象");
     await page.locator("#title").fill("只改這一場的新課名");
     await page.getByRole("button", { name: "儲存修改" }).click();
     await expect(page).toHaveURL(new RegExp(`/teacher/classes/${occurrence.id}\\?`));

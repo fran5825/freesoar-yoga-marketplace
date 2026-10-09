@@ -9,9 +9,9 @@
 | 01 | [背景預先載入不再改寫上次身分](tickets/01-fix-last-role-prefetch.md) | HEAVY | yes | – | 完成（`85bba16`） |
 | 02 | [第一批 review 與結案](tickets/02-batch-one-review-and-close.md) | STANDARD | no | 01 | 驗收完成（第一批 `2e54462`） |
 | 03 | [單堂課的適合對象與準備事項](tickets/03-single-class-suitable-for-and-preparation.md) | HEAVY | yes | – | 完成（2026-10-05） |
-| 04 | [系列課（每週固定與指定日期）沿用課程資訊](tickets/04-recurring-series-class-info.md) | HEAVY | yes | 03 | draft |
+| 04 | [系列課（每週固定與指定日期）沿用課程資訊](tickets/04-recurring-series-class-info.md) | HEAVY | yes | 03 | 整合 runtime／獨立 review 通過（Webpack、164/164）；未提交 |
 | 05 | [從課程直接 Google 登入](tickets/05-direct-google-sign-in-from-class.md) | HEAVY | yes | – | 驗收完成（2026-10-05，`048b878`） |
-| 06 | [完整學員旅程 usability 驗收](tickets/06-full-member-journey-acceptance.md) | STANDARD | no | 02、04、05 | draft |
+| 06 | [完整學員旅程 usability 驗收](tickets/06-full-member-journey-acceptance.md) | STANDARD | no | 02、04、05 | 未完成；2026-10-09 本輪收尾，停止重試／新增檢查；下一次僅使用短路徑完成本票驗收 |
 
 需要產品主人親自放行的 HEAVY 票：01、03、04、05。
 
@@ -31,6 +31,15 @@
 03 和 05 之間沒有程式相依，但不要同時修改共用檔案（例如課程詳情頁），也不要同時跑共用 DB fixtures。
 
 ## 目前證據
+
+### 2026-10-07 接手盤點
+
+- 產品主人要求 Codex 接手學員流程。本輪先做唯讀盤點與 docs 狀態校正；沒有執行 migration、DB fixtures、build 或 smoke。
+- 目前 branch 為 main、HEAD `a5c1ec2`，working tree 含多個 task 的未提交修改。`git merge-base --is-ancestor` 確認票 01 `85bba16`、第一批／票 02 `2e54462`、票 03 `b5c4760`、票 05 `048b878` 均已包含於 HEAD。
+- 票 04 的來源整合由現有老師接手 task 處理，進度與證據見該票末尾及 `.ai-runs/current/2026-10-07-member-flow-04-source-integration/`。候選 worktree 的測試通過不能替代目前 main 整合驗收；本 task 不重複修改票 04 或並行跑 DB fixtures。
+- 票 06 的剩餘驗收、既有測試覆蓋與缺口已寫入該票；完成定義與既有 acceptance criteria 維持不變。
+- 真實 Google OAuth：票 05 有產品主人 2026-10-05 的取消、重試登入、返回同課程與 consent 未預勾驗收回報；首次建帳號是否另測沒有紀錄，不宣稱已驗證。
+- 本 plan 的原有 packet 與各票初始 `draft` 標示保留為歷史；目前狀態看本表及各票最新補充。
 
 - 第一批：`.ai-runs/member-flow-batch-one/`（diff、checks、截圖）。90 passed／2 failed，不是一次 92/92。
 - 票 01 定位：`.ai-runs/member-flow-redesign-01/head-prefetch-diagnostic.log`。HEAD baseline 同一案例 6/6 通過；診斷顯示 HEAD 上也會因 `/member/*` prefetch 把上次身分改成學員，只是測試換頁比較快所以沒抓到。

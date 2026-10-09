@@ -30,8 +30,8 @@ import {
 export type EditClassSessionForTeacherInput = {
   title?: string | null;
   description?: string | null;
-  // member-flow 票 03：沒帶（undefined）就保留目前的值——系列場次「只改這一場」的表單不顯示這兩欄，
-  // 不能因此把它們清掉；要清空請傳空字串或 null。
+  // member-flow 票 03／04：單堂與系列場次皆可填；沒帶（undefined）就保留目前的值，
+  // 要清空請傳空字串或 null。
   suitableFor?: string | null;
   preparationNotes?: string | null;
   serviceTypes?: string[] | null;
