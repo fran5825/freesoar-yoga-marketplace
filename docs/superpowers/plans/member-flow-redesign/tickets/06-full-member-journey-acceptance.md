@@ -137,3 +137,10 @@ Recommended Next Step（僅記錄，不執行）：
 - 修正（只改測試）：新增 `tests/smoke/_helpers/hydration.ts` 的 `waitForHydrated(locator)`（等 DOM 節點出現 `__reactProps`），用在 `series-member-info.spec.ts` 三次打開改課頁與點「指定日期」之前。
 - 驗證：同樣延遲 3 秒、先 `waitForHydrated` 再 `fill`，值正確；重新 build 後 9 個 spec＋驗證共 140 項：137 passed／2 failed／1 skipped。原失敗的 :184、:266 在 desktop 與 mobile 都通過。
 - 新失敗：mobile `series-member-info:140` 打開課程頁時 `ERR_ABORTED`，單獨重跑 2 次通過，判定為偶發網路中斷。desktop `member-journey-acceptance:73`（團主課）單獨重跑 4 次失敗 3 次，失敗在三個不同位置（「我的報名」沒換頁、「確認報名」後沒出現成功訊息、200% 文字截圖前的橫向捲軸檢查）；老師課同一流程都通過。另以 390px＋200% 直接開頁面量測，團主課與老師課都沒有橫向捲軸。今天早上整套執行時此測試通過，之間合併了期班 07–12（改過課程詳情頁與我的報名），是否相關未查明，記在 `docs/backlog.md` 第 20 項。
+
+## `member-journey-acceptance:73` 團主課不穩定比對（2026-10-09 傍晚，Claude）
+
+- 條件相同（測試檔不改、desktop、只跑團主課、`--repeat-each=6`、伺服器冷啟動兩次）：期班合併前 `65ef03b`（獨立 worktree、自己的 node_modules）**12 次失敗 1 次**；目前 main **12 次失敗 4 次**。兩邊都會失敗，合併後較常失敗；樣本小，不能斷定是期班改動造成。
+- 失敗位置三種：按「確認報名」後 5 秒內沒有成功訊息、「我的報名」沒換頁、200% 文字截圖前橫向捲軸檢查。老師課同一流程沒失敗過。
+- 已排除：假設「hydration 前操作」，在報名表單前加 `waitForHydrated` 後兩次冷啟動仍 4／6、1／6 失敗，已撤回該改動；直接以 390px＋200% 開頁面量測沒有橫向捲軸；加量測時 6 次都沒出現橫向捲軸，抓不到撐寬元素。
+- 目前沒有找到會讓真實使用者失敗的程式錯誤；根因未查明，記在 `docs/backlog.md` 第 20 項。
