@@ -4,7 +4,7 @@
 
 **Blocked by:** 02、04、05
 
-**Status:** 自動化驗收通過；人工畫面項目待產品主人（2026-10-09 短路徑：9 個 spec desktop＋mobile 136 passed／2 flaky，flaky 檔單獨重跑 16/16 與 repeat×3 48/48 通過。真實 Google 首次建帳號、200% 文字、全程鍵盤與真實裝置鍵盤未驗收，列入收尾畫面驗收清單）
+**Status:** 未完成（2026-10-09 短路徑：9 個 spec desktop＋mobile 136 passed／2 failed；失敗的 `series-member-info` 單獨重跑 16/16、repeat×3 48/48 通過，但 desktop :264 存入新舊文字相接，可能是頁面未就緒時輸入的真實問題，根因未查明。真實 Google 首次建帳號、200% 文字、全程鍵盤未驗收。Codex review 2026-10-09 更正原「自動化驗收通過」）
 
 **Workflow mode:** STANDARD
 
@@ -128,5 +128,5 @@ Recommended Next Step（僅記錄，不執行）：
 - 環境：主工作目錄 main（含學員 04、團主 15a、管理員 14），`PORT=3100 CI=1`，`npm run test:smoke`（pretest build 為 Next 16 預設 Turbopack），本機共用開發 DB。
 - 範圍：`member-journey-acceptance`、`class-direct-sign-in`、`class-discovery-filters`、`class-member-info`、`enrollment-approval`、`enrollment`、`member-dashboard`、`public-classes-discovery`、`series-member-info`，desktop＋mobile 共 138 項。
 - 結果：136 passed／2 failed（11.3m）。兩項都在 `series-member-info.spec.ts`：desktop :264 存入值變成新舊文字相接（`只有第一場的適合對象系列的適合對象`），mobile :183 摺疊區 summary 一直不穩定可點。
-- 判定為負載下的 flaky：DB 閒置時單獨重跑該檔 16/16，`--repeat-each=3` 48/48 通過；未改產品 source 或測試。推測是長時間整套執行時頁面尚未 hydrate 完就操作表單；之後若再出現，再評估在這兩處等待表單可互動。
+- 原判定為負載下的 flaky（2026-10-09 Codex review 指出證據不足，已撤回此判定）：DB 閒置時單獨重跑該檔 16/16，`--repeat-each=3` 48/48 通過；未改產品 source 或測試。推測是長時間整套執行時頁面尚未 hydrate 完就操作表單；之後若再出現，再評估在這兩處等待表單可互動。
 - 未驗收（需產品主人或真實裝置）：真實 Google 首次建帳號、200% 文字放大、全程鍵盤、真實裝置鍵盤。列入 `docs/superpowers/plans/2026-10-09-wrap-up-plan.md` 畫面驗收清單。

@@ -186,14 +186,22 @@
 - [ ] `create-teacher-class-session-core.ts`、`create-class-session-core.ts` 在交易出錯時一律回 `create_failed`，原本的錯誤沒有記錄。測試在資料庫忙碌時（其他工作階段同時跑測試）偶爾出現 `create_failed`，無法判斷是交易逾時、鎖等待還是其他錯誤。
 - 建議：在回 `create_failed` 前用 `console.error` 記下原始錯誤（不含個資）；必要時再評估交易 `maxWait`／`timeout`。動到建課核心，需另開票。
 
-### 20. 收尾時延後的項目（2026-10-09 產品主人決定「期班延後」）
+### 20. 收尾時延後的項目（2026-10-09；期班當天已改為重新啟動）
 
 為了盡快收尾，以下項目先不做，之後再挑：
 
 - [x] **期班（老師排課票 07–13）**：2026-10-09 產品主人改為另開長任務完成；07–12 已實作並 push，13 驗收見 `docs/superpowers/plans/teacher-class-scheduling/tickets/13-scheduling-acceptance.md`。待 Codex 補審與畫面驗收。
 - [x] **團主組織舊欄位移除（團主改版票 15b）**：2026-10-09 完成，見票 15。
+- [ ] **學員課程詳情手機第一屏（學員易用性票 02）**：票 08 已讓第一屏露出標題、狀態、名額、報名鈕與「時間或地點」；原要求的老師、以及時間和地點同時出現，沒有實測。要嘛用 390px 實測補齊，要嘛由你決定接受目前的程度。
+- [ ] **查 `series-member-info.spec.ts` 整套執行時的失敗（學員流程票 06）**：2026-10-09 整套 138 項時，desktop :264 存入值變成「只有第一場的適合對象系列的適合對象」（新舊文字相接），mobile :183 摺疊區點不到；單獨重跑都過。可能是頁面還沒準備好（hydration）就輸入造成，手機慢的時候真實使用者也可能遇到。先確認根因，再決定修頁面還是修測試。
 - [x] **email 通知按鈕連結（團主易用性票 11 未完成項）**：2026-10-09 隨寄信功能完成。
-- [ ] **開通真實寄信**：申請 Resend 帳號、驗證網域、把設定填進 `.env` 後實測一次，步驟見 `docs/superpowers/plans/2026-08-01-transactional-email-plan.md`「啟用步驟」。
+- [ ] **開通真實寄信（你要做的，2026-10-09 決定之後再做）**：寄信程式已完成，目前 `EMAIL_DELIVERY_MODE` 沒設定＝不寄信，只發站內通知。照下面做完就能寄出第一封信：
+  1. 到 [resend.com](https://resend.com) 註冊，在 Domains 加入你的網域，照指示設定 DNS，等狀態變成 Verified。
+  2. 在 Resend 建立 API key。**不要貼在對話裡。**
+  3. 打開專案的 `.env`，自己填：`EMAIL_DELIVERY_MODE="allowlist"`、`RESEND_API_KEY="你的金鑰"`、`EMAIL_FROM="飛索 <notifications@你的網域>"`、`EMAIL_ALLOWED_RECIPIENTS="你自己的信箱"`。
+  4. 跟 Claude 說「Resend 設定好了，寄一封測試信給我」，確認收到信、按鈕能回到正確頁面。
+  5. 正式上線前才改成 `live`，並把 `APP_BASE_URL` 設成正式網址（https）。要停用時改回 `disabled`，站內通知不受影響。
+  - 信件長相已在 2026-10-09 用預覽確認過版面；Resend 免費方案每天 100 封，測試夠用。詳細設計見 `docs/superpowers/plans/2026-08-01-transactional-email-plan.md`。
 
 ### 4. 新增 LINE 與 Facebook 登入
 
