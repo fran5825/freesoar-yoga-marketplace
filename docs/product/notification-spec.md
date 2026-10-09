@@ -17,6 +17,18 @@
 - **`class_session_completed`／`review_submitted`（`class-session-review` 一輪新增，原始 14 個事件表沒有規劃過）**：跟 `demand_request_cancelled`、`teacher_profile_suspended`／`teacher_profile_restored` 同一類情況——`NotificationType` enum 沒有預先保留這兩個值，本輪真的執行了一次含兩個新值的 `ALTER TYPE ... ADD VALUE` migration。`class_session_completed` 由 `completeOwnClassSession` 成功後觸發，收件人是該課程所有 `confirmed` enrollment 的 Member（角色 `affected_member`，沿用 `class_session_cancelled` 已建立的角色），目的是邀請留下評價；沒有任何 `confirmed` enrollment 時不觸發（不寄空收件人清單）。`review_submitted` 由 `submitReviewForUser`（`src/domain/review/__internal__/submit-review-core.ts`）成功寫入評價後觸發，收件人只有該課程的授課老師一人（角色 `counterpart`），刻意不通知 Organizer 或 Admin（V1 沒有任何評價管理／審核介面，見 `docs/domain/permissions-matrix.md` 的 Review 小節）。兩者都在寫入成功之後才執行、try/catch 隔離失敗，不影響已經成功的狀態轉換或評價寫入本身（比照既有先例）。
 - **Notification Data／Status**：`Notification` 的欄位清單與 Status 清單（下方兩節）已經照原樣落地，沒有變動。
 
+## Email 落地（2026-10-09）
+
+依 `docs/superpowers/plans/2026-08-01-transactional-email-plan.md` 實作，產品主人 2026-10-09 確認 M1–M6 照 plan 建議。上一節「V1 只寫 in_app」的描述已不再完整：
+
+- **兩個 channel 並存**：`notifyUsers()` 先照舊寫站內通知，再依寄送規則另建一筆 `channel="email"` 記錄並寄出。`/notifications` 只顯示 `in_app`，不會重複。
+- **寄送規則**：`src/domain/notification/email-policy.ts` 是唯一依據，列出 25 種 `NotificationType` 各自要寄給哪些收件角色；目前已接線的「類型 × 角色」都寄，`review_submitted` 寄給授課老師，`class_reminder_basic` 未接線不寄。新增通知類型而沒補這張表時編譯會失敗。
+- **寄送模式** `EMAIL_DELIVERY_MODE`：`disabled`（預設，不寄）／`allowlist`（只寄 `EMAIL_ALLOWED_RECIPIENTS`）／`live`（全部寄，網址須為 https 且不可是 localhost）。設定缺漏一律不寄，只記一次不含值的錯誤 log。
+- **寄信出口**：Resend 官方 HTTPS API＋Node `fetch`（未安裝 SDK），逾時預設 5 秒並中斷請求；`Idempotency-Key` 為 `notification-<Notification.id>`。
+- **信件內容**：沿用站內通知文案，繁中，HTML＋純文字，品牌色票；所有插值 escape。按鈕連到 `/sign-in?callbackUrl=<目標頁>`：已登入直接進目標頁，未登入登入後回到目標頁；目標頁沿用站內通知的連結規則（`link.ts`），進頁面時照原本規則檢查權限。這點取代 plan E5「一律連 `/notifications`」：產品主人選了「按鈕直連目標頁」，而連結規則本來就只用白名單路徑。
+- **失敗處理**：每位收件人獨立；寄信失敗只把該筆 email 標 `failed`，站內通知與原本的操作照常成功，不自動重寄。沒有信箱的使用者略過。
+- **尚未完成**：產品主人還沒有 Resend 帳號與驗證網域，所以目前只以假的寄信出口完成自動化測試（`tests/smoke/transactional-email.spec.ts`），沒有真實寄送。啟用步驟見 plan 的「啟用步驟」。
+
 ## Notification 原則
 
 - 通知要清楚、溫和、可信任。

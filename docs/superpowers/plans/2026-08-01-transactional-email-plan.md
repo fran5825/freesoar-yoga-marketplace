@@ -1,6 +1,8 @@
 # Transactional Email with Resend — Draft Implementation Plan
 
 > Status: DRAFT — 待 Codex peer review、產品主人 event/copy 決策與 Preview credential gate；未授權 Builder 施工或寄送真實郵件。
+> 判定（2026-10-09 早上）：未做。
+> **2026-10-09 更新：程式與自動化測試已完成，尚未真實寄送。** 產品主人確認 M1–M6 照本 plan 建議；尚無 Resend 帳號與驗證網域，所以只做到假的寄信出口測試。實作與決策見文末「2026-10-09 實作紀錄」。
 > Date: 2026-08-01
 
 ## 1. Outcome
@@ -290,5 +292,26 @@ Stop and request direction if:
 - Preview allowlist smoke 通過 desktop/mobile email client sanity review；production 仍不會未經 approval 自動切 live。
 - Notification/docs/launch readiness accurately distinguish email completion from deferred reminder/retry work。
 - Required security/self review 完成；no unrelated files、schema change、commit、push 或 deploy。
+
+## 2026-10-09 實作紀錄
+
+產品主人決定：M1–M6 照第 5 節建議；目前沒有 Resend 帳號，先做到不寄真信、以假的寄信出口完成測試。
+
+- [x] Slice A 盤點：所有觸發點都經過 `notifyUsers()`（含 `notifyOverride` 預設值），所以只改 `notifyUsers()` 就涵蓋全部事件，不動任何業務程式。`NotificationType` 已是 25 種（本 plan 寫 19 種時尚未有團主改版的合作邀請事件）；實際接線的「類型 × 角色」與 `copy.ts` 一致。
+- [x] M1 寄送規則：`src/domain/notification/email-policy.ts`，`Record<NotificationType, …>` 完整列出 25 種；`class_reminder_basic` 為空。
+- [x] Slice B：`email-config.ts`（`disabled|allowlist|live`、缺漏 fail closed、live 禁 localhost／非 https、逾時 1–10 秒）、`email-copy.ts`（主旨去換行、HTML／純文字、escape）、`.env.example` 說明。
+- [x] Slice C：`email-transport.ts`。決策：**不安裝 resend SDK**，用官方 HTTPS API＋`fetch`＋`AbortController`，逾時真正中斷請求；錯誤訊息只含狀態碼與錯誤名稱。
+- [x] Slice D：`email-channel.ts`，由 `notifyUsers()` 在站內通知之後呼叫；每位收件人獨立 try/catch；eventKey 加 `:email` 防重寄。
+- [x] **偏離 E5（產品主人選項）**：按鈕不一律連 `/notifications`，而是 `/sign-in?callbackUrl=<目標頁>`，目標頁沿用 `link.ts`（白名單路徑，含票 12 的單筆連結）；已登入直接進、未登入登入後回到原頁，頁面照原本規則檢查權限。這也完成了團主易用性票 11 的 email 連結。
+- [x] 測試 `tests/smoke/transactional-email.spec.ts`（10 項，desktop 跑一次）：寄送規則與文案一致、設定 fail closed、escape 與主旨、逾時中斷與錯誤不含秘密、disabled／invalid 不寄、allowlist 只寄名單內且連結正確、寄信失敗不影響站內與後續收件人、重試只寄一次、無信箱略過。全部用假的寄信出口，不連網路。
+- [ ] 真實寄送（Slice E 手動 smoke）：等產品主人準備好 Resend 帳號、驗證網域並自行把設定填進 `.env`。
+- 未做：以真實業務操作（例如報名）在寄信失敗時仍成功的端到端測試；`notifyUsers()` 本身的隔離已由上述測試涵蓋，各觸發點本來就在 commit 後以 try/catch 呼叫。
+
+### 啟用步驟（產品主人）
+
+1. 到 Resend 註冊，在 Domains 加入你的網域並照指示設定 DNS，等狀態變成 Verified。
+2. 建立 API key。**不要貼在對話裡**，自己填進本機 `.env`：`RESEND_API_KEY`、`EMAIL_FROM`（例如 `飛索 <notifications@你的網域>`）、`EMAIL_DELIVERY_MODE="allowlist"`、`EMAIL_ALLOWED_RECIPIENTS="你自己的信箱"`。
+3. 重開 dev server，觸發一個低風險事件（例如送出一筆需求），確認收到信、連結能回到正確頁面。
+4. 正式上線前才改成 `live`，並把 `APP_BASE_URL` 設成正式網址（https）。要停用時改回 `disabled` 即可，站內通知不受影響。
 
 <!-- codex-peer-reviewed: 2026-08-02T01:45:54Z rounds=3 verdict=approved -->
