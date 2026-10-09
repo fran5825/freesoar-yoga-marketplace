@@ -22,12 +22,12 @@
 5. 中途只在測試失敗或遇到設計以外的狀況時停下。Codex 額度恢復前，本批設計與新增文件標「待 Codex 補審」，恢復後補審。
 - [x] 07 建立期班（2026-10-09，134 passed；待 Codex 補審）
 - [x] 08 學員報名整期（2026-10-09；待 Codex 補審）
-- [ ] 09 請假與退出整期
-- [ ] 10 老師處理整期報名
+- [x] 09 請假與退出整期（2026-10-09；待 Codex 補審）
+- [x] 10 老師處理整期報名（2026-10-09；待 Codex 補審）
 - [ ] 11 追加補課日期
 - [ ] 12 學員端呈現
 - [ ] 13 完整驗收與文件同步
-- [ ] 合併回 main、共用開發 DB migrate、push（依 G 的決定）
+- [ ] 合併回 main、共用開發 DB migrate、push（依 G 的決定）——第一批 07+08 已完成 2026-10-09（push `89490e7`，共用開發 DB 已 migrate；合併時 origin 另有 15b 與 email 通知，合併後 92 passed）
 
 進度紀錄（每完成一項補一行）：
 
@@ -45,8 +45,8 @@
 | [06 公開設定](06-visibility-settings.md) | 系列可公開、建好後可改 | 04、05 | HEAVY | yes | accepted（2026-10-06 實作；2026-10-09 畫面驗收通過） |
 | [07 建立期班](07-term-class-creation.md) | 持續開課／期班、報名方式 | 01、02、06 | HEAVY | yes | done（2026-10-09；待 Codex 補審、待畫面驗收） |
 | [08 報名整期](08-term-enrollment.md) | 學員整期報名、中途加入 | 07 | HEAVY | yes | done（2026-10-09；待 Codex 補審、待畫面驗收） |
-| [09 請假與退出](09-term-leave-and-withdraw.md) | 整期學員請假單場、退出整期 | 08 | HEAVY | yes | draft |
-| [10 老師處理整期報名](10-teacher-term-enrollment-handling.md) | 整期名單、整期確認一次 | 08 | HEAVY | yes | draft |
+| [09 請假與退出](09-term-leave-and-withdraw.md) | 整期學員請假單場、退出整期 | 08 | HEAVY | yes | done（2026-10-09；待 Codex 補審、待畫面驗收） |
+| [10 老師處理整期報名](10-teacher-term-enrollment-handling.md) | 整期名單、整期確認一次 | 08 | HEAVY | yes | done（2026-10-09；待 Codex 補審、待畫面驗收） |
 | [11 補課日期](11-term-makeup-dates.md) | 期班追加日期、整期學員自動報上 | 08 | HEAVY | yes | draft |
 | [12 學員端呈現](12-member-term-display.md) | 期班一張卡片、同系列場次 | 08、09 | STANDARD | yes | draft |
 | [13 完整驗收](13-scheduling-acceptance.md) | S1–S23、RWD、文件同步 | 01–12 | STANDARD | yes | draft |

@@ -9,6 +9,7 @@ import {
   generateMoreOccurrencesForTeacher,
   openAllDraftOccurrencesForTeacher,
 } from "@/domain/class-session/service";
+import { decideSeriesEnrollmentAsTeacher } from "@/domain/enrollment/term-service";
 
 export async function generateMoreOccurrencesAction(formData: FormData): Promise<void> {
   const recurringClassSeriesId = readFormString(formData, "recurringClassSeriesId");
@@ -105,6 +106,19 @@ export async function cancelRecurringClassSeriesAction(formData: FormData): Prom
     "success",
     `已取消 ${result.cancelledCount} 場尚未開始的課程。`,
   );
+}
+
+// teacher-class-scheduling 票 10：整期報名確認／婉拒一次（規則與 own-scope 在 decideSeriesEnrollmentAsTeacher）。
+export async function decideTermEnrollmentAction(formData: FormData): Promise<void> {
+  const recurringClassSeriesId = readFormString(formData, "recurringClassSeriesId");
+  const decision = readFormString(formData, "decision") === "decline" ? "decline" : "confirm";
+  const result = await decideSeriesEnrollmentAsTeacher(readFormString(formData, "seriesEnrollmentId"), decision);
+
+  revalidatePath(`/teacher/classes/series/${recurringClassSeriesId}`);
+  revalidatePath("/teacher/classes");
+  revalidatePath("/teacher/dashboard");
+
+  redirectWithFeedback(recurringClassSeriesId, result.ok ? "success" : "error", result.message);
 }
 
 function readFormString(formData: FormData, name: string): string {

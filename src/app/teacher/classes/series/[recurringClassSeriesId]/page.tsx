@@ -12,6 +12,10 @@ import {
   type RecurringClassSeriesOccurrence,
 } from "@/domain/class-session/read-service";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
+import {
+  listOwnTermEnrollmentsForTeacher,
+  type TeacherTermEnrollmentView,
+} from "@/domain/enrollment/term-service";
 import { requireUser } from "@/lib/auth/session";
 
 import {
@@ -23,6 +27,7 @@ import { CopyEnrollLinkButton } from "../../_components/CopyEnrollLinkButton";
 import { teacherClassDetailHref } from "../../_lib/return-context";
 import {
   cancelRecurringClassSeriesAction,
+  decideTermEnrollmentAction,
   generateMoreOccurrencesAction,
   openAllDraftOccurrencesAction,
 } from "./actions";
@@ -82,6 +87,8 @@ export default async function RecurringClassSeriesPage({
   const isTerm = series.kind === "term";
   const termSessionCount = series.occurrences.filter((occurrence) => occurrence.status !== "cancelled").length;
   const canGenerateMore = series.kind === "continuous" && series.dayOfWeek !== null;
+  // 票 10：期班的整期學員名單（own-scoped）。
+  const termEnrollments = isTerm ? await listOwnTermEnrollmentsForTeacher(series.id) : null;
 
   return (
     <div className="flex flex-col gap-6 sm:gap-8">
@@ -172,6 +179,10 @@ export default async function RecurringClassSeriesPage({
             </ConfirmActionDialog>
           </div>
         </section>
+      ) : null}
+
+      {termEnrollments ? (
+        <TermEnrollmentsSection seriesId={series.id} termEnrollments={termEnrollments} />
       ) : null}
 
       <section
@@ -364,6 +375,97 @@ export default async function RecurringClassSeriesPage({
         </section>
       ) : null}
     </div>
+  );
+}
+
+const termEnrollmentStatusLabels: Record<TeacherTermEnrollmentView["status"], string> = {
+  pending: "待確認",
+  confirmed: "已報名",
+  declined: "已婉拒",
+  withdrawn: "已退出",
+};
+
+// teacher-class-scheduling 票 10：整期學員名單。待確認的整期報名在這裡確認或婉拒一次，套用到整期。
+function TermEnrollmentsSection({
+  seriesId,
+  termEnrollments,
+}: {
+  seriesId: string;
+  termEnrollments: TeacherTermEnrollmentView[];
+}) {
+  const pendingCount = termEnrollments.filter((item) => item.status === "pending").length;
+
+  return (
+    <section
+      aria-labelledby="term-enrollments-title"
+      className="grid scroll-mt-6 gap-3 rounded-2xl border border-ink/15 bg-white p-5 sm:p-6"
+      id="term-enrollments"
+    >
+      <h2 className="text-lg font-medium text-ink" id="term-enrollments-title">
+        整期學員（{termEnrollments.length}）{pendingCount > 0 ? `・待確認 ${pendingCount}` : ""}
+      </h2>
+      {termEnrollments.length === 0 ? (
+        <p className="text-sm leading-6 text-ink-soft">目前還沒有學員報整期。</p>
+      ) : (
+        <ul className="grid gap-2">
+          {termEnrollments.map((item) => (
+            <li className="grid min-w-0 gap-2 rounded-2xl border border-ink/10 bg-cream p-3 text-sm" key={item.id}>
+              <p className="flex flex-wrap items-center gap-2">
+                <span className="min-w-0 break-words font-medium text-ink">{item.memberLabel}</span>
+                <span className="rounded-full bg-white px-2 py-0.5 text-xs text-ink-soft">
+                  {termEnrollmentStatusLabels[item.status]}
+                </span>
+                {item.status === "pending" || item.status === "confirmed" ? (
+                  <span className="text-ink-soft">之後 {item.activeUpcomingCount} 堂</span>
+                ) : null}
+              </p>
+              {item.notes ? (
+                <p className="min-w-0 whitespace-pre-wrap break-words text-ink-soft">{item.notes}</p>
+              ) : null}
+              {item.leaveDates.length > 0 ? (
+                <p className="text-ink-soft">
+                  請假：{item.leaveDates.map((date) => formatTaipeiDatetime(date)).join("、")}
+                </p>
+              ) : null}
+              {item.status === "pending" ? (
+                <div className="flex flex-wrap gap-2">
+                  <form action={decideTermEnrollmentAction}>
+                    <input name="recurringClassSeriesId" type="hidden" value={seriesId} />
+                    <input name="seriesEnrollmentId" type="hidden" value={item.id} />
+                    <input name="decision" type="hidden" value="confirm" />
+                    <button
+                      aria-label={`確認 ${item.memberLabel} 的整期報名`}
+                      className="min-h-11 rounded-full border border-emerald-300 bg-white px-4 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-50"
+                      type="submit"
+                    >
+                      確認整期報名
+                    </button>
+                  </form>
+                  <ConfirmActionDialog
+                    action={decideTermEnrollmentAction}
+                    confirmLabel="確定婉拒整期"
+                    hiddenFields={{ recurringClassSeriesId: seriesId, seriesEnrollmentId: item.id, decision: "decline" }}
+                    title="婉拒這筆整期報名？"
+                    triggerAriaLabel={`婉拒 ${item.memberLabel} 的整期報名`}
+                    triggerClassName="min-h-11 rounded-full border border-ink/25 bg-white px-4 py-2 text-sm font-medium text-ink-soft transition hover:bg-cream"
+                    triggerLabel="婉拒"
+                  >
+                    <p>
+                      學員：<span className="break-words font-medium text-ink">{item.memberLabel}</span>
+                    </p>
+                    <p>會取消報整期時新增的 {item.declineCancelCount} 堂，學員會收到一則通知。</p>
+                    {item.declineRestoreCount > 0 ? (
+                      <p>學員原本單堂報名的 {item.declineRestoreCount} 堂會恢復為單堂，維持原本狀態。</p>
+                    ) : null}
+                    <p>婉拒後，這位學員不能再報這一期的整期。</p>
+                  </ConfirmActionDialog>
+                </div>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

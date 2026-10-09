@@ -8,7 +8,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { SignInOptions } from "../../../_components/sign-in-options";
 import { SiteShell } from "../../../_components/site-shell";
 import { EnrollmentStatusBadge } from "../../../member/_components/EnrollmentStatusBadge";
-import { enrollTermAction, signInToEnrollTermAction } from "./actions";
+import { enrollTermAction, signInToEnrollTermAction, withdrawTermAction } from "./actions";
 
 // teacher-class-scheduling 票 08：學員端的期班頁（規格 4.7、4.8）。顯示期間、全部可見日期、剩餘堂數與報名方式，
 // 提供「報名整期」；整期和單堂都收的期班，每一場可以點進單堂頁單獨報名。
@@ -180,7 +180,17 @@ function TermEnrollPanel({ term, signedIn }: { term: TermDetail; signedIn: boole
         {term.ownSeriesEnrollment ? "你的整期報名" : "報名整期"}
       </h2>
       {term.ownSeriesEnrollment ? (
-        <p className="text-sm leading-6 text-ink-soft">{seriesStatusCopy[term.ownSeriesEnrollment.status]}</p>
+        <>
+          <p className="text-sm leading-6 text-ink-soft">{seriesStatusCopy[term.ownSeriesEnrollment.status]}</p>
+          {term.ownSeriesEnrollment.status === "pending" || term.ownSeriesEnrollment.status === "confirmed" ? (
+            <>
+              <p className="text-sm leading-6 text-ink-soft">
+                某一堂不能來，點進那一堂按「請假這一堂」，其他堂照常。
+              </p>
+              <WithdrawTermForm seriesEnrollmentId={term.ownSeriesEnrollment.id} term={term} />
+            </>
+          ) : null}
+        </>
       ) : term.termEnrollBlock ? (
         <p className="text-sm leading-6 text-ink-soft">{blockMessage(term.termEnrollBlock)}</p>
       ) : !signedIn ? (
@@ -224,6 +234,48 @@ function TermEnrollPanel({ term, signedIn }: { term: TermDetail; signedIn: boole
         </form>
       )}
     </section>
+  );
+}
+
+// teacher-class-scheduling 票 09：退出整期前列出會取消的場次（尚未開始、處理中／已報名的那幾堂）。
+function WithdrawTermForm({ term, seriesEnrollmentId }: { term: TermDetail; seriesEnrollmentId: string }) {
+  const affected = term.sessions.filter(
+    (session) =>
+      session.upcoming &&
+      (session.ownEnrollmentStatus === "pending" || session.ownEnrollmentStatus === "confirmed"),
+  );
+
+  return (
+    <details className="rounded-xl border border-amber-200 bg-amber-50/60">
+      <summary className="cursor-pointer list-none rounded-full px-4 py-2 text-sm font-medium text-amber-800 marker:hidden">
+        退出整期…
+      </summary>
+      <form action={withdrawTermAction} className="grid gap-3 border-t border-amber-100 p-4">
+        <input name="recurringClassSeriesId" type="hidden" value={term.id} />
+        <input name="seriesEnrollmentId" type="hidden" value={seriesEnrollmentId} />
+        <p className="text-sm font-medium leading-6 text-amber-900">
+          {affected.length > 0 ? `會取消之後的 ${affected.length} 堂：` : "之後沒有要取消的場次。"}
+        </p>
+        {affected.length > 0 ? (
+          <ul aria-label="退出後會取消的場次" className="grid gap-1 text-sm text-ink-soft">
+            {affected.map((session) => (
+              <li key={session.id}>{formatTaipeiShortDatetime(session.startAt)}</li>
+            ))}
+          </ul>
+        ) : null}
+        <p className="text-sm leading-6 text-ink-soft">已經上過的紀錄會保留。退出後這一期不能再報整期。</p>
+        <label className="flex items-start gap-2 text-sm leading-6 text-ink-soft">
+          <input className="mt-1 shrink-0" name="confirmWithdraw" required type="checkbox" value="yes" />
+          我確認要退出這一期。
+        </label>
+        <button
+          className="w-full rounded-full bg-amber-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-800 sm:w-auto"
+          type="submit"
+        >
+          確認退出整期
+        </button>
+      </form>
+    </details>
   );
 }
 

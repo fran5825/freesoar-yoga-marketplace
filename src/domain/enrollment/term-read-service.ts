@@ -16,6 +16,8 @@ export type TermSessionView = {
   startAt: Date;
   endAt: Date;
   status: "open_for_enrollment" | "completed";
+  // 讀取當下尚未開始（畫面元件不能自己呼叫 Date.now）。
+  upcoming: boolean;
   capacity: number;
   activeEnrollmentCount: number;
   ownEnrollmentStatus: EnrollmentStatus | null;
@@ -145,6 +147,7 @@ export async function getTermDetailForViewer(
         startAt: session.startAt,
         endAt: session.endAt,
         status: session.status,
+        upcoming: session.startAt.getTime() > now.getTime(),
         capacity: session.capacity,
         activeEnrollmentCount: session._count.enrollments,
         ownEnrollmentStatus,

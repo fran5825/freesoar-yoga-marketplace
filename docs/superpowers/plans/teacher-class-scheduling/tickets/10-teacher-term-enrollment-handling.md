@@ -23,3 +23,12 @@
 - [ ] Smoke 測試覆蓋確認、婉拒（含狀態相同的「新增」與「併入」子報名並存，重新讀取後各自處理正確）、他人拒絕、通知數量；tsc、lint、受影響 smoke 通過；RWD 檢查。
 
 <!-- codex-peer-reviewed: 2026-10-04T00:20:22Z rounds=4 verdict=approved -->
+
+## 實作紀錄（2026-10-09，Claude，worktree `term-classes`）
+
+**Status：done（待 Codex 補審；待產品主人看畫面）**。推導規則 9 已於 2026-10-09 一次性放行。
+
+- 核心 `src/domain/enrollment/__internal__/decide-series-enrollment-core.ts`：先鎖系列（own-scope：`teacherProfileId` 寫在鎖查詢 WHERE）再鎖整期報名列，必須是 pending。確認：未開始的 pending 逐場改 confirmed、整期改 confirmed。婉拒：整期改 declined；`term_created` 的未開始逐場改 cancelled；`merged_single` 的逐場清空整期關聯與來源、保留原狀態恢復為單堂。各只通知學員一則。
+- 系列頁（期班）：新增「整期學員」名單（狀態、之後幾堂、備註、請假日期），待確認的可「確認整期報名」或「婉拒」（確認視窗先說明會取消幾堂、幾堂恢復為單堂）。
+- 老師單場頁：期班場次的名單標示「整期／單堂」；整期子報名不顯示單場確認／婉拒，改連到期班頁處理（server 端拒絕仍在）。
+- 測試 `term-teacher-handling.spec.ts`：整期確認與通知數、重複處理被拒、婉拒時新增與併入並存且重讀後各自正確、他人老師被拒、UI 名單與確認。票 08 的老師單場測試改為檢查不顯示確認按鈕、改顯示連結。7 個 spec desktop＋mobile 92 passed／2 failed（本票測試的通知計數未排除建立場次的通知，已修正並重跑通過）。

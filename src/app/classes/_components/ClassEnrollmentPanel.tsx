@@ -31,7 +31,8 @@ export function ClassEnrollmentPanel({ classSession, signedIn, returnTo, termOnl
       {ownEnrollment ? <>
         <EnrollmentStatusBadge status={ownEnrollment.status} />
         <p className="text-sm leading-6 text-ink-soft">{ownEnrollment.status === "pending" ? "你的報名已送出，老師確認後才算成立，確認結果會顯示在「通知」。" : ownEnrollment.status === "cancelled" ? "這筆報名已取消，無法再次報名此課程。" : "報名已成立，請依課程時間與地點準時參加。"}</p>
-        {["pending", "confirmed"].includes(ownEnrollment.status) && !hasStarted ? <CancelEnrollmentForm action={cancelWithContext} classSessionId={classSession.id} enrollmentId={ownEnrollment.id} /> : null}
+        {"seriesEnrollmentId" in ownEnrollment && ownEnrollment.seriesEnrollmentId ? <p className="text-sm leading-6 text-ink-soft">這一堂屬於你的整期報名。</p> : null}
+        {["pending", "confirmed"].includes(ownEnrollment.status) && !hasStarted ? <CancelEnrollmentForm action={cancelWithContext} classSessionId={classSession.id} enrollmentId={ownEnrollment.id} variant={"seriesEnrollmentId" in ownEnrollment && ownEnrollment.seriesEnrollmentId ? "leave" : "cancel"} /> : null}
       </> : termOnlyHref ? <>
         <p className="text-sm leading-6 text-ink-soft">這個期班只收整期報名，請到期班頁報名整期。</p>
         <Link className={buttonClass} href={termOnlyHref}>前往期班頁報名整期</Link>

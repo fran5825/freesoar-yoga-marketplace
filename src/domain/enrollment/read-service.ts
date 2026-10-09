@@ -75,7 +75,8 @@ export type MemberFacingClassSession = {
   // 消費頁面需自行提供中性 fallback 文案（不假設一律有團體名稱）。
   organization: { name: string } | null;
   teacherProfile: { displayName: string | null };
-  ownEnrollment: { id: string; status: EnrollmentStatus } | null;
+  // teacher-class-scheduling 票 09：屬於整期報名時有值（取消這一堂就是「請假」）。
+  ownEnrollment: { id: string; status: EnrollmentStatus; seriesEnrollmentId: string | null } | null;
   requiresApproval: boolean;
   canAcceptNewEnrollments: boolean;
 };
@@ -128,7 +129,7 @@ export async function getClassSessionForMember(
   const { _count, teacherProfile, ...classSessionFields } = classSession;
   const ownEnrollment = await prisma.enrollment.findUnique({
     where: { classSessionId_userId: { classSessionId, userId: currentUser.id } },
-    select: { id: true, status: true },
+    select: { id: true, status: true, seriesEnrollmentId: true },
   });
 
   return {

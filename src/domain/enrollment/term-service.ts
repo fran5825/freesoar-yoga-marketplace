@@ -1,7 +1,10 @@
 // teacher-class-scheduling 票 08：學員整期報名的 auth-resolving 外層。規則與鎖都在
 // __internal__/create-series-enrollment-core.ts；這裡只把目前使用者解析成受信任的 userId，並把錯誤碼轉成文案。
 
+import type { SeriesEnrollmentStatus } from "@prisma/client";
+
 import { requireUser } from "@/lib/auth/session";
+import { prisma } from "@/lib/prisma";
 
 import { formatTaipeiShortDatetime } from "@/domain/class-session/timezone";
 
@@ -9,6 +12,11 @@ import {
   createSeriesEnrollmentForUser,
   type CreateSeriesEnrollmentErrorCode,
 } from "./__internal__/create-series-enrollment-core";
+import {
+  confirmSeriesEnrollmentForTeacher,
+  declineSeriesEnrollmentForTeacher,
+} from "./__internal__/decide-series-enrollment-core";
+import { withdrawSeriesEnrollmentForUser } from "./__internal__/withdraw-series-enrollment-core";
 import { type EnrollmentCreateInput, validateEnrollmentCreate } from "./validation";
 
 export type CreateOwnSeriesEnrollmentResult =
@@ -65,4 +73,167 @@ export async function createOwnSeriesEnrollment(
   };
 
   return { ok: false, code: result.code, message: messages[result.code] };
+}
+
+// teacher-class-scheduling 票 09：學員退出整期（本人）。
+export type WithdrawOwnSeriesEnrollmentResult =
+  | { ok: true; cancelledCount: number }
+  | { ok: false; message: string };
+
+export async function withdrawOwnSeriesEnrollment(
+  seriesEnrollmentId: string,
+): Promise<WithdrawOwnSeriesEnrollmentResult> {
+  let userId: string;
+
+  try {
+    userId = (await requireUser()).id;
+  } catch (error) {
+    if (error instanceof Error && error.message === "Authentication required") {
+      return { ok: false, message: "請先登入後再退出整期。" };
+    }
+
+    throw error;
+  }
+
+  const result = await withdrawSeriesEnrollmentForUser(userId, seriesEnrollmentId);
+
+  if (result.ok) {
+    return result;
+  }
+
+  return {
+    ok: false,
+    message:
+      result.code === "series_enrollment_not_found"
+        ? "找不到這筆整期報名，或你沒有權限操作。"
+        : "這筆整期報名已經退出或被婉拒，不能再退出。",
+  };
+}
+
+// teacher-class-scheduling 票 10：老師端的整期報名（own-scoped：系列必須是這位老師的）。
+async function resolveTeacherProfileId(): Promise<string | null> {
+  const currentUser = await requireUser();
+  const teacherProfile = await prisma.teacherProfile.findUnique({
+    where: { userId: currentUser.id },
+    select: { id: true },
+  });
+
+  return teacherProfile?.id ?? null;
+}
+
+export type DecideOwnSeriesEnrollmentResult = { ok: true; message: string } | { ok: false; message: string };
+
+export async function decideSeriesEnrollmentAsTeacher(
+  seriesEnrollmentId: string,
+  decision: "confirm" | "decline",
+): Promise<DecideOwnSeriesEnrollmentResult> {
+  const teacherProfileId = await resolveTeacherProfileId();
+
+  if (!teacherProfileId) {
+    return { ok: false, message: "找不到你的老師資料。" };
+  }
+
+  const result =
+    decision === "confirm"
+      ? await confirmSeriesEnrollmentForTeacher(teacherProfileId, seriesEnrollmentId)
+      : await declineSeriesEnrollmentForTeacher(teacherProfileId, seriesEnrollmentId);
+
+  if (!result.ok) {
+    return {
+      ok: false,
+      message:
+        result.code === "series_enrollment_not_found"
+          ? "找不到這筆整期報名，或你沒有權限操作。"
+          : "這筆整期報名已經處理過了。",
+    };
+  }
+
+  if (decision === "confirm") {
+    return { ok: true, message: `已確認整期報名，${result.affectedCount} 堂改為已報名。` };
+  }
+
+  return {
+    ok: true,
+    message:
+      result.restoredSingleCount > 0
+        ? `已婉拒整期報名，取消 ${result.affectedCount} 堂；學員原本單堂報名的 ${result.restoredSingleCount} 堂恢復為單堂。`
+        : `已婉拒整期報名，取消 ${result.affectedCount} 堂。`,
+  };
+}
+
+export type TeacherTermEnrollmentView = {
+  id: string;
+  status: SeriesEnrollmentStatus;
+  notes: string | null;
+  memberLabel: string;
+  // 尚未開始、仍有效的場次數；請假（已取消）的場次日期。
+  activeUpcomingCount: number;
+  leaveDates: Date[];
+  // 婉拒時的影響：會取消幾堂（整期新增、未開始、有效），幾堂恢復為單堂（併入的）。
+  declineCancelCount: number;
+  declineRestoreCount: number;
+};
+
+export async function listOwnTermEnrollmentsForTeacher(
+  recurringClassSeriesId: string,
+): Promise<TeacherTermEnrollmentView[] | null> {
+  const teacherProfileId = await resolveTeacherProfileId();
+
+  if (!teacherProfileId) {
+    return null;
+  }
+
+  const series = await prisma.recurringClassSeries.findFirst({
+    where: { id: recurringClassSeriesId, teacherProfileId, kind: "term" },
+    select: {
+      seriesEnrollments: {
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          status: true,
+          notes: true,
+          user: { select: { name: true, email: true } },
+          enrollments: {
+            select: {
+              status: true,
+              seriesEnrollmentSource: true,
+              classSession: { select: { startAt: true } },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!series) {
+    return null;
+  }
+
+  const now = Date.now();
+
+  return series.seriesEnrollments.map((seriesEnrollment) => {
+    const upcoming = seriesEnrollment.enrollments.filter(
+      (enrollment) => enrollment.classSession.startAt.getTime() > now,
+    );
+    const active = upcoming.filter(
+      (enrollment) => enrollment.status === "pending" || enrollment.status === "confirmed",
+    );
+
+    return {
+      id: seriesEnrollment.id,
+      status: seriesEnrollment.status,
+      notes: seriesEnrollment.notes,
+      memberLabel: seriesEnrollment.user.name ?? seriesEnrollment.user.email ?? "會員",
+      activeUpcomingCount: active.length,
+      leaveDates: seriesEnrollment.enrollments
+        .filter((enrollment) => enrollment.status === "cancelled")
+        .map((enrollment) => enrollment.classSession.startAt)
+        .sort((a, b) => a.getTime() - b.getTime()),
+      declineCancelCount: active.filter((enrollment) => enrollment.seriesEnrollmentSource === "term_created")
+        .length,
+      declineRestoreCount: seriesEnrollment.enrollments.filter(
+        (enrollment) => enrollment.seriesEnrollmentSource === "merged_single",
+      ).length,
+    };
+  });
 }

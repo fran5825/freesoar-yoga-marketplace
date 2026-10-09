@@ -309,6 +309,8 @@ test.describe("term enrollment (UI)", () => {
     await expect(page).toHaveURL(new RegExp(`/classes/terms/${series.id}`));
   });
 
+  // 票 10 起單場頁不再顯示整期子報名的確認按鈕（改連到期班頁）；server 端的拒絕仍在
+  // confirmPendingEnrollmentForTeacher 的 updateMany 條件（seriesEnrollmentId: null）。
   test("a teacher cannot confirm a single pending enrollment that belongs to a term", async ({ context, page }, testInfo) => {
     const id = runId(testInfo, "ui-teacher");
     const teacher = await seedTeacher(id);
@@ -318,8 +320,8 @@ test.describe("term enrollment (UI)", () => {
 
     await addAuthSessionCookie(context, teacher.sessionToken);
     await page.goto(`/teacher/classes/${sessions[0].id}`);
-    await page.getByRole("button", { name: "確認報名" }).click();
-    await expect(page.getByText("這筆報名屬於整期報名")).toBeVisible();
+    await expect(page.getByRole("link", { name: "到期班頁處理" })).toBeVisible();
+    await expect(page.locator("#pending-enrollments").getByRole("button", { name: "確認報名" })).toHaveCount(0);
     expect(await prisma.enrollment.findFirstOrThrow({ where: { userId: member.id, classSessionId: sessions[0].id } })).toMatchObject({
       status: "pending",
     });

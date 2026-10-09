@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { signIn } from "@/auth";
-import { createOwnSeriesEnrollment } from "@/domain/enrollment/term-service";
+import { createOwnSeriesEnrollment, withdrawOwnSeriesEnrollment } from "@/domain/enrollment/term-service";
 import { parseSignInProvider } from "@/lib/auth/sign-in-providers";
 import { rememberSignInReturn } from "@/lib/auth/sign-in-return";
 
@@ -43,6 +43,28 @@ export async function enrollTermAction(formData: FormData): Promise<void> {
     result.status === "pending"
       ? `整期報名已送出（共 ${result.sessionCount} 堂），等待老師確認。`
       : `整期報名成功，共 ${result.sessionCount} 堂。`,
+  );
+}
+
+// teacher-class-scheduling 票 09：退出整期（本人；規則都在 withdrawOwnSeriesEnrollment）。
+export async function withdrawTermAction(formData: FormData): Promise<void> {
+  const recurringClassSeriesId = readFormString(formData, "recurringClassSeriesId");
+  const result = await withdrawOwnSeriesEnrollment(readFormString(formData, "seriesEnrollmentId"));
+
+  revalidatePath(termHref(recurringClassSeriesId));
+  revalidatePath("/member/enrollments");
+  revalidatePath("/member/dashboard");
+
+  if (!result.ok) {
+    redirectWithFeedback(recurringClassSeriesId, "error", result.message);
+  }
+
+  redirectWithFeedback(
+    recurringClassSeriesId,
+    "success",
+    result.cancelledCount > 0
+      ? `已退出整期，取消了之後的 ${result.cancelledCount} 堂。`
+      : "已退出整期。",
   );
 }
 
