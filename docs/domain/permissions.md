@@ -36,6 +36,7 @@ Can:
 - Enroll in class sessions
 - View own enrollments
 - Cancel own enrollment if policy allows
+- **已落地（`lightweight-payment-v0`，2026-10-10）：Write own transfer note**：已報名且尚未付款的學員可填寫自己報名的「轉帳後五碼或備註」（單行、最多 100 字、純文字；原子條件更新，老師標記已收款後不能再改）；只能寫自己的報名，也只能看到自己報名的付款狀態與報名當下快照，看不到老師的內部收款備註
 - **已落地（`teacher-class-scheduling` 票 08，2026-10-09）：Enroll in a whole term（報名整期）**：學員本人（userId 由 session 解析，不接受表單傳入）可以報名期班整期。期班頁可見性比照單堂：訪客只看得到公開、老師已通過審核且有已開放場次的期班；已登入學員拿到連結就能看（至少一場已開放或已完成），或自己已有整期報名。期班頁只逐場列出已開放、已完成的場次，草稿只計入堂數。報名規則與鎖都在 server 端（見 `data-model.md` 的 `SeriesEnrollment`）；「只收整期」的期班，單場報名 server 端拒絕。
 - **已落地（`teacher-class-scheduling` 票 09，2026-10-09）：Take leave / withdraw from own term**：整期學員取消其中一堂（請假）沿用既有本人取消規則；退出整期只能由本人操作（整期報名的 userId 寫在鎖查詢 WHERE），取消尚未開始的場次，已開始或完成的紀錄保留；不另外通知老師。
 
@@ -44,6 +45,7 @@ Cannot:
 - Manage demand requests
 - Respond as teacher
 - View other members' private data
+- **Self-mark payment as paid（`lightweight-payment-v0`）**：學員只能填轉帳備註，不能自行把付款狀態改成已付款
 
 ## Organizer
 
@@ -61,6 +63,8 @@ Can:
 - **已核准・未實作（organizer-usability-redesign，Q18：A）**：建立並管理多個自己擁有的團體（owner 判斷）；為自己的團體建立合作邀請、選平台 approved 老師、修改／撤回尚未轉課的邀請；老師確認後直接開放報名（`organizer_direct`）。本人也是 approved 老師時，可以在團主表單明確確認由自己授課。細節見 `permissions-matrix.md` 的 OrganizerClassProposal 表。
 
 Cannot:
+
+- **已落地（`lightweight-payment-v0`，2026-10-10）：Change payment status**：團主對自己課程報名的付款狀態**唯讀**（只看得到報名狀態、付款狀態與時間，含已取消但有付款紀錄的報名），不能標記，也看不到收款備註、轉帳備註、收款帳號、聯絡方式、繳費規則快照與操作者；這些欄位的查詢與 DTO 一律不選取
 
 - See other organizers' private demand requests
 - Manage organizations owned by other organizers, or transfer / co-manage organizations（V1 不做）
@@ -83,6 +87,8 @@ Can:
 - **Read own data for dashboard/form defaults（`teacher-usability` 第 07、09 票，2026-09-26）**：建課表單帶入自己最近一堂自建課的地點、名額、是否需確認報名；總覽列出自己「已被選定、等待團主建課」的回應（只有需求 id 與標題）。兩者都是 own-scoped 讀取（`teacherProfileId` 寫在 WHERE），沒有新增能力或可讀的他人資料。
 - **View own single class session detail（`teacher-usability` 第 05 票，產品主人 2026-09-25 放行）**：老師只能讀自己的單堂課詳情（範圍與上方列表完全相同，未新增可讀欄位：只含 confirmed／pending 報名的學員姓名、email、備註，評價者姓名與 email，Organization 只有名稱、無團主聯絡資料，無學員電話與頭像）；別人的課、不存在、沒有老師資料一律回傳找不到；suspended 老師仍可查看自己既有的課。own-scope 寫在查詢 WHERE，不是事後比對。
 - View own calendar
+- **已落地（`lightweight-payment-v0`，2026-10-10）：Manage own payment settings**：approved／suspended 老師在 `/teacher/profile/payment` 維護自己的收款帳號、繳費規則與聯絡方式（獨立於個人資料審核流程）
+- **已落地（`lightweight-payment-v0`，2026-10-10）：Mark own class enrollments paid / refunded**：老師只能對**自己班級**（`classSession.teacherProfileId`）底下的報名標記已收款或已退款（含整期學員一次標記整期）；已取消的報名只能標記已退款，不能標記已收款；金錢不經過飛索，標記只是記錄
 - Enroll in class sessions only through the same User's Member capability
 - **已落地（`teacher-class-scheduling` 票 04，2026-10-05）：Edit own single class session（改課）**：approved 老師可以修改自己開的單堂課（`origin = teacher_initiated`、不屬於系列、`draft`／`open_for_enrollment`、`startAt` 尚未到達）的標題、說明、課程風格、瑜伽類型、時間、地點與人數上限。所有條件都在 server 端檢查（own-scope 寫在鎖查詢的 WHERE、origin 與狀態在鎖內確認、老師狀態在鎖內讀取），不只靠 UI 隱藏。改時間或地點時通知該場 `pending`／`confirmed` 學員；不能改「是否需要確認報名」；不能改團主媒合的課；暫停中的老師不能改。系列場次的改課在票 05，公開設定的修改在票 06。
 - **已落地（`teacher-class-scheduling` 票 05，2026-10-05）：Edit own series class sessions（系列改課）**：approved 老師可以改自己系列中尚未開始的場次，選「只改這場」或「改這場和之後所有場次」（後者同時更新自己的 `RecurringClassSeries` 設定）。系列 own-scope 寫在系列鎖查詢的 WHERE，每一場的條件（屬於這個系列、`teacher_initiated`、`draft`／`open_for_enrollment`、未開始）在鎖內重新檢查；不能改星期幾與「是否需要確認報名」。（票 05 當時也不能改公開設定；**票 06 起可以改公開設定**，持續開課依改課範圍套用；**票 07 起期班的公開設定整期一致**，不論範圍都套用到這一期所有尚未開始的草稿／開放場次與系列，先鎖系列再依 id 鎖場次。）
@@ -104,6 +110,7 @@ Cannot:
 
 Can:
 
+- **已落地（`lightweight-payment-v0`，2026-10-10）：Mark any enrollment paid / refunded**：Admin 可跨老師標記已收款或已退款，作為支援與糾紛協調；操作者角色記為 `admin`，與老師標記分開
 - Approve/reject/suspend teachers
 - Review/publish/reject demand requests
 - Manage class sessions

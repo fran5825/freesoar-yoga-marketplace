@@ -9,6 +9,12 @@ import {
   openOwnClassSessionForEnrollmentForTeacher,
 } from "@/domain/class-session/service";
 import {
+  markEnrollmentPaidForTeacher,
+  markEnrollmentRefundedForTeacher,
+  markSeriesEnrollmentPaidForTeacher,
+  markSeriesEnrollmentRefundedForTeacher,
+} from "@/domain/enrollment/payment-service";
+import {
   confirmPendingEnrollmentForTeacher,
   declinePendingEnrollmentForTeacher,
 } from "@/domain/enrollment/service";
@@ -100,6 +106,68 @@ export async function declinePendingEnrollmentAction(formData: FormData): Promis
   redirectWithFeedback(formData, "success", "已婉拒這筆報名。");
 }
 
+// lightweight-payment-v0（付款計畫 P3）：老師手動標記已收款／已退款，金錢不經過飛索。
+// 單堂在課程詳情頁操作；整期學員一次標記整期，在期班頁操作（帶 returnSeriesId 回到期班頁）。
+export async function markEnrollmentPaidAction(formData: FormData): Promise<void> {
+  const result = await markEnrollmentPaidForTeacher(
+    readFormString(formData, "enrollmentId"),
+    readFormString(formData, "note"),
+  );
+
+  revalidateTeacherClassPages(formData);
+
+  if (!result.ok) {
+    redirectWithFeedback(formData, "error", result.message);
+  }
+
+  redirectWithFeedback(formData, "success", "已標記為已收款。");
+}
+
+export async function markEnrollmentRefundedAction(formData: FormData): Promise<void> {
+  const result = await markEnrollmentRefundedForTeacher(
+    readFormString(formData, "enrollmentId"),
+    readFormString(formData, "note"),
+  );
+
+  revalidateTeacherClassPages(formData);
+
+  if (!result.ok) {
+    redirectWithFeedback(formData, "error", result.message);
+  }
+
+  redirectWithFeedback(formData, "success", "已標記為已退款。");
+}
+
+export async function markSeriesEnrollmentPaidAction(formData: FormData): Promise<void> {
+  const result = await markSeriesEnrollmentPaidForTeacher(
+    readFormString(formData, "seriesEnrollmentId"),
+    readFormString(formData, "note"),
+  );
+
+  revalidateTeacherClassPages(formData);
+
+  if (!result.ok) {
+    redirectWithFeedback(formData, "error", result.message);
+  }
+
+  redirectWithFeedback(formData, "success", "已將整期標記為已收款。");
+}
+
+export async function markSeriesEnrollmentRefundedAction(formData: FormData): Promise<void> {
+  const result = await markSeriesEnrollmentRefundedForTeacher(
+    readFormString(formData, "seriesEnrollmentId"),
+    readFormString(formData, "note"),
+  );
+
+  revalidateTeacherClassPages(formData);
+
+  if (!result.ok) {
+    redirectWithFeedback(formData, "error", result.message);
+  }
+
+  redirectWithFeedback(formData, "success", "已將整期標記為已退款。");
+}
+
 function readFormString(formData: FormData, name: string): string {
   const value = formData.get(name);
 
@@ -110,6 +178,13 @@ function readFormString(formData: FormData, name: string): string {
 // 表單會帶 classSessionId；只接受 id 形式的字串（英數、底線、連字號）組成站內路徑，
 // 不接受任何外部網址。沒有帶或格式不符時退回課程列表。
 function getReturnPath(formData: FormData): string {
+  // 整期付款在期班頁操作，做完回到期班頁（只接受 id 形式的字串）。
+  const returnSeriesId = readFormString(formData, "returnSeriesId");
+
+  if (/^[A-Za-z0-9_-]{1,64}$/.test(returnSeriesId)) {
+    return `/teacher/classes/series/${returnSeriesId}`;
+  }
+
   const classSessionId = readFormString(formData, "classSessionId");
 
   return /^[A-Za-z0-9_-]{1,64}$/.test(classSessionId)

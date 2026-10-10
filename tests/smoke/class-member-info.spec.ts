@@ -102,7 +102,7 @@ async function fillSingleClass(page: Page, title: string) {
 }
 
 async function openMemberInfo(page: Page) {
-  const summary = page.getByText("適合對象與準備事項（選填）", { exact: true });
+  const summary = page.getByText("價格、適合對象與準備事項（選填）", { exact: true });
   if (!(await page.locator("#suitableFor").isVisible())) {
     await summary.click();
   }

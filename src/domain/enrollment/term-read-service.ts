@@ -42,6 +42,9 @@ export type TermDetail = {
   description: string | null;
   suitableFor: string | null;
   preparationNotes: string | null;
+  // lightweight-payment-v0：期班的價格說明（系列 priceNote）與老師的繳費規則；沒填是 null。
+  priceNote: string | null;
+  paymentRulesText: string | null;
   // 票 14（Q8）：課程風格、瑜伽類型改為標題下方標籤。
   serviceTypes: string[];
   yogaStyles: string[];
@@ -76,6 +79,7 @@ export async function getTermDetailForViewer(
       description: true,
       suitableFor: true,
       preparationNotes: true,
+      priceNote: true,
       serviceType: true,
       serviceTypes: true,
       yogaStyles: true,
@@ -86,7 +90,7 @@ export async function getTermDetailForViewer(
       termEnrollmentMode: true,
       requiresApproval: true,
       isPublic: true,
-      teacherProfile: { select: { displayName: true, status: true } },
+      teacherProfile: { select: { displayName: true, status: true, paymentRulesText: true } },
       classSessions: {
         where: { status: { not: "cancelled" } },
         orderBy: { startAt: "asc" },
@@ -179,6 +183,8 @@ export async function getTermDetailForViewer(
     description: series.description,
     suitableFor: series.suitableFor,
     preparationNotes: series.preparationNotes,
+    priceNote: series.priceNote,
+    paymentRulesText: series.teacherProfile.paymentRulesText,
     serviceTypes: series.serviceTypes.length ? series.serviceTypes : series.serviceType ? [series.serviceType] : [],
     yogaStyles: series.yogaStyles,
     location: series.location,

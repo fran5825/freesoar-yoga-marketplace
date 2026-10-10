@@ -37,6 +37,8 @@ export type EditClassSessionForTeacherInput = {
   // 要清空請傳空字串或 null。
   suitableFor?: string | null;
   preparationNotes?: string | null;
+  // lightweight-payment-v0：價格文字；沒帶就保留目前的值，要清空請傳空字串或 null。
+  priceNote?: string | null;
   serviceTypes?: string[] | null;
   yogaStyles?: string[] | null;
   startAt?: string | null;
@@ -137,10 +139,11 @@ export async function editClassSessionForTeacher(
           location: string;
           suitableFor: string | null;
           preparationNotes: string | null;
+          priceNote: string | null;
         }[]
       >`
         SELECT "id", "status", "origin", "recurringClassSeriesId", "startAt", "endAt", "location",
-          "suitableFor", "preparationNotes"
+          "suitableFor", "preparationNotes", "priceNote"
         FROM "ClassSession"
         WHERE "id" = ${classSessionId} AND "teacherProfileId" = ${teacherProfileId}
         FOR UPDATE
@@ -180,6 +183,7 @@ export async function editClassSessionForTeacher(
           suitableFor: input.suitableFor === undefined ? current.suitableFor : input.suitableFor,
           preparationNotes:
             input.preparationNotes === undefined ? current.preparationNotes : input.preparationNotes,
+          priceNote: input.priceNote === undefined ? current.priceNote : input.priceNote,
           serviceTypes: input.serviceTypes,
           yogaStyles: input.yogaStyles,
           startAt: input.startAt,
@@ -241,6 +245,7 @@ export async function editClassSessionForTeacher(
           description: next.description,
           suitableFor: next.suitableFor,
           preparationNotes: next.preparationNotes,
+          priceNote: next.priceNote,
           serviceType: next.serviceType,
           serviceTypes: next.serviceTypes,
           yogaStyles: next.yogaStyles,

@@ -30,6 +30,8 @@ export type EditSeriesFromOccurrenceInput = {
   // member-flow 票 04：沒帶（undefined）就不改——系列與各場保留各自原本的值；要清空請傳空字串或 null。
   suitableFor?: string | null;
   preparationNotes?: string | null;
+  // lightweight-payment-v0：價格文字，套用到這些場次並成為系列預設；沒帶（undefined）就不改。
+  priceNote?: string | null;
   serviceTypes?: string[] | null;
   yogaStyles?: string[] | null;
   // 新的上課時段（台北時間 HH:mm），套用到每一場原本的日期。
@@ -180,6 +182,7 @@ export async function editSeriesFromOccurrenceForTeacher(
               description: input.description,
               suitableFor: input.suitableFor,
               preparationNotes: input.preparationNotes,
+              priceNote: input.priceNote,
               serviceTypes: input.serviceTypes,
               yogaStyles: input.yogaStyles,
               startAt: `${date}T${input.startTime ?? ""}`,
@@ -255,6 +258,7 @@ export async function editSeriesFromOccurrenceForTeacher(
         const memberInfoUpdate = {
           ...(input.suitableFor !== undefined ? { suitableFor: next.suitableFor } : {}),
           ...(input.preparationNotes !== undefined ? { preparationNotes: next.preparationNotes } : {}),
+          ...(input.priceNote !== undefined ? { priceNote: next.priceNote } : {}),
         };
 
         for (const item of planned) {

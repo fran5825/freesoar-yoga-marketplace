@@ -255,6 +255,12 @@ export type TeacherTermEnrollmentView = {
   // 婉拒時的影響：會取消幾堂（整期新增、未開始、有效），幾堂恢復為單堂（併入的）。
   declineCancelCount: number;
   declineRestoreCount: number;
+  // lightweight-payment-v0：整期付款摘要（只看仍有效、或已有付款紀錄的場次）、學員的轉帳備註，
+  // 以及老師現在能不能對這位學員「整期標記已收款／已退款」。
+  paymentSummary: "unpaid" | "paid" | "refunded" | "partial";
+  transferNote: string | null;
+  canMarkPaid: boolean;
+  canMarkRefunded: boolean;
 };
 
 export async function listOwnTermEnrollmentsForTeacher(
@@ -281,6 +287,8 @@ export async function listOwnTermEnrollmentsForTeacher(
               status: true,
               cancelledBy: true,
               seriesEnrollmentSource: true,
+              paymentStatus: true,
+              transferNote: true,
               classSession: { select: { startAt: true, status: true } },
             },
           },
@@ -314,10 +322,28 @@ export async function listOwnTermEnrollmentsForTeacher(
         .map((enrollment) => enrollment.classSession.startAt)
         .sort((a, b) => a.getTime() - b.getTime());
 
+    // 付款摘要只看「還有效」或「已有付款紀錄」的場次；請假（已取消、從未付款）的場次不算。
+    const paymentRelevant = seriesEnrollment.enrollments.filter(
+      (enrollment) => enrollment.status !== "cancelled" || enrollment.paymentStatus !== "unpaid",
+    );
+    const paymentStatuses = new Set(paymentRelevant.map((enrollment) => enrollment.paymentStatus));
+    const paymentSummary =
+      paymentStatuses.size === 1
+        ? ([...paymentStatuses][0] as "unpaid" | "paid" | "refunded")
+        : paymentStatuses.size === 0
+          ? "unpaid"
+          : "partial";
+
     return {
       id: seriesEnrollment.id,
       status: seriesEnrollment.status,
       notes: seriesEnrollment.notes,
+      paymentSummary,
+      transferNote: seriesEnrollment.enrollments.find((enrollment) => enrollment.transferNote)?.transferNote ?? null,
+      canMarkPaid: seriesEnrollment.enrollments.some(
+        (enrollment) => enrollment.paymentStatus === "unpaid" && enrollment.status !== "cancelled",
+      ),
+      canMarkRefunded: seriesEnrollment.enrollments.some((enrollment) => enrollment.paymentStatus === "paid"),
       memberLabel: seriesEnrollment.user.name ?? seriesEnrollment.user.email ?? "會員",
       activeUpcomingCount: active.length,
       // 整期仍有效、課程本身沒有取消、這一堂的報名已取消：依取消者分開列（spec 4.5）。

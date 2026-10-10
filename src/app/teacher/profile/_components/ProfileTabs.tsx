@@ -1,10 +1,11 @@
 import Link from "next/link";
 
-// 老師資料的兩個分頁：①可授課時間（/teacher/profile）②個人資料（/teacher/profile/info）。
-// 兩個網址都在 /teacher/profile 底下，導覽列「老師資料」在兩個分頁都會標示為目前頁。
+// 老師資料的三個分頁：①可授課時間（/teacher/profile）②個人資料（/teacher/profile/info）③收款與聯絡（/teacher/profile/payment）。
+// 三個網址都在 /teacher/profile 底下，導覽列「老師資料」在每個分頁都會標示為目前頁。
 const tabs = [
   { key: "availability", href: "/teacher/profile", label: "可授課時間" },
   { key: "info", href: "/teacher/profile/info", label: "個人資料" },
+  { key: "payment", href: "/teacher/profile/payment", label: "收款與聯絡" },
 ] as const;
 
 export function ProfileTabs({ active }: { active: (typeof tabs)[number]["key"] }) {

@@ -43,6 +43,9 @@ Fields:
 - teachingFormats
 - priceRange
 - profilePhotoUrl
+- paymentAccountInfo（2026-10-10 新增，nullable text：老師自填的收款帳號，最多 300 字；**不出現在任何公開頁、老師列表或個人資料頁**，只在學員報名成功後以「報名當下快照」顯示給該學員）
+- paymentRulesText（2026-10-10 新增，nullable text：繳費期限、取消與退費、請假規則，最多 1000 字；**報名前**就顯示在課程頁，有填才顯示；系統不依它自動取消報名或退費）
+- contactInfo（2026-10-10 新增，nullable text：Line ID、IG 或電話，最多 200 字；規則同 paymentAccountInfo，只在報名後以快照顯示給該學員）
 - status
 - rejectionReason
 - suspensionReason
@@ -61,6 +64,8 @@ Phase 1 schema notes:
 - `rejectionReason` 是 nullable 欄位（`String?`），保存 Admin 在 `submitted → rejected` 時填寫、**面向老師的退回說明**。它與內部 `AdminNote` 語意分離：`rejectionReason` 會顯示給該老師，`AdminNote` 不對外。V1 只保存「最新一次」reason，不保留歷史（audit trail 屬 V1 之外）。reason 由 Admin 動作寫入，非 Teacher 可編輯欄位；lifecycle 見 `state-transition-details.md`（`rejected` 期間保留、`rejected → submitted` 與 `approve` 時清空、再次 reject 覆蓋）。
 - **`suspensionReason`（`teacher-profile-suspension` 已確認）**：nullable 欄位（`String?`），保存 Admin 在 `approved → suspended` 時填寫、面向老師的暫停說明。獨立於 `rejectionReason`，不共用同一欄位——兩者代表不同原因（退回 vs. 暫停），共用會讓 UI 文案在其中一種情境下失真（比照 `demand-request-cancellation` D9 已經修過的同類教訓：reuse 一個語意不合的既有欄位/狀態，會讓文案講錯話）。lifecycle：`suspended` 期間保留（供老師查看）、`restore`（`suspended → approved`）時清空，不保留歷史。
 - **Edit（`teacher-profile-edit` 已確認）**：approved 老師可以在 `/teacher/profile` 編輯 `displayName`／`bio`／`teachingStyle`／`experienceYears`／`specialties`／`serviceAreas`／`teachingFormats`／`certifications`／`priceRange`／`profilePhotoUrl` 這 10 個欄位，`id`／`userId`／`status`／`rejectionReason`／`suspensionReason`／`createdAt`／`updatedAt` 不可由 Teacher 編輯。編輯重用送審時的必填規則（`validateTeacherProfileSubmit`），且額外要求 `experienceYears` 必須是整數並落在 Postgres `Int4` 範圍內（`0`–`2147483647`），避免超出範圍的數字在寫入資料庫時造成未攔截的例外。`suspended` 老師只能唯讀查看，不能編輯。**編輯不觸發重新審核、不改變 `status`、不新增 notification**——即使改的是會影響公開呈現或媒合判斷的欄位（如 `displayName`、`specialties`），這是本輪明確拍板的 V1 決策，不是遺漏；Admin 可在 `/admin/teachers` 的 approved／suspended 卡片上展開「View profile details」查看老師目前完整的欄位內容與最後更新時間，作為事後發現與判斷的既有補救手段。
+
+**收款與聯絡設定（`lightweight-payment-v0` 付款計畫第 0 節，2026-10-10）**：上列三個欄位由 approved／suspended 老師在 `/teacher/profile/payment` 自己維護，獨立於個人資料編輯與審核流程（修改不觸發任何審核、不影響 `status`）。migration `20261009223453_lightweight_payment_v0`（additive，可為空）。
 
 Status:
 
@@ -282,6 +287,7 @@ Fields:
 - description
 - suitableFor（2026-10-05 新增，nullable text：「適合對象／程度」，老師選填、最多 500 字（應用層限制），trim 後空字串存 null。可在老師建立單堂課、改單堂課、建立系列（由系列複製到每一場，見 `RecurringClassSeries`）與改系列場次時填寫：「只改這一場」只改該場；「改這一場和之後所有場次」改該場、之後未開始未取消的場次與系列本身（2026-10-06 member-flow 票 04）。舊課、團主媒合課與團主直接開課維持 null，不回填，學員課程頁不顯示該段（2026-10-09 票 14 起；原為顯示「尚未提供」）。migration `20261005200000_class_session_member_info`，來源 `docs/superpowers/plans/member-flow-redesign/tickets/03-single-class-suitable-for-and-preparation.md`）
 - preparationNotes（2026-10-05 新增，規則同 suitableFor：「準備事項」，老師選填、最多 500 字。改課時修改這兩欄不通知已報名學員）
+- priceNote（2026-10-10 新增，nullable text：價格說明，例如「單堂 600 元」，老師選填、最多 200 字，trim 後空字串存 null；沿用「價格是文字」原則，不新增金額型別。報名前顯示在課程頁，有填才顯示；老師改價只影響之後的新報名，已報名學員看到的是報名當下快照 `Enrollment.priceNoteSnapshot`。團主媒合的課程為空時，報名快照沿用已選定回應的 `DemandResponse.proposedPrice`。系列場次由系列複製；migration `20261009223453_lightweight_payment_v0`）
 - serviceType（主要課程風格，＝serviceTypes 的第一個）
 - serviceTypes（2026-09-26 新增，`String[] @default([])`：課程風格，可多選最多 3 個，值須落在 `service-types.ts` 清單內）
 - yogaStyles（2026-09-26 新增，`String[] @default([])`：瑜伽類型，老師建課必填，標籤來源同老師「擅長類型」，可加自訂項目；團主媒合的課為空。2026-10-03 起所有值一律寫「瑜伽」：儲存時自動把「瑜珈」改成「瑜伽」，舊資料由 data-only migration `20261003000000_yoga_wording_unify` 轉換，同一規則也套用在 `TeacherProfile.specialties`）
@@ -326,6 +332,7 @@ Fields:
 - description（選填）
 - suitableFor（2026-10-06 新增，nullable text：「適合對象」，選填、最多 500 字，規則同 `ClassSession.suitableFor`；生成場次時複製到每一場，「生成更多」也沿用。migration `20261006100000_recurring_series_member_info`，來源 `docs/superpowers/plans/member-flow-redesign/tickets/04-recurring-series-class-info.md`）
 - preparationNotes（2026-10-06 新增，「準備事項」，規則同 suitableFor）
+- priceNote（2026-10-10 新增，價格說明，規則同 `ClassSession.priceNote`：系列預設值，建立系列與「生成更多」、補課時複製到每一場；「改這一場和之後所有場次」一併更新；期班報名的價格快照取系列的 priceNote）
 - serviceType（選填；主要課程風格）
 - serviceTypes（2026-09-26 新增，課程風格可多選，見上方 ClassSession 說明）
 - yogaStyles（2026-09-26 新增，瑜伽類型，建立系列時必填）
@@ -402,6 +409,10 @@ Fields:
 - consentedAt
 - seriesEnrollmentId（2026-10-09 新增，nullable FK → `SeriesEnrollment`，`onDelete: SetNull`；屬於整期報名時才有值）
 - seriesEnrollmentSource（2026-10-09 新增，nullable `SeriesEnrollmentSource`：`term_created` 報整期時新增／`merged_single` 報整期前已存在、被併入的單堂報名）
+- paymentStatus（2026-10-10 新增，`EnrollmentPaymentStatus`：`unpaid` 預設／`paid`／`refunded`；**獨立於 `EnrollmentStatus` 的平行欄位**，只記錄、不收款——金錢直接由學員轉給老師，不經過飛索）
+- paymentAccountInfoSnapshot、paymentRulesSnapshot、contactInfoSnapshot、priceNoteSnapshot（2026-10-10 新增，nullable text：報名建立當下複製的老師收款帳號、繳費規則、聯絡方式與價格；老師之後修改不回溯）
+- transferNote（2026-10-10 新增，nullable text：學員自填的轉帳後五碼或備註，單行、最多 100 字、純文字；不改變任何狀態，只供老師對帳）
+- paymentNote、paymentConfirmedAt、paymentConfirmedByUserId、paymentConfirmedByRole、paymentRefundedAt、paymentRefundedByUserId、paymentRefundedByRole、paymentRefundReason（2026-10-10 新增：老師或 Admin 標記時的備註、時間與操作者；`*ByRole` 是 `PaymentActorRole`〔`teacher`／`admin`〕，由呼叫的入口直接寫入，不事後推論）
 - cancelledBy（2026-10-10 新增，nullable `EnrollmentCancelledBy`：`member` 學員自己取消或請假／`teacher` 老師婉拒／`admin` 管理員取消／`system` 整堂課被取消、學員退出整期、整期被婉拒時已終結的請假報名等連帶取消；`NULL` 表示舊資料或尚未取消）
 - createdAt
 - updatedAt
@@ -409,6 +420,8 @@ Fields:
 整期關聯（`teacher-class-scheduling` 票 08，migration `20261009024811_series_enrollment`）：DB check `Enrollment_series_source_check`——有 `seriesEnrollmentId` 就一定要有 `seriesEnrollmentSource`；應用層一律同時設定或清除兩者（整期紀錄被刪時 FK SET NULL，殘留的來源無害）。屬於整期的逐場報名，老師不能個別確認／婉拒（server 端拒絕，錯誤碼 `enrollment_in_term`），交由票 10 的整期操作；學員取消其中一場就是「請假」（票 09）。「只收整期」期班的場次，單場報名 server 端拒絕（`term_only_series`）。
 
 取消者（`enrollment-re-enrollment` 票 01，ADR 0006，migration `20261009163320_enrollment_cancelled_by`）：additive 欄位與 enum，DB check `Enrollment_cancelled_by_check`——`cancelledBy` 有值時 `status` 必為 `cancelled`；狀態離開 `cancelled`（重新報名、取消請假）時應用層一併清為 `NULL`。所有寫入 `cancelled` 的地方都要同時寫取消者（共 8 處：學員取消／請假、老師婉拒單堂、老師婉拒整期、管理員取消、團主與老師各一個整堂課取消核心〔raw SQL〕、學員退出整期）；舊的已取消紀錄維持 `NULL`（顯示「原因未記錄」，不能重新報名）。老師婉拒整期時，脫離整期的 `merged_single` 逐場若已是學員請假，同一動作改為 `system`，避免單堂化之後繞過「整期終結後不能重報」。唯一約束 `@@unique([classSessionId, userId])` 不變，重新報名與取消請假沿用同一筆紀錄（`cancelled` 改回有效狀態並清 `cancelledBy`）。「占用名額」不再只是 `pending + confirmed`：`term_only` 期班請假中的報名也算占用（定義在程式 `seat-occupancy.ts`，不另存欄位）。
+
+付款記錄（`lightweight-payment-v0`，付款計畫第 0 節，2026-10-10，migration `20261009223453_lightweight_payment_v0`）：全部是新增欄位與新資料表，沒有改寫既有資料。付款狀態只允許 `unpaid → paid → refunded`，每次轉換都是「帶舊狀態條件的 updateMany、`count === 1` 才算成功」，並在同一個 transaction 內新增一筆 `EnrollmentPaymentEvent`；兩個合法操作者同時操作時只有一個成功。已取消的報名不能標記為已收款，但「已付款後被取消」的報名仍可標記已退款。唯一的 `refunded → unpaid` 是**重新報名／取消請假恢復的內部流程**（沒有手動入口）：`unpaid`／`paid` 保留付款狀態、稽核欄位與既有快照；`refunded` 視為新的一筆交易，先把前一輪的快照、`transferNote`、付款狀態與稽核欄位完整寫進 `reset_on_re_enrollment` 事件的 `previousRound`，再清除目前這一輪的付款欄位與 `transferNote`，並重新抓取四個快照。快照寫入於所有報名建立路徑：單堂（`create-enrollment-core.ts`）、整期新建（`create-series-enrollment-core.ts` 的 `createMany`，價格取系列 `priceNote`）、補課（`add-makeup-session-core.ts`，沿用該整期報名 `term_created` 最早一列的快照，沒有則取最早一列）；整期併入既有單堂（`merged_single`）保留該報名原本的快照。欄位級揭露：學員只看得到自己的付款狀態、四個快照、`transferNote` 與退款原因；老師（自己班級）與 Admin 另可看 `paymentNote` 與稽核資訊；團主只看得到報名狀態、付款狀態與時間戳，**不含**任何備註、快照、轉帳備註與操作者。
 
 `consentedAt`（`enrollment` 已確認）：非 nullable，記錄使用者確認「了解此課程非醫療行為」的時間點；V1 唯一的建立路徑必定顯式寫入，不是選填的 UX 防誤觸欄位。
 
@@ -441,9 +454,26 @@ Rules：
 - 鎖定順序：`RecurringClassSeries` → 剩餘場次（依 id）→ `TeacherProfile`；取得場次鎖後才確認名額與既有報名。
 - 通知沿用 `enrollment_confirmed`／`enrollment_pending_review`，課名帶「（整期 N 堂）」，一次整期報名只發一則（需確認時老師也收到一則）。
 
+## EnrollmentPaymentEvent
+
+**已落地**（`lightweight-payment-v0`，2026-10-10）。只新增、不修改、不刪除的付款事件紀錄：`Enrollment` 上的付款欄位只代表「目前這一輪」，歷史靠這張表。
+
+Fields:
+
+- id
+- enrollmentId（FK → `Enrollment`，`onDelete: Cascade`）
+- type（`EnrollmentPaymentEventType`：`marked_paid`／`marked_refunded`／`reset_on_re_enrollment`）
+- actorUserId（nullable；標記者，重新報名重設時為學員本人）
+- actorRole（nullable `PaymentActorRole`；重設時為空）
+- note（已收款備註或退款原因）
+- previousRound（nullable JSON，只有 `reset_on_re_enrollment` 有值：重設前的四個快照、`transferNote`、付款狀態與稽核欄位）
+- createdAt
+
+索引 `(enrollmentId, createdAt)`。讀取權限：授課老師（自己班級）與 Admin 可讀；學員、團主與所有公開頁不讀。
+
 ## PaymentIntent
 
-Placeholder for future payment support.
+Placeholder for future payment support.（V1 的付款是手動記錄，不使用 `PaymentIntent`；見 `Enrollment.paymentStatus`。）
 
 Fields:
 

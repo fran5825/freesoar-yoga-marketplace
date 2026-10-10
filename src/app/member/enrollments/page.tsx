@@ -9,8 +9,9 @@ import { requireUser } from "@/lib/auth/session";
 import { CancelEnrollmentForm } from "../_components/CancelEnrollmentForm";
 import { EnrollmentStatusBadge } from "../_components/EnrollmentStatusBadge";
 import { MemberTodoList } from "../_components/MemberTodoList";
+import { PaymentInfoBlock, type PaymentBlockStatus } from "../_components/PaymentInfoBlock";
 
-import { cancelEnrollmentAction, submitReviewAction } from "./actions";
+import { cancelEnrollmentAction, saveTransferNoteAction, submitReviewAction } from "./actions";
 
 type OwnEnrollmentItem = Awaited<ReturnType<typeof listOwnEnrollmentsForMember>>[number];
 
@@ -44,6 +45,17 @@ function groupTermCards(items: OwnEnrollmentItem[]) {
       items: card.items.sort((a, b) => a.classSession.startAt.getTime() - b.classSession.startAt.getTime()),
     }))
     .sort((a, b) => a.items[0].classSession.startAt.getTime() - b.items[0].classSession.startAt.getTime());
+}
+
+// 整期卡片的付款狀態：整期底下仍有效的每一堂都同一個狀態才顯示該狀態，否則顯示「部分已收款」。
+function termPaymentStatus(items: OwnEnrollmentItem[]): PaymentBlockStatus {
+  const statuses = new Set(items.map((item) => item.paymentStatus));
+
+  if (statuses.size === 1) {
+    return [...statuses][0];
+  }
+
+  return "partial";
 }
 
 type MemberEnrollmentsPageProps = {
@@ -160,6 +172,19 @@ export default async function MemberEnrollmentsPage({
                   ))}
                 </ul>
               </details>
+              <PaymentInfoBlock
+                accountInfo={card.items[0].paymentAccountInfoSnapshot}
+                action={saveTransferNoteAction}
+                canEditTransferNote={card.items.some((item) => item.paymentStatus === "unpaid")}
+                contactInfo={card.items[0].contactInfoSnapshot}
+                idSuffix={`term-${card.seriesEnrollmentId}`}
+                priceNote={card.items[0].priceNoteSnapshot}
+                refundReason={null}
+                rulesText={card.items[0].paymentRulesSnapshot}
+                status={termPaymentStatus(card.items)}
+                target={{ kind: "term", id: card.seriesEnrollmentId }}
+                transferNote={card.items.find((item) => item.transferNote)?.transferNote ?? null}
+              />
               <p className="text-sm leading-6 text-ink-soft">
                 某一堂不能來，點進那一堂請假；要整期退出，請到
                 <Link className="mx-1 font-medium text-pine underline" href={`/classes/terms/${card.seriesId}`}>
@@ -214,6 +239,26 @@ export default async function MemberEnrollmentsPage({
                 {formatTaipeiDatetime(enrollment.classSession.startAt)} 開始・
                 {enrollment.classSession.location}
               </p>
+
+              {/* lightweight-payment-v0：報名仍有效，或已有付款紀錄（含已付款後被取消）時顯示付款方式。 */}
+              {!isActiveTermChild(enrollment) &&
+              (["confirmed", "pending"].includes(enrollment.status) || enrollment.paymentStatus !== "unpaid") ? (
+                <PaymentInfoBlock
+                  accountInfo={enrollment.paymentAccountInfoSnapshot}
+                  action={saveTransferNoteAction}
+                  canEditTransferNote={
+                    ["confirmed", "pending"].includes(enrollment.status) && enrollment.paymentStatus === "unpaid"
+                  }
+                  contactInfo={enrollment.contactInfoSnapshot}
+                  idSuffix={enrollment.id}
+                  priceNote={enrollment.priceNoteSnapshot}
+                  refundReason={enrollment.paymentRefundReason}
+                  rulesText={enrollment.paymentRulesSnapshot}
+                  status={enrollment.paymentStatus}
+                  target={{ kind: "enrollment", id: enrollment.id }}
+                  transferNote={enrollment.transferNote}
+                />
+              ) : null}
 
               {/* 課程開始後就不顯示取消（按了也會被伺服器擋下，見 cancelOwnEnrollment）。 */}
               {["confirmed", "pending"].includes(enrollment.status) &&

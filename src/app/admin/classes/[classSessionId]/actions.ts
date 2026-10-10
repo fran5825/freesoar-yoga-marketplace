@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { cancelClassSessionForAdmin } from "@/domain/class-session/admin-service";
 import { cancelEnrollmentForAdmin } from "@/domain/enrollment/admin-service";
+import { markEnrollmentPaidForAdmin, markEnrollmentRefundedForAdmin } from "@/domain/enrollment/payment-service";
 import { adminClassRosterHref, adminFeedbackHref, normalizeAdminRosterQuery } from "../../_lib/list-context";
 
 function revalidateClassSessionPaths(classSessionId: string): void {
@@ -58,6 +59,39 @@ export async function cancelEnrollmentAdminAction(formData: FormData): Promise<v
   }
 
   redirectWithFeedback(classSessionId, "success", "已取消這筆報名，同一位學員不能再報名這堂課。", formData, item);
+}
+
+// lightweight-payment-v0（付款計畫 P3）：Admin 可跨老師標記已收款／已退款，作為支援與糾紛協調；金錢不經過飛索。
+export async function markEnrollmentPaidAdminAction(formData: FormData): Promise<void> {
+  const classSessionId = readFormString(formData, "classSessionId");
+  const enrollmentId = readFormString(formData, "enrollmentId");
+  const item = /^[A-Za-z0-9_-]{1,64}$/.test(enrollmentId) ? enrollmentId : undefined;
+
+  const result = await withTransientFailure(() => markEnrollmentPaidForAdmin(enrollmentId));
+
+  revalidateClassSessionPaths(classSessionId);
+
+  if (!result.ok) {
+    redirectWithFeedback(classSessionId, "error", `沒有標記成功：${result.message}${failureNextStep}`, formData, item);
+  }
+
+  redirectWithFeedback(classSessionId, "success", "已標記為已收款。", formData, item);
+}
+
+export async function markEnrollmentRefundedAdminAction(formData: FormData): Promise<void> {
+  const classSessionId = readFormString(formData, "classSessionId");
+  const enrollmentId = readFormString(formData, "enrollmentId");
+  const item = /^[A-Za-z0-9_-]{1,64}$/.test(enrollmentId) ? enrollmentId : undefined;
+
+  const result = await withTransientFailure(() => markEnrollmentRefundedForAdmin(enrollmentId));
+
+  revalidateClassSessionPaths(classSessionId);
+
+  if (!result.ok) {
+    redirectWithFeedback(classSessionId, "error", `沒有標記成功：${result.message}${failureNextStep}`, formData, item);
+  }
+
+  redirectWithFeedback(classSessionId, "success", "已標記為已退款。", formData, item);
 }
 
 // 第二批票 08：失敗會回到同一堂課的詳情並重新載入，畫面只會出現當下仍合法的取消操作。

@@ -21,6 +21,7 @@ import type { NotificationPayload, NotificationRecipient } from "@/domain/notifi
 import { prisma } from "@/lib/prisma";
 
 import { termNotificationTitle } from "../term-enrollment-copy";
+import { buildEnrollmentPaymentSnapshot } from "../payment-snapshot";
 import { occupyingEnrollmentWhere } from "../seat-occupancy";
 
 export type CreateSeriesEnrollmentErrorCode =
@@ -100,9 +101,10 @@ export async function createSeriesEnrollmentForUser(
             teacherProfileId: string;
             title: string;
             requiresApproval: boolean;
+            priceNote: string | null;
           }[]
         >`
-          SELECT "id", "kind", "teacherProfileId", "title", "requiresApproval"
+          SELECT "id", "kind", "teacherProfileId", "title", "requiresApproval", "priceNote"
           FROM "RecurringClassSeries"
           WHERE "id" = ${recurringClassSeriesId}
           FOR UPDATE
@@ -219,6 +221,12 @@ export async function createSeriesEnrollmentForUser(
           select: { id: true },
         });
 
+        // lightweight-payment-v0：期班的價格快照取系列 priceNote；併入的既有單堂報名保留它原本的快照，不覆寫（付款計畫 §6）。
+        const paymentSnapshot = await buildEnrollmentPaymentSnapshot(tx, {
+          teacherProfileId: series.teacherProfileId,
+          priceNote: series.priceNote,
+        });
+
         if (toCreate.length > 0) {
           await tx.enrollment.createMany({
             data: toCreate.map((classSessionId) => ({
@@ -229,6 +237,7 @@ export async function createSeriesEnrollmentForUser(
               consentedAt,
               seriesEnrollmentId: seriesEnrollment.id,
               seriesEnrollmentSource: "term_created" as const,
+              ...paymentSnapshot,
             })),
           });
         }

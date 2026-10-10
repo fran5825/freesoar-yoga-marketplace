@@ -86,7 +86,13 @@ export default async function MemberClassSessionPage({ params, searchParams }: {
           <ClassEnrollmentPanel classSession={classSession} signedIn={Boolean(user)} returnTo={returnTo} />
         )}
         {/* 票 14（Q6）：課程說明、適合對象、準備事項有填才顯示（取代學員流程票 03 的「尚未提供」）。 */}
-        <ClassInfoSections description={classSession.description} preparationNotes={classSession.preparationNotes} suitableFor={classSession.suitableFor} />
+        <ClassInfoSections
+          description={classSession.description}
+          paymentRulesText={classSession.paymentRulesText}
+          preparationNotes={classSession.preparationNotes}
+          priceNote={classSession.priceNote}
+          suitableFor={classSession.suitableFor}
+        />
         {/* teacher-class-scheduling 票 12：同系列其他尚未開始、學員看得到的場次。 */}
         {siblings.length > 0 ? (
           <section aria-labelledby="sibling-heading" className="min-w-0 rounded-2xl border border-ink/15 bg-white p-5 sm:p-6">
