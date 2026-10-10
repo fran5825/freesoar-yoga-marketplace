@@ -45,6 +45,8 @@ export function getNotificationLink(
       return isTeacher
         ? { href: "/teacher/profile", label: "前往老師資料" }
         : null;
+    case "teacher_photo_removed":
+      return isTeacher ? { href: "/teacher/profile/photos", label: "前往我的照片" } : null;
     case "demand_request_submitted":
       if (isOrganizer) return { href: "/organizer/demands", label: "前往我的需求" };
       if (isAdmin) return { href: "/admin/demands", label: "前往需求審核" };

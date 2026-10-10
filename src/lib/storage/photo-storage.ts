@@ -35,7 +35,35 @@ export function isValidPhotoKey(key: string): boolean {
 
 type EnvLike = Record<string, string | undefined>;
 
+// 列表頁每張卡片都要轉網址，R2 的連線物件只在設定改變時才重建。
+let cached: { fingerprint: string; result: PhotoStorageResult } | null = null;
+
 export function getPhotoStorage(env: EnvLike = process.env): PhotoStorageResult {
+  const useCache = env === process.env;
+  const fingerprint = [
+    env.STORAGE_DRIVER,
+    env.R2_ACCOUNT_ID,
+    env.R2_ACCESS_KEY_ID,
+    env.R2_SECRET_ACCESS_KEY,
+    env.R2_BUCKET,
+    env.R2_PUBLIC_BASE_URL,
+    env.LOCAL_STORAGE_DIR,
+  ].join("|");
+
+  if (useCache && cached?.fingerprint === fingerprint) {
+    return cached.result;
+  }
+
+  const result = buildPhotoStorage(env);
+
+  if (useCache) {
+    cached = { fingerprint, result };
+  }
+
+  return result;
+}
+
+function buildPhotoStorage(env: EnvLike): PhotoStorageResult {
   const driver = env.STORAGE_DRIVER?.trim();
 
   if (driver === "r2") {

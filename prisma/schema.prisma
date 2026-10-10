@@ -88,6 +88,8 @@ model TeacherProfile {
   contactInfo                   String?
   // teacher-showcase-photos 票 03：老師頭像，指向自己的一張有效照片；照片被刪除時回到空（沒有頭像）。
   avatarPhotoId                 String?
+  // teacher-showcase-photos 票 06（spec S6）：老師公開頁，預設關閉，由老師自己決定；只有 approved 老師的公開頁才看得到（暫停或退回一律 404）。
+  isPublicPageEnabled           Boolean                       @default(false)
   status                        TeacherProfileStatus @default(draft)
   rejectionReason               String?
   suspensionReason              String?
@@ -255,6 +257,8 @@ model RecurringClassSeries {
   suitableFor        String? // 2026-10-06 member-flow 票 04：適合對象，系列預設值，生成場次時複製到每一場；最多 500 字（應用層限制）
   preparationNotes   String? // 2026-10-06 member-flow 票 04：準備事項，規則同 suitableFor
   priceNote          String? // lightweight-payment-v0：價格文字（例如「單堂 600 元」），系列預設值，生成場次時複製到每一場；期班報名時以此為價格快照
+  // teacher-showcase-photos 票 04：系列封面，系列內每一堂都顯示這一張；照片被刪除或下架時回到空（色塊）。
+  coverPhotoId       String?
   serviceType        String? // 主要課程風格＝serviceTypes 的第一個（公開篩選與舊資料相容用）
   serviceTypes       String[]                 @default([]) // 2026-09-26 課程風格可多選（最多 3 個），沿用需求 serviceTypes 的做法
   yogaStyles         String[]                 @default([]) // 2026-09-26 瑜伽風格（老師建課必填，可多選＋自訂），來源同老師「擅長類型」標籤
@@ -273,6 +277,7 @@ model RecurringClassSeries {
   updatedAt          DateTime                 @updatedAt
 
   teacherProfile    TeacherProfile     @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
+  coverPhoto        TeacherPhoto?      @relation("SeriesCover", fields: [coverPhotoId], references: [id], onDelete: SetNull)
   classSessions     ClassSession[]
   seriesEnrollments SeriesEnrollment[]
 
@@ -341,6 +346,9 @@ model ClassSession {
   suitableFor            String? // 2026-10-05 member-flow 票 03：適合對象／程度，老師選填，最多 500 字（應用層限制）
   preparationNotes       String? // 2026-10-05 member-flow 票 03：準備事項，老師選填，最多 500 字（應用層限制）
   priceNote              String? // lightweight-payment-v0：價格文字，老師選填；團主媒合的課程為空時沿用已選定回應的 proposedPrice
+  // teacher-showcase-photos 票 04：課程封面（指向授課老師自己的一張有效照片）。只有「不屬於任何系列」的單堂課才設定；
+  // 系列場次一律用系列的封面（DB check：有 recurringClassSeriesId 時必為 NULL）。照片被刪除或下架時回到空（色塊）。
+  coverPhotoId           String?
   serviceType            String? // 主要課程風格＝serviceTypes 的第一個
   serviceTypes           String[]           @default([]) // 2026-09-26 課程風格可多選（最多 3 個）
   yogaStyles             String[]           @default([]) // 2026-09-26 瑜伽風格；老師建立的課必填，團主媒合的課為空
@@ -358,6 +366,7 @@ model ClassSession {
   organizerProfile       OrganizerProfile?       @relation(fields: [organizerProfileId], references: [id], onDelete: Restrict)
   organization           Organization?           @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   recurringClassSeries   RecurringClassSeries?   @relation(fields: [recurringClassSeriesId], references: [id], onDelete: SetNull)
+  coverPhoto             TeacherPhoto?           @relation("SessionCover", fields: [coverPhotoId], references: [id], onDelete: SetNull)
   enrollments            Enrollment[]
   reviews                Review[]
   // organizer-usability-redesign：直接開團（organizer_direct，票 09）由這筆合作邀請轉成
@@ -634,6 +643,8 @@ enum NotificationType {
   class_proposal_declined
   class_proposal_withdrawn
   class_proposal_revised
+  // teacher-showcase-photos 票 07：管理員下架老師的照片，通知老師本人（只發站內通知）。
+  teacher_photo_removed
 }
 
 // 通知可直達的單筆頁白名單（organizer-usability-redesign 票 12）。
@@ -680,8 +691,10 @@ model TeacherPhoto {
   removedByUserId  String?
   createdAt        DateTime           @default(now())
 
-  teacherProfile TeacherProfile   @relation("TeacherPhotos", fields: [teacherProfileId], references: [id], onDelete: Cascade)
-  avatarOf       TeacherProfile[] @relation("TeacherAvatar")
+  teacherProfile TeacherProfile         @relation("TeacherPhotos", fields: [teacherProfileId], references: [id], onDelete: Cascade)
+  avatarOf       TeacherProfile[]       @relation("TeacherAvatar")
+  sessionCovers  ClassSession[]         @relation("SessionCover")
+  seriesCovers   RecurringClassSeries[] @relation("SeriesCover")
 
   @@index([teacherProfileId, status, sortOrder])
 }

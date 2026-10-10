@@ -6,6 +6,7 @@
 
 import type { Prisma } from "@prisma/client";
 
+import { photoRefSelect } from "@/domain/teacher-photo/display";
 import { prisma } from "@/lib/prisma";
 
 export const teacherFacingClassSessionSelect = {
@@ -15,6 +16,9 @@ export const teacherFacingClassSessionSelect = {
   suitableFor: true,
   preparationNotes: true,
   priceNote: true,
+  // teacher-showcase-photos 票 04：封面照片 id（系列場次用系列的封面）。
+  coverPhotoId: true,
+  coverPhoto: photoRefSelect,
   serviceType: true,
   serviceTypes: true,
   yogaStyles: true,
@@ -30,7 +34,7 @@ export const teacherFacingClassSessionSelect = {
   requiresApproval: true,
   demandRequest: { select: { targetLevel: true } },
   organization: { select: { name: true } },
-  recurringClassSeries: { select: { title: true, kind: true } },
+  recurringClassSeries: { select: { title: true, kind: true, coverPhotoId: true, coverPhoto: photoRefSelect } },
   // 含 confirmed／pending 的報名，以及「已有付款紀錄（paid／refunded）」的報名——已付款後被取消的報名仍要讓老師看到並能標記退款
   // （lightweight-payment-v0 P9；其餘已取消且從未付款的報名不含）。
   enrollments: {

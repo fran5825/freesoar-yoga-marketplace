@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { createOwnClassSessionForTeacher } from "@/domain/class-session/service";
 
+import { appendWarning, applyCoverFromForm } from "../_lib/apply-cover";
 import { buildCreateClassFieldErrors, type CreateClassFormState } from "./_lib/form-state";
 import { readServiceTypesFromForm, readYogaStylesFromForm } from "./read-yoga-styles";
 
@@ -54,12 +55,15 @@ export async function createOwnClassSessionAction(
     };
   }
 
+  // teacher-showcase-photos 票 04：課程先照原流程建好，封面是之後的獨立一步；失敗只補一句說明。
+  const coverWarning = await applyCoverFromForm(formData, { kind: "session", id: result.classSessionId });
+
   revalidatePath("/teacher/classes");
   revalidatePath("/teacher/dashboard");
   // teacher-usability 第 07 票：建好直接進這堂課的詳情頁，下一步（開放報名）就在眼前。
   redirect(
     `/teacher/classes/${result.classSessionId}?result=success&message=${encodeURIComponent(
-      "課程已建立。下一步：確認內容後按「開放報名」。",
+      appendWarning("課程已建立。下一步：確認內容後按「開放報名」。", coverWarning),
     )}`,
   );
 }

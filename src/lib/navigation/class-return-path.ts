@@ -20,6 +20,11 @@ function parseReturnPath(value: unknown, allowNested: boolean): string | null {
       const { filters, errors } = parseClassDiscoveryFilters(Object.fromEntries(searchParams));
       return errors.length ? null : classDiscoveryHref(filters);
     }
+    // teacher-showcase-photos 票 06：從老師公開頁點進課程，返回老師頁（/teachers/join 是申請頁，不算）。
+    const teacherPage = pathname.match(/^\/teachers\/([^/]+)$/);
+    if (teacherPage && teacherPage[1] !== "join" && ID_PATTERN.test(teacherPage[1])) {
+      return url.search ? null : pathname;
+    }
     if (pathname === "/member/enrollments" || pathname === "/member/dashboard") {
       return url.search ? null : pathname;
     }
@@ -55,6 +60,7 @@ export function classReturnLabel(returnTo: string): string {
   const safe = safeClassReturnPath(returnTo);
   if (safe.startsWith("/member/enrollments")) return "返回我的報名";
   if (safe.startsWith("/member/dashboard")) return "返回首頁";
+  if (safe.startsWith("/teachers/")) return "返回老師頁";
   if (safe.startsWith("/classes/terms/")) return "返回期班";
   if (safe.startsWith("/classes/series/")) return "返回持續開課";
   return "返回課程列表";

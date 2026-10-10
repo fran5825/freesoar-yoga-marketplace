@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { getOwnLatestClassFormDefaultsForTeacher } from "@/domain/class-session/read-service";
+import { listCoverChoicesForOwnTeacher } from "@/domain/teacher-photo/service";
 import { getOwnTeacherProfileApplicationSnapshot } from "@/domain/teacher-profile/service";
 import { requireUser } from "@/lib/auth/session";
 
@@ -94,7 +95,7 @@ export default async function NewClassSessionPage({
       ) : null}
 
       <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-4 sm:p-6">
-        <ClassSessionCreateForm defaults={formDefaults} />
+        <ClassSessionCreateForm coverChoices={await listCoverChoicesForOwnTeacher()} defaults={formDefaults} />
       </section>
     </div>
   );

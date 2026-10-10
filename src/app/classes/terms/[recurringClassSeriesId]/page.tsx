@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 
 import { formatTaipeiDatetimeLocal, formatTaipeiShortDatetime } from "@/domain/class-session/timezone";
@@ -8,6 +9,7 @@ import { classDetailHref, classReturnLabel, safeParentReturnPath, termDetailHref
 import { SignInOptions } from "../../../_components/sign-in-options";
 import { SiteShell } from "../../../_components/site-shell";
 import { EnrollmentStatusBadge } from "../../../member/_components/EnrollmentStatusBadge";
+import { DetailCover, TeacherByline } from "../../_components/ClassCover";
 import { ClassInfoSections } from "../../_components/ClassInfoSections";
 import { EnrollReveal, OptionalNotes } from "../../_components/EnrollReveal";
 import { enrollTermAction, signInToEnrollTermAction, withdrawTermAction } from "./actions";
@@ -58,6 +60,7 @@ export default async function TermPage({
         <Link className="w-fit py-2 text-sm text-clay underline" href={returnTo}>
           {classReturnLabel(returnTo)}
         </Link>
+        <DetailCover url={term.coverUrl} />
         <header className="grid gap-3 border-b border-ink/15 pb-5">
           <p className="w-fit rounded-full bg-pine-tint px-3 py-1 text-sm font-medium text-pine-deep">
             期班・共 {term.totalCount} 堂・剩 {term.remainingCount} 堂
@@ -147,7 +150,7 @@ function hasTimeException(term: TermDetail): boolean {
 }
 
 function TermFacts({ term }: { term: TermDetail }) {
-  const rows: { label: string; value: string }[] = [
+  const rows: { label: string; value: ReactNode }[] = [
     {
       label: "期間",
       value: term.firstStartAt && term.lastStartAt ? `${shortDate(term.firstStartAt)} – ${shortDate(term.lastStartAt)}` : "—",
@@ -165,7 +168,7 @@ function TermFacts({ term }: { term: TermDetail }) {
         ? `${term.location}（部分堂次地點不同，見每一堂）`
         : term.location,
     },
-    { label: "老師", value: term.teacherDisplayName ?? "飛索老師" },
+    { label: "老師", value: <TeacherByline avatarUrl={term.teacherAvatarUrl} href={term.teacherPageId ? `/teachers/${term.teacherPageId}` : null} name={term.teacherDisplayName ?? "飛索老師"} /> },
   ];
 
   return (

@@ -9,6 +9,7 @@
 import type { EnrollmentStatus, SeriesEnrollmentStatus, TermEnrollmentMode } from "@prisma/client";
 
 import { getClassAvailability } from "@/domain/class-session/availability";
+import { effectiveCoverUrl, photoRefSelect, teacherAvatarUrl } from "@/domain/teacher-photo/display";
 import { prisma } from "@/lib/prisma";
 import { occupyingEnrollmentWhere } from "./seat-occupancy";
 
@@ -55,6 +56,11 @@ export type TermDetail = {
   termEnrollmentMode: TermEnrollmentMode;
   requiresApproval: boolean;
   teacherDisplayName: string | null;
+  // teacher-showcase-photos 票 06：老師有開啟公開頁時的老師 id（課程頁的老師名字連到 /teachers/[id]）；沒有就是 null。
+  teacherPageId: string | null;
+  // teacher-showcase-photos 票 05：課程封面與授課老師頭像的網址（沒有或沒開通就是 null，畫面整塊不顯示）。
+  coverUrl: string | null;
+  teacherAvatarUrl: string | null;
   // 整期堂數（不含已取消）、剩餘堂數（尚未開始、未取消）、其中還是草稿的堂數。
   totalCount: number;
   remainingCount: number;
@@ -90,7 +96,8 @@ export async function getTermDetailForViewer(
       termEnrollmentMode: true,
       requiresApproval: true,
       isPublic: true,
-      teacherProfile: { select: { displayName: true, status: true, paymentRulesText: true } },
+      teacherProfile: { select: { id: true, isPublicPageEnabled: true, displayName: true, status: true, paymentRulesText: true, avatarPhoto: photoRefSelect } },
+      coverPhoto: photoRefSelect,
       classSessions: {
         where: { status: { not: "cancelled" } },
         orderBy: { startAt: "asc" },
@@ -194,6 +201,9 @@ export async function getTermDetailForViewer(
     termEnrollmentMode: series.termEnrollmentMode,
     requiresApproval: series.requiresApproval,
     teacherDisplayName: series.teacherProfile.displayName,
+    teacherPageId: series.teacherProfile.isPublicPageEnabled && series.teacherProfile.status === "approved" ? series.teacherProfile.id : null,
+    coverUrl: effectiveCoverUrl({ coverPhoto: series.coverPhoto }),
+    teacherAvatarUrl: teacherAvatarUrl(series.teacherProfile),
     totalCount: series.classSessions.length,
     remainingCount: remaining.length,
     draftCount,

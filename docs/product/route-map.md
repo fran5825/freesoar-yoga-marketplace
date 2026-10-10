@@ -34,7 +34,10 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 |---|---|
 | `/teacher/dashboard` | 老師 onboarding / status dashboard；已登入使用者可查看自己的 TeacherProfile status，尚未建立 TeacherProfile 時可前往建立申請。 |
 | `/teacher/profile` | **2026-09-26 起是「老師資料」的第一個分頁：可授課時間**（原 `/teacher/availability` 的內容）；個人資料編輯搬到 `/teacher/profile/info`。 |
+| `/admin/teachers/[teacherProfileId]`（照片區） | `teacher-showcase-photos` 票 07（2026-10-10）：老師詳情頁新增「老師的照片」區，列出有效與已下架的照片；管理員填原因（必填）後可下架單張照片，結果顯示在頁首提示；已下架的顯示原因與時間 |
+| `/teacher/classes/[classSessionId]`（分享文案） | `teacher-showcase-photos` 票 08（2026-10-10）：課程開放報名後，「分享給學員」區新增三種可複製的固定文案——招募公告、課前一天提醒、課後感謝。**不呼叫 AI**，只把課程資料（課名、時間、地點、價格說明、適合對象、準備事項、是否需老師確認、老師名字）套進模板；沒填的欄位整行不出現；報名連結用完整網址；語氣溫和、不使用緊迫或折扣用語；老師可以先在文字框改幾個字再複製。模板在 `src/domain/class-session/share-templates.ts` |
 | `/media/[...key]` | **只給開發與測試**（`STORAGE_DRIVER=local`）：提供本機資料夾裡的照片檔，只接受應用程式產生的 `photos/<uuid>.webp`，其餘一律 404；正式環境用 R2 公開網域，這個路由回 404（`teacher-showcase-photos` 票 02） |
+| `/teachers/[teacherProfileId]` | **已落地**（`teacher-showcase-photos` 票 06，2026-10-10）老師公開頁，訪客不用登入即可看：頭像與照片、簡介、教學風格、年資區間、證照、擅長類型、授課形式與服務地區，以及這位老師目前公開、尚未開始的課程（沿用 `/classes` 的可見性規則，「僅透過連結招募」的課不列）。老師自己開啟且審核通過才有；否則 404。不顯示 email、電話、收款帳號、繳費規則、聯絡方式、價格區間。課程頁的老師名字在公開頁開啟時連到這裡，從這裡點進課程的返回連結是「返回老師頁」。`/teachers/join` 是靜態路由，不受影響 |
 | `/teacher/profile/photos` | **已落地**（`teacher-showcase-photos` 票 03，2026-10-10）「老師資料」第三個分頁：照片。approved 老師上傳（最多 5 張、JPG／PNG／WebP、5 MB）、設定頭像、排序與刪除；suspended 老師唯讀；其餘狀態顯示說明。照片功能沒設定儲存服務時整頁顯示「尚未開通」 |
 | `/teacher/profile/payment` | **已落地**（`lightweight-payment-v0`，2026-10-10）「老師資料」第三個分頁：收款與聯絡。approved／suspended 老師維護自己的繳費與取消規則（報名前顯示在課程頁）、收款帳號與聯絡方式（報名後才給學員看）；其餘狀態顯示說明。獨立於個人資料審核流程；金錢不經過飛索 |
 | `/teacher/profile/info` | 「老師資料」第二個分頁：個人資料（原 `/teacher/profile` 的說明如下）：**已落地**（`teacher-profile-edit` 已確認）：approved 老師編輯自己的個人資料，suspended 唯讀查看，其餘狀態導向 `/teachers/join` |

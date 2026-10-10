@@ -41,6 +41,12 @@ const COPY_TABLE: CopyTable = {
       body: `你的老師資格已經暫停。原因：${reason ?? ""}`,
     }),
   },
+  teacher_photo_removed: {
+    self: ({ reason }) => ({
+      title: "有一張照片已被下架",
+      body: `管理員下架了你的一張照片，它不會再出現在任何頁面。原因：${reason ?? ""}。你可以到「老師資料 › 照片」重新上傳合適的照片。`,
+    }),
+  },
   teacher_profile_restored: {
     self: () => ({
       title: "老師資格已恢復",

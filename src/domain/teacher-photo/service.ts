@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { getPhotoStorage } from "@/lib/storage/photo-storage";
 
+import { countPhotoCoverUsageCore, setCoverCore, type CoverTarget } from "./__internal__/cover-core";
 import {
   clearAvatarCore,
   deleteTeacherPhotoCore,
@@ -25,7 +26,10 @@ export type PhotoServiceErrorCode =
   | "storage_not_configured"
   | "photo_not_found"
   | "delete_failed"
-  | "action_failed";
+  | "action_failed"
+  | "target_not_found"
+  | "cover_photo_invalid"
+  | "cover_failed";
 
 export type PhotoServiceResult<T extends object = object> =
   | ({ ok: true } & T)
@@ -43,6 +47,9 @@ const messages: Record<PhotoServiceErrorCode, string> = {
   photo_not_found: "找不到這張照片，或你沒有權限操作。",
   delete_failed: "照片暫時無法刪除，請稍後再試。",
   action_failed: "暫時無法完成這個操作，請稍後再試。",
+  target_not_found: "找不到這堂課，或你沒有權限操作。",
+  cover_photo_invalid: "這張照片不能當封面，請重新選一張。",
+  cover_failed: "封面暫時無法儲存，請稍後再試。",
 };
 
 function fail(code: PhotoServiceErrorCode): { ok: false; code: PhotoServiceErrorCode; message: string } {
@@ -105,7 +112,16 @@ export async function deleteOwnTeacherPhoto(photoId: string): Promise<PhotoServi
   return result.ok ? { ok: true } : fail(result.code);
 }
 
-export type OwnPhotoView = { id: string; url: string; width: number; height: number; sortOrder: number; isAvatar: boolean };
+export type OwnPhotoView = {
+  id: string;
+  url: string;
+  width: number;
+  height: number;
+  sortOrder: number;
+  isAvatar: boolean;
+  // 目前被多少堂單堂課、多少個系列當成封面（刪除前提醒用）。
+  coverUsage: { sessions: number; series: number };
+};
 
 // 老師自己的有效照片（依排序）。儲存服務沒設定時 url 無法產生，回傳空清單並標示 storageConfigured = false。
 export async function listOwnTeacherPhotos(): Promise<{ storageConfigured: boolean; photos: OwnPhotoView[] }> {
@@ -120,6 +136,7 @@ export async function listOwnTeacherPhotos(): Promise<{ storageConfigured: boole
     where: { id: teacher.teacherProfileId },
     select: { avatarPhotoId: true },
   });
+  const usage = await countPhotoCoverUsageCore(teacher.teacherProfileId);
   const rows = await prisma.teacherPhoto.findMany({
     where: { teacherProfileId: teacher.teacherProfileId, status: "active" },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
@@ -135,6 +152,7 @@ export async function listOwnTeacherPhotos(): Promise<{ storageConfigured: boole
       height: row.height,
       sortOrder: row.sortOrder,
       isAvatar: row.id === profile?.avatarPhotoId,
+      coverUsage: usage.get(row.id) ?? { sessions: 0, series: 0 },
     })),
   };
 }
@@ -180,4 +198,39 @@ export async function moveOwnPhoto(photoId: string, direction: "up" | "down"): P
   const result = await movePhotoCore(teacher.teacherProfileId, photoId, direction);
 
   return result.ok ? { ok: true } : fail(result.code);
+}
+
+export type { CoverTarget };
+
+// 設定或移除課程封面（photoId = null 代表不放封面）。對系列場次設定，實際上是設定整個系列的封面。
+export async function setOwnClassCover(target: CoverTarget, photoId: string | null): Promise<PhotoServiceResult> {
+  const teacher = await resolveOwnTeacherProfileId();
+
+  if (!teacher.ok) {
+    return teacher;
+  }
+
+  const result = await setCoverCore(teacher.teacherProfileId, target, photoId);
+
+  return result.ok ? { ok: true } : fail(result.code);
+}
+
+// 建課表單用：老師目前可以選來當封面的照片（有效照片，依排序）。儲存服務沒設定時不提供選擇。
+export async function listCoverChoicesForOwnTeacher(): Promise<{
+  storageConfigured: boolean;
+  canUpload: boolean;
+  photos: { id: string; url: string }[];
+}> {
+  const result = await listOwnTeacherPhotos();
+  const teacher = await resolveOwnTeacherProfileId();
+  const profile = teacher.ok
+    ? await prisma.teacherProfile.findUnique({ where: { id: teacher.teacherProfileId }, select: { status: true } })
+    : null;
+
+  return {
+    storageConfigured: result.storageConfigured,
+    // 只有審核通過的老師能上傳；已放滿 5 張也不能再上傳。
+    canUpload: result.storageConfigured && profile?.status === "approved" && result.photos.length < TEACHER_PHOTO_MAX_COUNT,
+    photos: result.photos.map((photo) => ({ id: photo.id, url: photo.url })),
+  };
 }

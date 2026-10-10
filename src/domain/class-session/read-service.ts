@@ -8,6 +8,7 @@ import type {
   TermEnrollmentMode,
 } from "@prisma/client";
 
+import type { PhotoRef } from "@/domain/teacher-photo/display";
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
@@ -117,6 +118,9 @@ export type TeacherFacingClassSession = {
   preparationNotes: string | null;
   // lightweight-payment-v0：價格文字（沒填是 null）。
   priceNote: string | null;
+  // teacher-showcase-photos 票 04：單堂課自己的封面照片 id；系列場次這欄永遠是 null，用 recurringClassSeries.coverPhotoId。
+  coverPhotoId: string | null;
+  coverPhoto: PhotoRef;
   serviceType: string | null;
   serviceTypes: string[];
   yogaStyles: string[];
@@ -138,7 +142,7 @@ export type TeacherFacingClassSession = {
   // Slice E：統一列表要顯示常規/固定期課程系列的名稱，不是只顯示一個沒有名字的 id——
   // recurringClassSeriesId 本身不足以讓老師分辨「這是哪一個系列」。
   // teacher-class-scheduling 票 10：kind 讓名單標示整期或單堂。
-  recurringClassSeries: { title: string; kind: RecurringClassSeriesKind } | null;
+  recurringClassSeries: { title: string; kind: RecurringClassSeriesKind; coverPhotoId: string | null; coverPhoto: PhotoRef } | null;
   // teacher-initiated-open-classes 第 8 節（Gate G2/G3）：涵蓋 pending，讓老師端 roster 能
   // 看到並操作等待審核的報名；status 一起帶出讓 UI 分辨要不要顯示確認/拒絕按鈕。
   enrollments: {

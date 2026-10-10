@@ -44,6 +44,7 @@ Fields:
 - priceRange
 - profilePhotoUrl（**2026-10-10 起停用**，`teacher-showcase-photos` 票 03：舊的「貼照片網址」欄位退場——老師申請表與個人資料頁不再顯示或寫入，舊資料保留在資料庫、不再顯示；照片改用 `TeacherPhoto`）
 - avatarPhotoId（2026-10-10 新增，nullable FK → `TeacherPhoto`，`onDelete: SetNull`；老師頭像，只能指向自己的有效照片，照片被刪除時回到空＝沒有頭像；migration `20261010003352_teacher_avatar`）
+- isPublicPageEnabled（2026-10-10 新增，`teacher-showcase-photos` 票 06，`Boolean @default(false)`：老師自己決定要不要公開老師頁，預設關閉；只有 `status = approved` 且開啟時 `/teachers/[id]` 才看得到，暫停、退回、未公開、不存在一律 404；老師的開關狀態在暫停期間保留，恢復後不需重設；migration `20261010044017_teacher_public_page`）
 - paymentAccountInfo（2026-10-10 新增，nullable text：老師自填的收款帳號，最多 300 字；**不出現在任何公開頁、老師列表或個人資料頁**，只在學員報名成功後以「報名當下快照」顯示給該學員）
 - paymentRulesText（2026-10-10 新增，nullable text：繳費期限、取消與退費、請假規則，最多 1000 字；**報名前**就顯示在課程頁，有填才顯示；系統不依它自動取消報名或退費）
 - contactInfo（2026-10-10 新增，nullable text：Line ID、IG 或電話，最多 200 字；規則同 paymentAccountInfo，只在報名後以快照顯示給該學員）
@@ -288,6 +289,7 @@ Fields:
 - description
 - suitableFor（2026-10-05 新增，nullable text：「適合對象／程度」，老師選填、最多 500 字（應用層限制），trim 後空字串存 null。可在老師建立單堂課、改單堂課、建立系列（由系列複製到每一場，見 `RecurringClassSeries`）與改系列場次時填寫：「只改這一場」只改該場；「改這一場和之後所有場次」改該場、之後未開始未取消的場次與系列本身（2026-10-06 member-flow 票 04）。舊課、團主媒合課與團主直接開課維持 null，不回填，學員課程頁不顯示該段（2026-10-09 票 14 起；原為顯示「尚未提供」）。migration `20261005200000_class_session_member_info`，來源 `docs/superpowers/plans/member-flow-redesign/tickets/03-single-class-suitable-for-and-preparation.md`）
 - preparationNotes（2026-10-05 新增，規則同 suitableFor：「準備事項」，老師選填、最多 500 字。改課時修改這兩欄不通知已報名學員）
+- coverPhotoId（2026-10-10 新增，`teacher-showcase-photos` 票 04，nullable FK → `TeacherPhoto`，`onDelete: SetNull`：課程封面。**只有不屬於任何系列的單堂課才有值**；系列場次一律用系列的封面，DB check `ClassSession_cover_not_in_series_check`：有 `recurringClassSeriesId` 時必為 NULL。照片被刪除或管理員下架時回到空，畫面顯示品牌色塊；migration `20261010011646_class_cover_photo`）
 - priceNote（2026-10-10 新增，nullable text：價格說明，例如「單堂 600 元」，老師選填、最多 200 字，trim 後空字串存 null；沿用「價格是文字」原則，不新增金額型別。報名前顯示在課程頁，有填才顯示；老師改價只影響之後的新報名，已報名學員看到的是報名當下快照 `Enrollment.priceNoteSnapshot`。團主媒合的課程為空時，報名快照沿用已選定回應的 `DemandResponse.proposedPrice`。系列場次由系列複製；migration `20261009223453_lightweight_payment_v0`）
 - serviceType（主要課程風格，＝serviceTypes 的第一個）
 - serviceTypes（2026-09-26 新增，`String[] @default([])`：課程風格，可多選最多 3 個，值須落在 `service-types.ts` 清單內）
@@ -333,6 +335,7 @@ Fields:
 - description（選填）
 - suitableFor（2026-10-06 新增，nullable text：「適合對象」，選填、最多 500 字，規則同 `ClassSession.suitableFor`；生成場次時複製到每一場，「生成更多」也沿用。migration `20261006100000_recurring_series_member_info`，來源 `docs/superpowers/plans/member-flow-redesign/tickets/04-recurring-series-class-info.md`）
 - preparationNotes（2026-10-06 新增，「準備事項」，規則同 suitableFor）
+- coverPhotoId（2026-10-10 新增，nullable FK → `TeacherPhoto`，`onDelete: SetNull`：系列封面，系列內每一堂都顯示這一張；對系列的任何一場設定封面，實際上設定的是整個系列的封面）
 - priceNote（2026-10-10 新增，價格說明，規則同 `ClassSession.priceNote`：系列預設值，建立系列與「生成更多」、補課時複製到每一場；「改這一場和之後所有場次」一併更新；期班報名的價格快照取系列的 priceNote）
 - serviceType（選填；主要課程風格）
 - serviceTypes（2026-09-26 新增，課程風格可多選，見上方 ClassSession 說明）
@@ -470,7 +473,7 @@ Fields:
 - removedReason、removedAt、removedByUserId（下架時填寫）
 - createdAt
 
-索引 `(teacherProfileId, status, sortOrder)`。規則：每位老師最多 5 張**有效**照片（在鎖住老師資料列後檢查，同時上傳不會超過）；只有 `approved` 老師能上傳；上傳時檢查實際格式（JPG／PNG／WebP）、5 MB、像素上限，自動轉正方向、長邊縮到 1600 px、輸出 WebP，**不保留任何 metadata**（GPS 與裝置資訊不會被保存）。檔案先寫入儲存服務再寫資料庫，資料庫寫入失敗或超過上限時刪除剛寫入的檔案。老師頭像由 `TeacherProfile.avatarPhotoId` 指向（票 03，頭像選填、沒指定就沒有頭像）；老師可在 `/teacher/profile/photos` 上傳、設頭像、排序（往前／往後，每次寫成 0..n-1）與刪除。尚未實作（後續票）：課程封面（`coverPhotoId`）、管理員下架與通知。
+索引 `(teacherProfileId, status, sortOrder)`。規則：每位老師最多 5 張**有效**照片（在鎖住老師資料列後檢查，同時上傳不會超過）；只有 `approved` 老師能上傳；上傳時檢查實際格式（JPG／PNG／WebP）、5 MB、像素上限，自動轉正方向、長邊縮到 1600 px、輸出 WebP，**不保留任何 metadata**（GPS 與裝置資訊不會被保存）。檔案先寫入儲存服務再寫資料庫，資料庫寫入失敗或超過上限時刪除剛寫入的檔案。老師公開頁（票 06）：`/teachers/[id]` 顯示老師的頭像與全部有效個人照片（依排序）、簡介等有填的欄位；管理員下架的照片不顯示。老師頭像由 `TeacherProfile.avatarPhotoId` 指向（票 03，頭像選填、沒指定就沒有頭像）；老師可在 `/teacher/profile/photos` 上傳、設頭像、排序（往前／往後，每次寫成 0..n-1）與刪除。課程封面（票 04）：`ClassSession.coverPhotoId`（單堂）與 `RecurringClassSeries.coverPhotoId`（系列）指向老師自己的有效照片，被刪除或下架時回到空。管理員下架（票 07）：`status` 改成 `removed_by_admin`、記下原因（必填 5–500 字）、時間與管理員，**資料列保留**；同一個交易裡把引用它的老師頭像與課程、系列封面回到空，交易成功後才從儲存服務刪除檔案；下架的不算在 5 張上限裡，老師可以重新上傳。封面與頭像在課程列表、各課程頁與老師公開頁的顯示見票 05、06（只顯示 `active` 的照片）。
 
 ## EnrollmentPaymentEvent
 

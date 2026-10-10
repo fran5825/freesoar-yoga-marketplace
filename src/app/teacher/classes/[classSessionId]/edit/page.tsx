@@ -6,6 +6,7 @@ import {
   getOwnRecurringClassSeriesDetailForTeacher,
 } from "@/domain/class-session/read-service";
 import { formatTaipeiDatetimeLocal } from "@/domain/class-session/timezone";
+import { listCoverChoicesForOwnTeacher } from "@/domain/teacher-photo/service";
 import { getOwnTeacherProfileApplicationSnapshot } from "@/domain/teacher-profile/service";
 import { requireUser } from "@/lib/auth/session";
 
@@ -105,6 +106,7 @@ export default async function EditClassSessionPage({ params }: EditClassSessionP
         </section>
       ) : (
         <ClassSessionCreateForm
+          coverChoices={await listCoverChoicesForOwnTeacher()}
           defaults={null}
           edit={{
             classSessionId: classSession.id,
@@ -113,6 +115,11 @@ export default async function EditClassSessionPage({ params }: EditClassSessionP
             suitableFor: classSession.suitableFor ?? "",
             preparationNotes: classSession.preparationNotes ?? "",
             priceNote: classSession.priceNote ?? "",
+            // 系列場次的封面屬於整個系列；單堂課用自己的封面。
+            coverPhotoId: classSession.recurringClassSeriesId
+              ? (classSession.recurringClassSeries?.coverPhotoId ?? null)
+              : classSession.coverPhotoId,
+            isSeriesSession: classSession.recurringClassSeriesId !== null,
             serviceTypes: classSession.serviceTypes.length
               ? classSession.serviceTypes
               : classSession.serviceType

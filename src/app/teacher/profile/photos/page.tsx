@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { PHOTO_MAX_BYTES } from "@/domain/teacher-photo/process-image";
 import { listOwnTeacherPhotos, TEACHER_PHOTO_MAX_COUNT } from "@/domain/teacher-photo/service";
+import { getOwnPublicPageSetting } from "@/domain/teacher-profile/public-page-settings";
 import { getOwnTeacherProfileApplicationSnapshot } from "@/domain/teacher-profile/service";
 import { requireUser } from "@/lib/auth/session";
 
@@ -13,6 +14,7 @@ import {
   deletePhotoAction,
   movePhotoAction,
   setAvatarAction,
+  setPublicPageAction,
   uploadPhotoAction,
 } from "./actions";
 
@@ -32,9 +34,10 @@ export default async function TeacherPhotosPage({ searchParams }: TeacherPhotosP
     redirect("/sign-in");
   }
 
-  const [profile, list, resolvedSearchParams] = await Promise.all([
+  const [profile, list, publicPage, resolvedSearchParams] = await Promise.all([
     getOwnTeacherProfileApplicationSnapshot(),
     listOwnTeacherPhotos(),
+    getOwnPublicPageSetting(),
     searchParams,
   ]);
   const feedback =
@@ -89,6 +92,42 @@ export default async function TeacherPhotosPage({ searchParams }: TeacherPhotosP
           {!list.storageConfigured ? (
             <section aria-live="polite" className="rounded-xl border border-ink/15 bg-cream px-4 py-3 text-sm leading-6 text-ink-soft">
               照片功能尚未開通，暫時無法上傳或顯示照片。其他功能不受影響。
+            </section>
+          ) : null}
+
+          {publicPage.state === "ok" ? (
+            <section aria-labelledby="public-page-title" className="grid gap-3 rounded-2xl border border-ink/15 bg-white p-6">
+              <h2 className="text-lg font-medium text-ink" id="public-page-title">
+                公開我的老師頁
+              </h2>
+              <p className="text-sm leading-6 text-ink-soft">
+                目前：<span className="font-medium text-ink">{publicPage.visible ? "已公開" : "未公開"}</span>
+                {publicPage.enabled && !publicPage.visible ? "（帳號暫停期間訪客看不到）" : ""}
+              </p>
+              <p className="text-xs leading-5 text-ink-faint">
+                公開後，任何人（不用登入）都能看到：頭像與照片、簡介、教學風格、證照、擅長類型、授課形式與服務地區，以及你目前公開的課程。
+                不會顯示：email、電話、收款帳號與聯絡方式。預設是關閉，你隨時可以關掉。
+              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                {publicPage.canChange ? (
+                  <form action={setPublicPageAction}>
+                    <input name="enabled" type="hidden" value={publicPage.enabled ? "no" : "yes"} />
+                    <button
+                      className="inline-flex min-h-11 items-center rounded-full bg-pine px-6 py-3 text-sm font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+                      type="submit"
+                    >
+                      {publicPage.enabled ? "關閉公開頁" : "公開我的老師頁"}
+                    </button>
+                  </form>
+                ) : (
+                  <p className="text-sm text-ink-soft">帳號暫停期間無法變更。</p>
+                )}
+                {publicPage.visible ? (
+                  <Link className="text-sm font-medium text-pine underline underline-offset-4" href={`/teachers/${publicPage.teacherProfileId}`}>
+                    查看我的公開頁
+                  </Link>
+                ) : null}
+              </div>
             </section>
           ) : null}
 
@@ -203,6 +242,11 @@ export default async function TeacherPhotosPage({ searchParams }: TeacherPhotosP
                           triggerLabel="刪除"
                         >
                           <p>刪除後，這張照片會從所有頁面消失，無法復原。</p>
+                          {photo.coverUsage.sessions + photo.coverUsage.series > 0 ? (
+                            <p>
+                              這張照片目前是{coverUsageText(photo.coverUsage)}的封面，刪除後這些課程會改用品牌色塊，課程本身不受影響。
+                            </p>
+                          ) : null}
                           {photo.isAvatar ? <p>這張是你的頭像，刪除後就沒有頭像了。</p> : null}
                         </ConfirmActionDialog>
                       </div>
@@ -216,4 +260,13 @@ export default async function TeacherPhotosPage({ searchParams }: TeacherPhotosP
       )}
     </div>
   );
+}
+
+function coverUsageText(usage: { sessions: number; series: number }): string {
+  const parts = [
+    usage.sessions > 0 ? `${usage.sessions} 堂單堂課` : null,
+    usage.series > 0 ? `${usage.series} 個系列` : null,
+  ].filter((part): part is string => part !== null);
+
+  return parts.join("與 ");
 }

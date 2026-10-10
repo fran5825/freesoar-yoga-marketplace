@@ -34,7 +34,7 @@ V1 採用能力模型，而不是限制一個 `User` 只能有一種身分：
 | Action | Visitor | Member | Organizer | Teacher | Admin |
 |---|---|---|---|---|---|
 | View marketing pages | Yes | Yes | Yes | Yes | Yes |
-| View public teacher profile | Yes | Yes | Yes | Yes | Yes |
+| View public teacher profile（老師自己公開、審核通過才有，`/teachers/[id]`） | Yes | Yes | Yes | Yes | Yes |
 | View public class session | Yes | Yes | Yes | Yes | Yes |
 | Submit public inquiry form | Yes | Yes | Yes | Yes | Yes |
 
@@ -215,6 +215,9 @@ Teacher 可查看自己的 class session；下方「V1 落地範圍」對 Comple
 | Write own transfer note | No | Own（尚未付款時） | No | No | No |
 | Mark enrollment paid / refunded（手動記錄，不經手金錢） | No | No | No | Own（自己班級） | Admin |
 | Manage own payment settings（收款帳號、繳費規則、聯絡方式） | No | No | No | Own | No |
+| Set cover photo on own class / series（只能用自己的有效照片） | No | No | No | Own | No |
+| Remove (take down) a teacher photo | No | No | No | No | Admin |
+| Publish / unpublish own teacher page | No | No | No | Own（approved） | No |
 | Upload / delete / reorder own photos, set avatar | No | No | No | Own（approved） | No（V1 只有下架，見票 07） |
 
 同一 user 不可重複報名同一 class session。Confirmed enrollments 不可超過 capacity——**已擴充（Gate G3 = A）：`pending` 與 `confirmed` 合計不可超過 capacity**，不是只算 `confirmed`。

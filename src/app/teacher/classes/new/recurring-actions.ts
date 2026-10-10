@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createOwnRecurringClassSeriesForTeacher } from "@/domain/class-session/service";
 import type { RecurringSeriesInput } from "@/domain/class-session/recurring-series-validation";
 
+import { appendWarning, applyCoverFromForm } from "../_lib/apply-cover";
 import { buildCreateClassFieldErrors, type CreateClassFormState } from "./_lib/form-state";
 import { readServiceTypesFromForm, readYogaStylesFromForm } from "./read-yoga-styles";
 
@@ -75,13 +76,19 @@ export async function createOwnRecurringClassSeriesAction(
     };
   }
 
+  // teacher-showcase-photos 票 04：系列先照原流程建好，封面是之後的獨立一步；失敗只補一句說明。
+  const coverWarning = await applyCoverFromForm(formData, { kind: "series", id: result.recurringClassSeriesId });
+
   redirect(
     `/teacher/classes/series/${result.recurringClassSeriesId}?result=success&message=${encodeURIComponent(
-      buildCreatedMessage(
-        result.createdClassSessionIds.length,
-        result.skipped,
-        formData.get("openForEnrollment") === "yes",
-        mode === "fixed_dates" || readFormString(formData, "seriesKind") === "term",
+      appendWarning(
+        buildCreatedMessage(
+          result.createdClassSessionIds.length,
+          result.skipped,
+          formData.get("openForEnrollment") === "yes",
+          mode === "fixed_dates" || readFormString(formData, "seriesKind") === "term",
+        ),
+        coverWarning,
       ),
     )}`,
   );

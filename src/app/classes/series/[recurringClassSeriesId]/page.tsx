@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -13,6 +14,7 @@ import {
 import { classDetailHref, classReturnLabel, safeParentReturnPath, seriesDetailHref } from "@/lib/navigation/class-return-path";
 
 import { SiteShell } from "../../../_components/site-shell";
+import { DetailCover, TeacherByline } from "../../_components/ClassCover";
 import { ClassOriginTag } from "../../_components/ClassOriginTag";
 
 // class-discovery-series-cards 票 01：持續開課的系列頁。只看課程資訊與每一場的日期、名額；
@@ -55,6 +57,7 @@ export default async function SeriesPage({
           </p>
         </header>
 
+        <DetailCover url={series.coverUrl} />
         <SeriesSummary series={series} />
         <SeriesSessionList returnTo={returnTo} series={series} />
 
@@ -88,10 +91,10 @@ export default async function SeriesPage({
 }
 
 function SeriesSummary({ series }: { series: PublicSeriesDetail }) {
-  const rows: { label: string; value: string }[] = [
+  const rows: { label: string; value: ReactNode }[] = [
     { label: "上課時間", value: series.scheduleLabel },
     { label: "地點", value: series.location },
-    { label: "老師", value: series.teacherProfile.displayName ?? "飛索老師" },
+    { label: "老師", value: <TeacherByline avatarUrl={series.teacherAvatarUrl} href={series.teacherPageId ? `/teachers/${series.teacherPageId}` : null} name={series.teacherProfile.displayName ?? "飛索老師"} /> },
     ...(series.serviceTypes.length ? [{ label: "課程風格", value: series.serviceTypes.join("、") }] : []),
     ...(series.yogaStyles.length ? [{ label: "瑜伽類型", value: series.yogaStyles.join("、") }] : []),
   ];

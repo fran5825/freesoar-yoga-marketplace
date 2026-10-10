@@ -5,10 +5,12 @@ import { formatMultiChoiceText } from "@/app/teachers/join/_lib/application-fiel
 import { countClassSessionsForTeacherForAdmin } from "@/domain/class-session/admin-service";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { formatTeacherRatingSummary } from "@/domain/review/rating-summary";
+import { listTeacherPhotosForAdmin } from "@/domain/teacher-photo/admin-service";
 import { getTeacherProfileForAdmin } from "@/domain/teacher-profile/service";
 import { formatRelativeTime } from "@/lib/format-relative-time";
 import { requireAdmin } from "@/lib/auth/session";
 
+import { AdminConfirmButton } from "../../_components/AdminConfirmButton";
 import { AdminFlash, type AdminFlashParams } from "../../_components/AdminFlash";
 import { AdminReviewPanel } from "../../_components/AdminReviewPanel";
 import { adminDetailHref, adminListHref, safeAdminReturnTo } from "../../_lib/list-context";
@@ -16,6 +18,7 @@ import { teacherRejectionTemplates } from "../../_components/reason-templates";
 import {
   approveTeacherProfileApplicationAction,
   rejectTeacherProfileApplicationAction,
+  removeTeacherPhotoAdminAction,
 } from "../actions";
 import { adminTeacherStatusLabels, adminTeacherStatusToneClasses } from "../status-labels";
 import { TeacherStatusPanel } from "./TeacherStatusPanel";
@@ -39,10 +42,11 @@ export default async function AdminTeacherDetailPage({
   }
 
   const { teacherProfileId } = await params;
-  const [teacher, resolvedSearchParams, classSessionCount] = await Promise.all([
+  const [teacher, resolvedSearchParams, classSessionCount, photos] = await Promise.all([
     getTeacherProfileForAdmin(teacherProfileId),
     searchParams,
     countClassSessionsForTeacherForAdmin(teacherProfileId),
+    listTeacherPhotosForAdmin(teacherProfileId),
   ]);
 
   if (!teacher) {
@@ -143,6 +147,61 @@ export default async function AdminTeacherDetailPage({
         <Field label="教學風格" multiline value={teacher.teachingStyle} wide />
       </section>
 
+      {photos.length > 0 ? (
+        <section aria-labelledby="teacher-photos-title" className="grid scroll-mt-6 gap-4 rounded-2xl border border-ink/15 bg-white p-6" id="teacher-photos">
+          <div>
+            <h2 className="text-lg font-semibold text-ink" id="teacher-photos-title">老師的照片（{photos.filter((photo) => photo.status === "active").length}）</h2>
+            <p className="mt-1 text-sm leading-6 text-ink-soft">
+              若照片不適當，可以下架：會立即從所有頁面消失（頭像與課程封面也一併拿掉），老師會在通知裡看到你寫的原因，之後可以重新上傳。
+            </p>
+          </div>
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {photos.map((photo, index) => (
+              <li className="grid min-w-0 gap-3 rounded-2xl border border-ink/10 bg-cream p-3" key={photo.id}>
+                {photo.status === "active" && photo.url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img alt={`第 ${index + 1} 張照片${photo.isAvatar ? "（頭像）" : ""}`} className="aspect-[3/2] w-full rounded-xl bg-white object-cover" src={photo.url} />
+                ) : (
+                  <div className="grid aspect-[3/2] place-items-center rounded-xl bg-white text-sm text-ink-soft">已下架</div>
+                )}
+                {photo.status === "active" ? (
+                  <form action={removeTeacherPhotoAdminAction} className="grid gap-2">
+                    <input name="photoId" type="hidden" value={photo.id} />
+                    <input name="teacherProfileId" type="hidden" value={teacher.id} />
+                    <input name="returnTo" type="hidden" value={returnTo} />
+                    <label className="text-xs font-medium text-ink" htmlFor={`remove-reason-${photo.id}`}>
+                      下架原因（必填，老師會看到）
+                    </label>
+                    <textarea
+                      className="min-h-16 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink focus:outline-2 focus:outline-clay"
+                      id={`remove-reason-${photo.id}`}
+                      maxLength={500}
+                      minLength={5}
+                      name="reason"
+                      placeholder="例如：照片中有其他人的臉，無法確認對方同意。"
+                      required
+                    />
+                    <AdminConfirmButton
+                      confirmLabel="確認下架這張照片"
+                      description="照片會立即從所有頁面消失，老師的頭像與課程封面若用到它也會一併拿掉；無法復原，老師可以重新上傳。"
+                      pendingLabel="下架處理中…"
+                      title="確定要下架這張照片嗎？"
+                      triggerClassName="w-fit rounded-full border border-rose-300 px-4 py-1.5 text-sm font-medium text-rose-800 transition hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay disabled:cursor-not-allowed disabled:opacity-60"
+                      triggerLabel="下架這張照片"
+                    />
+                  </form>
+                ) : (
+                  <p className="min-w-0 break-words text-xs leading-5 text-ink-soft">
+                    下架原因：{photo.removedReason ?? "（未記錄）"}
+                    {photo.removedAt ? `・${formatTaipeiDatetime(photo.removedAt)}` : ""}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6 sm:grid-cols-2">
         <h2 className="text-lg font-semibold text-ink sm:col-span-2">聯絡方式</h2>
         <Field label="帳號名稱" value={teacher.user.name} />
@@ -157,7 +216,7 @@ export default async function AdminTeacherDetailPage({
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <List label="證照" values={teacher.certifications} />
           <Field label="價格區間" value={teacher.priceRange} />
-          <Field label="照片連結" value={teacher.profilePhotoUrl} wide />
+          <Field label="舊版照片連結（已停用，不再顯示給任何人）" value={teacher.profilePhotoUrl} wide />
           <Field
             label="偏好課程長度"
             value={

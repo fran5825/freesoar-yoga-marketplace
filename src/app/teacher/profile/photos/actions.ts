@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { setOwnPublicPageEnabled } from "@/domain/teacher-profile/public-page-settings";
 import {
   clearOwnAvatar,
   deleteOwnTeacherPhoto,
@@ -77,6 +78,20 @@ export async function movePhotoAction(formData: FormData): Promise<void> {
   }
 
   redirectWithFeedback("success", "已調整順序。");
+}
+
+// teacher-showcase-photos 票 06：老師自己決定要不要公開老師頁（預設關閉，隨時可以關）。
+export async function setPublicPageAction(formData: FormData): Promise<void> {
+  const enabled = readFormString(formData, "enabled") === "yes";
+  const result = await setOwnPublicPageEnabled(enabled);
+
+  revalidate();
+
+  if (!result.ok) {
+    redirectWithFeedback("error", result.message);
+  }
+
+  redirectWithFeedback("success", enabled ? "已公開你的老師頁。" : "已關閉老師頁，訪客不會再看到。");
 }
 
 function revalidate() {

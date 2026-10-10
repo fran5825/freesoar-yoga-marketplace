@@ -8,6 +8,7 @@
 import type { ClassSessionOrigin, ClassSessionStatus, TermEnrollmentMode } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import { effectiveCoverUrl, photoRefSelect, teacherAvatarUrl } from "@/domain/teacher-photo/display";
 import { getClassAvailability } from "./availability";
 import { getClassServiceTypes } from "./service-types-display";
 import { taipeiDayOfWeek } from "./recurring-series-dates";
@@ -32,9 +33,14 @@ export type PublicClassSessionListItem = {
   // 只是「誰開的課」的分類標籤，不含任何內部關聯 id。
   origin: ClassSessionOrigin;
   teacherProfile: { displayName: string | null };
+  // teacher-showcase-photos 票 05：課程封面與授課老師頭像的網址（沒有或沒開通就是 null，畫面整塊不顯示）。
+  coverUrl: string | null;
+  teacherAvatarUrl: string | null;
 };
 
 export type PublicClassSessionListFilters = {
+  // teacher-showcase-photos 票 06：老師公開頁只列這位老師公開的課程。
+  teacherProfileId?: string;
   serviceType?: string;
   // 0（週日）–6，比照既有 TeacherAvailability／RecurringClassSeries 慣例。
   dayOfWeek?: number;
@@ -65,6 +71,11 @@ export type PublicClassSessionDetail = {
   canAcceptNewEnrollments: boolean;
   origin: ClassSessionOrigin;
   teacherProfile: { displayName: string | null };
+  // teacher-showcase-photos 票 06：老師有開啟公開頁時的老師 id（課程頁的老師名字連到 /teachers/[id]）；沒有就是 null。
+  teacherPageId: string | null;
+  // teacher-showcase-photos 票 05：課程封面與授課老師頭像的網址（沒有或沒開通就是 null，畫面整塊不顯示）。
+  coverUrl: string | null;
+  teacherAvatarUrl: string | null;
 };
 
 const PUBLIC_STATUS_FILTER: ClassSessionStatus[] = ["open_for_enrollment", "confirmed"];
@@ -78,7 +89,7 @@ async function loadPublicRows(filters: PublicClassSessionListFilters) {
     where: {
       isPublic: true,
       status: { in: PUBLIC_STATUS_FILTER },
-      teacherProfile: { status: "approved" },
+      teacherProfile: { status: "approved", ...(filters.teacherProfileId ? { id: filters.teacherProfileId } : {}) },
       ...(discovery ? {
         AND: { status: "open_for_enrollment" as const, startAt: { gt: now } },
         ...(discovery.location ? { location: { contains: discovery.location, mode: "insensitive" as const } } : {}),
@@ -107,9 +118,11 @@ async function loadPublicRows(filters: PublicClassSessionListFilters) {
       status: true,
       requiresApproval: true,
       origin: true,
-      teacherProfile: { select: { displayName: true } },
-      // 票 12：期班的場次在找課程合併成一張卡片；只取型態與 id，不回傳給訪客的單場 DTO。
-      recurringClassSeries: { select: { id: true, kind: true } },
+      teacherProfile: { select: { displayName: true, avatarPhoto: photoRefSelect } },
+      // 票 05：封面（單堂用自己的、系列場次用系列的）。
+      coverPhoto: photoRefSelect,
+      // 票 12：期班的場次在找課程合併成一張卡片；只取型態、id 與封面，不回傳給訪客的單場 DTO。
+      recurringClassSeries: { select: { id: true, kind: true, coverPhoto: photoRefSelect } },
       _count: {
         select: {
           enrollments: { where: occupyingEnrollmentWhere },
@@ -149,7 +162,9 @@ function toPublicListItem(row: PublicRow, now: Date): PublicClassSessionListItem
     requiresApproval: row.requiresApproval,
     canAcceptNewEnrollments: row.status === "open_for_enrollment" && getClassAvailability({ capacity: row.capacity, activeEnrollmentCount: row._count.enrollments, startAt: row.startAt, now }).state === "open",
     origin: row.origin,
-    teacherProfile: row.teacherProfile,
+    teacherProfile: { displayName: row.teacherProfile.displayName },
+    coverUrl: effectiveCoverUrl(row),
+    teacherAvatarUrl: teacherAvatarUrl(row.teacherProfile),
   };
 }
 
@@ -193,6 +208,9 @@ export type PublicTermListItem = {
   requiresApproval: boolean;
   canEnroll: boolean;
   teacherProfile: { displayName: string | null };
+  // teacher-showcase-photos 票 05：課程封面與授課老師頭像的網址（沒有或沒開通就是 null，畫面整塊不顯示）。
+  coverUrl: string | null;
+  teacherAvatarUrl: string | null;
 };
 
 // class-discovery-series-cards 票 02：持續開課在找課程只出現一張系列卡。卡片上的資料取自「下一堂」那一場
@@ -213,6 +231,9 @@ export type PublicSeriesListItem = {
   nextIsFull: boolean;
   requiresApproval: boolean;
   teacherProfile: { displayName: string | null };
+  // teacher-showcase-photos 票 05：課程封面與授課老師頭像的網址（沒有或沒開通就是 null，畫面整塊不顯示）。
+  coverUrl: string | null;
+  teacherAvatarUrl: string | null;
 };
 
 export type PublicClassListEntry =
@@ -317,6 +338,8 @@ export async function getPublicClassListEntries(
         requiresApproval: term.requiresApproval,
         canEnroll,
         teacherProfile: term.teacherProfile,
+        coverUrl: toPublicListItem(nextRow, now).coverUrl,
+        teacherAvatarUrl: toPublicListItem(nextRow, now).teacherAvatarUrl,
       },
     });
   }
@@ -354,6 +377,8 @@ export async function getPublicClassListEntries(
         nextIsFull: item.capacity - item.activeEnrollmentCount <= 0,
         requiresApproval: item.requiresApproval,
         teacherProfile: item.teacherProfile,
+        coverUrl: item.coverUrl,
+        teacherAvatarUrl: item.teacherAvatarUrl,
       },
     });
   }
@@ -396,7 +421,9 @@ export async function getPublicClassSessionDetail(
       status: true,
       requiresApproval: true,
       origin: true,
-      teacherProfile: { select: { displayName: true, paymentRulesText: true } },
+      teacherProfile: { select: { id: true, isPublicPageEnabled: true, displayName: true, paymentRulesText: true, avatarPhoto: photoRefSelect } },
+      coverPhoto: photoRefSelect,
+      recurringClassSeries: { select: { coverPhoto: photoRefSelect } },
       _count: {
         select: {
           enrollments: { where: occupyingEnrollmentWhere },
@@ -409,8 +436,8 @@ export async function getPublicClassSessionDetail(
     return null;
   }
 
-  const { _count, status, teacherProfile, ...fields } = row;
-  return { ...fields, teacherProfile: { displayName: teacherProfile.displayName }, paymentRulesText: teacherProfile.paymentRulesText, activeEnrollmentCount: _count.enrollments,
+  const { _count, status, teacherProfile, coverPhoto, recurringClassSeries, ...fields } = row;
+  return { ...fields, teacherProfile: { displayName: teacherProfile.displayName }, paymentRulesText: teacherProfile.paymentRulesText, teacherPageId: teacherProfile.isPublicPageEnabled ? teacherProfile.id : null, coverUrl: effectiveCoverUrl({ coverPhoto, recurringClassSeries }), teacherAvatarUrl: teacherAvatarUrl(teacherProfile), activeEnrollmentCount: _count.enrollments,
     canAcceptNewEnrollments: status === "open_for_enrollment" && getClassAvailability({ capacity: row.capacity, activeEnrollmentCount: _count.enrollments, startAt: row.startAt }).state === "open" };
 }
 
@@ -459,6 +486,11 @@ export type PublicSeriesDetail = {
   origin: ClassSessionOrigin;
   requiresApproval: boolean;
   teacherProfile: { displayName: string | null };
+  // teacher-showcase-photos 票 06：老師有開啟公開頁時的老師 id（課程頁的老師名字連到 /teachers/[id]）；沒有就是 null。
+  teacherPageId: string | null;
+  // teacher-showcase-photos 票 05：課程封面與授課老師頭像的網址（沒有或沒開通就是 null，畫面整塊不顯示）。
+  coverUrl: string | null;
+  teacherAvatarUrl: string | null;
   headerSessionId: string;
   headerIsFull: boolean;
   sessions: PublicSeriesSessionRow[];
@@ -523,7 +555,8 @@ export async function getPublicSeriesDetail(
       yogaStyles: true,
       requiresApproval: true,
       origin: true,
-      teacherProfile: { select: { displayName: true, paymentRulesText: true } },
+      teacherProfile: { select: { id: true, isPublicPageEnabled: true, displayName: true, paymentRulesText: true, avatarPhoto: photoRefSelect } },
+      recurringClassSeries: { select: { coverPhoto: photoRefSelect } },
     },
   });
 
@@ -549,6 +582,9 @@ export async function getPublicSeriesDetail(
     origin: header.origin,
     requiresApproval: header.requiresApproval,
     teacherProfile: { displayName: header.teacherProfile.displayName },
+    teacherPageId: header.teacherProfile.isPublicPageEnabled ? header.teacherProfile.id : null,
+    coverUrl: effectiveCoverUrl({ recurringClassSeries: header.recurringClassSeries }),
+    teacherAvatarUrl: teacherAvatarUrl(header.teacherProfile),
     headerSessionId: headerRow.id,
     headerIsFull: stateOf(headerRow) === "full",
     sessions: shown.map((row) => {

@@ -351,6 +351,7 @@ flowchart LR
 - 課程取消會連帶取消其下所有 `confirmed`／`pending` Enrollment；DemandRequest 取消則會連帶 decline 其下尚有效的老師回覆。
 - Enrollment 建立時**依課程設定**成為 `confirmed`（既有行為）或 `pending`（新——課程設定「需要老師確認」時），並原子檢查容量（`pending`＋`confirmed` 合計）與重複報名；課程開始後不可自助取消，`pending` 報名也受同一時間限制。老師可在自己課程的報名清單確認或拒絕 `pending` 報名。
 - **付款狀態為手動記錄**（`lightweight-payment-v0`，2026-10-10）：金錢由學員直接轉給授課老師，**不經過飛索、未串接任何金流商**。報名建立當下複製老師的收款帳號、繳費規則、聯絡方式與課程價格成快照；學員報名前就在課程頁看到價格與繳費規則（有填才顯示），報名後在「我的報名」看到快照與付款狀態，並可填寫轉帳後五碼；老師（自己班級）與 Admin 手動標記已收款／已退款（整期學員可一次標記整期）；團主唯讀付款狀態。付款狀態是獨立於 `EnrollmentStatus` 的平行欄位；歷史記在 `EnrollmentPaymentEvent`。
+- **老師展示與分享**（`teacher-showcase-photos`，2026-10-10）：老師可上傳最多 5 張照片（存在 Cloudflare R2，沒設定時功能關閉）、指定頭像、為課程與系列選封面；課程列表卡片與各課程頁顯示封面與老師頭像（沒封面顯示品牌色塊）；老師自己決定是否公開老師頁 `/teachers/[id]`（預設關閉）；管理員可下架不適當的照片（原因必填，老師收到站內通知）；老師開放報名後可複製三種固定分享文案（不呼叫 AI）。
 - 評價只開放給已完成課程中仍為 `confirmed` 的報名者，每位使用者每堂課只能提交一次。
 - 通知寫入 `channel="in_app"`；`email` 已實作（2026-10-09），由 `EMAIL_DELIVERY_MODE` 控制，預設 `disabled` 不寄，尚未接上真實 Resend 帳號。`line`、`sms` 仍是 reserved enum，不能解讀成已提供的功能。
 - TeacherAvailability 與 AvailabilityException 已能維護，但目前不會在媒合或 ClassSession 建立時自動阻擋排程衝突（這與上方「雙重預約衝突檢查」是不同機制——後者比對的是同一位老師的其他 `ClassSession` 時段，不是 `TeacherAvailability` 宣告的可授課時段；老師自建課程會提示自己宣告的可授課時段，但不強制限制在該時段內建課）。

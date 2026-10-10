@@ -11,7 +11,9 @@ import {
   getOwnRecurringClassSeriesDetailForTeacher,
 } from "@/domain/class-session/read-service";
 import { getClassServiceTypes } from "@/domain/class-session/service-types-display";
+import { buildShareTemplates } from "@/domain/class-session/share-templates";
 import { getTeacherClassNextStep } from "@/domain/class-session/teacher-next-step";
+import { effectiveCoverUrl } from "@/domain/teacher-photo/display";
 import { getOwnTeacherProfileApplicationSnapshot } from "@/domain/teacher-profile/service";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { requireUser } from "@/lib/auth/session";
@@ -24,6 +26,7 @@ import { ConfirmActionDialog } from "../_components/ConfirmActionDialog";
 import { CopyEnrollLinkButton } from "../_components/CopyEnrollLinkButton";
 import { EnrollmentPaymentControls } from "../_components/EnrollmentPaymentControls";
 import { PendingSubmitButton } from "../_components/PendingSubmitButton";
+import { ShareTemplates } from "../_components/ShareTemplates";
 import {
   parseReturnContext,
   returnContextParams,
@@ -127,6 +130,20 @@ export default async function TeacherClassSessionDetailPage({
     endAt: classSession.endAt,
   });
   const isOwnClass = classSession.origin === "teacher_initiated";
+  const shareTemplates = buildShareTemplates({
+    title: classSession.title,
+    startAt: classSession.startAt,
+    endAt: classSession.endAt,
+    location: classSession.location,
+    priceNote: classSession.priceNote,
+    suitableFor: classSession.suitableFor,
+    preparationNotes: classSession.preparationNotes,
+    requiresApproval: classSession.requiresApproval,
+    teacherName: teacherProfile?.displayName ?? null,
+    isSeries: classSession.recurringClassSeriesId !== null,
+  });
+  // 系列場次顯示系列的封面（teacher-showcase-photos 票 04、05）。
+  const coverUrl = effectiveCoverUrl(classSession);
   const serviceTypes = getClassServiceTypes(classSession);
   const showRoster = ["open_for_enrollment", "confirmed", "completed"].includes(
     classSession.status,
@@ -201,6 +218,15 @@ export default async function TeacherClassSessionDetailPage({
           {classSession.description}
         </p>
       ) : null}
+      <div className="border-t border-ink/10 pt-3 text-sm leading-6">
+        <p className="font-medium text-ink">課程封面</p>
+        {coverUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img alt="目前的課程封面" className="mt-2 aspect-[3/2] w-full max-w-xs rounded-xl bg-cream object-cover" src={coverUrl} />
+        ) : (
+          <p className="mt-1 text-ink-soft">還沒設定封面，學員會看到品牌色塊。要設定請到「修改課程」。</p>
+        )}
+      </div>
       {/* member-flow 票 03／04：學員會在課程頁看到這兩段；單堂與系列場次都可以填。 */}
       {[
         { label: "適合對象", value: classSession.suitableFor },
@@ -516,6 +542,14 @@ export default async function TeacherClassSessionDetailPage({
               學員需要先登入飛索帳號，才能打開連結並報名。
             </p>
             <CopyEnrollLinkButton classSessionId={classSession.id} />
+            {/* teacher-showcase-photos 票 08：不呼叫 AI，只是把課程資料套進固定模板；沒填的欄位整行不出現。 */}
+            <h3 className="mt-3 text-sm font-medium text-ink" id="share-templates-title">
+              分享文案（可以直接複製，也可以先改幾個字）
+            </h3>
+            <ShareTemplates
+              enrollPath={`/classes/${classSession.id}`}
+              templates={Object.entries(shareTemplates).map(([key, template]) => ({ key, ...template }))}
+            />
           </section>
         ) : null}
       </section>

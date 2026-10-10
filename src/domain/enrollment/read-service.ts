@@ -10,6 +10,7 @@ import type {
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { getClassAvailability } from "@/domain/class-session/availability";
+import { effectiveCoverUrl, photoRefSelect, teacherAvatarUrl } from "@/domain/teacher-photo/display";
 
 import { getReEnrollState, type ReEnrollState } from "./re-enroll-eligibility";
 import { occupyingEnrollmentWhere } from "./seat-occupancy";
@@ -113,6 +114,11 @@ export type MemberFacingClassSession = {
   // 消費頁面需自行提供中性 fallback 文案（不假設一律有團體名稱）。
   organization: { name: string } | null;
   teacherProfile: { displayName: string | null };
+  // teacher-showcase-photos 票 06：老師有開啟公開頁時的老師 id（課程頁的老師名字連到 /teachers/[id]）；沒有就是 null。
+  teacherPageId: string | null;
+  // teacher-showcase-photos 票 05：課程封面與授課老師頭像的網址（沒有或沒開通就是 null，畫面整塊不顯示）。
+  coverUrl: string | null;
+  teacherAvatarUrl: string | null;
   // teacher-class-scheduling 票 09：屬於整期報名時有值（取消這一堂就是「請假」）。
   // enrollment-re-enrollment 票 02：已取消的報名能不能重新報名，由 service layer 一次算好（spec 4.6）。
   ownEnrollment: { id: string; status: EnrollmentStatus; seriesEnrollmentId: string | null; reEnroll: ReEnrollState } | null;
@@ -154,8 +160,9 @@ export async function getClassSessionForMember(
       status: true,
       origin: true,
       organization: { select: { name: true } },
-      teacherProfile: { select: { displayName: true, status: true, paymentRulesText: true } },
-      recurringClassSeries: { select: { kind: true, termEnrollmentMode: true } },
+      teacherProfile: { select: { id: true, isPublicPageEnabled: true, displayName: true, status: true, paymentRulesText: true, avatarPhoto: photoRefSelect } },
+      coverPhoto: photoRefSelect,
+      recurringClassSeries: { select: { kind: true, termEnrollmentMode: true, coverPhoto: photoRefSelect } },
       _count: {
         select: {
           enrollments: { where: occupyingEnrollmentWhere },
@@ -168,7 +175,7 @@ export async function getClassSessionForMember(
     return null;
   }
 
-  const { _count, teacherProfile, recurringClassSeries, ...classSessionFields } = classSession;
+  const { _count, teacherProfile, recurringClassSeries, coverPhoto, ...classSessionFields } = classSession;
   const ownRow = await prisma.enrollment.findUnique({
     where: { classSessionId_userId: { classSessionId, userId: currentUser.id } },
     select: { id: true, status: true, seriesEnrollmentId: true, cancelledBy: true, seriesEnrollment: { select: { status: true } } },
@@ -198,6 +205,9 @@ export async function getClassSessionForMember(
     ...classSessionFields,
     teacherProfile: { displayName: teacherProfile.displayName },
     paymentRulesText: teacherProfile.paymentRulesText,
+    teacherPageId: teacherProfile.isPublicPageEnabled && teacherProfile.status === "approved" ? teacherProfile.id : null,
+    coverUrl: effectiveCoverUrl({ coverPhoto, recurringClassSeries }),
+    teacherAvatarUrl: teacherAvatarUrl(teacherProfile),
     canAcceptNewEnrollments: teacherProfile.status === "approved" && classSession.status === "open_for_enrollment" && getClassAvailability({ capacity: classSession.capacity, activeEnrollmentCount: _count.enrollments, startAt: classSession.startAt }).state === "open",
     activeEnrollmentCount: _count.enrollments,
     // 整期的請假確認文字依期班報名方式不同（term_only／term_and_single）。

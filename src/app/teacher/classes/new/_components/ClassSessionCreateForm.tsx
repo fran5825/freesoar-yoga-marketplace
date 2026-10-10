@@ -14,6 +14,8 @@ import {
 import { TagCheckbox } from "@/app/_components/tag-checkbox";
 import { SPECIALTY_GROUPS } from "@/app/teachers/join/_lib/application-fields";
 import { MEMBER_INFO_MAX_LENGTH, PRICE_NOTE_MAX_LENGTH } from "@/domain/class-session/validation";
+
+import { CoverPhotoField, type CoverChoices } from "./CoverPhotoField";
 import {
   computeNextWeeklyOccurrenceDates,
   weeklyAfterDateForStartDate,
@@ -236,6 +238,9 @@ export type EditClassInitial = {
   suitableFor: string;
   preparationNotes: string;
   priceNote: string;
+  // teacher-showcase-photos 票 04：目前的封面照片 id（系列場次是系列的封面），沒有就是 null。
+  coverPhotoId: string | null;
+  isSeriesSession: boolean;
   serviceTypes: string[];
   yogaStyles: string[];
   date: string;
@@ -295,11 +300,14 @@ function sharedFromEdit(edit: EditClassInitial): SharedFields {
 export function ClassSessionCreateForm({
   defaults,
   edit,
+  coverChoices = null,
 }: {
   // 老師最近一次自己建立的課的地點、名額、是否需確認報名；沒建過課時是 null。
   defaults: { location: string; capacity: number; requiresApproval: boolean } | null;
   // teacher-class-scheduling 票 04：有值時是改課模式——只有單堂欄位，送出改課 action。
   edit?: EditClassInitial;
+  // teacher-showcase-photos 票 04：封面可選的照片；沒有（或照片功能沒開通）就不顯示封面欄位。
+  coverChoices?: CoverChoices | null;
 }) {
   const isEdit = edit !== undefined;
   const [mode, setMode] = useState<Mode>("single");
@@ -758,6 +766,13 @@ export function ClassSessionCreateForm({
             <YogaStylesField {...yogaStylesFieldProps} serverError={fieldErrors.yogaStyles} />
             <DescriptionField {...descriptionProps} error={fieldErrors.description} />
             {/* member-flow 票 03／04：單堂、改單堂與改系列場次（兩種範圍）都顯示，帶入這一場目前的值。 */}
+            <CoverPhotoField
+              choices={coverChoices}
+              currentCoverId={edit?.coverPhotoId ?? null}
+              idPrefix="single-"
+              isSeriesSession={edit?.isSeriesSession ?? false}
+              mode={isEdit ? "edit" : "create"}
+            />
             <MemberInfoFields
               {...sharedFieldProps}
               errors={{
@@ -947,6 +962,13 @@ export function ClassSessionCreateForm({
               serverError={fieldErrors.yogaStyles}
             />
             <DescriptionField {...descriptionProps} error={fieldErrors.description} idPrefix="weekly-" />
+            <CoverPhotoField
+              choices={coverChoices}
+              currentCoverId={edit?.coverPhotoId ?? null}
+              idPrefix="weekly-"
+              isSeriesSession={edit?.isSeriesSession ?? false}
+              mode={isEdit ? "edit" : "create"}
+            />
             <MemberInfoFields
               {...sharedFieldProps}
               errors={{
@@ -1101,6 +1123,13 @@ export function ClassSessionCreateForm({
               serverError={fieldErrors.yogaStyles}
             />
             <DescriptionField {...descriptionProps} error={fieldErrors.description} idPrefix="fixed-" />
+            <CoverPhotoField
+              choices={coverChoices}
+              currentCoverId={edit?.coverPhotoId ?? null}
+              idPrefix="fixed-"
+              isSeriesSession={edit?.isSeriesSession ?? false}
+              mode={isEdit ? "edit" : "create"}
+            />
             <MemberInfoFields
               {...sharedFieldProps}
               errors={{

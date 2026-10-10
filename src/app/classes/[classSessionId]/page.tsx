@@ -13,6 +13,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { classDetailHref, classReturnLabel, safeClassReturnPath, termDetailHref } from "@/lib/navigation/class-return-path";
 import { SiteShell } from "../../_components/site-shell";
 import { ClassAvailabilityBadge } from "../_components/ClassAvailabilityBadge";
+import { DetailCover } from "../_components/ClassCover";
 import { ClassOriginTag } from "../_components/ClassOriginTag";
 import { ClassSummary } from "../_components/ClassSummary";
 import { ClassEnrollmentPanel } from "../_components/ClassEnrollmentPanel";
@@ -65,6 +66,7 @@ export default async function MemberClassSessionPage({ params, searchParams }: {
     <SiteShell signedInArea="member" publicMainClassName="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-5 py-8 sm:px-8" signedInClassName="flex flex-col gap-6">
       <div className={canEnroll ? "group grid min-w-0 gap-6 pb-24 sm:pb-0" : "grid min-w-0 gap-6"}>
         <Link className="w-fit py-2 text-sm text-clay underline" href={returnTo}>{classReturnLabel(returnTo)}</Link>
+        <DetailCover url={classSession.coverUrl} />
         <header className="border-b border-ink/15 pb-5">
           <h1 className="min-w-0 break-words text-2xl font-semibold tracking-tight text-ink">{classSession.title}</h1>
           <div className="mt-3 flex flex-wrap items-center gap-3"><ClassOriginTag origin={classSession.origin} /><ClassAvailabilityBadge availability={availability} canAcceptNewEnrollments={classSession.canAcceptNewEnrollments} /></div>

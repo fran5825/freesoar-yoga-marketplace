@@ -6,11 +6,12 @@ import {
   restoreSuspendedTeacherProfile,
   suspendApprovedTeacherProfile,
 } from "@/domain/teacher-profile/service";
+import { removeTeacherPhotoForAdmin } from "@/domain/teacher-photo/admin-service";
 import { requireAdmin } from "@/lib/auth/session";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { adminActionError, adminReviewFailure, type AdminActionState } from "../_lib/action-state";
-import { adminFeedbackHref } from "../_lib/list-context";
+import { adminDetailHref, adminFeedbackHref } from "../_lib/list-context";
 
 // admin-usability 票 06：操作完成後回到老師列表（保留原搜尋／分類），列表頂端顯示成功提示；
 // 失敗則留在這位老師的詳情頁顯示原因（第二批起由 action 回傳狀態，不再跳頁）。
@@ -143,4 +144,27 @@ export async function restoreTeacherProfileAction(
 
   revalidatePath("/admin/teachers");
   redirectToList("success", "這位老師已經恢復。", formData, teacherProfileId);
+}
+
+// teacher-showcase-photos 票 07（spec S5）：管理員下架老師的一張照片。原因必填，會以通知告訴老師；
+// 結果回到這位老師的詳情頁顯示。身分與規則都在 domain 層檢查，這裡只讀表單與導回。
+export async function removeTeacherPhotoAdminAction(formData: FormData): Promise<void> {
+  const read = (name: string) => {
+    const value = formData.get(name);
+
+    return typeof value === "string" ? value : "";
+  };
+  const teacherProfileId = read("teacherProfileId");
+  const returnTo = read("returnTo");
+  const result = await removeTeacherPhotoForAdmin(read("photoId"), read("reason"));
+
+  revalidatePath("/admin/teachers");
+  revalidatePath(`/admin/teachers/${teacherProfileId}`);
+
+  const base = /^[A-Za-z0-9_-]{1,64}$/.test(teacherProfileId) ? adminDetailHref("teachers", teacherProfileId, returnTo) : "/admin/teachers";
+  const url = new URL(base, "https://admin.invalid");
+  url.searchParams.set("result", result.ok ? "success" : "error");
+  url.searchParams.set("message", result.ok ? "已下架這張照片，老師會收到通知。" : result.message);
+
+  redirect(`${url.pathname}?${url.searchParams}#teacher-photos`);
 }

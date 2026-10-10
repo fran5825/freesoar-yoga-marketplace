@@ -33,6 +33,8 @@ export const EMAIL_POLICY: Readonly<Record<NotificationType, readonly Notificati
   class_proposal_declined: ["counterpart"],
   class_proposal_withdrawn: ["counterpart"],
   class_proposal_revised: ["counterpart"],
+  // teacher-showcase-photos 票 07：下架照片只發站內通知（空陣列＝不寄 email），避免管理動作變成打擾。
+  teacher_photo_removed: [],
 };
 
 export function shouldSendEmail(type: NotificationType, role: NotificationRecipientRole): boolean {

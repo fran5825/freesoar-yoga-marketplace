@@ -1,18 +1,11 @@
 import Link from "next/link";
-import { getClassServiceTypes } from "@/domain/class-session/service-types-display";
-import { getClassAvailability } from "@/domain/class-session/availability";
 import {
   getPublicClassListEntries,
   getPublicClassYogaStyles,
-  type PublicClassSessionListItem,
-  type PublicSeriesListItem,
-  type PublicTermListItem,
 } from "@/domain/class-session/public-read-service";
-import { classDiscoveryHref, classDiscoveryWeekday, parseClassDiscoveryFilters, type DiscoveryParams } from "@/domain/class-session/class-discovery-filters";
-import { formatTaipeiDatetime, formatTaipeiShortDatetime } from "@/domain/class-session/timezone";
-import { classDetailHref, seriesDetailHref, termDetailHref } from "@/lib/navigation/class-return-path";
+import { classDiscoveryHref, parseClassDiscoveryFilters, type DiscoveryParams } from "@/domain/class-session/class-discovery-filters";
 import { SiteShell } from "../_components/site-shell";
-import { ClassOriginTag } from "./_components/ClassOriginTag";
+import { ClassListEntries } from "./_components/ClassListCards";
 import { ClassFilters } from "./_components/ClassFilters";
 
 export default async function PublicClassesPage({ searchParams }: { searchParams?: Promise<DiscoveryParams> }) {
@@ -39,64 +32,8 @@ export default async function PublicClassesPage({ searchParams }: { searchParams
           <Link className="mt-4 inline-flex rounded-full bg-pine px-5 py-3 text-sm font-medium text-white" href="/classes">清除篩選</Link>
         </section>
       ) : <section aria-label="課程結果" className="grid gap-4 sm:grid-cols-2">
-        {entries.map(entry => entry.kind === "term" ? <TermCard key={`term-${entry.item.id}`} returnTo={returnTo} term={entry.item} /> : entry.kind === "series" ? <SeriesCard key={`series-${entry.item.id}`} returnTo={returnTo} series={entry.item} /> : <SessionCard key={entry.item.id} returnTo={returnTo} session={entry.item} />)}
+        <ClassListEntries entries={entries} returnTo={returnTo} />
       </section>}
     </SiteShell>
-  );
-}
-
-const cardClassName = "grid min-w-0 gap-3 rounded-2xl border border-ink/15 bg-white p-5 transition hover:border-pine/40 focus-visible:outline-2 focus-visible:outline-pine";
-
-function TermCard({ term, returnTo }: { term: PublicTermListItem; returnTo: string }) {
-  const serviceTypes = getClassServiceTypes(term);
-  return (
-    <Link className={cardClassName} href={termDetailHref(term.id, returnTo)}>
-      <div className="flex flex-wrap gap-2">
-        <span className="rounded-full bg-pine-tint px-3 py-1 text-xs font-medium text-pine-deep">期班・共 {term.totalCount} 堂・剩 {term.remainingCount} 堂</span>
-        {term.canEnroll ? null : <span className="rounded-full bg-cream px-3 py-1 text-xs font-medium text-ink-soft">目前無法報名</span>}
-      </div>
-      <h2 className="min-w-0 break-words text-lg font-medium text-ink">{term.title}</h2>
-      <p className="text-sm text-ink">{term.scheduleLabel}</p>
-      <p className="break-words text-sm text-ink-soft">{term.location}</p>
-      <p className="break-words text-sm text-ink-soft">{term.teacherProfile.displayName ?? "老師"}{serviceTypes.length ? `・${serviceTypes.join("、")}` : ""}</p>
-      {term.yogaStyles.length ? <p className="break-words text-sm text-ink-soft">瑜伽類型：{term.yogaStyles.join("、")}</p> : null}
-      <p className="text-sm font-medium text-pine">下一堂 {formatTaipeiShortDatetime(term.nextStartAt)}・{term.termEnrollmentMode === "term_only" ? "只收整期報名" : "可報整期，也可單堂報名"}{term.requiresApproval ? "・需老師確認" : ""}</p>
-    </Link>
-  );
-}
-
-function SeriesCard({ series, returnTo }: { series: PublicSeriesListItem; returnTo: string }) {
-  const serviceTypes = getClassServiceTypes(series);
-  return (
-    <Link className={cardClassName} href={seriesDetailHref(series.id, returnTo)}>
-      <div className="flex flex-wrap gap-2"><ClassOriginTag origin={series.origin} /><span className="rounded-full bg-pine-tint px-3 py-1 text-xs font-medium text-pine-deep">持續開課</span></div>
-      <h2 className="min-w-0 break-words text-lg font-medium text-ink">{series.title}</h2>
-      <p className="text-sm text-ink">{series.scheduleLabel}</p>
-      <p className="break-words text-sm text-ink-soft">{series.location}</p>
-      <p className="break-words text-sm text-ink-soft">{series.teacherProfile.displayName ?? "老師"}{serviceTypes.length ? `・${serviceTypes.join("、")}` : ""}</p>
-      {series.yogaStyles.length ? <p className="break-words text-sm text-ink-soft">瑜伽類型：{series.yogaStyles.join("、")}</p> : null}
-      <p className={series.nextIsFull ? "text-sm font-medium text-ink-soft" : "text-sm font-medium text-pine"}>
-        {series.nextIsFull ? `最近一堂 ${formatTaipeiShortDatetime(series.nextStartAt)}・已額滿` : `下一個有名額 ${formatTaipeiShortDatetime(series.nextStartAt)}・剩 ${series.nextRemainingSeats} 個名額`}
-      </p>
-    </Link>
-  );
-}
-
-function SessionCard({ session, returnTo }: { session: PublicClassSessionListItem; returnTo: string }) {
-  const availability = getClassAvailability({ capacity: session.capacity, activeEnrollmentCount: session.activeEnrollmentCount, startAt: session.startAt });
-  const open = availability.state === "open" && session.canAcceptNewEnrollments;
-  return (
-    <Link className={cardClassName} href={classDetailHref(session.id, returnTo)}>
-      <div className="flex flex-wrap gap-2"><ClassOriginTag origin={session.origin} /></div>
-      <h2 className="min-w-0 break-words text-lg font-medium text-ink">{session.title}</h2>
-      <p className="text-sm text-ink">{formatTaipeiDatetime(session.startAt)}・{classDiscoveryWeekday(session.startAt)}</p>
-      <p className="break-words text-sm text-ink-soft">{session.location}</p>
-      <p className="break-words text-sm text-ink-soft">{session.teacherProfile.displayName ?? "老師"}{getClassServiceTypes(session).length ? `・${getClassServiceTypes(session).join("、")}` : ""}</p>
-      {session.yogaStyles.length ? <p className="break-words text-sm text-ink-soft">瑜伽類型：{session.yogaStyles.join("、")}</p> : null}
-      <p className={open ? "text-sm font-medium text-pine" : "text-sm font-medium text-ink-soft"}>
-        {open ? `剩 ${availability.remainingSeats} 個名額` : availability.state === "full" ? "已額滿" : availability.state === "started" ? "已開始" : "目前不開放報名"}
-        {session.requiresApproval ? "・需老師確認" : ""}
-      </p>
-    </Link>
   );
 }

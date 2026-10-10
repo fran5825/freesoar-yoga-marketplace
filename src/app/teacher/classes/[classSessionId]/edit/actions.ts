@@ -8,6 +8,7 @@ import {
   editOwnSeriesFromOccurrenceForTeacher,
 } from "@/domain/class-session/service";
 
+import { appendWarning, applyCoverFromForm } from "../../_lib/apply-cover";
 import {
   buildCreateClassFieldErrors,
   type CreateClassFormState,
@@ -70,6 +71,9 @@ export async function editOwnClassSessionAction(
     return { status: "error", mode: "single", code: result.code, message: result.message, fieldErrors };
   }
 
+  // teacher-showcase-photos 票 04：封面是獨立一步；系列場次的封面屬於整個系列。
+  const coverWarning = await applyCoverFromForm(formData, { kind: "session", id: classSessionId });
+
   revalidatePath(`/teacher/classes/${classSessionId}`);
   revalidatePath("/teacher/classes");
   revalidatePath("/teacher/dashboard");
@@ -79,7 +83,9 @@ export async function editOwnClassSessionAction(
       ? `課程已更新，已通知 ${result.notifiedMemberCount} 位已報名的學員。`
       : "課程已更新。";
 
-  redirect(`/teacher/classes/${classSessionId}?result=success&message=${encodeURIComponent(message)}`);
+  redirect(
+    `/teacher/classes/${classSessionId}?result=success&message=${encodeURIComponent(appendWarning(message, coverWarning))}`,
+  );
 }
 
 async function editFollowingSessions(
@@ -132,6 +138,8 @@ async function editFollowingSessions(
     return { status: "error", mode: "single", code: result.code, message: result.message, fieldErrors };
   }
 
+  const coverWarning = await applyCoverFromForm(formData, { kind: "series", id: recurringClassSeriesId });
+
   revalidatePath(`/teacher/classes/series/${recurringClassSeriesId}`);
   revalidatePath("/teacher/classes");
   revalidatePath("/teacher/dashboard");
@@ -142,7 +150,7 @@ async function editFollowingSessions(
       : `已更新 ${result.updatedCount} 場與系列設定。`;
 
   redirect(
-    `/teacher/classes/series/${recurringClassSeriesId}?result=success&message=${encodeURIComponent(message)}`,
+    `/teacher/classes/series/${recurringClassSeriesId}?result=success&message=${encodeURIComponent(appendWarning(message, coverWarning))}`,
   );
 }
 

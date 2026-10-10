@@ -21,6 +21,7 @@ Can:
 - View public teacher profile if enabled
 - **View public class session（已落地，`teacher-initiated-open-classes` Slice D 已確認）**：`/classes` 公開列表與 `/classes/[id]` 詳情，僅限 `isPublic=true`、狀態符合、且授課老師 `status=approved` 的課程；不符合公開條件（含 `isPublic=false`／`draft`／老師已被暫停）不揭露存在性差異：organizer-usability-redesign 票 13 起，`/classes/[id]` 對這些情況（以及不存在的 id、已取消）一律顯示同一個通用登入引導，不再回 not-found；登入後依 Member 規則讀取。可見範圍不變。看到的欄位是窄選過的 visitor-safe DTO，不含任何內部關聯 id。
 - Submit public forms if allowed
+- **已落地（`teacher-showcase-photos` 票 06，2026-10-10）：View a public teacher page**：不用登入即可看老師自己選擇公開、且審核通過的老師頁（`/teachers/[id]`）；不會看到任何私人欄位（email、電話、收款資訊、聯絡方式、價格區間）
 
 Cannot:
 
@@ -87,6 +88,8 @@ Can:
 - **Read own data for dashboard/form defaults（`teacher-usability` 第 07、09 票，2026-09-26）**：建課表單帶入自己最近一堂自建課的地點、名額、是否需確認報名；總覽列出自己「已被選定、等待團主建課」的回應（只有需求 id 與標題）。兩者都是 own-scoped 讀取（`teacherProfileId` 寫在 WHERE），沒有新增能力或可讀的他人資料。
 - **View own single class session detail（`teacher-usability` 第 05 票，產品主人 2026-09-25 放行）**：老師只能讀自己的單堂課詳情（範圍與上方列表完全相同，未新增可讀欄位：只含 confirmed／pending 報名的學員姓名、email、備註，評價者姓名與 email，Organization 只有名稱、無團主聯絡資料，無學員電話與頭像）；別人的課、不存在、沒有老師資料一律回傳找不到；suspended 老師仍可查看自己既有的課。own-scope 寫在查詢 WHERE，不是事後比對。
 - View own calendar
+- **已落地（`teacher-showcase-photos` 票 06，2026-10-10）：Publish own teacher page**：approved 老師可以自己開啟或關閉公開老師頁（預設關閉，隨時可關，立即生效）；suspended 老師不能變更，且暫停期間公開頁一律看不到
+- **已落地（`teacher-showcase-photos` 票 04，2026-10-10）：Set cover photo on own classes**：老師可在建課與改課時，為自己的單堂課選一張自己的有效照片當封面（或直接上傳新照片，新照片進入照片庫並算在 5 張上限內）；系列的封面是整個系列共用。只能用自己的照片、只能改自己的課，伺服器端檢查；封面失敗不會讓課程建立失敗，只在訊息後補一句說明
 - **已落地（`teacher-showcase-photos` 票 02、03，2026-10-10）：Manage own photos**：approved 老師可上傳、刪除、排序自己的照片（最多 5 張有效照片）並指定頭像；只能操作自己的照片；suspended 老師只能查看；其他狀態看不到上傳區。檔案存放與規則見 ADR 0007
 - **已落地（`lightweight-payment-v0`，2026-10-10）：Manage own payment settings**：approved／suspended 老師在 `/teacher/profile/payment` 維護自己的收款帳號、繳費規則與聯絡方式（獨立於個人資料審核流程）
 - **已落地（`lightweight-payment-v0`，2026-10-10）：Mark own class enrollments paid / refunded**：老師只能對**自己班級**（`classSession.teacherProfileId`）底下的報名標記已收款或已退款（含整期學員一次標記整期）；已取消的報名只能標記已退款，不能標記已收款；金錢不經過飛索，標記只是記錄
@@ -111,6 +114,7 @@ Cannot:
 
 Can:
 
+- **已落地（`teacher-showcase-photos` 票 07，2026-10-10）：Remove any teacher photo**：管理員可以下架任何老師的任何一張有效照片（原因必填），立即從所有頁面消失、頭像與課程封面一併拿掉，老師收到站內通知（不寄 email）；V1 沒有「恢復照片」，老師可以重新上傳
 - **已落地（`lightweight-payment-v0`，2026-10-10）：Mark any enrollment paid / refunded**：Admin 可跨老師標記已收款或已退款，作為支援與糾紛協調；操作者角色記為 `admin`，與老師標記分開
 - Approve/reject/suspend teachers
 - Review/publish/reject demand requests

@@ -243,6 +243,7 @@ test.describe("yoga styles in the teacher class form and public pages", () => {
     await expect(page.getByText("哈達瑜伽、陰瑜伽")).toBeVisible();
 
     await page.goto("/classes");
-    await expect(page.getByText("瑜伽類型：哈達瑜伽、陰瑜伽").first()).toBeVisible();
+    // teacher-showcase-photos 票 05：卡片上的瑜伽類型併入封面區標籤（第一個＋「等」），不再單獨成行。
+    await expect(page.getByTestId("card-cover").getByText("哈達瑜伽等").first()).toBeVisible();
   });
 });
