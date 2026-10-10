@@ -8,7 +8,9 @@ import { requireUser } from "@/lib/auth/session";
 
 import { CancelEnrollmentForm } from "../_components/CancelEnrollmentForm";
 import { EnrollmentStatusBadge } from "../_components/EnrollmentStatusBadge";
+import { ScrollToTarget } from "../../_components/ScrollToTarget";
 import { MemberTodoList } from "../_components/MemberTodoList";
+import { TermRowAction, TermRowBadge, WithdrawTermInline } from "../_components/TermRowControls";
 
 import { cancelEnrollmentAction, submitReviewAction } from "./actions";
 
@@ -47,7 +49,7 @@ function groupTermCards(items: OwnEnrollmentItem[]) {
 }
 
 type MemberEnrollmentsPageProps = {
-  searchParams?: Promise<{ result?: string; message?: string }>;
+  searchParams?: Promise<{ result?: string; message?: string; open?: string; focus?: string }>;
 };
 
 export default async function MemberEnrollmentsPage({
@@ -78,16 +80,17 @@ export default async function MemberEnrollmentsPage({
   const now = new Date();
   const todos = getMemberTodos(enrollments, now);
   // 即將上課（沒取消、還沒結案）由近到遠排在前面；過去與已取消的放後面、由新到舊。
-  const isUpcoming = (enrollment: (typeof enrollments)[number]) =>
-    enrollment.status !== "cancelled" &&
-    enrollment.classSession.status !== "cancelled" &&
-    enrollment.classSession.status !== "completed" &&
-    enrollment.classSession.endAt.getTime() >= now.getTime();
-  // teacher-class-scheduling 票 12：有效整期報名的即將上課場次合併成一張期班卡片；
-  // 請假（已取消）與過去的場次仍逐場列在下方，評價留在各自的場次。
+  // teacher-class-scheduling 票 12：有效整期報名的即將上課場次合併成一張期班卡片；過去的場次與整期已終結的取消逐場列在下方，評價留在各自的場次。
   const isActiveTermChild = (enrollment: (typeof enrollments)[number]) =>
     enrollment.seriesEnrollment !== null &&
     (enrollment.seriesEnrollment.status === "pending" || enrollment.seriesEnrollment.status === "confirmed");
+  // inline-member-actions 票 01：整期仍有效時，請假中的堂也算即將上課（收進整期卡，可以就地取消請假）。
+  const isOnActiveTermLeave = (enrollment: (typeof enrollments)[number]) => enrollment.rowControl.kind === "on_leave" && isActiveTermChild(enrollment);
+  const isUpcoming = (enrollment: (typeof enrollments)[number]) =>
+    (enrollment.status !== "cancelled" || isOnActiveTermLeave(enrollment)) &&
+    enrollment.classSession.status !== "cancelled" &&
+    enrollment.classSession.status !== "completed" &&
+    enrollment.classSession.endAt.getTime() >= now.getTime();
   const termCards = groupTermCards(enrollments.filter((enrollment) => isUpcoming(enrollment) && isActiveTermChild(enrollment)));
   const upcoming = enrollments
     .filter((enrollment) => isUpcoming(enrollment) && !isActiveTermChild(enrollment))
@@ -111,6 +114,7 @@ export default async function MemberEnrollmentsPage({
       {feedback ? (
         <section
           aria-live="polite"
+          id="action-feedback"
           className={
             feedback.kind === "success"
               ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
@@ -121,13 +125,12 @@ export default async function MemberEnrollmentsPage({
         </section>
       ) : null}
 
+      <ScrollToTarget targetId={resolvedSearchParams?.focus} />
+
       <MemberTodoList todos={todos} />
 
       {termCards.length > 0 ? (
-        <section aria-labelledby="term-cards-heading" className="grid gap-4">
-          <h2 className="text-sm font-medium text-ink-soft" id="term-cards-heading">
-            整期報名
-          </h2>
+        <section aria-label="整期報名" className="grid gap-4">
           {termCards.map((card) => (
             <article
               className="grid gap-3 rounded-2xl border border-pine/25 bg-white p-5"
@@ -147,26 +150,33 @@ export default async function MemberEnrollmentsPage({
                   <span className="text-sm text-ink-soft">等待老師確認整期報名</span>
                 ) : null}
               </div>
-              <details>
+              <details open={resolvedSearchParams?.open === "sessions"}>
                 <summary className="cursor-pointer text-sm font-medium text-pine">查看每一堂</summary>
                 <ul aria-label={`${card.title} 的每一堂`} className="mt-3 grid gap-2">
                   {card.items.map((enrollment) => (
-                    <li className="flex flex-wrap items-center justify-between gap-2 text-sm" key={enrollment.id}>
-                      <Link className="min-h-11 py-2 text-ink underline-offset-4 hover:underline" href={`/classes/${enrollment.classSession.id}`}>
-                        {formatTaipeiDatetime(enrollment.classSession.startAt)}
-                      </Link>
-                      <EnrollmentStatusBadge status={enrollment.status} />
+                    <li className="grid scroll-mt-6 gap-2 rounded-xl border border-ink/10 px-4 py-2 text-sm" id={`session-row-${enrollment.id}`} key={enrollment.id}>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <Link className="min-h-11 py-2 text-ink underline-offset-4 hover:underline" href={`/classes/${enrollment.classSession.id}`}>
+                          {formatTaipeiDatetime(enrollment.classSession.startAt)}
+                        </Link>
+                        <TermRowBadge control={enrollment.rowControl} status={enrollment.status} />
+                      </div>
+                      <TermRowAction
+                        classSessionId={enrollment.classSession.id}
+                        control={enrollment.rowControl}
+                        enrollmentId={enrollment.id}
+                        returnTo="/member/enrollments"
+                        termMode={enrollment.termEnrollmentMode}
+                      />
                     </li>
                   ))}
                 </ul>
               </details>
-              <p className="text-sm leading-6 text-ink-soft">
-                某一堂不能來，點進那一堂請假；要整期退出，請到
-                <Link className="mx-1 font-medium text-pine underline" href={`/classes/terms/${card.seriesId}`}>
-                  期班頁
-                </Link>
-                。
-              </p>
+              <WithdrawTermInline
+                affectedStartAts={card.items.filter((enrollment) => enrollment.rowControl.kind === "leave").map((enrollment) => enrollment.classSession.startAt)}
+                returnTo="/member/enrollments"
+                seriesEnrollmentId={card.seriesEnrollmentId}
+              />
             </article>
           ))}
         </section>

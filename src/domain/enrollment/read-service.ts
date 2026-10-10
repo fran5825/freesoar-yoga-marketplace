@@ -1,6 +1,7 @@
 import type {
   ClassSessionOrigin,
   ClassSessionStatus,
+  EnrollmentCancelledBy,
   EnrollmentStatus,
   SeriesEnrollmentStatus,
   TermEnrollmentMode,
@@ -12,12 +13,17 @@ import { getClassAvailability } from "@/domain/class-session/availability";
 
 import { getReEnrollState, type ReEnrollState } from "./re-enroll-eligibility";
 import { occupyingEnrollmentWhere } from "./seat-occupancy";
+import { getTermRowControl, type TermRowControl } from "./term-row-controls";
 
 export type OwnEnrollment = {
   id: string;
   status: EnrollmentStatus;
   notes: string | null;
   createdAt: Date;
+  cancelledBy: EnrollmentCancelledBy | null;
+  // inline-member-actions 票 01：整期的這一堂要顯示請假、取消請假還是說明文字（service layer 算好）。
+  rowControl: TermRowControl;
+  termEnrollmentMode: TermEnrollmentMode | null;
   // teacher-class-scheduling 票 12：屬於整期報名時，「我的報名」把即將上課的場次合併成一張期班卡片。
   seriesEnrollment: {
     id: string;
@@ -42,13 +48,15 @@ export type OwnEnrollment = {
 export async function listOwnEnrollmentsForMember(): Promise<OwnEnrollment[]> {
   const currentUser = await requireUser();
 
-  return prisma.enrollment.findMany({
+  const rows = await prisma.enrollment.findMany({
     where: { userId: currentUser.id },
     select: {
       id: true,
       status: true,
       notes: true,
       createdAt: true,
+      cancelledBy: true,
+      seriesEnrollmentId: true,
       seriesEnrollment: {
         select: { id: true, status: true, recurringClassSeries: { select: { id: true, title: true } } },
       },
@@ -60,6 +68,10 @@ export async function listOwnEnrollmentsForMember(): Promise<OwnEnrollment[]> {
           endAt: true,
           location: true,
           status: true,
+          capacity: true,
+          recurringClassSeries: { select: { kind: true, termEnrollmentMode: true } },
+          teacherProfile: { select: { status: true } },
+          _count: { select: { enrollments: { where: occupyingEnrollmentWhere } } },
           reviews: {
             where: { reviewerUserId: currentUser.id },
             select: { id: true, rating: true, comment: true },
@@ -68,6 +80,29 @@ export async function listOwnEnrollmentsForMember(): Promise<OwnEnrollment[]> {
       },
     },
     orderBy: { classSession: { startAt: "asc" } },
+  });
+
+  return rows.map(({ seriesEnrollmentId, classSession, ...row }) => {
+    const { capacity, recurringClassSeries, teacherProfile, _count, ...sessionFields } = classSession;
+    const termEnrollmentMode = recurringClassSeries?.kind === "term" ? recurringClassSeries.termEnrollmentMode : null;
+
+    return {
+      ...row,
+      termEnrollmentMode,
+      rowControl: getTermRowControl({
+        status: row.status,
+        cancelledBy: row.cancelledBy,
+        seriesEnrollmentId,
+        seriesEnrollmentStatus: row.seriesEnrollment?.status ?? null,
+        termEnrollmentMode,
+        classStatus: sessionFields.status,
+        startAt: sessionFields.startAt,
+        capacity,
+        occupiedCount: _count.enrollments,
+        teacherApproved: teacherProfile.status === "approved",
+      }),
+      classSession: sessionFields,
+    };
   });
 }
 
