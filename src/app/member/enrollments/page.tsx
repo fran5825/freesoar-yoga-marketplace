@@ -5,6 +5,7 @@ import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { getMemberTodos } from "@/domain/enrollment/member-todos";
 import { listOwnEnrollmentsForMember } from "@/domain/enrollment/read-service";
 import { requireUser } from "@/lib/auth/session";
+import { classDetailHref, termDetailHref } from "@/lib/navigation/class-return-path";
 
 import { CancelEnrollmentForm } from "../_components/CancelEnrollmentForm";
 import { EnrollmentStatusBadge } from "../_components/EnrollmentStatusBadge";
@@ -133,7 +134,7 @@ export default async function MemberEnrollmentsPage({
         </section>
       ) : null}
 
-      <MemberTodoList todos={todos} />
+      <MemberTodoList returnTo="/member/enrollments" todos={todos} />
 
       {termCards.length > 0 ? (
         <section aria-labelledby="term-cards-heading" className="grid gap-4">
@@ -148,7 +149,7 @@ export default async function MemberEnrollmentsPage({
             >
               <div className="flex flex-wrap items-center gap-3">
                 <h3 className="min-w-0 break-words text-lg font-medium text-ink">
-                  <Link className="underline-offset-4 hover:underline" href={`/classes/terms/${card.seriesId}`}>
+                  <Link className="underline-offset-4 hover:underline" href={termDetailHref(card.seriesId, "/member/enrollments")}>
                     {card.title}
                   </Link>
                 </h3>
@@ -164,7 +165,7 @@ export default async function MemberEnrollmentsPage({
                 <ul aria-label={`${card.title} 的每一堂`} className="mt-3 grid gap-2">
                   {card.items.map((enrollment) => (
                     <li className="flex flex-wrap items-center justify-between gap-2 text-sm" key={enrollment.id}>
-                      <Link className="min-h-11 py-2 text-ink underline-offset-4 hover:underline" href={`/classes/${enrollment.classSession.id}`}>
+                      <Link className="min-h-11 py-2 text-ink underline-offset-4 hover:underline" href={classDetailHref(enrollment.classSession.id, "/member/enrollments")}>
                         {formatTaipeiDatetime(enrollment.classSession.startAt)}
                       </Link>
                       <EnrollmentStatusBadge status={enrollment.status} />
@@ -187,7 +188,7 @@ export default async function MemberEnrollmentsPage({
               />
               <p className="text-sm leading-6 text-ink-soft">
                 某一堂不能來，點進那一堂請假；要整期退出，請到
-                <Link className="mx-1 font-medium text-pine underline" href={`/classes/terms/${card.seriesId}`}>
+                <Link className="mx-1 font-medium text-pine underline" href={termDetailHref(card.seriesId, "/member/enrollments")}>
                   期班頁
                 </Link>
                 。
@@ -227,7 +228,7 @@ export default async function MemberEnrollmentsPage({
                       取消與評價的表單另外用 relative z-10 浮在上層，仍可正常操作。 */}
                   {enrollment.classSession.status === "cancelled" ? <span>{enrollment.classSession.title}</span> : <Link
                     className="after:absolute after:inset-0 after:rounded-2xl"
-                    href={`/classes/${enrollment.classSession.id}`}
+                    href={classDetailHref(enrollment.classSession.id, "/member/enrollments")}
                   >
                     {enrollment.classSession.title}
                   </Link>}

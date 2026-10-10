@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import type { MemberTodo } from "@/domain/enrollment/member-todos";
+import { classDetailHref } from "@/lib/navigation/class-return-path";
 
 const todoCopy: Record<MemberTodo["kind"], { label: string; text: string }> = {
   review: { label: "待評價", text: "課程已結束，留下你的評價吧" },
@@ -8,14 +9,14 @@ const todoCopy: Record<MemberTodo["kind"], { label: string; text: string }> = {
 };
 
 // 依既有 kind 分開本人可操作事項與等候事項，domain 判斷不變。
-export function MemberTodoList({ todos }: { todos: MemberTodo[] }) {
+export function MemberTodoList({ todos, returnTo }: { todos: MemberTodo[]; returnTo: "/member/dashboard" | "/member/enrollments" }) {
   return <>
-    <TodoSection todos={todos.filter(todo => todo.kind === "review")} heading="待你處理" id="member-todo-heading" />
-    {todos.some(todo => todo.kind === "pending") ? <TodoSection todos={todos.filter(todo => todo.kind === "pending")} heading="等待老師確認" id="member-waiting-heading" /> : null}
+    <TodoSection todos={todos.filter(todo => todo.kind === "review")} heading="待你處理" id="member-todo-heading" returnTo={returnTo} />
+    {todos.some(todo => todo.kind === "pending") ? <TodoSection todos={todos.filter(todo => todo.kind === "pending")} heading="等待老師確認" id="member-waiting-heading" returnTo={returnTo} /> : null}
   </>;
 }
 
-function TodoSection({ todos, heading, id }: { todos: MemberTodo[]; heading: string; id: string }) {
+function TodoSection({ todos, heading, id, returnTo }: { todos: MemberTodo[]; heading: string; id: string; returnTo: string }) {
   return (
     <section
       aria-labelledby={id}
@@ -35,7 +36,7 @@ function TodoSection({ todos, heading, id }: { todos: MemberTodo[]; heading: str
                 href={
                   todo.kind === "review"
                     ? `/member/enrollments#enrollment-${todo.enrollmentId}`
-                    : `/classes/${todo.classSessionId}`
+                    : classDetailHref(todo.classSessionId, returnTo)
                 }
               >
                 <span className="rounded-full bg-pine-tint px-3 py-1 text-xs font-medium text-pine">

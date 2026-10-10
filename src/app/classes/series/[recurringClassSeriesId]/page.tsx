@@ -10,6 +10,7 @@ import {
   type PublicSeriesDetail,
   type PublicSeriesSessionRow,
 } from "@/domain/class-session/public-read-service";
+import { classDetailHref, classReturnLabel, safeParentReturnPath, seriesDetailHref } from "@/lib/navigation/class-return-path";
 
 import { SiteShell } from "../../../_components/site-shell";
 import { ClassOriginTag } from "../../_components/ClassOriginTag";
@@ -23,9 +24,10 @@ export default async function SeriesPage({
   searchParams,
 }: {
   params: Promise<{ recurringClassSeriesId: string }>;
-  searchParams?: Promise<{ show?: string | string[] }>;
+  searchParams?: Promise<{ show?: string | string[]; returnTo?: string }>;
 }) {
   const [{ recurringClassSeriesId }, query] = await Promise.all([params, searchParams]);
+  const returnTo = safeParentReturnPath(query?.returnTo);
   const series = await getPublicSeriesDetail(recurringClassSeriesId, { show: parseSeriesShow(query?.show) });
 
   if (!series) {
@@ -39,8 +41,8 @@ export default async function SeriesPage({
       signedInClassName="flex flex-col gap-6"
     >
       <div className="grid min-w-0 gap-6">
-        <Link className="w-fit py-2 text-sm text-clay underline" href="/classes">
-          返回課程列表
+        <Link className="w-fit py-2 text-sm text-clay underline" href={returnTo}>
+          {classReturnLabel(returnTo)}
         </Link>
         <header className="border-b border-ink/15 pb-5">
           <div className="flex flex-wrap gap-2">
@@ -54,7 +56,7 @@ export default async function SeriesPage({
         </header>
 
         <SeriesSummary series={series} />
-        <SeriesSessionList series={series} />
+        <SeriesSessionList returnTo={returnTo} series={series} />
 
         {series.priceNote ? (
           <section aria-labelledby="series-price-heading" className={cardClass}>
@@ -115,8 +117,11 @@ function rowStatus(row: PublicSeriesSessionRow): string {
   return "目前不開放報名";
 }
 
-function SeriesSessionList({ series }: { series: PublicSeriesDetail }) {
+function SeriesSessionList({ series, returnTo }: { series: PublicSeriesDetail; returnTo: string }) {
   const nextShow = Math.min(series.show + SERIES_SHOW_STEP, SERIES_SHOW_MAX);
+  const showMoreParams = new URLSearchParams();
+  if (returnTo !== "/classes") showMoreParams.set("returnTo", returnTo);
+  showMoreParams.set("show", String(nextShow));
 
   return (
     <section aria-labelledby="series-sessions-heading" className={cardClass} id="sessions">
@@ -125,7 +130,7 @@ function SeriesSessionList({ series }: { series: PublicSeriesDetail }) {
         {series.sessions.map((session) => (
           <li className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-xl border border-ink/10 px-4 py-3 text-sm" key={session.id}>
             <span className="min-w-0">
-              <Link className="inline-flex min-h-11 items-center font-medium text-ink underline-offset-4 hover:underline" href={`/classes/${session.id}`}>
+              <Link className="inline-flex min-h-11 items-center font-medium text-ink underline-offset-4 hover:underline" href={classDetailHref(session.id, seriesDetailHref(series.id, returnTo))}>
                 {formatTaipeiShortDatetime(session.startAt)}
               </Link>
               {session.timeNote || session.locationNote ? (
@@ -141,7 +146,7 @@ function SeriesSessionList({ series }: { series: PublicSeriesDetail }) {
         ))}
       </ul>
       {series.hasMore && !series.capped ? (
-        <Link className="mt-4 inline-flex min-h-11 items-center rounded-full border border-pine/40 px-5 py-2 text-sm font-medium text-pine hover:bg-pine-tint" href={`?show=${nextShow}#sessions`} scroll={false}>
+        <Link className="mt-4 inline-flex min-h-11 items-center rounded-full border border-pine/40 px-5 py-2 text-sm font-medium text-pine hover:bg-pine-tint" href={`?${showMoreParams.toString()}#sessions`} scroll={false}>
           看更多日期
         </Link>
       ) : null}

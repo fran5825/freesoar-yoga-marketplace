@@ -6,6 +6,7 @@ import { getMemberTodos } from "@/domain/enrollment/member-todos";
 import { listOwnEnrollmentsForMember } from "@/domain/enrollment/read-service";
 import { listOwnNotifications } from "@/domain/notification/read-service";
 import { requireUser } from "@/lib/auth/session";
+import { classDetailHref } from "@/lib/navigation/class-return-path";
 
 import { MemberTodoList } from "../_components/MemberTodoList";
 
@@ -84,7 +85,7 @@ export default async function MemberDashboardPage() {
             {upcomingEnrollments.map((enrollment, index) => (
               <Link
                 className="grid gap-1 rounded-2xl border border-ink/10 bg-cream p-4 transition hover:border-pine/40 hover:bg-pine-tint/60"
-                href={`/classes/${enrollment.classSession.id}`}
+                href={classDetailHref(enrollment.classSession.id, "/member/dashboard")}
                 key={enrollment.id}
               >
                 {index === 0 ? <span className="text-xs font-medium text-pine">下一堂課</span> : null}
@@ -101,7 +102,7 @@ export default async function MemberDashboardPage() {
         )}
       </section>
 
-      <MemberTodoList todos={todos} />
+      <MemberTodoList returnTo="/member/dashboard" todos={todos} />
 
       <section className="rounded-2xl border border-ink/15 bg-white p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
