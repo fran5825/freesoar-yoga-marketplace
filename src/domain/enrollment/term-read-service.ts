@@ -11,6 +11,7 @@ import type { EnrollmentStatus, SeriesEnrollmentStatus, TermEnrollmentMode } fro
 import { getClassAvailability } from "@/domain/class-session/availability";
 import { prisma } from "@/lib/prisma";
 import { occupyingEnrollmentWhere } from "./seat-occupancy";
+import { getTermRowControl, type TermRowControl } from "./term-row-controls";
 
 export type TermSessionView = {
   id: string;
@@ -24,6 +25,9 @@ export type TermSessionView = {
   capacity: number;
   activeEnrollmentCount: number;
   ownEnrollmentStatus: EnrollmentStatus | null;
+  // inline-member-actions 票 02：自己在這一堂的報名 id 與就地操作（請假、取消請假、說明），service layer 算好。
+  ownEnrollmentId: string | null;
+  rowControl: TermRowControl;
   // 單堂報名可用（整期和單堂都收、已開放、未開始、有名額、自己還沒有這場的報名）。
   canEnrollSingle: boolean;
 };
@@ -130,10 +134,11 @@ export async function getTermDetailForViewer(
   const ownEnrollments = userId
     ? await prisma.enrollment.findMany({
         where: { userId, classSessionId: { in: series.classSessions.map((session) => session.id) } },
-        select: { classSessionId: true, status: true, cancelledBy: true, seriesEnrollmentId: true },
+        select: { id: true, classSessionId: true, status: true, cancelledBy: true, seriesEnrollmentId: true },
       })
     : [];
   const ownBySession = new Map(ownEnrollments.map((enrollment) => [enrollment.classSessionId, enrollment.status]));
+  const ownRowBySession = new Map(ownEnrollments.map((enrollment) => [enrollment.classSessionId, enrollment]));
   const reEnrollableSessions = new Set(
     ownEnrollments
       .filter((enrollment) => enrollment.status === "cancelled" && enrollment.cancelledBy === "member" && enrollment.seriesEnrollmentId === null)
@@ -168,6 +173,22 @@ export async function getTermDetailForViewer(
         capacity: session.capacity,
         activeEnrollmentCount: session._count.enrollments,
         ownEnrollmentStatus,
+        ownEnrollmentId: ownRowBySession.get(session.id)?.id ?? null,
+        rowControl: ownRowBySession.has(session.id)
+          ? getTermRowControl({
+              status: ownRowBySession.get(session.id)!.status,
+              cancelledBy: ownRowBySession.get(session.id)!.cancelledBy,
+              seriesEnrollmentId: ownRowBySession.get(session.id)!.seriesEnrollmentId,
+              seriesEnrollmentStatus: ownSeriesEnrollment?.status ?? null,
+              termEnrollmentMode: series.termEnrollmentMode,
+              classStatus: session.status,
+              startAt: session.startAt,
+              capacity: session.capacity,
+              occupiedCount: session._count.enrollments,
+              teacherApproved,
+              now,
+            })
+          : ({ kind: "none" } as const),
         canEnrollSingle:
           series.termEnrollmentMode === "term_and_single" && teacherApproved && open && ownEnrollmentStatus === null,
       };
