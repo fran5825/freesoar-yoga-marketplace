@@ -6,6 +6,7 @@
 
 import { prisma } from "@/lib/prisma";
 
+import { applyReEnrollmentPaymentRule, buildEnrollmentPaymentSnapshot } from "../payment-snapshot";
 import { occupyingEnrollmentWhere } from "../seat-occupancy";
 
 export type RestoreLeaveErrorCode =
@@ -56,8 +57,8 @@ export async function restoreLeaveForUser(
 
   try {
     return await prisma.$transaction(async (tx): Promise<RestoreLeaveResult> => {
-      const lockedSeries = await tx.$queryRaw<{ teacherProfileId: string; termEnrollmentMode: string | null }[]>`
-        SELECT "teacherProfileId", "termEnrollmentMode" FROM "RecurringClassSeries"
+      const lockedSeries = await tx.$queryRaw<{ teacherProfileId: string; termEnrollmentMode: string | null; priceNote: string | null }[]>`
+        SELECT "teacherProfileId", "termEnrollmentMode", "priceNote" FROM "RecurringClassSeries"
         WHERE "id" = ${recurringClassSeriesId}
         FOR UPDATE
       `;
@@ -149,6 +150,16 @@ export async function restoreLeaveForUser(
       if (restored.count === 0) {
         throw new Rejected("leave_not_restorable");
       }
+
+      // lightweight-payment-v0（付款計畫 §2）：取消請假恢復比照重新報名——unpaid／paid 保留；refunded 重設並換新快照。
+      await applyReEnrollmentPaymentRule(tx, {
+        enrollmentId,
+        actorUserId: userId,
+        freshSnapshot: await buildEnrollmentPaymentSnapshot(tx, {
+          teacherProfileId: lockedSeries[0].teacherProfileId,
+          priceNote: lockedSeries[0].priceNote,
+        }),
+      });
 
       return { ok: true, status: seriesEnrollment.status };
     });

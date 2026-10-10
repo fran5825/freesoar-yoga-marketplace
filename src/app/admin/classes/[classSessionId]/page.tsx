@@ -24,7 +24,12 @@ import {
   type AdminRosterStatus,
 } from "../../_lib/list-context";
 import { adminClassOriginLabel } from "../origin-labels";
-import { cancelClassSessionAdminAction, cancelEnrollmentAdminAction } from "./actions";
+import {
+  cancelClassSessionAdminAction,
+  cancelEnrollmentAdminAction,
+  markEnrollmentPaidAdminAction,
+  markEnrollmentRefundedAdminAction,
+} from "./actions";
 
 type AdminClassSessionDetailPageProps = {
   params: Promise<{ classSessionId: string }>;
@@ -38,6 +43,8 @@ const enrollmentStatusLabels: Record<string, string> = {
   attended: "已出席",
   no_show: "未出席",
 };
+
+const paymentLabels = { unpaid: "待付款", paid: "已收款", refunded: "已退款" } as const;
 
 const CANCELLABLE_CLASS_SESSION_STATUSES = new Set(["draft", "open_for_enrollment"]);
 
@@ -290,6 +297,56 @@ export default async function AdminClassSessionDetailPage({
                       <p className="mt-1 min-w-0 whitespace-pre-wrap break-words text-ink-soft">
                         {entry.notes}
                       </p>
+                    ) : null}
+
+                    {/* lightweight-payment-v0：報名狀態與付款狀態是兩個獨立標籤；Admin 可跨老師標記（支援與糾紛協調）。 */}
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className="w-fit rounded-full bg-white px-2 py-0.5 text-xs font-medium text-ink-soft">
+                        付款：{paymentLabels[entry.paymentStatus]}
+                      </span>
+                      {entry.transferNote ? (
+                        <span className="min-w-0 wrap-anywhere text-xs text-ink-soft">轉帳備註：{entry.transferNote}</span>
+                      ) : null}
+                      {entry.paymentNote ? (
+                        <span className="min-w-0 wrap-anywhere text-xs text-ink-soft">收款備註：{entry.paymentNote}</span>
+                      ) : null}
+                      {entry.paymentStatus === "refunded" && entry.paymentRefundReason ? (
+                        <span className="min-w-0 wrap-anywhere text-xs text-ink-soft">退款說明：{entry.paymentRefundReason}</span>
+                      ) : null}
+                    </div>
+                    {entry.paymentStatus === "unpaid" && entry.status !== "cancelled" ? (
+                      <form action={markEnrollmentPaidAdminAction} className="mt-2">
+                        <input name="returnTo" type="hidden" value={returnTo} />
+                        <input name="classSessionId" type="hidden" value={classSessionId} />
+                        <input name="enrollmentId" type="hidden" value={entry.id} />
+                        <input name="rq" type="hidden" value={roster.rq} />
+                        <input name="rstatus" type="hidden" value={roster.rstatus} />
+                        <AdminConfirmButton
+                          confirmLabel="確認標記為已收款"
+                          description="這只是記錄老師已經收到款項，飛索不經手任何金錢。標記會留下紀錄，並顯示為 Admin 標記。"
+                          pendingLabel="處理中…"
+                          title={`確定要將「${memberDisplay(entry)}」標記為已收款嗎？`}
+                          triggerClassName="rounded-full border border-pine/40 px-3 py-1.5 text-xs font-medium text-pine transition hover:bg-pine-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay disabled:cursor-not-allowed disabled:opacity-60"
+                          triggerLabel="標記已收款"
+                        />
+                      </form>
+                    ) : null}
+                    {entry.paymentStatus === "paid" ? (
+                      <form action={markEnrollmentRefundedAdminAction} className="mt-2">
+                        <input name="returnTo" type="hidden" value={returnTo} />
+                        <input name="classSessionId" type="hidden" value={classSessionId} />
+                        <input name="enrollmentId" type="hidden" value={entry.id} />
+                        <input name="rq" type="hidden" value={roster.rq} />
+                        <input name="rstatus" type="hidden" value={roster.rstatus} />
+                        <AdminConfirmButton
+                          confirmLabel="確認標記為已退款"
+                          description="請確認老師已經在銀行 App 退款。這只是記錄，飛索不會替任何人轉帳。"
+                          pendingLabel="處理中…"
+                          title={`確定要將「${memberDisplay(entry)}」標記為已退款嗎？`}
+                          triggerClassName="rounded-full border border-ink/25 px-3 py-1.5 text-xs font-medium text-ink-soft transition hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay disabled:cursor-not-allowed disabled:opacity-60"
+                          triggerLabel="標記已退款"
+                        />
+                      </form>
                     ) : null}
 
                     {(entry.status === "confirmed" || entry.status === "pending") && !started ? (

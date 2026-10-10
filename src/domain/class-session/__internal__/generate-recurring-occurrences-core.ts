@@ -119,6 +119,7 @@ export async function generateOccurrencesForSeries(
             // member-flow 票 04：每一場複製系列目前的適合對象、準備事項（之後「生成更多」也沿用）。
             suitableFor: series.suitableFor,
             preparationNotes: series.preparationNotes,
+            priceNote: series.priceNote,
             // schema 上 nullable，但 validateRecurringSeriesInput 列為必填，實際不會是 null。
             serviceType: series.serviceType as string,
             serviceTypes: series.serviceTypes,

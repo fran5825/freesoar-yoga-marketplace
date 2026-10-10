@@ -22,6 +22,7 @@ import {
 } from "../_components/CancelFromHereDialog";
 import { ConfirmActionDialog } from "../_components/ConfirmActionDialog";
 import { CopyEnrollLinkButton } from "../_components/CopyEnrollLinkButton";
+import { EnrollmentPaymentControls } from "../_components/EnrollmentPaymentControls";
 import { PendingSubmitButton } from "../_components/PendingSubmitButton";
 import {
   parseReturnContext,
@@ -113,6 +114,10 @@ export default async function TeacherClassSessionDetailPage({
   const pendingEnrollments = classSession.enrollments.filter(
     (enrollment) => enrollment.status === "pending",
   );
+  // lightweight-payment-v0（P9）：已付款後被取消的報名仍要讓老師看得到，才能標記退款。
+  const cancelledWithPayment = classSession.enrollments.filter(
+    (enrollment) => enrollment.status === "cancelled" && enrollment.paymentStatus !== "unpaid",
+  );
   // teacher-class-scheduling 票 10：期班的場次，名單標示整期或單堂。
   const isTermSession = classSession.recurringClassSeries?.kind === "term";
   const nextStep = getTeacherClassNextStep({
@@ -200,6 +205,7 @@ export default async function TeacherClassSessionDetailPage({
       {[
         { label: "適合對象", value: classSession.suitableFor },
         { label: "準備事項", value: classSession.preparationNotes },
+        { label: "價格說明", value: classSession.priceNote },
       ].map((item) => (
         <div className="border-t border-ink/10 pt-3 text-sm leading-6" key={item.label}>
           <p className="font-medium text-ink">{item.label}</p>
@@ -324,10 +330,54 @@ export default async function TeacherClassSessionDetailPage({
                       {enrollment.notes}
                     </p>
                   ) : null}
+                  <EnrollmentPaymentControls
+                    classSessionId={classSession.id}
+                    enrollmentId={enrollment.id}
+                    enrollmentStatus={enrollment.status}
+                    hiddenReturnFields={returnFields}
+                    memberName={enrollment.user.name ?? enrollment.user.email ?? "會員"}
+                    paymentNote={enrollment.paymentNote}
+                    paymentStatus={enrollment.paymentStatus}
+                    refundReason={enrollment.paymentRefundReason}
+                    transferNote={enrollment.transferNote}
+                  />
                 </li>
               ))}
             </ul>
           )}
+          {cancelledWithPayment.length > 0 ? (
+            <div className="mt-4" id="cancelled-payments">
+              <h3 className="text-sm font-medium text-ink">
+                已取消但有付款紀錄（{cancelledWithPayment.length} 人）
+              </h3>
+              <p className="mt-1 text-xs leading-5 text-ink-faint">
+                這些報名已取消。若你已收款，請退款後在這裡標記已退款，學員才看得到最終結果。
+              </p>
+              <ul className="mt-2 grid gap-2">
+                {cancelledWithPayment.map((enrollment) => (
+                  <li
+                    className="min-w-0 rounded-2xl border border-ink/10 bg-cream p-3 text-sm"
+                    key={enrollment.id}
+                  >
+                    <p className="min-w-0 break-words font-medium text-ink">
+                      {enrollment.user.name ?? enrollment.user.email ?? "會員"}
+                    </p>
+                    <EnrollmentPaymentControls
+                      classSessionId={classSession.id}
+                      enrollmentId={enrollment.id}
+                      enrollmentStatus={enrollment.status}
+                      hiddenReturnFields={returnFields}
+                      memberName={enrollment.user.name ?? enrollment.user.email ?? "會員"}
+                      paymentNote={enrollment.paymentNote}
+                      paymentStatus={enrollment.paymentStatus}
+                      refundReason={enrollment.paymentRefundReason}
+                      transferNote={enrollment.transferNote}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </div>
       ) : pendingEnrollments.length === 0 ? (
         <p className="text-sm leading-6 text-ink-soft">

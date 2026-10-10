@@ -89,7 +89,9 @@ export default async function TermPage({
         <ClassInfoSections
           description={term.description}
           idPrefix="term-"
+          paymentRulesText={term.paymentRulesText}
           preparationNotes={term.preparationNotes}
+          priceNote={term.priceNote}
           suitableFor={term.suitableFor}
         />
 

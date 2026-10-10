@@ -1,7 +1,9 @@
 import type {
   ClassSessionOrigin,
   ClassSessionStatus,
+  EnrollmentPaymentStatus,
   EnrollmentStatus,
+  PaymentActorRole,
   RecurringClassSeriesKind,
   TermEnrollmentMode,
 } from "@prisma/client";
@@ -113,6 +115,8 @@ export type TeacherFacingClassSession = {
   // member-flow 票 03：適合對象、準備事項（沒填是 null）。
   suitableFor: string | null;
   preparationNotes: string | null;
+  // lightweight-payment-v0：價格文字（沒填是 null）。
+  priceNote: string | null;
   serviceType: string | null;
   serviceTypes: string[];
   yogaStyles: string[];
@@ -143,6 +147,15 @@ export type TeacherFacingClassSession = {
     notes: string | null;
     // 票 10：屬於整期報名時有值；整期的逐場報名不能在單場個別確認。
     seriesEnrollmentId: string | null;
+    // lightweight-payment-v0：付款狀態與對帳資訊（P9：已付款後被取消的報名仍會出現）。
+    paymentStatus: EnrollmentPaymentStatus;
+    transferNote: string | null;
+    paymentNote: string | null;
+    paymentConfirmedAt: Date | null;
+    paymentConfirmedByRole: PaymentActorRole | null;
+    paymentRefundedAt: Date | null;
+    paymentRefundedByRole: PaymentActorRole | null;
+    paymentRefundReason: string | null;
     user: { name: string | null; email: string | null };
   }[];
   reviews: {

@@ -17,6 +17,7 @@ import {
   CAPACITY_MAX,
   CAPACITY_MIN,
   checkMemberInfoLength,
+  checkPriceNoteLength,
   DESCRIPTION_MAX_LENGTH,
   LOCATION_MAX_LENGTH,
   normalizeMemberInfoText,
@@ -39,6 +40,8 @@ export type RecurringSeriesInput = {
   // member-flow 票 04：適合對象、準備事項，選填；規則與單堂相同（validation.ts 的共用 helper）。
   suitableFor?: string | null;
   preparationNotes?: string | null;
+  // lightweight-payment-v0：價格文字，系列預設值，生成場次時複製。
+  priceNote?: string | null;
   serviceType?: string | null;
   serviceTypes?: string[] | null;
   yogaStyles?: string[] | null;
@@ -72,6 +75,7 @@ export type RecurringSeriesValidationErrorCode =
   | "description_too_long"
   | "suitable_for_too_long"
   | "preparation_notes_too_long"
+  | "price_note_too_long"
   | "service_type_required"
   | "service_type_invalid"
   | "service_type_too_many"
@@ -100,6 +104,7 @@ export type RecurringSeriesValidationError = {
     | "description"
     | "suitableFor"
     | "preparationNotes"
+    | "priceNote"
     | "serviceType"
     | "yogaStyles"
     | "location"
@@ -122,6 +127,7 @@ type NormalizedBaseFields = {
   description: string | null;
   suitableFor: string | null;
   preparationNotes: string | null;
+  priceNote: string | null;
   serviceType: string;
   serviceTypes: string[];
   yogaStyles: string[];
@@ -162,6 +168,7 @@ export function validateRecurringSeriesInput(
       : null;
   const normalizedSuitableFor = normalizeMemberInfoText(input.suitableFor);
   const normalizedPreparationNotes = normalizeMemberInfoText(input.preparationNotes);
+  const normalizedPriceNote = normalizeMemberInfoText(input.priceNote);
   const normalizedServiceTypes = normalizeYogaStyles(
     input.serviceTypes && input.serviceTypes.length > 0
       ? input.serviceTypes
@@ -195,6 +202,7 @@ export function validateRecurringSeriesInput(
   for (const issue of [
     checkMemberInfoLength("suitableFor", normalizedSuitableFor),
     checkMemberInfoLength("preparationNotes", normalizedPreparationNotes),
+    checkPriceNoteLength(normalizedPriceNote),
   ]) {
     if (issue) {
       errors.push(issue);
@@ -408,6 +416,7 @@ export function validateRecurringSeriesInput(
       description: normalizedDescription,
       suitableFor: normalizedSuitableFor,
       preparationNotes: normalizedPreparationNotes,
+      priceNote: normalizedPriceNote,
       serviceType: normalizedServiceType,
       serviceTypes: normalizedServiceTypes,
       yogaStyles: normalizedYogaStyles,

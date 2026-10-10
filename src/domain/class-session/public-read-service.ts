@@ -50,6 +50,9 @@ export type PublicClassSessionDetail = {
   // member-flow 票 03：適合對象、準備事項（沒填是 null；票 14 起畫面不顯示該段）。
   suitableFor: string | null;
   preparationNotes: string | null;
+  // lightweight-payment-v0：報名前就顯示的價格說明與老師的繳費規則（沒填是 null，畫面整塊不顯示）。
+  priceNote: string | null;
+  paymentRulesText: string | null;
   serviceType: string | null;
   serviceTypes: string[];
   yogaStyles: string[];
@@ -382,6 +385,7 @@ export async function getPublicClassSessionDetail(
       description: true,
       suitableFor: true,
       preparationNotes: true,
+      priceNote: true,
       serviceType: true,
       serviceTypes: true,
       yogaStyles: true,
@@ -392,7 +396,7 @@ export async function getPublicClassSessionDetail(
       status: true,
       requiresApproval: true,
       origin: true,
-      teacherProfile: { select: { displayName: true } },
+      teacherProfile: { select: { displayName: true, paymentRulesText: true } },
       _count: {
         select: {
           enrollments: { where: occupyingEnrollmentWhere },
@@ -405,8 +409,8 @@ export async function getPublicClassSessionDetail(
     return null;
   }
 
-  const { _count, status, ...fields } = row;
-  return { ...fields, activeEnrollmentCount: _count.enrollments,
+  const { _count, status, teacherProfile, ...fields } = row;
+  return { ...fields, teacherProfile: { displayName: teacherProfile.displayName }, paymentRulesText: teacherProfile.paymentRulesText, activeEnrollmentCount: _count.enrollments,
     canAcceptNewEnrollments: status === "open_for_enrollment" && getClassAvailability({ capacity: row.capacity, activeEnrollmentCount: _count.enrollments, startAt: row.startAt }).state === "open" };
 }
 
@@ -446,6 +450,8 @@ export type PublicSeriesDetail = {
   description: string | null;
   suitableFor: string | null;
   preparationNotes: string | null;
+  priceNote: string | null;
+  paymentRulesText: string | null;
   serviceTypes: string[];
   yogaStyles: string[];
   location: string;
@@ -511,12 +517,13 @@ export async function getPublicSeriesDetail(
       description: true,
       suitableFor: true,
       preparationNotes: true,
+      priceNote: true,
       serviceType: true,
       serviceTypes: true,
       yogaStyles: true,
       requiresApproval: true,
       origin: true,
-      teacherProfile: { select: { displayName: true } },
+      teacherProfile: { select: { displayName: true, paymentRulesText: true } },
     },
   });
 
@@ -533,13 +540,15 @@ export async function getPublicSeriesDetail(
     description: header.description,
     suitableFor: header.suitableFor,
     preparationNotes: header.preparationNotes,
+    priceNote: header.priceNote,
+    paymentRulesText: header.teacherProfile.paymentRulesText,
     serviceTypes: getClassServiceTypes(header),
     yogaStyles: header.yogaStyles,
     location: headerRow.location,
     scheduleLabel: sessionScheduleLabel(headerRow.startAt, headerRow.endAt),
     origin: header.origin,
     requiresApproval: header.requiresApproval,
-    teacherProfile: header.teacherProfile,
+    teacherProfile: { displayName: header.teacherProfile.displayName },
     headerSessionId: headerRow.id,
     headerIsFull: stateOf(headerRow) === "full",
     sessions: shown.map((row) => {

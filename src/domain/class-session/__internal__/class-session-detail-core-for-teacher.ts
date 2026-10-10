@@ -14,6 +14,7 @@ export const teacherFacingClassSessionSelect = {
   description: true,
   suitableFor: true,
   preparationNotes: true,
+  priceNote: true,
   serviceType: true,
   serviceTypes: true,
   yogaStyles: true,
@@ -30,13 +31,25 @@ export const teacherFacingClassSessionSelect = {
   demandRequest: { select: { targetLevel: true } },
   organization: { select: { name: true } },
   recurringClassSeries: { select: { title: true, kind: true } },
-  // 只含 confirmed／pending 的報名（其他狀態不含）。
+  // 含 confirmed／pending 的報名，以及「已有付款紀錄（paid／refunded）」的報名——已付款後被取消的報名仍要讓老師看到並能標記退款
+  // （lightweight-payment-v0 P9；其餘已取消且從未付款的報名不含）。
   enrollments: {
-    where: { status: { in: ["confirmed", "pending"] } },
+    where: {
+      OR: [{ status: { in: ["confirmed", "pending"] } }, { paymentStatus: { not: "unpaid" } }],
+    },
     select: {
       id: true,
       status: true,
       notes: true,
+      // lightweight-payment-v0：付款狀態與對帳資訊；老師可見自己班級報名的 transferNote／paymentNote／退款原因。
+      paymentStatus: true,
+      transferNote: true,
+      paymentNote: true,
+      paymentConfirmedAt: true,
+      paymentConfirmedByRole: true,
+      paymentRefundedAt: true,
+      paymentRefundedByRole: true,
+      paymentRefundReason: true,
       // teacher-class-scheduling 票 10：標示整期或單堂；整期的逐場報名不能在單場個別確認。
       seriesEnrollmentId: true,
       user: { select: { name: true, email: true } },

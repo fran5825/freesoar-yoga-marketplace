@@ -1,6 +1,7 @@
 import type {
   ClassSessionOrigin,
   ClassSessionStatus,
+  EnrollmentPaymentStatus,
   EnrollmentStatus,
   SeriesEnrollmentStatus,
   TermEnrollmentMode,
@@ -18,6 +19,15 @@ export type OwnEnrollment = {
   status: EnrollmentStatus;
   notes: string | null;
   createdAt: Date;
+  // lightweight-payment-v0（付款計畫 P9 欄位揭露表）：學員只看得到付款狀態、報名當下的快照、自己填的轉帳備註與退款原因；
+  // 不含老師的內部備註（paymentNote）與操作者資訊。
+  paymentStatus: EnrollmentPaymentStatus;
+  paymentAccountInfoSnapshot: string | null;
+  paymentRulesSnapshot: string | null;
+  contactInfoSnapshot: string | null;
+  priceNoteSnapshot: string | null;
+  transferNote: string | null;
+  paymentRefundReason: string | null;
   // teacher-class-scheduling 票 12：屬於整期報名時，「我的報名」把即將上課的場次合併成一張期班卡片。
   seriesEnrollment: {
     id: string;
@@ -49,6 +59,13 @@ export async function listOwnEnrollmentsForMember(): Promise<OwnEnrollment[]> {
       status: true,
       notes: true,
       createdAt: true,
+      paymentStatus: true,
+      paymentAccountInfoSnapshot: true,
+      paymentRulesSnapshot: true,
+      contactInfoSnapshot: true,
+      priceNoteSnapshot: true,
+      transferNote: true,
+      paymentRefundReason: true,
       seriesEnrollment: {
         select: { id: true, status: true, recurringClassSeries: { select: { id: true, title: true } } },
       },
@@ -78,6 +95,9 @@ export type MemberFacingClassSession = {
   // member-flow 票 03：適合對象、準備事項（沒填是 null；票 14 起畫面不顯示該段）。
   suitableFor: string | null;
   preparationNotes: string | null;
+  // lightweight-payment-v0：報名前就顯示的價格說明與老師的繳費規則（沒填是 null）。
+  priceNote: string | null;
+  paymentRulesText: string | null;
   serviceType: string | null;
   serviceTypes: string[];
   yogaStyles: string[];
@@ -122,6 +142,7 @@ export async function getClassSessionForMember(
       description: true,
       suitableFor: true,
       preparationNotes: true,
+      priceNote: true,
       serviceType: true,
       serviceTypes: true,
       yogaStyles: true,
@@ -133,7 +154,7 @@ export async function getClassSessionForMember(
       status: true,
       origin: true,
       organization: { select: { name: true } },
-      teacherProfile: { select: { displayName: true, status: true } },
+      teacherProfile: { select: { displayName: true, status: true, paymentRulesText: true } },
       recurringClassSeries: { select: { kind: true, termEnrollmentMode: true } },
       _count: {
         select: {
@@ -176,6 +197,7 @@ export async function getClassSessionForMember(
   return {
     ...classSessionFields,
     teacherProfile: { displayName: teacherProfile.displayName },
+    paymentRulesText: teacherProfile.paymentRulesText,
     canAcceptNewEnrollments: teacherProfile.status === "approved" && classSession.status === "open_for_enrollment" && getClassAvailability({ capacity: classSession.capacity, activeEnrollmentCount: _count.enrollments, startAt: classSession.startAt }).state === "open",
     activeEnrollmentCount: _count.enrollments,
     // 整期的請假確認文字依期班報名方式不同（term_only／term_and_single）。
@@ -188,13 +210,21 @@ export type ClassSessionRosterEntry = {
   id: string;
   memberLabel: string;
   notes: string | null;
+  // lightweight-payment-v0（付款計畫 P9 欄位揭露表）：團主唯讀，只看得到報名狀態、付款狀態與時間戳；
+  // 不含收款備註、退款原因、轉帳備註、任何快照與操作者資訊。
+  status: EnrollmentStatus;
+  paymentStatus: EnrollmentPaymentStatus;
+  paymentConfirmedAt: Date | null;
+  paymentRefundedAt: Date | null;
 };
 
 // D9：僅供 Organizer 的單一 class session 詳情頁使用（own-scoped，檢查
 // organizerProfileId 屬於自己），只回傳 confirmed enrollment。這個函式一次只服務一個
 // class session，沒有 N+1 問題（Teacher 列表頁的 roster 改用
 // class-session/read-service.ts 的 listOwnClassSessionsForTeacher() 一次查詢帶出）。
-export async function listConfirmedEnrollmentsForClassSession(
+// lightweight-payment-v0（P9）：原本只回傳 confirmed；現在也回傳「已有付款紀錄（paid／refunded）」的報名，
+// 讓團主看得到已付款後被取消、已退款的最終結果。呼叫端要自己依 status 區分「已報名」與「已取消」。
+export async function listRosterEnrollmentsForClassSession(
   classSessionId: string,
 ): Promise<ClassSessionRosterEntry[] | null> {
   const currentUser = await requireUser();
@@ -209,8 +239,16 @@ export async function listConfirmedEnrollmentsForClassSession(
   }
 
   const enrollments = await prisma.enrollment.findMany({
-    where: { classSessionId, status: "confirmed" },
-    select: { id: true, notes: true, user: { select: { name: true, email: true } } },
+    where: { classSessionId, OR: [{ status: "confirmed" }, { paymentStatus: { not: "unpaid" } }] },
+    select: {
+      id: true,
+      notes: true,
+      status: true,
+      paymentStatus: true,
+      paymentConfirmedAt: true,
+      paymentRefundedAt: true,
+      user: { select: { name: true, email: true } },
+    },
     orderBy: { createdAt: "asc" },
   });
 
@@ -218,5 +256,9 @@ export async function listConfirmedEnrollmentsForClassSession(
     id: enrollment.id,
     memberLabel: enrollment.user.name ?? enrollment.user.email ?? "會員",
     notes: enrollment.notes,
+    status: enrollment.status,
+    paymentStatus: enrollment.paymentStatus,
+    paymentConfirmedAt: enrollment.paymentConfirmedAt,
+    paymentRefundedAt: enrollment.paymentRefundedAt,
   }));
 }

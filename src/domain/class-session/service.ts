@@ -1069,6 +1069,7 @@ export async function createOwnRecurringClassSeriesForTeacher(
       description: validation.normalized.description,
       suitableFor: validation.normalized.suitableFor,
       preparationNotes: validation.normalized.preparationNotes,
+      priceNote: validation.normalized.priceNote,
       serviceType: validation.normalized.serviceType,
       serviceTypes: validation.normalized.serviceTypes,
       yogaStyles: validation.normalized.yogaStyles,

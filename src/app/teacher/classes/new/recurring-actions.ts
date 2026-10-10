@@ -23,6 +23,7 @@ export async function createOwnRecurringClassSeriesAction(
     description: readFormString(formData, "description"),
     suitableFor: readFormString(formData, "suitableFor"),
     preparationNotes: readFormString(formData, "preparationNotes"),
+    priceNote: readFormString(formData, "priceNote"),
     serviceTypes: readServiceTypesFromForm(formData),
     yogaStyles: readYogaStylesFromForm(formData),
     startTime: readFormString(formData, "startTime"),

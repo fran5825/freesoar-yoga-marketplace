@@ -210,8 +210,15 @@ Teacher 可查看自己的 class session；下方「V1 落地範圍」對 Comple
 | Confirm enrollment | No | No | No | Own | Admin |
 | Decline enrollment | No | No | No | Own | Admin |
 | Mark attended / no_show | No | No | No | No | Admin |
+| View own payment status and enrollment-time payment snapshot | No | Own | No | No | Admin |
+| View payment status of class roster | No | No | Own（唯讀，僅狀態與時間） | Own | Admin |
+| Write own transfer note | No | Own（尚未付款時） | No | No | No |
+| Mark enrollment paid / refunded（手動記錄，不經手金錢） | No | No | No | Own（自己班級） | Admin |
+| Manage own payment settings（收款帳號、繳費規則、聯絡方式） | No | No | No | Own | No |
 
 同一 user 不可重複報名同一 class session。Confirmed enrollments 不可超過 capacity——**已擴充（Gate G3 = A）：`pending` 與 `confirmed` 合計不可超過 capacity**，不是只算 `confirmed`。
+
+**付款記錄（`lightweight-payment-v0`，2026-10-10）**：上表新增的五列都在 server-side 檢查——老師只能對自己班級（`classSession.teacherProfileId`）的報名標記；Admin 可跨老師；團主只讀狀態；學員只能寫自己報名的轉帳備註，且只在報名仍有效、付款狀態仍是 `unpaid` 時成功（原子條件更新）。收款帳號、聯絡方式與繳費規則快照只給該筆報名的學員、授課老師與 Admin，所有團主查詢與 DTO 都不選取。`EnrollmentPaymentEvent` 只有授課老師（自己班級）與 Admin 可讀。
 
 V1 不做完整 Teacher attendance workflow；`attended` / `no_show` 可保留為 future 或 admin-only 後續能力。
 

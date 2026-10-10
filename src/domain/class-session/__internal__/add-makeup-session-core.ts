@@ -13,6 +13,8 @@
 import { prisma } from "@/lib/prisma";
 import { notifyUsers } from "@/domain/notification/create";
 
+import { readTermPaymentSnapshot } from "@/domain/enrollment/payment-snapshot";
+
 import { lockTeacherScheduleAndCheckConflict } from "../conflict-check";
 import { FIXED_DATES_COUNT_MAX } from "../recurring-series-validation";
 import { formatTaipeiShortDatetime, parseTaipeiDatetimeLocal } from "../timezone";
@@ -144,6 +146,7 @@ export async function addMakeupSessionForTeacher(
           description: series.description,
           suitableFor: series.suitableFor,
           preparationNotes: series.preparationNotes,
+          priceNote: series.priceNote,
           serviceType: series.serviceType as string,
           serviceTypes: series.serviceTypes,
           yogaStyles: series.yogaStyles,
@@ -169,6 +172,13 @@ export async function addMakeupSessionForTeacher(
           status: member.status === "confirmed" ? ("confirmed" as const) : ("pending" as const),
         }));
 
+        // lightweight-payment-v0（付款計畫 §6）：補課沿用每位整期學員「整期報名建立當下」的快照，不重新讀老師現在的資料。
+        const snapshotByMember = new Map<string, Awaited<ReturnType<typeof readTermPaymentSnapshot>>>();
+
+        for (const member of termMembers) {
+          snapshotByMember.set(member.id, await readTermPaymentSnapshot(tx, member.id));
+        }
+
         if (termMembers.length > 0) {
           await tx.enrollment.createMany({
             data: termMembers.map((member) => ({
@@ -179,6 +189,7 @@ export async function addMakeupSessionForTeacher(
               consentedAt: member.consentedAt,
               seriesEnrollmentId: member.id,
               seriesEnrollmentSource: "term_created" as const,
+              ...snapshotByMember.get(member.id)!,
             })),
           });
         }

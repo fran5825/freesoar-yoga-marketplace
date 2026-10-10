@@ -58,6 +58,12 @@ export default async function SeriesPage({
         <SeriesSummary series={series} />
         <SeriesSessionList returnTo={returnTo} series={series} />
 
+        {series.priceNote ? (
+          <section aria-labelledby="series-price-heading" className={cardClass}>
+            <h2 className="text-lg font-medium text-ink" id="series-price-heading">價格</h2>
+            <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-ink-soft">{series.priceNote}</p>
+          </section>
+        ) : null}
         <section aria-labelledby="series-description-heading" className={cardClass}>
           <h2 className="text-lg font-medium text-ink" id="series-description-heading">課程說明</h2>
           <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-ink-soft">{series.description || "尚未提供課程說明。"}</p>
@@ -70,6 +76,12 @@ export default async function SeriesPage({
           <h2 className="text-lg font-medium text-ink" id="series-preparation-heading">準備事項</h2>
           <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-ink-soft">{series.preparationNotes || "尚未提供"}</p>
         </section>
+        {series.paymentRulesText ? (
+          <section aria-labelledby="series-payment-rules-heading" className={cardClass}>
+            <h2 className="text-lg font-medium text-ink" id="series-payment-rules-heading">繳費與取消規則</h2>
+            <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-ink-soft">{series.paymentRulesText}</p>
+          </section>
+        ) : null}
       </div>
     </SiteShell>
   );
