@@ -67,11 +67,10 @@ test("dashboard keeps pending work first and every KPI opens a list with exactly
 
   await addAuthSessionCookie(context, (await createUserSession({ email: adminEmail, isAdmin: true })).sessionToken);
 
-  // 待你處理仍在最上方；KPI 卡片連到精準分類；已確認報名沒有連結。
+  // inline-member-actions 票 04：沒有待審項目時「待你處理」整張不出現，最上面直接是數字概況；KPI 卡片連到精準分類；已確認報名沒有連結。
   await page.goto("/admin/dashboard");
-  const pendingTop = (await page.getByRole("heading", { name: "待你處理" }).boundingBox())!.y;
-  const statsTop = (await page.getByRole("heading", { name: "數字概況" }).boundingBox())!.y;
-  expect(pendingTop).toBeLessThan(statsTop);
+  await expect(page.getByRole("heading", { name: "待你處理" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "數字概況" })).toBeVisible();
   const card = (label: string) => page.getByRole("link").filter({ has: page.getByText(label, { exact: true }) });
   await expect(card("已通過的老師")).toHaveAttribute("href", "/admin/teachers?status=approved");
   await expect(card("已公開的需求")).toHaveAttribute("href", "/admin/demands?status=published");

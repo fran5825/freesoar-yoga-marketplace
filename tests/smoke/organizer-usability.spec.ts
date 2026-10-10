@@ -50,8 +50,9 @@ test.describe("organizer usability", () => {
     await addAuthSessionCookie(context, empty.sessionToken);
     await page.goto("/organizer/dashboard");
 
-    await expect(page.getByRole("heading", { name: "待你處理" })).toBeVisible();
-    await expect(page.getByText("目前沒有待處理事項。")).toBeVisible();
+    // inline-member-actions 票 04：沒有輪到團主處理的事項時整張「待你處理」不出現（也沒有空訊息）。
+    await expect(page.getByRole("heading", { name: "待你處理" })).toHaveCount(0);
+    await expect(page.getByText("目前沒有待處理事項。")).toHaveCount(0);
 
     const withDraft = await createOrganizer(testInfo, "pending-draft");
     await createDemandRequest({

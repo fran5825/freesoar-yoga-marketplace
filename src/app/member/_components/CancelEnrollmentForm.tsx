@@ -7,6 +7,8 @@ export function CancelEnrollmentForm({
   classSessionId,
   variant = "cancel",
   termMode = null,
+  returnTo,
+  summaryLabel,
 }: {
   action: (formData: FormData) => Promise<void>;
   enrollmentId: string;
@@ -15,16 +17,21 @@ export function CancelEnrollmentForm({
   variant?: "cancel" | "leave";
   // enrollment-re-enrollment 票 03：請假的說明依期班報名方式不同（只收整期保留名額，整期和單堂都收則釋出給單堂）。
   termMode?: "term_only" | "term_and_single" | null;
+  // inline-member-actions 票 01：就地操作做完要回到哪一頁（共用的 term-row action 讀這個欄位）。
+  returnTo?: string;
+  // 列上的按鈕用短標籤（例如「請假」），預設沿用原本的文字。
+  summaryLabel?: string;
 }) {
   const isLeave = variant === "leave";
 
   return (
     <details className="relative z-10 rounded-xl border border-amber-200 bg-amber-50/60">
       <summary className="cursor-pointer list-none rounded-full px-4 py-2 text-sm font-medium text-amber-800 marker:hidden">
-        {isLeave ? "請假這一堂…" : "取消報名…"}
+        {summaryLabel ?? (isLeave ? "請假這一堂…" : "取消報名…")}
       </summary>
       <form action={action} className="grid gap-3 border-t border-amber-100 p-4">
         <input name="enrollmentId" type="hidden" value={enrollmentId} />
+        {returnTo ? <input name="returnTo" type="hidden" value={returnTo} /> : null}
         {classSessionId ? (
           <input name="classSessionId" type="hidden" value={classSessionId} />
         ) : null}

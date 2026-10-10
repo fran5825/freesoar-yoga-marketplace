@@ -24,7 +24,7 @@ test("single class: cancel, re-enroll, cancel again — every state fits the scr
   if (!created.ok) throw new Error("fixture");
   await addAuthSessionCookie(context, member.sessionToken);
   const noOverflow = async () => expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  const region = page.getByRole("region", { name: "你的報名狀態" });
+  const region = page.getByRole("region", { name: "課程重點" });
 
   for (const round of [1, 2]) {
     await page.goto(`/classes/${sessions[0].id}`);
@@ -36,6 +36,7 @@ test("single class: cancel, re-enroll, cancel again — every state fits the scr
     await expect(region).toContainText("可以重新報名");
     await expect(page.getByText("無法再次報名")).toHaveCount(0);
     await noOverflow();
+    await region.getByText("重新報名…").click();
     await region.getByLabel("我了解此課程非醫療行為，會依自身身體狀況參與。").check();
     await region.getByRole("button", { name: "重新報名" }).click();
     await expect(page.getByText("已重新報名。")).toBeVisible();
@@ -59,12 +60,12 @@ test("term: take leave, cancel the leave, and the reasons read well when it cann
   if (!joined.ok) throw new Error("fixture");
   await addAuthSessionCookie(context, member.sessionToken);
   const noOverflow = async () => expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  const region = page.getByRole("region", { name: "你的報名狀態" });
+  const region = page.getByRole("region", { name: "課程重點" });
 
   await page.goto(`/classes/${term.sessions[0].id}`);
-  await page.getByText("請假這一堂…").click();
-  await page.getByLabel("我確認這一堂要請假。").check();
-  await page.getByRole("button", { name: "確認請假" }).click();
+  await page.getByRole("region", { name: "課程重點" }).getByText("請假", { exact: true }).click();
+  await page.getByRole("region", { name: "課程重點" }).getByLabel("我確認這一堂要請假。").check();
+  await page.getByRole("region", { name: "課程重點" }).getByRole("button", { name: "確認請假" }).click();
   await expect(region).toContainText("可以取消請假");
   await noOverflow();
   await region.getByRole("button", { name: "取消請假" }).click();
@@ -74,9 +75,9 @@ test("term: take leave, cancel the leave, and the reasons read well when it cann
 
   // 退出整期之後，那一堂不能再報名，也不會看到「取消請假」。
   await page.goto(`/classes/${term.sessions[1].id}`);
-  await page.getByText("請假這一堂…").click();
-  await page.getByLabel("我確認這一堂要請假。").check();
-  await page.getByRole("button", { name: "確認請假" }).click();
+  await page.getByRole("region", { name: "課程重點" }).getByText("請假", { exact: true }).click();
+  await page.getByRole("region", { name: "課程重點" }).getByLabel("我確認這一堂要請假。").check();
+  await page.getByRole("region", { name: "課程重點" }).getByRole("button", { name: "確認請假" }).click();
   await expect(region).toContainText("可以取消請假");
   await page.goto(`/classes/terms/${term.series.id}`);
   await page.getByText("退出整期…").click();

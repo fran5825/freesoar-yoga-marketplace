@@ -8,7 +8,7 @@ import { listOwnNotifications } from "@/domain/notification/read-service";
 import { requireUser } from "@/lib/auth/session";
 import { classDetailHref } from "@/lib/navigation/class-return-path";
 
-import { MemberTodoList } from "../_components/MemberTodoList";
+import { MemberTodoList, MemberWaitingList } from "../_components/MemberTodoList";
 
 const RECENT_NOTIFICATIONS_LIMIT = 5;
 const UPCOMING_ENROLLMENTS_LIMIT = 5;
@@ -44,6 +44,9 @@ export default async function MemberDashboardPage() {
           我的總覽
         </h1>
       </header>
+
+      {/* inline-member-actions 票 04：待你處理有事項時是標題後第一張卡。 */}
+      <MemberTodoList returnTo="/member/dashboard" todos={todos} />
 
       <section className="rounded-2xl border border-ink/15 bg-white p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -102,7 +105,7 @@ export default async function MemberDashboardPage() {
         )}
       </section>
 
-      <MemberTodoList returnTo="/member/dashboard" todos={todos} />
+      <MemberWaitingList returnTo="/member/dashboard" todos={todos} />
 
       <section className="rounded-2xl border border-ink/15 bg-white p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">

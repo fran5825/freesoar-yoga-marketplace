@@ -86,10 +86,10 @@ test.describe("leave and withdraw (UI)", () => {
 
     await addAuthSessionCookie(context, member.sessionToken);
     await page.goto(`/classes/${sessions[1].id}`);
-    await expect(page.getByText("這一堂屬於你的整期報名。")).toBeVisible();
-    await page.getByText("請假這一堂…").click();
-    await page.getByLabel("我確認這一堂要請假。").check();
-    await page.getByRole("button", { name: "確認請假" }).click();
+    await expect(page.getByRole("region", { name: "課程重點" })).toContainText("這一堂屬於你的整期報名");
+    await page.getByRole("region", { name: "課程重點" }).getByText("請假", { exact: true }).click();
+    await page.getByRole("region", { name: "課程重點" }).getByLabel("我確認這一堂要請假。").check();
+    await page.getByRole("region", { name: "課程重點" }).getByRole("button", { name: "確認請假" }).click();
     await expect(page.getByText("已請假這一堂，整期的其他堂照常。")).toBeVisible();
 
     const enrollments = await prisma.enrollment.findMany({

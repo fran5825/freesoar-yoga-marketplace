@@ -6,12 +6,13 @@
 // 只逐場列出學員本來就看得到的場次（已開放報名、已完成）；草稿只計入堂數，不列日期與連結。
 // 不回傳任何內部關聯 id 以外的資料（老師只回顯示名稱）。
 
-import type { EnrollmentStatus, SeriesEnrollmentStatus, TermEnrollmentMode } from "@prisma/client";
+import type { EnrollmentStatus, RecurringClassSeriesKind, SeriesEnrollmentStatus, TermEnrollmentMode } from "@prisma/client";
 
 import { getClassAvailability } from "@/domain/class-session/availability";
 import { effectiveCoverUrl, photoRefSelect, teacherAvatarUrl } from "@/domain/teacher-photo/display";
 import { prisma } from "@/lib/prisma";
 import { occupyingEnrollmentWhere } from "./seat-occupancy";
+import { getTermRowControl, type TermRowControl } from "./term-row-controls";
 
 export type TermSessionView = {
   id: string;
@@ -25,6 +26,9 @@ export type TermSessionView = {
   capacity: number;
   activeEnrollmentCount: number;
   ownEnrollmentStatus: EnrollmentStatus | null;
+  // inline-member-actions 票 02：自己在這一堂的報名 id 與就地操作（請假、取消請假、說明），service layer 算好。
+  ownEnrollmentId: string | null;
+  rowControl: TermRowControl;
   // 單堂報名可用（整期和單堂都收、已開放、未開始、有名額、自己還沒有這場的報名）。
   canEnrollSingle: boolean;
 };
@@ -141,10 +145,11 @@ export async function getTermDetailForViewer(
   const ownEnrollments = userId
     ? await prisma.enrollment.findMany({
         where: { userId, classSessionId: { in: series.classSessions.map((session) => session.id) } },
-        select: { classSessionId: true, status: true, cancelledBy: true, seriesEnrollmentId: true },
+        select: { id: true, classSessionId: true, status: true, cancelledBy: true, seriesEnrollmentId: true },
       })
     : [];
   const ownBySession = new Map(ownEnrollments.map((enrollment) => [enrollment.classSessionId, enrollment.status]));
+  const ownRowBySession = new Map(ownEnrollments.map((enrollment) => [enrollment.classSessionId, enrollment]));
   const reEnrollableSessions = new Set(
     ownEnrollments
       .filter((enrollment) => enrollment.status === "cancelled" && enrollment.cancelledBy === "member" && enrollment.seriesEnrollmentId === null)
@@ -179,6 +184,22 @@ export async function getTermDetailForViewer(
         capacity: session.capacity,
         activeEnrollmentCount: session._count.enrollments,
         ownEnrollmentStatus,
+        ownEnrollmentId: ownRowBySession.get(session.id)?.id ?? null,
+        rowControl: ownRowBySession.has(session.id)
+          ? getTermRowControl({
+              status: ownRowBySession.get(session.id)!.status,
+              cancelledBy: ownRowBySession.get(session.id)!.cancelledBy,
+              seriesEnrollmentId: ownRowBySession.get(session.id)!.seriesEnrollmentId,
+              seriesEnrollmentStatus: ownSeriesEnrollment?.status ?? null,
+              termEnrollmentMode: series.termEnrollmentMode,
+              classStatus: session.status,
+              startAt: session.startAt,
+              capacity: session.capacity,
+              occupiedCount: session._count.enrollments,
+              teacherApproved,
+              now,
+            })
+          : ({ kind: "none" } as const),
         canEnrollSingle:
           series.termEnrollmentMode === "term_and_single" && teacherApproved && open && ownEnrollmentStatus === null,
       };
@@ -257,10 +278,19 @@ function computeTermEnrollBlock(
 // teacher-class-scheduling 票 12：單堂課程頁列出同系列其他尚未開始的場次（規格 4.8、Q15）。
 // 只列學員本來就看得到的：已開放報名、老師已通過審核；訪客另外限公開場次（與公開詳情同一條件）。
 // 只回傳 id 與時間，不帶任何其他欄位。
+// inline-member-actions 票 03：整期學員自己的列帶出報名與就地操作（own）；isPublic 讓單堂頁判斷持續開課能不能改成系列頁連結。
+export type SiblingSession = {
+  id: string;
+  startAt: Date;
+  isPublic: boolean;
+  own: { enrollmentId: string; status: EnrollmentStatus; rowControl: TermRowControl } | null;
+};
+
 export async function listVisibleSiblingSessions(
   classSessionId: string,
   signedIn: boolean,
-): Promise<{ id: string; startAt: Date }[]> {
+  userId: string | null = null,
+): Promise<SiblingSession[]> {
   const current = await prisma.classSession.findUnique({
     where: { id: classSessionId },
     select: { recurringClassSeriesId: true },
@@ -270,7 +300,7 @@ export async function listVisibleSiblingSessions(
     return [];
   }
 
-  return prisma.classSession.findMany({
+  const siblings = await prisma.classSession.findMany({
     where: {
       recurringClassSeriesId: current.recurringClassSeriesId,
       id: { not: classSessionId },
@@ -281,7 +311,52 @@ export async function listVisibleSiblingSessions(
     },
     // 不截斷：規格 4.8 要列出同系列其他可見、尚未開始的場次（期班最多 26 堂；2026-10-09 Codex review）。
     orderBy: { startAt: "asc" },
-    select: { id: true, startAt: true },
+    select: {
+      id: true,
+      startAt: true,
+      isPublic: true,
+      status: true,
+      capacity: true,
+      recurringClassSeries: { select: { kind: true, termEnrollmentMode: true } },
+      _count: { select: { enrollments: { where: occupyingEnrollmentWhere } } },
+    },
+  });
+  const ownRows = userId
+    ? await prisma.enrollment.findMany({
+        where: { userId, classSessionId: { in: siblings.map((sibling) => sibling.id) }, seriesEnrollmentId: { not: null } },
+        select: { id: true, classSessionId: true, status: true, cancelledBy: true, seriesEnrollmentId: true, seriesEnrollment: { select: { status: true } } },
+      })
+    : [];
+  const ownBySession = new Map(ownRows.map((row) => [row.classSessionId, row]));
+  const now = new Date();
+
+  return siblings.map((sibling) => {
+    const own = ownBySession.get(sibling.id);
+
+    return {
+      id: sibling.id,
+      startAt: sibling.startAt,
+      isPublic: sibling.isPublic,
+      own: own
+        ? {
+            enrollmentId: own.id,
+            status: own.status,
+            rowControl: getTermRowControl({
+              status: own.status,
+              cancelledBy: own.cancelledBy,
+              seriesEnrollmentId: own.seriesEnrollmentId,
+              seriesEnrollmentStatus: own.seriesEnrollment?.status ?? null,
+              termEnrollmentMode: sibling.recurringClassSeries?.kind === "term" ? sibling.recurringClassSeries.termEnrollmentMode : null,
+              classStatus: sibling.status,
+              startAt: sibling.startAt,
+              capacity: sibling.capacity,
+              occupiedCount: sibling._count.enrollments,
+              teacherApproved: true,
+              now,
+            }),
+          }
+        : null,
+    };
   });
 }
 
@@ -289,6 +364,7 @@ export async function listVisibleSiblingSessions(
 // 讓不屬於系列的課（例如團主團課）只多一次輕量查詢，其餘期班相關查詢只在需要時才做。
 export type ClassSeriesContext = {
   seriesId: string;
+  kind: RecurringClassSeriesKind;
   term: { id: string; title: string; termEnrollmentMode: TermEnrollmentMode; totalCount: number } | null;
 } | null;
 
@@ -315,6 +391,7 @@ export async function getClassSeriesContext(classSessionId: string): Promise<Cla
 
   return {
     seriesId: series.id,
+    kind: series.kind,
     term:
       series.kind === "term" && series.termEnrollmentMode
         ? { id: series.id, title: series.title, termEnrollmentMode: series.termEnrollmentMode, totalCount: series._count.classSessions }

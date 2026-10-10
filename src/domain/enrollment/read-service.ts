@@ -1,6 +1,7 @@
 import type {
   ClassSessionOrigin,
   ClassSessionStatus,
+  EnrollmentCancelledBy,
   EnrollmentPaymentStatus,
   EnrollmentStatus,
   SeriesEnrollmentStatus,
@@ -14,12 +15,17 @@ import { effectiveCoverUrl, photoRefSelect, teacherAvatarUrl } from "@/domain/te
 
 import { getReEnrollState, type ReEnrollState } from "./re-enroll-eligibility";
 import { occupyingEnrollmentWhere } from "./seat-occupancy";
+import { getTermRowControl, type TermRowControl } from "./term-row-controls";
 
 export type OwnEnrollment = {
   id: string;
   status: EnrollmentStatus;
   notes: string | null;
   createdAt: Date;
+  cancelledBy: EnrollmentCancelledBy | null;
+  // inline-member-actions 票 01：整期的這一堂要顯示請假、取消請假還是說明文字（service layer 算好）。
+  rowControl: TermRowControl;
+  termEnrollmentMode: TermEnrollmentMode | null;
   // lightweight-payment-v0（付款計畫 P9 欄位揭露表）：學員只看得到付款狀態、報名當下的快照、自己填的轉帳備註與退款原因；
   // 不含老師的內部備註（paymentNote）與操作者資訊。
   paymentStatus: EnrollmentPaymentStatus;
@@ -53,13 +59,15 @@ export type OwnEnrollment = {
 export async function listOwnEnrollmentsForMember(): Promise<OwnEnrollment[]> {
   const currentUser = await requireUser();
 
-  return prisma.enrollment.findMany({
+  const rows = await prisma.enrollment.findMany({
     where: { userId: currentUser.id },
     select: {
       id: true,
       status: true,
       notes: true,
       createdAt: true,
+      cancelledBy: true,
+      seriesEnrollmentId: true,
       paymentStatus: true,
       paymentAccountInfoSnapshot: true,
       paymentRulesSnapshot: true,
@@ -78,6 +86,10 @@ export async function listOwnEnrollmentsForMember(): Promise<OwnEnrollment[]> {
           endAt: true,
           location: true,
           status: true,
+          capacity: true,
+          recurringClassSeries: { select: { kind: true, termEnrollmentMode: true } },
+          teacherProfile: { select: { status: true } },
+          _count: { select: { enrollments: { where: occupyingEnrollmentWhere } } },
           reviews: {
             where: { reviewerUserId: currentUser.id },
             select: { id: true, rating: true, comment: true },
@@ -86,6 +98,29 @@ export async function listOwnEnrollmentsForMember(): Promise<OwnEnrollment[]> {
       },
     },
     orderBy: { classSession: { startAt: "asc" } },
+  });
+
+  return rows.map(({ seriesEnrollmentId, classSession, ...row }) => {
+    const { capacity, recurringClassSeries, teacherProfile, _count, ...sessionFields } = classSession;
+    const termEnrollmentMode = recurringClassSeries?.kind === "term" ? recurringClassSeries.termEnrollmentMode : null;
+
+    return {
+      ...row,
+      termEnrollmentMode,
+      rowControl: getTermRowControl({
+        status: row.status,
+        cancelledBy: row.cancelledBy,
+        seriesEnrollmentId,
+        seriesEnrollmentStatus: row.seriesEnrollment?.status ?? null,
+        termEnrollmentMode,
+        classStatus: sessionFields.status,
+        startAt: sessionFields.startAt,
+        capacity,
+        occupiedCount: _count.enrollments,
+        teacherApproved: teacherProfile.status === "approved",
+      }),
+      classSession: sessionFields,
+    };
   });
 }
 
@@ -121,7 +156,8 @@ export type MemberFacingClassSession = {
   teacherAvatarUrl: string | null;
   // teacher-class-scheduling 票 09：屬於整期報名時有值（取消這一堂就是「請假」）。
   // enrollment-re-enrollment 票 02：已取消的報名能不能重新報名，由 service layer 一次算好（spec 4.6）。
-  ownEnrollment: { id: string; status: EnrollmentStatus; seriesEnrollmentId: string | null; reEnroll: ReEnrollState } | null;
+  // inline-member-actions 票 03：rowControl＝整期的這一堂要顯示請假、取消請假還是說明（不屬於整期時是 none）。
+  ownEnrollment: { id: string; status: EnrollmentStatus; seriesEnrollmentId: string | null; reEnroll: ReEnrollState; rowControl: TermRowControl } | null;
   termEnrollmentMode: TermEnrollmentMode | null;
   requiresApproval: boolean;
   canAcceptNewEnrollments: boolean;
@@ -186,6 +222,18 @@ export async function getClassSessionForMember(
         id: ownRow.id,
         status: ownRow.status,
         seriesEnrollmentId: ownRow.seriesEnrollmentId,
+        rowControl: getTermRowControl({
+          status: ownRow.status,
+          cancelledBy: ownRow.cancelledBy,
+          seriesEnrollmentId: ownRow.seriesEnrollmentId,
+          seriesEnrollmentStatus: ownRow.seriesEnrollment?.status ?? null,
+          termEnrollmentMode,
+          classStatus: classSession.status,
+          startAt: classSession.startAt,
+          capacity: classSession.capacity,
+          occupiedCount: _count.enrollments,
+          teacherApproved: teacherProfile.status === "approved",
+        }),
         reEnroll: getReEnrollState({
           status: ownRow.status,
           cancelledBy: ownRow.cancelledBy,

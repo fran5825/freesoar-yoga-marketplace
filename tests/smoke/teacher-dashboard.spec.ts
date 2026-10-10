@@ -146,13 +146,10 @@ test.describe("/teacher/dashboard smoke", () => {
         await expect(page.getByRole("heading", { name: "待你處理" })).toHaveCount(0);
         await expect(page.getByRole("main").locator('a[href="/teacher/classes"]')).toHaveCount(0);
       } else {
-        // teacher-usability 第 08 票：通過審核（或暫停中）才有「待你處理」與「看全部課程」。
-        await expect(page.getByRole("heading", { name: "待你處理" })).toBeVisible();
-        await expect(page.getByText("目前沒有待處理事項。")).toBeVisible();
-        await expect(page.getByRole("link", { name: "看全部課程 →" })).toHaveAttribute(
-          "href",
-          "/teacher/classes",
-        );
+        // inline-member-actions 票 04：沒有待處理事項時「待你處理」整張不出現（含空訊息），課程入口在導覽列。
+        await expect(page.getByRole("heading", { name: "待你處理" })).toHaveCount(0);
+        await expect(page.getByText("目前沒有待處理事項。")).toHaveCount(0);
+        expect(await page.locator('a[href="/teacher/classes"]').count()).toBeGreaterThan(0);
       }
 
       if (statusCase.status === "approved") {

@@ -19,9 +19,14 @@ export function classTimeLine(startAt: Date, endAt: Date): string {
 export function ClassSummary({
   classSession,
   termPeriod = null,
+  statusSlot = null,
+  actionsSlot = null,
 }: {
   classSession: PublicClassSessionDetail & { organization?: { name: string } | null };
   termPeriod?: string | null;
+  // inline-member-actions 票 03：已報名學員的狀態（卡片頂端）與就地操作／連結（卡片底部）。
+  statusSlot?: ReactNode;
+  actionsSlot?: ReactNode;
 }) {
   const items: [string, ReactNode][] = [
     ...(termPeriod ? ([["期間", termPeriod]] as [string, ReactNode][]) : []),
@@ -34,10 +39,12 @@ export function ClassSummary({
   ];
   return (
     <section aria-label="課程重點" className="rounded-2xl border border-ink/15 bg-white p-5 sm:p-6">
+      {statusSlot ? <div className="mb-4 border-b border-ink/10 pb-4">{statusSlot}</div> : null}
       <dl className="grid gap-4 text-sm sm:grid-cols-2">
         {items.map(([label, value]) => <div key={label} className="min-w-0"><dt className="font-medium text-ink">{label}</dt><dd className="mt-1 break-words leading-6 text-ink-soft">{value}</dd></div>)}
         <div className="min-w-0"><dt className="font-medium text-ink">報名方式</dt><dd className="mt-1 leading-6 text-ink-soft">{classSession.requiresApproval ? "需老師確認。送出申請後，確認結果會顯示在「通知」。" : "確認報名後即成立。"}</dd></div>
       </dl>
+      {actionsSlot ? <div className="mt-4 grid gap-3">{actionsSlot}</div> : null}
     </section>
   );
 }

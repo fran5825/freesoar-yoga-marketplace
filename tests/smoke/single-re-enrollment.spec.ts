@@ -154,8 +154,9 @@ test.describe("single re-enrollment (UI)", () => {
     await page.getByRole("button", { name: "確認取消" }).click();
     await expect(page.getByText("報名已取消。")).toBeVisible();
 
-    const region = page.getByRole("region", { name: "你的報名狀態" });
+    const region = page.getByRole("region", { name: "課程重點" });
     await expect(region).toContainText("可以重新報名");
+    await region.getByText("重新報名…").click();
     await region.getByLabel("備註（選填）").fill("想再來一次");
     await region.getByLabel("我了解此課程非醫療行為，會依自身身體狀況參與。").check();
     await region.getByRole("button", { name: "重新報名" }).click();
@@ -170,7 +171,8 @@ test.describe("single re-enrollment (UI)", () => {
     await addAuthSessionCookie(context, member.sessionToken);
 
     await page.goto(`/classes/${session.id}`);
-    const region = page.getByRole("region", { name: "你的報名狀態" });
+    const region = page.getByRole("region", { name: "課程重點" });
+    await region.getByText("重新報名…").click();
     await region.getByLabel("我了解此課程非醫療行為，會依自身身體狀況參與。").check();
     await region.getByRole("button", { name: "重新送出報名申請" }).click();
     await expect(page.getByText("重新報名已送出，等待老師確認。")).toBeVisible();
@@ -181,7 +183,7 @@ test.describe("single re-enrollment (UI)", () => {
     const { teacher, member, session, enrollmentId } = await seedEnrolled("ui-blocked", testInfo, { capacity: 1 });
     const other = await seedMember(runId(testInfo, "ui-blocked-other"), "b");
     await addAuthSessionCookie(context, member.sessionToken);
-    const region = page.getByRole("region", { name: "你的報名狀態" });
+    const region = page.getByRole("region", { name: "課程重點" });
     const noForm = async () => {
       await expect(region.getByRole("button", { name: /重新報名|重新送出/ })).toHaveCount(0);
       await expect(region.getByLabel("備註（選填）")).toHaveCount(0);

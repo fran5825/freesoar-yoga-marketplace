@@ -97,10 +97,12 @@ export default async function AdminDashboardPage() {
       <header className="border-b border-ink/15 pb-6">
         <h1 className="text-3xl font-semibold tracking-tight text-ink">總覽</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
-          最上方是需要你審核的事，等最久的排在最前面。
+          有需要你審核的事會放在最上方，等最久的排在最前面。
         </p>
       </header>
 
+      {/* inline-member-actions 票 04：沒有待審項目就整張不出現，最上面直接是數字概況。 */}
+      {hasPending ? (
       <section
         aria-labelledby="pending-title"
         className="grid gap-5 rounded-2xl border border-ink/15 bg-white p-6"
@@ -109,7 +111,7 @@ export default async function AdminDashboardPage() {
           待你處理
         </h2>
 
-        {hasPending ? (
+        {(
           <>
             {pending.teacherApplications.total > 0 ? (
               <PendingGroup
@@ -134,10 +136,9 @@ export default async function AdminDashboardPage() {
               />
             ) : null}
           </>
-        ) : (
-          <p className="text-sm text-ink-soft">目前沒有待處理事項。</p>
         )}
       </section>
+      ) : null}
 
       <section className="grid gap-4">
         <h2 className="text-xl font-semibold text-ink">數字概況</h2>

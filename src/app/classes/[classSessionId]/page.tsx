@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { getClassSessionForMember } from "@/domain/enrollment/read-service";
+import { getClassSessionForMember, type MemberFacingClassSession } from "@/domain/enrollment/read-service";
 import {
   getClassSeriesContext,
   getTermDetailForViewer,
@@ -9,6 +9,7 @@ import {
 import { formatTaipeiDatetime, formatTaipeiShortDatetime } from "@/domain/class-session/timezone";
 import { getPublicClassSessionDetail } from "@/domain/class-session/public-read-service";
 import { getClassAvailability } from "@/domain/class-session/availability";
+import { SERIES_SHOW_MAX, isPublicSeriesPageAvailable } from "@/domain/class-session/public-read-service";
 import { getCurrentUser } from "@/lib/auth/session";
 import { classDetailHref, classReturnLabel, safeClassReturnPath, termDetailHref } from "@/lib/navigation/class-return-path";
 import { SiteShell } from "../../_components/site-shell";
@@ -17,13 +18,16 @@ import { DetailCover } from "../_components/ClassCover";
 import { ClassOriginTag } from "../_components/ClassOriginTag";
 import { ClassSummary } from "../_components/ClassSummary";
 import { ClassEnrollmentPanel } from "../_components/ClassEnrollmentPanel";
+import { ClassOwnEnrollmentActions, ClassOwnEnrollmentStatus } from "../_components/ClassOwnEnrollment";
+import { ScrollToTarget } from "../../_components/ScrollToTarget";
+import { TermRowAction, TermRowBadge } from "../../member/_components/TermRowControls";
 import { ClassSignInGuide } from "../_components/ClassSignInGuide";
 import { ClassInfoSections } from "../_components/ClassInfoSections";
 import { TermClassEnrollPanel } from "../_components/TermClassEnrollPanel";
 
 export default async function MemberClassSessionPage({ params, searchParams }: {
   params: Promise<{ classSessionId: string }>;
-  searchParams?: Promise<{ result?: string; message?: string; returnTo?: string; enroll?: string }>;
+  searchParams?: Promise<{ result?: string; message?: string; returnTo?: string; enroll?: string; open?: string; focus?: string }>;
 }) {
   const [{ classSessionId }, query, user] = await Promise.all([params, searchParams, getCurrentUser()]);
   // 保留 Visitor / Member 各自既有的可見性與權限查詢條件。
@@ -48,7 +52,7 @@ export default async function MemberClassSessionPage({ params, searchParams }: {
   if (term?.termEnrollmentMode === "term_only" && !ownEnrollment) redirect(returnTo.startsWith(`/classes/terms/${term.id}`) ? returnTo : termDetailHref(term.id, returnTo));
   const feedback = query?.result && query.message ? { success: query.result === "success", message: query.message } : null;
   const [siblings, termDetail] = await Promise.all([
-    seriesContext ? listVisibleSiblingSessions(classSession.id, Boolean(user)) : Promise.resolve([]),
+    seriesContext ? listVisibleSiblingSessions(classSession.id, Boolean(user), user?.id ?? null) : Promise.resolve([]),
     term ? getTermDetailForViewer(term.id, user?.id ?? null) : Promise.resolve(null),
   ]);
   // 票 14（Q2）：屬於期班、還沒報名這一堂時，用合併後的期班報名區（「我要報名」展開、二選一）。
@@ -60,6 +64,26 @@ export default async function MemberClassSessionPage({ params, searchParams }: {
   const canEnroll = classSession.canAcceptNewEnrollments && !ownEnrollment;
   const openForm = query?.enroll === "1" || (feedback !== null && !feedback.success);
   const detailHref = classDetailHref(classSession.id, returnTo);
+  // inline-member-actions 票 03（spec I8）：持續開課且系列頁看得到時，「同系列的其他場次」整張卡改成第一張卡裡的連結。
+  // 只有這位使用者看得到的其他場次全部公開、連同這一堂沒超過系列頁上限時才換（否則會有日期失去入口），條件與系列頁一致。
+  const seriesLink =
+    seriesContext?.kind === "continuous" &&
+    siblings.length > 0 &&
+    siblings.every((sibling) => sibling.isPublic) &&
+    siblings.length + 1 <= SERIES_SHOW_MAX &&
+    (await isPublicSeriesPageAvailable(seriesContext.seriesId))
+      ? `/classes/series/${seriesContext.seriesId}`
+      : null;
+  // 已登入時 classSession 來自 getClassSessionForMember（含自己的報名與就地操作資料）。
+  const memberSession = user ? (classSession as MemberFacingClassSession) : null;
+  const ownStatusSlot = memberSession?.ownEnrollment ? <ClassOwnEnrollmentStatus classSession={memberSession} /> : null;
+  const summaryActions =
+    memberSession?.ownEnrollment || seriesLink ? (
+      <>
+        {memberSession?.ownEnrollment ? <ClassOwnEnrollmentActions classSession={memberSession} detailHref={detailHref} returnTo={returnTo} /> : null}
+        {seriesLink ? <Link className="w-fit py-2 text-sm font-medium text-clay underline" href={seriesLink}>查看這個課程的所有日期</Link> : null}
+      </>
+    ) : null;
   const enrollHref = `${detailHref}${detailHref.includes("?") ? "&" : "?"}enroll=1#enroll`;
   const availability = getClassAvailability(classSession);
   return (
@@ -72,8 +96,9 @@ export default async function MemberClassSessionPage({ params, searchParams }: {
           <div className="mt-3 flex flex-wrap items-center gap-3"><ClassOriginTag origin={classSession.origin} /><ClassAvailabilityBadge availability={availability} canAcceptNewEnrollments={classSession.canAcceptNewEnrollments} /></div>
           {canEnroll && !useTermPanel ? <a className="mt-4 inline-flex min-h-11 items-center rounded-full bg-pine px-5 py-3 text-sm font-medium text-white hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-clay" href="#enroll">{classSession.requiresApproval ? "申請報名" : "我要報名"}</a> : null}
         </header>
-        {feedback && !useTermPanel ? <section aria-live="polite" className={feedback.success ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900" : "rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"}>{feedback.message}{feedback.success ? <> <Link className="font-medium underline" href="/member/enrollments">查看我的報名</Link></> : null}</section> : null}
-        <ClassSummary classSession={classSession} termPeriod={termPeriod} />
+        {feedback && !useTermPanel ? <section aria-live="polite" id="action-feedback" className={feedback.success ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900" : "rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"}>{feedback.message}{feedback.success ? <> <Link className="font-medium underline" href="/member/enrollments">查看我的報名</Link></> : null}</section> : null}
+        <ScrollToTarget targetId={query?.focus} />
+        <ClassSummary actionsSlot={summaryActions} classSession={classSession} statusSlot={ownStatusSlot} termPeriod={termPeriod} />
         {useTermPanel && term ? (
           <TermClassEnrollPanel
             classSession={classSession}
@@ -84,7 +109,7 @@ export default async function MemberClassSessionPage({ params, searchParams }: {
             term={term}
             termDetail={termDetail}
           />
-        ) : (
+        ) : ownEnrollment ? null : (
           <ClassEnrollmentPanel classSession={classSession} signedIn={Boolean(user)} returnTo={returnTo} />
         )}
         {/* 票 14（Q6）：課程說明、適合對象、準備事項有填才顯示（取代學員流程票 03 的「尚未提供」）。 */}
@@ -96,15 +121,19 @@ export default async function MemberClassSessionPage({ params, searchParams }: {
           suitableFor={classSession.suitableFor}
         />
         {/* teacher-class-scheduling 票 12：同系列其他尚未開始、學員看得到的場次。 */}
-        {siblings.length > 0 ? (
+        {siblings.length > 0 && !seriesLink ? (
           <section aria-labelledby="sibling-heading" className="min-w-0 rounded-2xl border border-ink/15 bg-white p-5 sm:p-6">
             <h2 id="sibling-heading" className="text-lg font-medium text-ink">同系列的其他場次</h2>
             <ul aria-label="同系列的其他場次" className="mt-3 grid gap-1">
               {siblings.map((sibling) => (
-                <li key={sibling.id}>
-                  <Link className="inline-flex min-h-11 items-center text-sm text-ink underline-offset-4 hover:underline" href={`/classes/${sibling.id}`}>
-                    {formatTaipeiDatetime(sibling.startAt)}
-                  </Link>
+                <li className="grid scroll-mt-6 gap-1" id={sibling.own ? `session-row-${sibling.own.enrollmentId}` : undefined} key={sibling.id}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Link className="inline-flex min-h-11 items-center text-sm text-ink underline-offset-4 hover:underline" href={`/classes/${sibling.id}`}>
+                      {formatTaipeiDatetime(sibling.startAt)}
+                    </Link>
+                    {sibling.own ? <TermRowBadge control={sibling.own.rowControl} status={sibling.own.status} /> : null}
+                  </div>
+                  {sibling.own ? <TermRowAction classSessionId={sibling.id} control={sibling.own.rowControl} enrollmentId={sibling.own.enrollmentId} returnTo={detailHref} termMode={term?.termEnrollmentMode ?? null} /> : null}
                 </li>
               ))}
             </ul>

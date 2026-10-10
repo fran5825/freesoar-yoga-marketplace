@@ -121,7 +121,7 @@ test.describe("enrollment smoke", () => {
     await expect(history).toContainText("課程已取消");
     await expect(history).toContainText("Test Studio");
     await expect(history.getByRole("link")).toHaveCount(0);
-    await expect(page.locator(`#enrollment-${second.enrollmentId}`).getByRole("link")).toHaveAttribute("href", `/classes/${cancelledOwn.classSessionId}`);
+    await expect(page.locator(`#enrollment-${second.enrollmentId}`).getByRole("link")).toHaveAttribute("href", new RegExp(`^/classes/${cancelledOwn.classSessionId}([?]|$)`));
   });
 
   test("a suspended teacher's existing member detail remains readable but offers no enrollment form or internal status", async ({ page, context }, testInfo) => {
@@ -439,7 +439,8 @@ test.describe("enrollment smoke", () => {
     await page.goto("/member/enrollments");
     await expect(page.getByText("目前沒有任何報名")).toBeVisible();
     await expect(page.getByText(`Class ${testRunId}`)).toBeHidden();
-    await expect(page.getByText("目前沒有待處理事項")).toBeVisible();
+    await expect(page.getByText("目前沒有待處理事項")).toBeHidden();
+    await expect(page.getByRole("region", { name: "待你處理" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "去找一堂課" })).toHaveAttribute(
       "href",
       "/classes",
@@ -546,7 +547,7 @@ test.describe("enrollment smoke", () => {
     await page
       .locator(`#enrollment-${pending.enrollmentId}`)
       .click({ position: { x: 8, y: 8 } });
-    await expect(page).toHaveURL(new RegExp(`/classes/${pendingClassId}$`));
+    await expect(page).toHaveURL(new RegExp(`/classes/${pendingClassId}([?].*)?$`));
 
     // 留下評價後，該筆從「待你處理」消失。
     await page.goto("/member/enrollments");
@@ -556,7 +557,7 @@ test.describe("enrollment smoke", () => {
       .click();
     await page.locator(`#rating-${done.enrollmentId}`).selectOption("5");
     await page.getByRole("button", { name: "送出評價" }).click();
-    await expect(page.getByRole("region", { name: "待你處理" })).not.toContainText("待評價");
+    await expect(page.getByRole("region", { name: "待你處理" })).toHaveCount(0);
   });
 
   test("IDOR: an organizer cannot view another organizer's class session detail (404)", async ({

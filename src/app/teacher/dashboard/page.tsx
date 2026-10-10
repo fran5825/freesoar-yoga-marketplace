@@ -103,6 +103,8 @@ export default async function TeacherDashboardPage() {
         }),
       ]
     : [];
+  const actionItems = todoItems.filter((item) => item.kind === "action");
+  const waitingItems = todoItems.filter((item) => item.kind === "waiting");
 
   return (
     <div className="flex flex-col gap-8">
@@ -121,7 +123,9 @@ export default async function TeacherDashboardPage() {
         </div>
       </header>
 
-      {hasClassCapability ? (
+      {/* inline-member-actions 票 04：「待你處理」只放輪到老師處理的事項（action），沒有就整張不出現；
+          等待對方的事項（waiting）放進緊接在後的「等待對方回覆」卡，同樣沒有就不出現。 */}
+      {hasClassCapability && actionItems.length > 0 ? (
         <section
           aria-labelledby="todo-title"
           className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6"
@@ -134,33 +138,19 @@ export default async function TeacherDashboardPage() {
               看全部課程 →
             </Link>
           </div>
-          {todoItems.length === 0 ? (
-            <p className="text-sm leading-6 text-ink-soft">目前沒有待處理事項。</p>
-          ) : (
-            <ul className="grid gap-3">
-              {todoItems.map((item) => (
-                <li key={`${item.href}-${item.label}`}>
-                  <Link
-                    className={`grid gap-1 rounded-2xl border p-4 transition hover:bg-sand ${
-                      item.kind === "action"
-                        ? "border-clay/30 bg-clay-tint"
-                        : "border-amber-200 bg-amber-50"
-                    }`}
-                    href={item.href}
-                  >
-                    <span
-                      className={`text-sm font-medium ${
-                        item.kind === "action" ? "text-clay-deep" : "text-amber-900"
-                      }`}
-                    >
-                      {item.label}
-                    </span>
-                    <span className="text-sm leading-6 text-ink-soft">{item.message}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
+          <TodoLinks items={actionItems} />
+        </section>
+      ) : null}
+
+      {hasClassCapability && waitingItems.length > 0 ? (
+        <section
+          aria-labelledby="waiting-title"
+          className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6"
+        >
+          <h2 className="text-lg font-medium text-ink" id="waiting-title">
+            等待對方回覆
+          </h2>
+          <TodoLinks items={waitingItems} />
         </section>
       ) : null}
 
@@ -306,4 +296,26 @@ function formatDateTime(value: Date) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(value);
+}
+
+function TodoLinks({ items }: { items: TeacherTodoItem[] }) {
+  return (
+    <ul className="grid gap-3">
+      {items.map((item) => (
+        <li key={`${item.href}-${item.label}`}>
+          <Link
+            className={`grid gap-1 rounded-2xl border p-4 transition hover:bg-sand ${
+              item.kind === "action" ? "border-clay/30 bg-clay-tint" : "border-amber-200 bg-amber-50"
+            }`}
+            href={item.href}
+          >
+            <span className={`text-sm font-medium ${item.kind === "action" ? "text-clay-deep" : "text-amber-900"}`}>
+              {item.label}
+            </span>
+            <span className="text-sm leading-6 text-ink-soft">{item.message}</span>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
 }

@@ -613,3 +613,21 @@ export async function getPublicClassYogaStyles(): Promise<string[]> {
   });
   return [...new Set(rows.flatMap(row => row.yogaStyles))].sort((a, b) => a.localeCompare(b, "zh-Hant"));
 }
+
+// inline-member-actions 票 03：單堂頁能不能把「同系列的其他場次」換成系列頁連結。條件與 getPublicSeriesDetail 完全相同
+// （持續開課，且至少有一場未來、公開、狀態符合、老師 approved 的場次），避免連到 404。
+export async function isPublicSeriesPageAvailable(recurringClassSeriesId: string): Promise<boolean> {
+  const count = await prisma.classSession.count({
+    where: {
+      recurringClassSeriesId,
+      recurringClassSeries: { kind: "continuous" },
+      isPublic: true,
+      status: { in: PUBLIC_STATUS_FILTER },
+      teacherProfile: { status: "approved" },
+      startAt: { gt: new Date() },
+    },
+    take: 1,
+  });
+
+  return count > 0;
+}

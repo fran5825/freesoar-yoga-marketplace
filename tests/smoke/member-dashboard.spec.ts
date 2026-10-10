@@ -135,7 +135,8 @@ test.describe("/member dashboard smoke", () => {
     await expect(page.getByRole("heading", { name: "我的總覽" })).toBeVisible();
     await expect(page.getByText("目前沒有任何通知")).toBeVisible();
     await expect(page.getByText("目前沒有任何報名")).toBeVisible();
-    await expect(page.getByText("目前沒有待處理事項")).toBeVisible();
+    await expect(page.getByText("目前沒有待處理事項")).toBeHidden();
+    await expect(page.getByRole("region", { name: "待你處理" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "去找一堂課" })).toHaveAttribute(
       "href",
       "/classes",
@@ -246,7 +247,7 @@ test.describe("/member dashboard smoke", () => {
     await page.goto(dashboardPath);
 
     // 等候區：2 筆 pending；本人待處理區不混入等候事項。
-    await expect(page.getByRole("region", { name: "待你處理" })).toContainText("目前沒有待處理事項");
+    await expect(page.getByRole("region", { name: "待你處理" })).toHaveCount(0);
     const todo = page.getByRole("region", { name: "等待老師確認" });
     await expect(todo.getByText("等老師確認")).toHaveCount(2);
     await expect(todo).toContainText(`Class ${testRunId}-pending-1`);
@@ -261,7 +262,7 @@ test.describe("/member dashboard smoke", () => {
     // 即將上課的卡片整張是連結，點了進課程詳情。
     await expect(
       page.getByRole("link", { name: new RegExp(`Class ${testRunId}-future-1`) }),
-    ).toHaveAttribute("href", `/classes/${futureClassSessions[0].id}`);
+    ).toHaveAttribute("href", new RegExp(`^/classes/${futureClassSessions[0].id}([?]|$)`));
 
     // 已過去的 confirmed 報名不進入即將到來清單。
     await expect(page.getByText(`Class ${testRunId}-past`)).toBeHidden();

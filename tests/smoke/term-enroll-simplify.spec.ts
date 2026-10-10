@@ -107,7 +107,7 @@ test.describe("single class page of a term (Q1, Q2, Q7, Q9)", () => {
     const memberPage = await memberContext.newPage();
     await memberPage.goto(`/classes/${sessions[1].id}`);
     await expect(memberPage).toHaveURL(new RegExp(`/classes/${sessions[1].id}$`));
-    await expect(memberPage.getByText("請假這一堂…")).toBeVisible();
+    await expect(memberPage.getByRole("region", { name: "課程重點" }).getByText("請假", { exact: true })).toBeVisible();
     await memberContext.close();
 
     const teacherContext = await browser.newContext();

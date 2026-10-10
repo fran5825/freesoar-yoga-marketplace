@@ -152,12 +152,15 @@ test.describe("teacher dashboard todo list", () => {
     const todo = page.getByRole("region", { name: "待你處理" });
     await expect(todo).toBeVisible();
     const links = todo.getByRole("link").filter({ hasNotText: "看全部課程" });
-    await expect(links).toHaveCount(2);
+    await expect(links).toHaveCount(1);
     await expect(links.nth(0)).toHaveAttribute("href", `/teacher/classes/${created.classSessionId}`);
     await expect(links.nth(0)).toContainText("1 筆報名待確認");
-    await expect(links.nth(1)).toHaveAttribute("href", `/teacher/demands/${demand.id}`);
-    await expect(links.nth(1)).toContainText("等待團主建立課程");
-    await expect(links.nth(1)).toContainText(`已選定需求 ${testRunId}`);
+    // inline-member-actions 票 04：等待團主建立課程是等待對方，放在緊接在後的「等待對方回覆」卡，不算待你處理。
+    const waiting = page.getByRole("region", { name: "等待對方回覆" });
+    await expect(waiting.getByRole("link")).toHaveCount(1);
+    await expect(waiting.getByRole("link").nth(0)).toHaveAttribute("href", `/teacher/demands/${demand.id}`);
+    await expect(waiting.getByRole("link").nth(0)).toContainText("等待團主建立課程");
+    await expect(waiting.getByRole("link").nth(0)).toContainText(`已選定需求 ${testRunId}`);
 
     await links.nth(0).click();
     await expect(page).toHaveURL(new RegExp(`/teacher/classes/${created.classSessionId}$`));
