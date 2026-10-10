@@ -41,3 +41,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local photo storage (STORAGE_DRIVER=local, dev/test only)
+/.local-storage/

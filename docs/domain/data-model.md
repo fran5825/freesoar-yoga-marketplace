@@ -454,6 +454,23 @@ Rules：
 - 鎖定順序：`RecurringClassSeries` → 剩餘場次（依 id）→ `TeacherProfile`；取得場次鎖後才確認名額與既有報名。
 - 通知沿用 `enrollment_confirmed`／`enrollment_pending_review`，課名帶「（整期 N 堂）」，一次整期報名只發一則（需確認時老師也收到一則）。
 
+## TeacherPhoto
+
+**已落地**（`teacher-showcase-photos` 票 02，2026-10-10，migration `20261010002141_teacher_photo`，ADR 0007）。老師的照片。檔案本身存在 Cloudflare R2（開發與測試用本機資料夾），資料庫只記錄倉庫裡的位置。
+
+Fields:
+
+- id
+- teacherProfileId（FK → `TeacherProfile`，`onDelete: Cascade`）
+- storageKey（unique；應用程式產生的隨機 key `photos/<uuid>.webp`，不含老師姓名、id 或原始檔名）
+- width、height（處理後的像素）
+- sortOrder（老師自己排序，預設 0）
+- status（`TeacherPhotoStatus`：`active` 有效／`removed_by_admin` 管理員下架，保留紀錄但所有頁面一律不顯示）
+- removedReason、removedAt、removedByUserId（下架時填寫）
+- createdAt
+
+索引 `(teacherProfileId, status, sortOrder)`。規則：每位老師最多 5 張**有效**照片（在鎖住老師資料列後檢查，同時上傳不會超過）；只有 `approved` 老師能上傳；上傳時檢查實際格式（JPG／PNG／WebP）、5 MB、像素上限，自動轉正方向、長邊縮到 1600 px、輸出 WebP，**不保留任何 metadata**（GPS 與裝置資訊不會被保存）。檔案先寫入儲存服務再寫資料庫，資料庫寫入失敗或超過上限時刪除剛寫入的檔案。尚未實作（後續票）：老師頭像（`TeacherProfile.avatarPhotoId`）、課程封面（`coverPhotoId`）、管理員下架通知。
+
 ## EnrollmentPaymentEvent
 
 **已落地**（`lightweight-payment-v0`，2026-10-10）。只新增、不修改、不刪除的付款事件紀錄：`Enrollment` 上的付款欄位只代表「目前這一輪」，歷史靠這張表。

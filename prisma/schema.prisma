@@ -99,6 +99,7 @@ model TeacherProfile {
   availabilityExceptions AvailabilityException[]
   recurringClassSeries   RecurringClassSeries[]
   classProposals         OrganizerClassProposal[]
+  photos                 TeacherPhoto[]
 }
 
 // teacher-availability D2/D11：不含原始草稿的 isRecurring 欄位——這個 model 本身就是
@@ -652,4 +653,31 @@ enum NotificationStatus {
   sent
   failed
   cancelled
+}
+
+// teacher-showcase-photos 票 02（ADR 0007）：老師的照片。檔案本身存在 Cloudflare R2（或開發用的本機資料夾），
+// 這裡只記錄「倉庫裡的位置（storageKey，不可猜測的隨機 key）」與基本資訊。
+// 老師最多 5 張有效照片（應用層在鎖定老師資料列後檢查）；管理員下架的照片保留紀錄（status = removed_by_admin），
+// 但所有頁面一律不顯示。課程封面與老師頭像引用它，刪除或下架時引用會回到空（票 03、04）。
+enum TeacherPhotoStatus {
+  active
+  removed_by_admin
+}
+
+model TeacherPhoto {
+  id               String             @id @default(cuid())
+  teacherProfileId String
+  storageKey       String             @unique
+  width            Int
+  height           Int
+  sortOrder        Int                @default(0)
+  status           TeacherPhotoStatus @default(active)
+  removedReason    String?
+  removedAt        DateTime?
+  removedByUserId  String?
+  createdAt        DateTime           @default(now())
+
+  teacherProfile TeacherProfile @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
+
+  @@index([teacherProfileId, status, sortOrder])
 }
