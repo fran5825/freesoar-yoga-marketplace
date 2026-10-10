@@ -10,7 +10,7 @@ import { formatTaipeiDatetime, formatTaipeiShortDatetime } from "@/domain/class-
 import { getPublicClassSessionDetail } from "@/domain/class-session/public-read-service";
 import { getClassAvailability } from "@/domain/class-session/availability";
 import { getCurrentUser } from "@/lib/auth/session";
-import { classDetailHref, safeClassReturnPath } from "@/lib/navigation/class-return-path";
+import { classDetailHref, classReturnLabel, safeClassReturnPath, termDetailHref } from "@/lib/navigation/class-return-path";
 import { SiteShell } from "../../_components/site-shell";
 import { ClassAvailabilityBadge } from "../_components/ClassAvailabilityBadge";
 import { ClassOriginTag } from "../_components/ClassOriginTag";
@@ -44,7 +44,7 @@ export default async function MemberClassSessionPage({ params, searchParams }: {
   const ownEnrollment = "ownEnrollment" in classSession ? classSession.ownEnrollment : null;
   const seriesContext = await getClassSeriesContext(classSession.id);
   const term = seriesContext?.term ?? null;
-  if (term?.termEnrollmentMode === "term_only" && !ownEnrollment) redirect(`/classes/terms/${term.id}`);
+  if (term?.termEnrollmentMode === "term_only" && !ownEnrollment) redirect(returnTo.startsWith(`/classes/terms/${term.id}`) ? returnTo : termDetailHref(term.id, returnTo));
   const feedback = query?.result && query.message ? { success: query.result === "success", message: query.message } : null;
   const [siblings, termDetail] = await Promise.all([
     seriesContext ? listVisibleSiblingSessions(classSession.id, Boolean(user)) : Promise.resolve([]),
@@ -64,7 +64,7 @@ export default async function MemberClassSessionPage({ params, searchParams }: {
   return (
     <SiteShell signedInArea="member" publicMainClassName="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-5 py-8 sm:px-8" signedInClassName="flex flex-col gap-6">
       <div className={canEnroll ? "group grid min-w-0 gap-6 pb-24 sm:pb-0" : "grid min-w-0 gap-6"}>
-        <Link className="w-fit py-2 text-sm text-clay underline" href={returnTo}>返回課程列表</Link>
+        <Link className="w-fit py-2 text-sm text-clay underline" href={returnTo}>{classReturnLabel(returnTo)}</Link>
         <header className="border-b border-ink/15 pb-5">
           <h1 className="min-w-0 break-words text-2xl font-semibold tracking-tight text-ink">{classSession.title}</h1>
           <div className="mt-3 flex flex-wrap items-center gap-3"><ClassOriginTag origin={classSession.origin} /><ClassAvailabilityBadge availability={availability} canAcceptNewEnrollments={classSession.canAcceptNewEnrollments} /></div>
