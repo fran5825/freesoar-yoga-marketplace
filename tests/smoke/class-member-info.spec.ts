@@ -254,7 +254,7 @@ test.describe("single class member info", () => {
 
     await addAuthSessionCookie(context, teacher.sessionToken);
     await page.goto(`/teacher/classes/${classSession.id}`);
-    await expect(page.getByText("原本的適合對象")).toBeVisible();
+    await expect(page.getByText("原本的適合對象", { exact: true })).toBeVisible();
 
     // 只改標題：兩段原值保留。
     await page.goto(`/teacher/classes/${classSession.id}/edit`);
