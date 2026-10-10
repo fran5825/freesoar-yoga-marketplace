@@ -12,7 +12,7 @@ export type TeacherProfileDraftFormInput = {
   serviceAreas: string;
   teachingFormats: string;
   priceRange: string;
-  profilePhotoUrl: string;
+  profilePhotoUrl?: string;
   preferredSessionLengthMinutes: string;
   preferredFrequency: string;
   preferredLocationType: string;
@@ -33,7 +33,7 @@ export function normalizeTeacherProfileDraftInput(
     serviceAreas: normalizeStringList(input.serviceAreas),
     teachingFormats: normalizeStringList(input.teachingFormats),
     priceRange: normalizeOptionalString(input.priceRange),
-    profilePhotoUrl: normalizeOptionalString(input.profilePhotoUrl),
+    profilePhotoUrl: normalizeOptionalString(input.profilePhotoUrl ?? ""),
     preferredSessionLengthMinutes: normalizeOptionalNumber(
       input.preferredSessionLengthMinutes,
     ),

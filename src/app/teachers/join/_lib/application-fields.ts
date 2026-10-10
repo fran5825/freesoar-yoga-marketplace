@@ -13,7 +13,6 @@ export type FormFieldName =
   | "serviceAreas"
   | "teachingFormats"
   | "priceRange"
-  | "profilePhotoUrl"
   | "preferredSessionLengthMinutes"
   | "preferredFrequency"
   | "preferredLocationType"
@@ -71,7 +70,6 @@ export const fieldLabels: Record<FormFieldName, string> = {
   serviceAreas: "可服務區域",
   teachingFormats: "授課形式",
   priceRange: "參考收費區間",
-  profilePhotoUrl: "老師照片連結",
   preferredSessionLengthMinutes: "希望的上課時長",
   preferredFrequency: "希望的上課頻率",
   preferredLocationType: "希望的上課地點",
@@ -313,15 +311,6 @@ export const applicationSections: {
         helper: "正式送審時必填。請選擇最接近的教學年資區間。",
         kind: "select",
         options: EXPERIENCE_YEARS_OPTIONS,
-      },
-      {
-        name: "profilePhotoUrl",
-        label: fieldLabels.profilePhotoUrl,
-        requirement: "optionalRecommended",
-        helper: "通過後再補也可以。目前請貼上圖片連結（尚未提供上傳）。",
-        kind: "text",
-        placeholder: "例如：https://example.com/profile.jpg",
-        inputMode: "url",
       },
     ],
   },

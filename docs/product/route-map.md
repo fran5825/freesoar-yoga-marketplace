@@ -35,6 +35,7 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 | `/teacher/dashboard` | 老師 onboarding / status dashboard；已登入使用者可查看自己的 TeacherProfile status，尚未建立 TeacherProfile 時可前往建立申請。 |
 | `/teacher/profile` | **2026-09-26 起是「老師資料」的第一個分頁：可授課時間**（原 `/teacher/availability` 的內容）；個人資料編輯搬到 `/teacher/profile/info`。 |
 | `/media/[...key]` | **只給開發與測試**（`STORAGE_DRIVER=local`）：提供本機資料夾裡的照片檔，只接受應用程式產生的 `photos/<uuid>.webp`，其餘一律 404；正式環境用 R2 公開網域，這個路由回 404（`teacher-showcase-photos` 票 02） |
+| `/teacher/profile/photos` | **已落地**（`teacher-showcase-photos` 票 03，2026-10-10）「老師資料」第三個分頁：照片。approved 老師上傳（最多 5 張、JPG／PNG／WebP、5 MB）、設定頭像、排序與刪除；suspended 老師唯讀；其餘狀態顯示說明。照片功能沒設定儲存服務時整頁顯示「尚未開通」 |
 | `/teacher/profile/payment` | **已落地**（`lightweight-payment-v0`，2026-10-10）「老師資料」第三個分頁：收款與聯絡。approved／suspended 老師維護自己的繳費與取消規則（報名前顯示在課程頁）、收款帳號與聯絡方式（報名後才給學員看）；其餘狀態顯示說明。獨立於個人資料審核流程；金錢不經過飛索 |
 | `/teacher/profile/info` | 「老師資料」第二個分頁：個人資料（原 `/teacher/profile` 的說明如下）：**已落地**（`teacher-profile-edit` 已確認）：approved 老師編輯自己的個人資料，suspended 唯讀查看，其餘狀態導向 `/teachers/join` |
 | `/teacher/availability` | **2026-09-26 起轉址到 `/teacher/profile`**（可授課時間併入老師資料的第一個分頁）。以下為原說明：**已落地**（`teacher-availability` 已確認）：管理固定 availability 與 exception |

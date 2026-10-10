@@ -145,3 +145,87 @@ async function removeStoredFile(storage: PhotoStorage, storageKey: string): Prom
     console.error("[teacher-photo] storage delete failed (file may be orphaned)", error);
   }
 }
+
+export type PhotoActionResult = { ok: true } | { ok: false; code: "photo_not_found" | "action_failed" };
+
+// 指定頭像：只能是自己的、有效的照片；沒指定就沒有頭像（有填才顯示）。
+export async function setAvatarCore(teacherProfileId: string, photoId: string): Promise<PhotoActionResult> {
+  try {
+    return await prisma.$transaction(async (tx): Promise<PhotoActionResult> => {
+      const photo = await tx.teacherPhoto.findFirst({
+        where: { id: photoId, teacherProfileId, status: "active" },
+        select: { id: true },
+      });
+
+      if (!photo) {
+        return { ok: false, code: "photo_not_found" };
+      }
+
+      await tx.teacherProfile.update({ where: { id: teacherProfileId }, data: { avatarPhotoId: photo.id } });
+
+      return { ok: true };
+    });
+  } catch (error) {
+    // 檢查之後、寫入之前照片剛好被刪：外鍵擋下，視為找不到。
+    if (typeof error === "object" && error !== null && (error as { code?: string }).code === "P2003") {
+      return { ok: false, code: "photo_not_found" };
+    }
+
+    console.error("[teacher-photo] set avatar failed", error);
+
+    return { ok: false, code: "action_failed" };
+  }
+}
+
+export async function clearAvatarCore(teacherProfileId: string): Promise<PhotoActionResult> {
+  try {
+    await prisma.teacherProfile.update({ where: { id: teacherProfileId }, data: { avatarPhotoId: null } });
+
+    return { ok: true };
+  } catch (error) {
+    console.error("[teacher-photo] clear avatar failed", error);
+
+    return { ok: false, code: "action_failed" };
+  }
+}
+
+// 上移或下移一格：在鎖住老師資料列之後，依目前順序（sortOrder、createdAt）重排並一律寫成 0..n-1，
+// 順便把重複或有空洞的 sortOrder 整理乾淨。已經在最前面／最後面時不動作也視為成功。
+export async function movePhotoCore(
+  teacherProfileId: string,
+  photoId: string,
+  direction: "up" | "down",
+): Promise<PhotoActionResult> {
+  try {
+    return await prisma.$transaction(async (tx): Promise<PhotoActionResult> => {
+      await tx.$queryRaw`SELECT "id" FROM "TeacherProfile" WHERE "id" = ${teacherProfileId} FOR UPDATE`;
+      const ordered = await tx.teacherPhoto.findMany({
+        where: { teacherProfileId, status: "active" },
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+        select: { id: true },
+      });
+      const index = ordered.findIndex((photo) => photo.id === photoId);
+
+      if (index === -1) {
+        return { ok: false, code: "photo_not_found" };
+      }
+
+      const target = direction === "up" ? index - 1 : index + 1;
+      const ids = ordered.map((photo) => photo.id);
+
+      if (target >= 0 && target < ids.length) {
+        [ids[index], ids[target]] = [ids[target], ids[index]];
+      }
+
+      for (const [order, id] of ids.entries()) {
+        await tx.teacherPhoto.update({ where: { id }, data: { sortOrder: order } });
+      }
+
+      return { ok: true };
+    });
+  } catch (error) {
+    console.error("[teacher-photo] move failed", error);
+
+    return { ok: false, code: "action_failed" };
+  }
+}

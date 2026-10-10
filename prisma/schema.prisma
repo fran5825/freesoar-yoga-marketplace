@@ -86,6 +86,8 @@ model TeacherProfile {
   paymentAccountInfo            String?
   paymentRulesText              String?
   contactInfo                   String?
+  // teacher-showcase-photos 票 03：老師頭像，指向自己的一張有效照片；照片被刪除時回到空（沒有頭像）。
+  avatarPhotoId                 String?
   status                        TeacherProfileStatus @default(draft)
   rejectionReason               String?
   suspensionReason              String?
@@ -99,7 +101,8 @@ model TeacherProfile {
   availabilityExceptions AvailabilityException[]
   recurringClassSeries   RecurringClassSeries[]
   classProposals         OrganizerClassProposal[]
-  photos                 TeacherPhoto[]
+  photos                 TeacherPhoto[]           @relation("TeacherPhotos")
+  avatarPhoto            TeacherPhoto?            @relation("TeacherAvatar", fields: [avatarPhotoId], references: [id], onDelete: SetNull)
 }
 
 // teacher-availability D2/D11：不含原始草稿的 isRecurring 欄位——這個 model 本身就是
@@ -677,7 +680,8 @@ model TeacherPhoto {
   removedByUserId  String?
   createdAt        DateTime           @default(now())
 
-  teacherProfile TeacherProfile @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
+  teacherProfile TeacherProfile   @relation("TeacherPhotos", fields: [teacherProfileId], references: [id], onDelete: Cascade)
+  avatarOf       TeacherProfile[] @relation("TeacherAvatar")
 
   @@index([teacherProfileId, status, sortOrder])
 }

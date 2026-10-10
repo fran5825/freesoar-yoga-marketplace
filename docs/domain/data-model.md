@@ -42,7 +42,8 @@ Fields:
 - serviceAreas
 - teachingFormats
 - priceRange
-- profilePhotoUrl
+- profilePhotoUrl（**2026-10-10 起停用**，`teacher-showcase-photos` 票 03：舊的「貼照片網址」欄位退場——老師申請表與個人資料頁不再顯示或寫入，舊資料保留在資料庫、不再顯示；照片改用 `TeacherPhoto`）
+- avatarPhotoId（2026-10-10 新增，nullable FK → `TeacherPhoto`，`onDelete: SetNull`；老師頭像，只能指向自己的有效照片，照片被刪除時回到空＝沒有頭像；migration `20261010003352_teacher_avatar`）
 - paymentAccountInfo（2026-10-10 新增，nullable text：老師自填的收款帳號，最多 300 字；**不出現在任何公開頁、老師列表或個人資料頁**，只在學員報名成功後以「報名當下快照」顯示給該學員）
 - paymentRulesText（2026-10-10 新增，nullable text：繳費期限、取消與退費、請假規則，最多 1000 字；**報名前**就顯示在課程頁，有填才顯示；系統不依它自動取消報名或退費）
 - contactInfo（2026-10-10 新增，nullable text：Line ID、IG 或電話，最多 200 字；規則同 paymentAccountInfo，只在報名後以快照顯示給該學員）
@@ -469,7 +470,7 @@ Fields:
 - removedReason、removedAt、removedByUserId（下架時填寫）
 - createdAt
 
-索引 `(teacherProfileId, status, sortOrder)`。規則：每位老師最多 5 張**有效**照片（在鎖住老師資料列後檢查，同時上傳不會超過）；只有 `approved` 老師能上傳；上傳時檢查實際格式（JPG／PNG／WebP）、5 MB、像素上限，自動轉正方向、長邊縮到 1600 px、輸出 WebP，**不保留任何 metadata**（GPS 與裝置資訊不會被保存）。檔案先寫入儲存服務再寫資料庫，資料庫寫入失敗或超過上限時刪除剛寫入的檔案。尚未實作（後續票）：老師頭像（`TeacherProfile.avatarPhotoId`）、課程封面（`coverPhotoId`）、管理員下架通知。
+索引 `(teacherProfileId, status, sortOrder)`。規則：每位老師最多 5 張**有效**照片（在鎖住老師資料列後檢查，同時上傳不會超過）；只有 `approved` 老師能上傳；上傳時檢查實際格式（JPG／PNG／WebP）、5 MB、像素上限，自動轉正方向、長邊縮到 1600 px、輸出 WebP，**不保留任何 metadata**（GPS 與裝置資訊不會被保存）。檔案先寫入儲存服務再寫資料庫，資料庫寫入失敗或超過上限時刪除剛寫入的檔案。老師頭像由 `TeacherProfile.avatarPhotoId` 指向（票 03，頭像選填、沒指定就沒有頭像）；老師可在 `/teacher/profile/photos` 上傳、設頭像、排序（往前／往後，每次寫成 0..n-1）與刪除。尚未實作（後續票）：課程封面（`coverPhotoId`）、管理員下架與通知。
 
 ## EnrollmentPaymentEvent
 

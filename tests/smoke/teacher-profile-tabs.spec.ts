@@ -16,7 +16,7 @@ test.afterAll(async () => {
   await prisma.$disconnect();
 });
 
-test("老師資料 has three tabs (可授課時間 first, 個人資料 second, 收款與聯絡 third), the nav no longer lists 可授課時間, and the old URL redirects", async ({
+test("老師資料 has four tabs (可授課時間 first, 個人資料 second, 照片 third, 收款與聯絡 fourth), the nav no longer lists 可授課時間, and the old URL redirects", async ({
   context,
   page,
 }, testInfo) => {
@@ -40,7 +40,7 @@ test("老師資料 has three tabs (可授課時間 first, 個人資料 second, �
   await expect(page.getByRole("heading", { name: "固定可授課時段" })).toBeVisible();
 
   const tabs = page.getByRole("navigation", { name: "老師資料分頁" }).getByRole("link");
-  await expect(tabs).toHaveText(["可授課時間", "個人資料", "收款與聯絡"]);
+  await expect(tabs).toHaveText(["可授課時間", "個人資料", "照片", "收款與聯絡"]);
   await expect(tabs.nth(0)).toHaveAttribute("aria-current", "page");
 
   // 導覽列只剩「老師資料」，沒有「可授課時間」；兩個分頁都標示在「老師資料」。

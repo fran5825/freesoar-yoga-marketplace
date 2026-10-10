@@ -6,7 +6,10 @@ import { prisma } from "@/lib/prisma";
 import { getPhotoStorage } from "@/lib/storage/photo-storage";
 
 import {
+  clearAvatarCore,
   deleteTeacherPhotoCore,
+  movePhotoCore,
+  setAvatarCore,
   TEACHER_PHOTO_MAX_COUNT,
   uploadTeacherPhotoCore,
   type UploadPhotoErrorCode,
@@ -21,7 +24,8 @@ export type PhotoServiceErrorCode =
   | "teacher_profile_required"
   | "storage_not_configured"
   | "photo_not_found"
-  | "delete_failed";
+  | "delete_failed"
+  | "action_failed";
 
 export type PhotoServiceResult<T extends object = object> =
   | ({ ok: true } & T)
@@ -38,6 +42,7 @@ const messages: Record<PhotoServiceErrorCode, string> = {
   upload_failed: "照片暫時無法上傳，請稍後再試。",
   photo_not_found: "找不到這張照片，或你沒有權限操作。",
   delete_failed: "照片暫時無法刪除，請稍後再試。",
+  action_failed: "暫時無法完成這個操作，請稍後再試。",
 };
 
 function fail(code: PhotoServiceErrorCode): { ok: false; code: PhotoServiceErrorCode; message: string } {
@@ -100,7 +105,7 @@ export async function deleteOwnTeacherPhoto(photoId: string): Promise<PhotoServi
   return result.ok ? { ok: true } : fail(result.code);
 }
 
-export type OwnPhotoView = { id: string; url: string; width: number; height: number; sortOrder: number };
+export type OwnPhotoView = { id: string; url: string; width: number; height: number; sortOrder: number; isAvatar: boolean };
 
 // 老師自己的有效照片（依排序）。儲存服務沒設定時 url 無法產生，回傳空清單並標示 storageConfigured = false。
 export async function listOwnTeacherPhotos(): Promise<{ storageConfigured: boolean; photos: OwnPhotoView[] }> {
@@ -111,6 +116,10 @@ export async function listOwnTeacherPhotos(): Promise<{ storageConfigured: boole
     return { storageConfigured: storage.ok, photos: [] };
   }
 
+  const profile = await prisma.teacherProfile.findUnique({
+    where: { id: teacher.teacherProfileId },
+    select: { avatarPhotoId: true },
+  });
   const rows = await prisma.teacherPhoto.findMany({
     where: { teacherProfileId: teacher.teacherProfileId, status: "active" },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
@@ -125,6 +134,7 @@ export async function listOwnTeacherPhotos(): Promise<{ storageConfigured: boole
       width: row.width,
       height: row.height,
       sortOrder: row.sortOrder,
+      isAvatar: row.id === profile?.avatarPhotoId,
     })),
   };
 }
@@ -134,4 +144,40 @@ export function photoUrlForKey(storageKey: string): string | null {
   const storage = getPhotoStorage();
 
   return storage.ok ? storage.storage.publicUrl(storageKey) : null;
+}
+
+export async function setOwnAvatar(photoId: string): Promise<PhotoServiceResult> {
+  const teacher = await resolveOwnTeacherProfileId();
+
+  if (!teacher.ok) {
+    return teacher;
+  }
+
+  const result = await setAvatarCore(teacher.teacherProfileId, photoId);
+
+  return result.ok ? { ok: true } : fail(result.code);
+}
+
+export async function clearOwnAvatar(): Promise<PhotoServiceResult> {
+  const teacher = await resolveOwnTeacherProfileId();
+
+  if (!teacher.ok) {
+    return teacher;
+  }
+
+  const result = await clearAvatarCore(teacher.teacherProfileId);
+
+  return result.ok ? { ok: true } : fail(result.code);
+}
+
+export async function moveOwnPhoto(photoId: string, direction: "up" | "down"): Promise<PhotoServiceResult> {
+  const teacher = await resolveOwnTeacherProfileId();
+
+  if (!teacher.ok) {
+    return teacher;
+  }
+
+  const result = await movePhotoCore(teacher.teacherProfileId, photoId, direction);
+
+  return result.ok ? { ok: true } : fail(result.code);
 }

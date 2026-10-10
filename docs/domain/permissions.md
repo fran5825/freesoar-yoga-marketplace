@@ -87,6 +87,7 @@ Can:
 - **Read own data for dashboard/form defaults（`teacher-usability` 第 07、09 票，2026-09-26）**：建課表單帶入自己最近一堂自建課的地點、名額、是否需確認報名；總覽列出自己「已被選定、等待團主建課」的回應（只有需求 id 與標題）。兩者都是 own-scoped 讀取（`teacherProfileId` 寫在 WHERE），沒有新增能力或可讀的他人資料。
 - **View own single class session detail（`teacher-usability` 第 05 票，產品主人 2026-09-25 放行）**：老師只能讀自己的單堂課詳情（範圍與上方列表完全相同，未新增可讀欄位：只含 confirmed／pending 報名的學員姓名、email、備註，評價者姓名與 email，Organization 只有名稱、無團主聯絡資料，無學員電話與頭像）；別人的課、不存在、沒有老師資料一律回傳找不到；suspended 老師仍可查看自己既有的課。own-scope 寫在查詢 WHERE，不是事後比對。
 - View own calendar
+- **已落地（`teacher-showcase-photos` 票 02、03，2026-10-10）：Manage own photos**：approved 老師可上傳、刪除、排序自己的照片（最多 5 張有效照片）並指定頭像；只能操作自己的照片；suspended 老師只能查看；其他狀態看不到上傳區。檔案存放與規則見 ADR 0007
 - **已落地（`lightweight-payment-v0`，2026-10-10）：Manage own payment settings**：approved／suspended 老師在 `/teacher/profile/payment` 維護自己的收款帳號、繳費規則與聯絡方式（獨立於個人資料審核流程）
 - **已落地（`lightweight-payment-v0`，2026-10-10）：Mark own class enrollments paid / refunded**：老師只能對**自己班級**（`classSession.teacherProfileId`）底下的報名標記已收款或已退款（含整期學員一次標記整期）；已取消的報名只能標記已退款，不能標記已收款；金錢不經過飛索，標記只是記錄
 - Enroll in class sessions only through the same User's Member capability
