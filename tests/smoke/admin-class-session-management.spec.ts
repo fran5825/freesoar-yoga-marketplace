@@ -516,7 +516,8 @@ test.describe("admin class session management smoke", () => {
     const row = page.locator("li", { hasText: `member-retry-a-${testRunId}` });
     const rowTrigger = row.getByRole("button", { name: "取消這筆報名" });
     await expect(rowTrigger).toBeEnabled();
-    await row.locator('input[name="enrollmentId"]').evaluate((el: HTMLInputElement) => { el.value = "does-not-exist"; });
+    // 這一列同時有「標記已收款」與「取消這筆報名」兩個表單（lightweight-payment-v0），只竄改取消表單的欄位。
+    await row.locator("form", { has: page.getByRole("button", { name: "取消這筆報名" }) }).locator('input[name="enrollmentId"]').evaluate((el: HTMLInputElement) => { el.value = "does-not-exist"; });
     await rowTrigger.click();
     await page.getByRole("dialog").getByRole("button", { name: "確認取消報名" }).click();
     // 第三批票 12：學員名稱改由頁面依 item 對照名單補上；item 被竄改成不存在的報名時，只顯示通用文字。

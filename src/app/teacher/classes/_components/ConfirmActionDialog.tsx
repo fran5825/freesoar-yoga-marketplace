@@ -18,6 +18,7 @@ export function ConfirmActionDialog({
   action,
   hiddenFields,
   confirmClassName = "min-h-11 rounded-full bg-clay px-5 py-2 text-sm font-medium text-white transition hover:bg-clay-deep",
+  textField,
 }: {
   triggerLabel: string;
   // 同一頁有多個同名按鈕時（例如每筆報名都有「婉拒」），用來說清楚是哪一筆。
@@ -30,8 +31,12 @@ export function ConfirmActionDialog({
   hiddenFields: Record<string, string>;
   // 非破壞性的確認（例如「全部開放報名」）可改用主要操作的顏色。
   confirmClassName?: string;
+  // lightweight-payment-v0：選填的單行文字（例如收款備註、退款原因），隨確認一起送出。
+  textField?: { name: string; label: string; placeholder?: string; maxLength: number };
 }) {
   const titleId = useId();
+  const formId = useId();
+  const textFieldId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
@@ -67,7 +72,23 @@ export function ConfirmActionDialog({
             {title}
           </h2>
           <div className="grid gap-2 text-sm leading-6 text-ink-soft">{children}</div>
-          <form action={action} className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          {textField ? (
+            <div className="grid gap-1">
+              <label className="text-sm font-medium text-ink" htmlFor={textFieldId}>
+                {textField.label}
+              </label>
+              <input
+                className="w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
+                form={formId}
+                id={textFieldId}
+                maxLength={textField.maxLength}
+                name={textField.name}
+                placeholder={textField.placeholder}
+                type="text"
+              />
+            </div>
+          ) : null}
+          <form action={action} className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end" id={formId}>
             {Object.entries(hiddenFields).map(([name, value]) => (
               <input key={name} name={name} type="hidden" value={value} />
             ))}

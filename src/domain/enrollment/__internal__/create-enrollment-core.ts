@@ -8,6 +8,7 @@ import type { NotificationType } from "@prisma/client";
 import { notifyUsers } from "@/domain/notification/create";
 import type { NotificationPayload, NotificationRecipient } from "@/domain/notification/types";
 import { prisma } from "@/lib/prisma";
+import { applyReEnrollmentPaymentRule, buildEnrollmentPaymentSnapshot } from "../payment-snapshot";
 import { occupyingEnrollmentWhere } from "../seat-occupancy";
 
 // 供 D4 端到端失敗隔離測試注入：預設值就是「解析收件人 + 呼叫 notifyUsers」的真正邏輯
@@ -139,9 +140,11 @@ export async function createEnrollmentForUser(
           startAt: Date;
           requiresApproval: boolean;
           teacherProfileId: string;
+          priceNote: string | null;
+          demandRequestId: string | null;
         }[]
       >`
-        SELECT "id", "status", "capacity", "startAt", "requiresApproval", "teacherProfileId"
+        SELECT "id", "status", "capacity", "startAt", "requiresApproval", "teacherProfileId", "priceNote", "demandRequestId"
         FROM "ClassSession"
         WHERE "id" = ${classSessionId}
         FOR UPDATE
@@ -198,6 +201,13 @@ export async function createEnrollmentForUser(
         select: { id: true, status: true, cancelledBy: true, seriesEnrollmentId: true },
       });
 
+      // lightweight-payment-v0：報名當下複製老師的收款帳號、繳費規則、聯絡方式與價格（付款計畫 P4、P5）。
+      const paymentSnapshot = await buildEnrollmentPaymentSnapshot(tx, {
+        teacherProfileId: classSession.teacherProfileId,
+        priceNote: classSession.priceNote,
+        demandRequestId: classSession.demandRequestId,
+      });
+
       const resolvedStatus: "pending" | "confirmed" = classSession.requiresApproval
         ? "pending"
         : "confirmed";
@@ -227,6 +237,14 @@ export async function createEnrollmentForUser(
           throw new AlreadyEnrolledError("active");
         }
 
+        // lightweight-payment-v0（付款計畫 §2）：unpaid／paid 保留付款狀態與既有快照；refunded 視為新的一筆交易，
+        // 由內部規則重設（前一輪內容先寫進 reset_on_re_enrollment 事件）並換成新的快照。
+        await applyReEnrollmentPaymentRule(tx, {
+          enrollmentId: existingEnrollment.id,
+          actorUserId: userId,
+          freshSnapshot: paymentSnapshot,
+        });
+
         return { enrollmentId: existingEnrollment.id, status: resolvedStatus };
       }
 
@@ -237,6 +255,7 @@ export async function createEnrollmentForUser(
           status: resolvedStatus,
           notes: input.notes,
           consentedAt: new Date(),
+          ...paymentSnapshot,
         },
         select: { id: true },
       });

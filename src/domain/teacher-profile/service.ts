@@ -988,7 +988,7 @@ function toTeacherProfileDraftData(input: TeacherProfileApplicationInput) {
     serviceAreas: input.serviceAreas ?? [],
     teachingFormats: input.teachingFormats ?? [],
     priceRange: input.priceRange ?? null,
-    profilePhotoUrl: input.profilePhotoUrl ?? null,
+    // profilePhotoUrl 已停用（teacher-showcase-photos 票 03）：舊資料保留在資料庫、不再寫入或顯示；照片改用 TeacherPhoto。
     preferredSessionLengthMinutes: input.preferredSessionLengthMinutes ?? null,
     preferredFrequency: input.preferredFrequency ?? null,
     preferredLocationType: input.preferredLocationType ?? null,

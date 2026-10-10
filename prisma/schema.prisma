@@ -80,6 +80,14 @@ model TeacherProfile {
   preferredFrequency            String?
   preferredLocationType         String?
   preferenceNotes               String?
+  // lightweight-payment-v0（2026-10-10 修訂，見付款計畫第 0 節）：老師自填、可為空的自由文字。
+  // paymentRulesText 在報名前顯示於課程頁；paymentAccountInfo 與 contactInfo 只在報名後顯示，
+  // 報名當下各複製一份快照到 Enrollment，不進任何公開頁。
+  paymentAccountInfo            String?
+  paymentRulesText              String?
+  contactInfo                   String?
+  // teacher-showcase-photos 票 03：老師頭像，指向自己的一張有效照片；照片被刪除時回到空（沒有頭像）。
+  avatarPhotoId                 String?
   status                        TeacherProfileStatus @default(draft)
   rejectionReason               String?
   suspensionReason              String?
@@ -93,6 +101,8 @@ model TeacherProfile {
   availabilityExceptions AvailabilityException[]
   recurringClassSeries   RecurringClassSeries[]
   classProposals         OrganizerClassProposal[]
+  photos                 TeacherPhoto[]           @relation("TeacherPhotos")
+  avatarPhoto            TeacherPhoto?            @relation("TeacherAvatar", fields: [avatarPhotoId], references: [id], onDelete: SetNull)
 }
 
 // teacher-availability D2/D11：不含原始草稿的 isRecurring 欄位——這個 model 本身就是
@@ -138,11 +148,11 @@ model AvailabilityException {
 }
 
 model OrganizerProfile {
-  id             String   @id @default(cuid())
-  userId         String   @unique
-  displayName    String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  displayName String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   user               User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   ownedOrganizations Organization[]           @relation("OrganizationOwner")
@@ -244,6 +254,7 @@ model RecurringClassSeries {
   description        String?
   suitableFor        String? // 2026-10-06 member-flow 票 04：適合對象，系列預設值，生成場次時複製到每一場；最多 500 字（應用層限制）
   preparationNotes   String? // 2026-10-06 member-flow 票 04：準備事項，規則同 suitableFor
+  priceNote          String? // lightweight-payment-v0：價格文字（例如「單堂 600 元」），系列預設值，生成場次時複製到每一場；期班報名時以此為價格快照
   serviceType        String? // 主要課程風格＝serviceTypes 的第一個（公開篩選與舊資料相容用）
   serviceTypes       String[]                 @default([]) // 2026-09-26 課程風格可多選（最多 3 個），沿用需求 serviceTypes 的做法
   yogaStyles         String[]                 @default([]) // 2026-09-26 瑜伽風格（老師建課必填，可多選＋自訂），來源同老師「擅長類型」標籤
@@ -329,6 +340,7 @@ model ClassSession {
   description            String?
   suitableFor            String? // 2026-10-05 member-flow 票 03：適合對象／程度，老師選填，最多 500 字（應用層限制）
   preparationNotes       String? // 2026-10-05 member-flow 票 03：準備事項，老師選填，最多 500 字（應用層限制）
+  priceNote              String? // lightweight-payment-v0：價格文字，老師選填；團主媒合的課程為空時沿用已選定回應的 proposedPrice
   serviceType            String? // 主要課程風格＝serviceTypes 的第一個
   serviceTypes           String[]           @default([]) // 2026-09-26 課程風格可多選（最多 3 個）
   yogaStyles             String[]           @default([]) // 2026-09-26 瑜伽風格；老師建立的課必填，團主媒合的課為空
@@ -409,30 +421,84 @@ model OrganizerClassProposal {
 }
 
 model Enrollment {
-  id                     String                  @id @default(cuid())
-  classSessionId         String
-  userId                 String
-  status                 EnrollmentStatus        @default(confirmed)
-  notes                  String?
-  consentedAt            DateTime
+  id                         String                  @id @default(cuid())
+  classSessionId             String
+  userId                     String
+  status                     EnrollmentStatus        @default(confirmed)
+  notes                      String?
+  consentedAt                DateTime
   // 票 08：屬於整期報名時指向它，並記錄來源；單堂報名兩者皆為 NULL（DB check：同為 NULL 或同有值）。
-  seriesEnrollmentId     String?
-  seriesEnrollmentSource SeriesEnrollmentSource?
+  seriesEnrollmentId         String?
+  seriesEnrollmentSource     SeriesEnrollmentSource?
   // enrollment-re-enrollment 票 01：這筆報名是誰取消的（ADR 0006）。只有 status = cancelled 時有值，
   // 離開 cancelled 時清為 NULL（DB check）；舊資料為 NULL，顯示「原因未記錄」且不能重新報名。
-  cancelledBy            EnrollmentCancelledBy?
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
+  cancelledBy                EnrollmentCancelledBy?
+  // lightweight-payment-v0：付款狀態是獨立於 EnrollmentStatus 的平行欄位，只記錄不收款（金錢不經過平台）。
+  // 狀態只允許 unpaid → paid → refunded；退款後重新報名由內部流程重設回 unpaid（歷史在 EnrollmentPaymentEvent）。
+  paymentStatus              EnrollmentPaymentStatus @default(unpaid)
+  // 報名建立當下複製的快照；老師之後修改不回溯，學員一律讀快照，不讀老師現在的資料。
+  paymentAccountInfoSnapshot String?
+  paymentRulesSnapshot       String?
+  contactInfoSnapshot        String?
+  priceNoteSnapshot          String?
+  // 學員自填的轉帳後五碼或備註（最多 100 字，純文字）；不改變任何狀態，只供老師對帳。
+  transferNote               String?
+  paymentNote                String?
+  paymentConfirmedAt         DateTime?
+  paymentConfirmedByUserId   String?
+  paymentConfirmedByRole     PaymentActorRole?
+  paymentRefundedAt          DateTime?
+  paymentRefundedByUserId    String?
+  paymentRefundedByRole      PaymentActorRole?
+  paymentRefundReason        String?
+  createdAt                  DateTime                @default(now())
+  updatedAt                  DateTime                @updatedAt
 
-  classSession     ClassSession      @relation(fields: [classSessionId], references: [id], onDelete: Cascade)
-  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  seriesEnrollment SeriesEnrollment? @relation(fields: [seriesEnrollmentId], references: [id], onDelete: SetNull)
+  classSession     ClassSession             @relation(fields: [classSessionId], references: [id], onDelete: Cascade)
+  user             User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  seriesEnrollment SeriesEnrollment?        @relation(fields: [seriesEnrollmentId], references: [id], onDelete: SetNull)
+  paymentEvents    EnrollmentPaymentEvent[]
 
   @@unique([classSessionId, userId])
   @@index([seriesEnrollmentId])
   @@index([classSessionId])
   @@index([userId])
   @@index([status])
+  @@index([paymentStatus])
+}
+
+// lightweight-payment-v0：只新增、不修改、不刪除的付款事件紀錄。Enrollment 上的付款欄位只代表「目前這一輪」，
+// 重新報名重設時，前一輪的完整內容先存進 previousRound，對帳歷史不會消失。
+enum EnrollmentPaymentStatus {
+  unpaid
+  paid
+  refunded
+}
+
+enum PaymentActorRole {
+  teacher
+  admin
+}
+
+enum EnrollmentPaymentEventType {
+  marked_paid
+  marked_refunded
+  reset_on_re_enrollment
+}
+
+model EnrollmentPaymentEvent {
+  id            String                     @id @default(cuid())
+  enrollmentId  String
+  type          EnrollmentPaymentEventType
+  actorUserId   String? // reset_on_re_enrollment 為學員本人；其他為標記者
+  actorRole     PaymentActorRole? // 學員重新報名重設時為空
+  note          String? // 已收款備註或退款原因
+  previousRound Json? // reset_on_re_enrollment 專用：重設前的四個快照、transferNote、付款狀態與稽核欄位
+  createdAt     DateTime                   @default(now())
+
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@index([enrollmentId, createdAt])
 }
 
 // D2/D4（class-session-review-plan）：不含 teacherProfileId（授課老師一律透過
@@ -590,4 +656,32 @@ enum NotificationStatus {
   sent
   failed
   cancelled
+}
+
+// teacher-showcase-photos 票 02（ADR 0007）：老師的照片。檔案本身存在 Cloudflare R2（或開發用的本機資料夾），
+// 這裡只記錄「倉庫裡的位置（storageKey，不可猜測的隨機 key）」與基本資訊。
+// 老師最多 5 張有效照片（應用層在鎖定老師資料列後檢查）；管理員下架的照片保留紀錄（status = removed_by_admin），
+// 但所有頁面一律不顯示。課程封面與老師頭像引用它，刪除或下架時引用會回到空（票 03、04）。
+enum TeacherPhotoStatus {
+  active
+  removed_by_admin
+}
+
+model TeacherPhoto {
+  id               String             @id @default(cuid())
+  teacherProfileId String
+  storageKey       String             @unique
+  width            Int
+  height           Int
+  sortOrder        Int                @default(0)
+  status           TeacherPhotoStatus @default(active)
+  removedReason    String?
+  removedAt        DateTime?
+  removedByUserId  String?
+  createdAt        DateTime           @default(now())
+
+  teacherProfile TeacherProfile   @relation("TeacherPhotos", fields: [teacherProfileId], references: [id], onDelete: Cascade)
+  avatarOf       TeacherProfile[] @relation("TeacherAvatar")
+
+  @@index([teacherProfileId, status, sortOrder])
 }

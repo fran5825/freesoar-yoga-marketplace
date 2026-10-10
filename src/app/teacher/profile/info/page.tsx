@@ -266,18 +266,6 @@ export default async function TeacherProfilePage({
               </select>
             </div>
             <div>
-              <label className="text-sm font-medium text-ink" htmlFor="profilePhotoUrl">
-                {fieldLabels.profilePhotoUrl}（選填）
-              </label>
-              <input
-                className="mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
-                defaultValue={profile.profilePhotoUrl ?? ""}
-                id="profilePhotoUrl"
-                name="profilePhotoUrl"
-                type="url"
-              />
-            </div>
-            <div>
               <label className="text-sm font-medium text-ink" htmlFor="priceRange">
                 {fieldLabels.priceRange}（選填）
               </label>
@@ -435,7 +423,6 @@ export default async function TeacherProfilePage({
               label={fieldLabels.experienceYears}
               value={typeof profile.experienceYears === "number" ? `${profile.experienceYears} 年` : "尚未填寫"}
             />
-            <ReadOnlyItem label={fieldLabels.profilePhotoUrl} value={profile.profilePhotoUrl ?? "尚未填寫"} />
             <ReadOnlyItem label={fieldLabels.priceRange} value={profile.priceRange ?? "尚未填寫"} />
           </div>
           <ReadOnlyItem label={fieldLabels.bio} value={profile.bio ?? "尚未填寫"} />

@@ -6,17 +6,24 @@ export function ClassInfoSections({
   description,
   suitableFor,
   preparationNotes,
+  priceNote = null,
+  paymentRulesText = null,
   idPrefix = "",
 }: {
   description: string | null;
   suitableFor: string | null;
   preparationNotes: string | null;
+  // lightweight-payment-v0：價格說明與老師的繳費規則，同樣「有填才顯示」，報名前就看得到。
+  priceNote?: string | null;
+  paymentRulesText?: string | null;
   idPrefix?: string;
 }) {
   const items = [
+    { key: "price", title: "價格", value: priceNote },
     { key: "description", title: "課程說明", value: description },
     { key: "suitable-for", title: "適合對象", value: suitableFor },
     { key: "preparation", title: "準備事項", value: preparationNotes },
+    { key: "payment-rules", title: "繳費與取消規則", value: paymentRulesText },
   ].filter((item) => item.value && item.value.trim().length > 0);
 
   return (

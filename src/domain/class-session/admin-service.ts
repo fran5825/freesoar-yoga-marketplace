@@ -2,6 +2,7 @@ import type {
   ClassSessionOrigin,
   ClassSessionStatus,
   DemandRequestStatus,
+  EnrollmentPaymentStatus,
   EnrollmentStatus,
   OrganizationType,
   TeacherProfileStatus,
@@ -107,6 +108,11 @@ export type AdminClassSessionRosterEntry = {
   status: EnrollmentStatus;
   // enrollment-re-enrollment 票 04：已取消的報名顯示取消原因；沒取消就是 null。
   cancelReason: string | null;
+  // lightweight-payment-v0：管理員可看付款狀態與全部對帳備註（只限 requireAdmin() 之後的這個型別）。
+  paymentStatus: EnrollmentPaymentStatus;
+  transferNote: string | null;
+  paymentNote: string | null;
+  paymentRefundReason: string | null;
 };
 
 export type AdminClassSessionDetail = {
@@ -194,6 +200,10 @@ export async function getClassSessionDetailForAdmin(
           status: true,
           cancelledBy: true,
           seriesEnrollmentId: true,
+          paymentStatus: true,
+          transferNote: true,
+          paymentNote: true,
+          paymentRefundReason: true,
           seriesEnrollment: { select: { status: true } },
           user: { select: { name: true, email: true } },
         },
@@ -225,6 +235,10 @@ export async function getClassSessionDetailForAdmin(
       memberEmail: enrollment.user.email,
       notes: enrollment.notes,
       status: enrollment.status,
+      paymentStatus: enrollment.paymentStatus,
+      transferNote: enrollment.transferNote,
+      paymentNote: enrollment.paymentNote,
+      paymentRefundReason: enrollment.paymentRefundReason,
       cancelReason: describeEnrollmentCancelReason({
         status: enrollment.status,
         cancelledBy: enrollment.cancelledBy,

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import type { MemberTodo } from "@/domain/enrollment/member-todos";
+import { classDetailHref } from "@/lib/navigation/class-return-path";
 
 const todoCopy: Record<MemberTodo["kind"], { label: string; text: string }> = {
   review: { label: "待評價", text: "課程已結束，留下你的評價吧" },
@@ -9,19 +10,21 @@ const todoCopy: Record<MemberTodo["kind"], { label: string; text: string }> = {
 
 // inline-member-actions 票 04：「待你處理」（輪到學員）沒有事項就整張不出現，有事項時放在頁面第一張卡；
 // 「等待老師確認」不算待你處理，另外一張卡、放在原本的位置，沒有同樣不出現。domain 判斷不變。
-export function MemberTodoList({ todos }: { todos: MemberTodo[] }) {
+type TodoReturnTo = "/member/dashboard" | "/member/enrollments";
+
+export function MemberTodoList({ todos, returnTo }: { todos: MemberTodo[]; returnTo: TodoReturnTo }) {
   const review = todos.filter((todo) => todo.kind === "review");
 
-  return review.length > 0 ? <TodoSection todos={review} heading="待你處理" id="member-todo-heading" /> : null;
+  return review.length > 0 ? <TodoSection todos={review} heading="待你處理" id="member-todo-heading" returnTo={returnTo} /> : null;
 }
 
-export function MemberWaitingList({ todos }: { todos: MemberTodo[] }) {
+export function MemberWaitingList({ todos, returnTo }: { todos: MemberTodo[]; returnTo: TodoReturnTo }) {
   const pending = todos.filter((todo) => todo.kind === "pending");
 
-  return pending.length > 0 ? <TodoSection todos={pending} heading="等待老師確認" id="member-waiting-heading" /> : null;
+  return pending.length > 0 ? <TodoSection todos={pending} heading="等待老師確認" id="member-waiting-heading" returnTo={returnTo} /> : null;
 }
 
-function TodoSection({ todos, heading, id }: { todos: MemberTodo[]; heading: string; id: string }) {
+function TodoSection({ todos, heading, id, returnTo }: { todos: MemberTodo[]; heading: string; id: string; returnTo: string }) {
   return (
     <section
       aria-labelledby={id}
@@ -41,7 +44,7 @@ function TodoSection({ todos, heading, id }: { todos: MemberTodo[]; heading: str
                 href={
                   todo.kind === "review"
                     ? `/member/enrollments#enrollment-${todo.enrollmentId}`
-                    : `/classes/${todo.classSessionId}`
+                    : classDetailHref(todo.classSessionId, returnTo)
                 }
               >
                 <span className="rounded-full bg-pine-tint px-3 py-1 text-xs font-medium text-pine">

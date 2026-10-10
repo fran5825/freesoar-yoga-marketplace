@@ -22,7 +22,6 @@ export async function updateTeacherProfileAction(formData: FormData): Promise<vo
       "teachingFormatsOther",
     ),
     priceRange: readFormString(formData, "priceRange"),
-    profilePhotoUrl: readFormString(formData, "profilePhotoUrl"),
     preferredSessionLengthMinutes: readFormString(
       formData,
       "preferredSessionLengthMinutes",

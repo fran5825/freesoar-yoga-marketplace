@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+import { E2E_LOCAL_STORAGE_DIR } from "./tests/smoke/_helpers/storage";
+
 const port = Number(process.env.PORT ?? 3000);
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${port}`;
 const webServerReadyURL =
@@ -26,6 +28,8 @@ export default defineConfig({
     url: webServerReadyURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    // 照片功能的端對端測試：用本機資料夾當照片倉庫（正式環境是 Cloudflare R2，見 ADR 0007）。
+    env: { STORAGE_DRIVER: "local", LOCAL_STORAGE_DIR: E2E_LOCAL_STORAGE_DIR },
   },
   projects: [
     {

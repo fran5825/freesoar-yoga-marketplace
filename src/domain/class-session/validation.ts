@@ -18,6 +18,8 @@ export type ClassSessionCreateInput = {
   // member-flow 票 03：適合對象、準備事項，老師選填。
   suitableFor?: string | null;
   preparationNotes?: string | null;
+  // lightweight-payment-v0：價格文字，老師選填。
+  priceNote?: string | null;
   serviceType?: string | null;
   // 課程風格（可多選，最多 3 個）；沒帶時退回單一 serviceType（團主媒合建課仍是單選）。
   serviceTypes?: string[] | null;
@@ -41,6 +43,8 @@ export const LOCATION_MAX_LENGTH = 200;
 export const DESCRIPTION_MAX_LENGTH = 2000;
 // member-flow 票 03（Q11）：適合對象、準備事項各最多 500 字；系列（票 04）沿用同一個上限與 helper。
 export const MEMBER_INFO_MAX_LENGTH = 500;
+// lightweight-payment-v0：價格文字（例如「單堂 600 元，整期 2400 元」）最多 200 字，老師選填；單堂與系列共用。
+export const PRICE_NOTE_MAX_LENGTH = 200;
 
 // trim 後空字串視為未提供（null）。表單送出時瀏覽器會把換行變成 \r\n（兩個字元），但輸入框的
 // maxLength 把換行算一個字；先統一成 \n，才不會讓剛好 500 字、含換行的內容在 server 端被誤判超過。
@@ -52,6 +56,20 @@ export function normalizeMemberInfoText(value: string | null | undefined): strin
   const normalized = value.replace(/\r\n?/g, "\n").trim();
 
   return normalized.length > 0 ? normalized : null;
+}
+
+export function checkPriceNoteLength(
+  value: string | null,
+): { field: "priceNote"; code: "price_note_too_long"; message: string } | null {
+  if (!value || value.length <= PRICE_NOTE_MAX_LENGTH) {
+    return null;
+  }
+
+  return {
+    field: "priceNote",
+    code: "price_note_too_long",
+    message: `價格說明不可超過 ${PRICE_NOTE_MAX_LENGTH} 個字。`,
+  };
 }
 
 const MEMBER_INFO_LABELS = { suitableFor: "適合對象", preparationNotes: "準備事項" } as const;
@@ -77,6 +95,7 @@ export type ClassSessionValidationErrorCode =
   | "description_too_long"
   | "suitable_for_too_long"
   | "preparation_notes_too_long"
+  | "price_note_too_long"
   | "service_type_required"
   | "service_type_invalid"
   | "service_type_too_many"
@@ -96,6 +115,7 @@ export type ClassSessionValidationError = {
     | "description"
     | "suitableFor"
     | "preparationNotes"
+    | "priceNote"
     | "serviceType"
     | "yogaStyles"
     | "location"
@@ -114,6 +134,7 @@ export type ClassSessionValidationResult =
         description: string | null;
         suitableFor: string | null;
         preparationNotes: string | null;
+        priceNote: string | null;
         serviceType: string;
         serviceTypes: string[];
         yogaStyles: string[];
@@ -143,6 +164,7 @@ export function validateClassSessionCreate(
       : null;
   const normalizedSuitableFor = normalizeMemberInfoText(input.suitableFor);
   const normalizedPreparationNotes = normalizeMemberInfoText(input.preparationNotes);
+  const normalizedPriceNote = normalizeMemberInfoText(input.priceNote);
   const normalizedServiceTypes = normalizeYogaStyles(
     input.serviceTypes && input.serviceTypes.length > 0
       ? input.serviceTypes
@@ -176,6 +198,7 @@ export function validateClassSessionCreate(
   for (const issue of [
     checkMemberInfoLength("suitableFor", normalizedSuitableFor),
     checkMemberInfoLength("preparationNotes", normalizedPreparationNotes),
+    checkPriceNoteLength(normalizedPriceNote),
   ]) {
     if (issue) {
       errors.push(issue);
@@ -284,6 +307,7 @@ export function validateClassSessionCreate(
       description: normalizedDescription,
       suitableFor: normalizedSuitableFor,
       preparationNotes: normalizedPreparationNotes,
+      priceNote: normalizedPriceNote,
       serviceType: normalizedServiceType,
       serviceTypes: normalizedServiceTypes,
       yogaStyles: normalizedYogaStyles,

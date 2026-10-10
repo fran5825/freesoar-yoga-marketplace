@@ -36,6 +36,10 @@ export default async function EditClassSessionPage({ params }: EditClassSessionP
   }
 
   const detailHref = `/teacher/classes/${classSession.id}`;
+  // 名單也含「已付款後被取消」的報名（付款計畫 P9），人數只算仍有效的報名。
+  const activeEnrollmentCount = classSession.enrollments.filter(
+    (enrollment) => enrollment.status === "confirmed" || enrollment.status === "pending",
+  ).length;
   const blockedReason =
     profile?.status !== "approved"
       ? "老師資格暫停期間不能修改課程。"
@@ -81,8 +85,8 @@ export default async function EditClassSessionPage({ params }: EditClassSessionP
         <h1 className="mt-1 text-3xl font-semibold tracking-tight text-ink">修改課程</h1>
         <p className="mt-3 max-w-2xl break-words text-sm leading-6 text-ink-soft">
           {classSession.title}
-          {classSession.enrollments.length > 0
-            ? `・目前已報名（含待確認）${classSession.enrollments.length} 人，改時間或地點會通知他們。`
+          {activeEnrollmentCount > 0
+            ? `・目前已報名（含待確認）${activeEnrollmentCount} 人，改時間或地點會通知他們。`
             : ""}
         </p>
       </header>
@@ -108,6 +112,7 @@ export default async function EditClassSessionPage({ params }: EditClassSessionP
             description: classSession.description ?? "",
             suitableFor: classSession.suitableFor ?? "",
             preparationNotes: classSession.preparationNotes ?? "",
+            priceNote: classSession.priceNote ?? "",
             serviceTypes: classSession.serviceTypes.length
               ? classSession.serviceTypes
               : classSession.serviceType
@@ -121,7 +126,7 @@ export default async function EditClassSessionPage({ params }: EditClassSessionP
             capacity: classSession.capacity,
             requiresApproval: classSession.requiresApproval,
             isPublic: classSession.isPublic,
-            enrolledCount: classSession.enrollments.length,
+            enrolledCount: activeEnrollmentCount,
             series: series
               ? { id: series.id, title: series.title, following, isTerm: series.kind === "term" }
               : undefined,

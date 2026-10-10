@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { getOwnClassSessionDetailForOrganizer } from "@/domain/class-session/read-service";
 import { classOriginLabelsForOrganizer } from "@/domain/class-session/origin-labels";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
-import { listConfirmedEnrollmentsForClassSession } from "@/domain/enrollment/read-service";
+import { listRosterEnrollmentsForClassSession } from "@/domain/enrollment/read-service";
 import { listReviewsForClassSession } from "@/domain/review/read-service";
 import { requireUser } from "@/lib/auth/session";
 
@@ -24,6 +24,8 @@ type OrganizerClassSessionDetailPageProps = {
   params: Promise<{ classSessionId: string }>;
   searchParams?: Promise<{ result?: string; message?: string; flash?: string }>;
 };
+
+const paymentStatusLabels = { unpaid: "待付款", paid: "已收款", refunded: "已退款" } as const;
 
 export default async function OrganizerClassSessionDetailPage({
   params,
@@ -62,8 +64,11 @@ export default async function OrganizerClassSessionDetailPage({
   }
 
   const roster = ["open_for_enrollment", "completed"].includes(classSession.status)
-    ? ((await listConfirmedEnrollmentsForClassSession(classSessionId)) ?? [])
+    ? ((await listRosterEnrollmentsForClassSession(classSessionId)) ?? [])
     : [];
+  // 已報名名單只算 confirmed；已取消但有付款紀錄的另外列出，讓團主看得到最終結果（唯讀）。
+  const confirmedRoster = roster.filter((entry) => entry.status === "confirmed");
+  const cancelledPaidRoster = roster.filter((entry) => entry.status !== "confirmed");
   const reviews =
     classSession.status === "completed"
       ? ((await listReviewsForClassSession(classSessionId)) ?? [])
@@ -182,15 +187,15 @@ export default async function OrganizerClassSessionDetailPage({
         <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
           <div className="scroll-mt-24" id="roster">
             <h3 className="text-sm font-medium text-ink">
-              已報名會員（{roster.length} 人）
+              已報名會員（{confirmedRoster.length} 人）
             </h3>
-            {roster.length === 0 ? (
+            {confirmedRoster.length === 0 ? (
               <p className="mt-2 text-sm leading-6 text-ink-soft">
                 目前還沒有會員報名，之後有報名會顯示在這裡。
               </p>
             ) : (
               <ul className="mt-2 grid gap-2">
-                {roster.map((entry) => (
+                {confirmedRoster.map((entry) => (
                   <li
                     className="min-w-0 rounded-2xl border border-ink/10 bg-cream p-3 text-sm"
                     key={entry.id}
@@ -203,10 +208,24 @@ export default async function OrganizerClassSessionDetailPage({
                         {entry.notes}
                       </p>
                     ) : null}
+                    <p className="mt-2 text-xs text-ink-soft">付款：{paymentStatusLabels[entry.paymentStatus]}（老師記錄，唯讀）</p>
                   </li>
                 ))}
               </ul>
             )}
+            {cancelledPaidRoster.length > 0 ? (
+              <div className="mt-4">
+                <h3 className="text-sm font-medium text-ink">已取消但有付款紀錄（{cancelledPaidRoster.length} 人）</h3>
+                <ul className="mt-2 grid gap-2">
+                  {cancelledPaidRoster.map((entry) => (
+                    <li className="min-w-0 rounded-2xl border border-ink/10 bg-cream p-3 text-sm" key={entry.id}>
+                      <p className="min-w-0 break-words font-medium text-ink">{entry.memberLabel}</p>
+                      <p className="mt-1 text-xs text-ink-soft">報名已取消・付款：{paymentStatusLabels[entry.paymentStatus]}（老師記錄，唯讀）</p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </div>
         </section>
       ) : null}

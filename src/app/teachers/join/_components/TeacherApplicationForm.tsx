@@ -34,7 +34,6 @@ type TeacherApplicationFormState = {
   serviceAreas: string;
   teachingFormats: string;
   priceRange: string;
-  profilePhotoUrl: string;
   preferredSessionLengthMinutes: string;
   preferredFrequency: string;
   preferredLocationType: string;
@@ -85,7 +84,6 @@ const initialFormState: TeacherApplicationFormState = {
   serviceAreas: "",
   teachingFormats: "",
   priceRange: "",
-  profilePhotoUrl: "",
   preferredSessionLengthMinutes: "",
   preferredFrequency: "",
   preferredLocationType: "",
@@ -311,7 +309,6 @@ function toTeacherApplicationFormState(
     serviceAreas: profile.serviceAreas.join("\n"),
     teachingFormats: profile.teachingFormats.join("\n"),
     priceRange: profile.priceRange ?? "",
-    profilePhotoUrl: profile.profilePhotoUrl ?? "",
     preferredSessionLengthMinutes:
       typeof profile.preferredSessionLengthMinutes === "number"
         ? String(profile.preferredSessionLengthMinutes)

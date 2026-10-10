@@ -34,6 +34,9 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 |---|---|
 | `/teacher/dashboard` | 老師 onboarding / status dashboard；已登入使用者可查看自己的 TeacherProfile status，尚未建立 TeacherProfile 時可前往建立申請。 |
 | `/teacher/profile` | **2026-09-26 起是「老師資料」的第一個分頁：可授課時間**（原 `/teacher/availability` 的內容）；個人資料編輯搬到 `/teacher/profile/info`。 |
+| `/media/[...key]` | **只給開發與測試**（`STORAGE_DRIVER=local`）：提供本機資料夾裡的照片檔，只接受應用程式產生的 `photos/<uuid>.webp`，其餘一律 404；正式環境用 R2 公開網域，這個路由回 404（`teacher-showcase-photos` 票 02） |
+| `/teacher/profile/photos` | **已落地**（`teacher-showcase-photos` 票 03，2026-10-10）「老師資料」第三個分頁：照片。approved 老師上傳（最多 5 張、JPG／PNG／WebP、5 MB）、設定頭像、排序與刪除；suspended 老師唯讀；其餘狀態顯示說明。照片功能沒設定儲存服務時整頁顯示「尚未開通」 |
+| `/teacher/profile/payment` | **已落地**（`lightweight-payment-v0`，2026-10-10）「老師資料」第三個分頁：收款與聯絡。approved／suspended 老師維護自己的繳費與取消規則（報名前顯示在課程頁）、收款帳號與聯絡方式（報名後才給學員看）；其餘狀態顯示說明。獨立於個人資料審核流程；金錢不經過飛索 |
 | `/teacher/profile/info` | 「老師資料」第二個分頁：個人資料（原 `/teacher/profile` 的說明如下）：**已落地**（`teacher-profile-edit` 已確認）：approved 老師編輯自己的個人資料，suspended 唯讀查看，其餘狀態導向 `/teachers/join` |
 | `/teacher/availability` | **2026-09-26 起轉址到 `/teacher/profile`**（可授課時間併入老師資料的第一個分頁）。以下為原說明：**已落地**（`teacher-availability` 已確認）：管理固定 availability 與 exception |
 | `/teacher/demands` | 查看 eligible demand requests |
@@ -105,6 +108,7 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 - `/member/*` 必須只允許登入會員或 Admin。
 - 所有登入者預設具備 Member 基本能力；Teacher 或 Organizer 若要報名課程，使用同一個 User 的 Member 能力。
 - 公開 class detail / share link 只允許 `open_for_enrollment` 或 `confirmed` 且標記可公開的 class session。**已落地並擴充（`teacher-initiated-open-classes` Slice D 已確認）**：未登入 Visitor 走 `getPublicClassSessionDetail()`，額外要求授課老師 `status = approved`；已登入 Member 仍沿用既有 `getClassSessionForMember()`（不檢查 `isPublic`，維持既有 share-link 模式，D4 的既有行為不變）。兩條路徑對「不符合公開條件」與「`draft` 狀態」都一律回傳 not-found，不揭露任何欄位。
+- **學員端返回連結（2026-10-10，`member-back-links`）**：`/classes/[classSessionId]`、`/classes/terms/[id]`、`/classes/series/[id]` 的「返回」依 `?returnTo=` 回到來源，文字跟目的地一致（返回課程列表／我的報名／首頁／期班／持續開課）。`returnTo` 只收白名單：`/classes`（合法篩選）、`/member/enrollments`、`/member/dashboard`，以及期班頁／持續開課頁（可再帶一層上述來源，不再巢狀）；其他一律退回 `/classes`。實作在 `src/lib/navigation/class-return-path.ts`。
 - `/classes` 公開列表**已落地**（`teacher-initiated-open-classes` Slice D 已確認），不再是 optional / later。
 - **已落地（organizer-usability-redesign 票 13，2026-10-05）**：未登入開啟公開規則讀不到的 `/classes/[classSessionId]`（不存在、草稿、僅透過連結招募、已取消、老師非 approved）時，一律顯示同一個通用登入引導（`src/app/classes/_components/ClassSignInGuide.tsx`；狀態碼 200、內容與頁面標題相同，只依網址上的 id 與已清理的找課條件產生，不讀課程資料、不透露是否存在），登入後回到同一個網址再依 Member 規則讀取，讀不到才 not-found；取代原本匿名回 not-found 的呈現。
 - **已核准・未實作（organizer-usability-redesign 票 10、13）**：團主流程的 `callbackUrl`、`returnTo` 只接受 `/` 開頭、非 `//`、且在允許前綴內的站內路徑；沒有明確 intent 時維持既有 last-role 行為。

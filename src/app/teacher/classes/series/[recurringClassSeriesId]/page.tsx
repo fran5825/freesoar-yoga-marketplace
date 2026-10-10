@@ -16,6 +16,7 @@ import {
   listOwnTermEnrollmentsForTeacher,
   type TeacherTermEnrollmentView,
 } from "@/domain/enrollment/term-service";
+import { PAYMENT_NOTE_MAX_LENGTH } from "@/domain/enrollment/payment-limits";
 import { requireUser } from "@/lib/auth/session";
 
 import {
@@ -23,7 +24,9 @@ import {
   occurrencesFromHere,
 } from "../../_components/CancelFromHereDialog";
 import { ConfirmActionDialog } from "../../_components/ConfirmActionDialog";
+import { PaymentStatusBadge } from "../../_components/EnrollmentPaymentControls";
 import { CopyEnrollLinkButton } from "../../_components/CopyEnrollLinkButton";
+import { markSeriesEnrollmentPaidAction, markSeriesEnrollmentRefundedAction } from "../../actions";
 import { teacherClassDetailHref } from "../../_lib/return-context";
 import {
   addMakeupSessionAction,
@@ -502,6 +505,69 @@ function TermEnrollmentsSection({
                 <p className="text-ink-soft">
                   已取消（原因未記錄）：{item.unrecordedCancelDates.map((date) => formatTaipeiDatetime(date)).join("、")}
                 </p>
+              ) : null}
+              {item.status === "pending" || item.status === "confirmed" ? (
+                <div className="grid gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <PaymentStatusBadge status={item.paymentSummary === "partial" ? "unpaid" : item.paymentSummary} />
+                    {item.paymentSummary === "partial" ? (
+                      <span className="text-xs text-ink-faint">部分場次已收款</span>
+                    ) : null}
+                  </div>
+                  {item.transferNote ? (
+                    <p className="min-w-0 break-words text-ink-soft">
+                      <span className="text-ink-faint">學員的轉帳備註：</span>
+                      {item.transferNote}
+                    </p>
+                  ) : null}
+                  <div className="flex flex-wrap gap-2">
+                    {item.canMarkPaid ? (
+                      <ConfirmActionDialog
+                        action={markSeriesEnrollmentPaidAction}
+                        confirmClassName="min-h-11 rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep"
+                        confirmLabel="整期標記為已收款"
+                        hiddenFields={{ seriesEnrollmentId: item.id, returnSeriesId: seriesId }}
+                        textField={{
+                          name: "note",
+                          label: "收款備註（選填）",
+                          placeholder: "例如：已收到整期款項",
+                          maxLength: PAYMENT_NOTE_MAX_LENGTH,
+                        }}
+                        title="整期標記為已收款？"
+                        triggerAriaLabel={`標記 ${item.memberLabel} 整期為已收款`}
+                        triggerClassName="min-h-11 rounded-full border border-pine/40 bg-white px-4 py-2 text-sm font-medium text-pine transition hover:bg-pine-tint"
+                        triggerLabel="整期標記已收款"
+                      >
+                        <p>
+                          學員：<span className="break-words font-medium text-ink">{item.memberLabel}</span>
+                        </p>
+                        <p>會把這位學員整期仍有效的每一堂都記錄為已收款。飛索不會經手任何金錢。</p>
+                      </ConfirmActionDialog>
+                    ) : null}
+                    {item.canMarkRefunded ? (
+                      <ConfirmActionDialog
+                        action={markSeriesEnrollmentRefundedAction}
+                        confirmLabel="整期標記為已退款"
+                        hiddenFields={{ seriesEnrollmentId: item.id, returnSeriesId: seriesId }}
+                        textField={{
+                          name: "note",
+                          label: "退款說明（選填，學員看得到）",
+                          placeholder: "例如：整期退費",
+                          maxLength: PAYMENT_NOTE_MAX_LENGTH,
+                        }}
+                        title="整期標記為已退款？"
+                        triggerAriaLabel={`標記 ${item.memberLabel} 整期為已退款`}
+                        triggerClassName="min-h-11 rounded-full border border-ink/25 bg-white px-4 py-2 text-sm font-medium text-ink-soft transition hover:bg-cream"
+                        triggerLabel="整期標記已退款"
+                      >
+                        <p>
+                          學員：<span className="break-words font-medium text-ink">{item.memberLabel}</span>
+                        </p>
+                        <p>請先在你的銀行 App 完成退款，再回來標記。飛索不會替你轉帳。</p>
+                      </ConfirmActionDialog>
+                    ) : null}
+                  </div>
+                </div>
               ) : null}
               {item.status === "pending" ? (
                 <div className="flex flex-wrap gap-2">

@@ -36,6 +36,7 @@ export async function editOwnClassSessionAction(
       // member-flow 票 03／04：表單都會送出這兩欄；沒送出（例如舊表單或直接呼叫）就不帶，核心會保留原值。
       suitableFor: readOptionalFormString(formData, "suitableFor"),
       preparationNotes: readOptionalFormString(formData, "preparationNotes"),
+      priceNote: readOptionalFormString(formData, "priceNote"),
       serviceTypes: readServiceTypesFromForm(formData),
       yogaStyles: readYogaStylesFromForm(formData),
       startAt: readFormString(formData, "startAt"),
@@ -97,6 +98,7 @@ async function editFollowingSessions(
       description: readFormString(formData, "description"),
       suitableFor: readOptionalFormString(formData, "suitableFor"),
       preparationNotes: readOptionalFormString(formData, "preparationNotes"),
+      priceNote: readOptionalFormString(formData, "priceNote"),
       serviceTypes: readServiceTypesFromForm(formData),
       yogaStyles: readYogaStylesFromForm(formData),
       startTime,

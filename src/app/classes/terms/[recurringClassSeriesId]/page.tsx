@@ -3,6 +3,7 @@ import Link from "next/link";
 import { formatTaipeiDatetimeLocal, formatTaipeiShortDatetime } from "@/domain/class-session/timezone";
 import { getTermDetailForViewer, type TermDetail, type TermEnrollBlock } from "@/domain/enrollment/term-read-service";
 import { getCurrentUser } from "@/lib/auth/session";
+import { classDetailHref, classReturnLabel, safeParentReturnPath, termDetailHref } from "@/lib/navigation/class-return-path";
 
 import { SignInOptions } from "../../../_components/sign-in-options";
 import { SiteShell } from "../../../_components/site-shell";
@@ -25,10 +26,12 @@ export default async function TermPage({
   searchParams,
 }: {
   params: Promise<{ recurringClassSeriesId: string }>;
-  searchParams?: Promise<{ result?: string; message?: string; enroll?: string; open?: string; focus?: string }>;
+  searchParams?: Promise<{ result?: string; message?: string; enroll?: string; returnTo?: string; open?: string; focus?: string }>;
 }) {
   const [{ recurringClassSeriesId }, query, user] = await Promise.all([params, searchParams, getCurrentUser()]);
   const term = await getTermDetailForViewer(recurringClassSeriesId, user?.id ?? null);
+  // 這一頁的來源（找課程、我的報名、首頁）；返回連結與下面各表單都帶著它。
+  const returnTo = safeParentReturnPath(query?.returnTo);
 
   if (!term) {
     return (
@@ -37,7 +40,7 @@ export default async function TermPage({
         publicMainClassName="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-5 py-8 sm:px-8"
         signedInClassName="flex flex-col gap-6"
       >
-        <TermUnavailable recurringClassSeriesId={recurringClassSeriesId} signedIn={Boolean(user)} />
+        <TermUnavailable recurringClassSeriesId={recurringClassSeriesId} returnTo={returnTo} signedIn={Boolean(user)} />
       </SiteShell>
     );
   }
@@ -53,8 +56,8 @@ export default async function TermPage({
       signedInClassName="flex flex-col gap-6"
     >
       <div className={canStartEnroll ? "grid min-w-0 gap-6 pb-24 sm:pb-0" : "grid min-w-0 gap-6"}>
-        <Link className="w-fit py-2 text-sm text-clay underline" href="/classes">
-          返回課程列表
+        <Link className="w-fit py-2 text-sm text-clay underline" href={returnTo}>
+          {classReturnLabel(returnTo)}
         </Link>
         <header className="grid gap-3 border-b border-ink/15 pb-5">
           <p className="w-fit rounded-full bg-pine-tint px-3 py-1 text-sm font-medium text-pine-deep">
@@ -78,24 +81,26 @@ export default async function TermPage({
           </h2>
           <TermFacts term={term} />
           <div className="grid gap-4 border-t border-ink/10 pt-5">
-            <TermEnrollArea feedback={feedback} openForm={openForm} signedIn={Boolean(user)} term={term} />
+            <TermEnrollArea feedback={feedback} openForm={openForm} returnTo={returnTo} signedIn={Boolean(user)} term={term} />
           </div>
         </section>
 
         <ScrollToTarget targetId={query?.focus} />
-        <TermSessionList term={term} openSessions={query?.open === "sessions"} />
+        <TermSessionList openSessions={query?.open === "sessions"} returnTo={returnTo} term={term} />
 
         <ClassInfoSections
           description={term.description}
           idPrefix="term-"
+          paymentRulesText={term.paymentRulesText}
           preparationNotes={term.preparationNotes}
+          priceNote={term.priceNote}
           suitableFor={term.suitableFor}
         />
 
         {canStartEnroll ? (
           <a
             className="fixed inset-x-0 bottom-0 z-20 border-t border-pine/20 bg-cream px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-center text-sm font-medium text-pine underline focus-visible:outline-2 focus-visible:outline-pine sm:hidden"
-            href="?enroll=1#enroll-term"
+            href={`${termDetailHref(term.id, returnTo)}${returnTo === "/classes" ? "?" : "&"}enroll=1#enroll-term`}
           >
             我要報名
           </a>
@@ -106,11 +111,11 @@ export default async function TermPage({
 }
 
 // 訪客讀不到（不公開、全是草稿等）時顯示登入引導，比照單堂頁不透露期班是否存在；已登入仍讀不到就說明。
-function TermUnavailable({ recurringClassSeriesId, signedIn }: { recurringClassSeriesId: string; signedIn: boolean }) {
+function TermUnavailable({ recurringClassSeriesId, returnTo, signedIn }: { recurringClassSeriesId: string; returnTo: string; signedIn: boolean }) {
   return (
     <div className="grid min-w-0 gap-6">
-      <Link className="w-fit py-2 text-sm text-clay underline" href="/classes">
-        返回課程列表
+      <Link className="w-fit py-2 text-sm text-clay underline" href={returnTo}>
+        {classReturnLabel(returnTo)}
       </Link>
       <section className="grid gap-4 rounded-2xl border border-pine/25 bg-white p-5 sm:p-6">
         <h1 className="text-2xl font-semibold tracking-tight text-ink">{signedIn ? "目前看不到這個期班" : "登入後查看這個期班"}</h1>
@@ -124,7 +129,7 @@ function TermUnavailable({ recurringClassSeriesId, signedIn }: { recurringClassS
             <SignInOptions
               action={signInToEnrollTermAction}
               buttonClassName={buttonClass}
-              fields={{ recurringClassSeriesId }}
+              fields={{ recurringClassSeriesId, returnTo }}
               label={(provider) => `使用 ${provider} 登入查看`}
             />
           </>
@@ -211,7 +216,9 @@ function TermEnrollArea({
   signedIn,
   feedback,
   openForm,
+  returnTo,
 }: {
+  returnTo: string;
   term: TermDetail;
   signedIn: boolean;
   feedback: { success: boolean; message: string } | null;
@@ -253,7 +260,7 @@ function TermEnrollArea({
             <p className="text-sm leading-6 text-ink-soft">某一堂不能來，到「查看每一堂」按那一堂的「請假」，其他堂照常。</p>
             <WithdrawTermInline
               affectedStartAts={term.sessions.filter((session) => session.rowControl.kind === "leave").map((session) => session.startAt)}
-              returnTo={`/classes/terms/${term.id}`}
+              returnTo={termDetailHref(term.id, returnTo)}
               seriesEnrollmentId={term.ownSeriesEnrollment.id}
             />
           </>
@@ -283,13 +290,14 @@ function TermEnrollArea({
           <SignInOptions
             action={signInToEnrollTermAction}
             buttonClassName={buttonClass}
-            fields={{ recurringClassSeriesId: term.id }}
+            fields={{ recurringClassSeriesId: term.id, returnTo }}
             label={(provider) => `使用 ${provider} 登入並報名`}
           />
         </>
       ) : (
         <form action={enrollTermAction} className="grid gap-4">
           <input name="recurringClassSeriesId" type="hidden" value={term.id} />
+          <input name="returnTo" type="hidden" value={returnTo} />
           <p className="text-sm leading-6 text-ink-soft">
             報名整期會報上剩下的 {term.remainingCount} 堂{term.requiresApproval ? "，送出後等待老師確認" : ""}。已經單堂報名的場次會併入整期。
           </p>
@@ -308,7 +316,7 @@ function TermEnrollArea({
 }
 
 // Q11：預設收起，只列日期時段、自己的狀態、地點或時間不同的提示；不顯示人數。
-function TermSessionList({ term, openSessions }: { term: TermDetail; openSessions: boolean }) {
+function TermSessionList({ term, returnTo, openSessions }: { term: TermDetail; returnTo: string; openSessions: boolean }) {
   return (
     <details className={cardClass} open={openSessions}>
       <summary className="cursor-pointer text-base font-medium text-ink">查看每一堂（共 {term.totalCount} 堂）</summary>
@@ -318,7 +326,7 @@ function TermSessionList({ term, openSessions }: { term: TermDetail; openSession
       <ul aria-label="這一期的上課日期" className="mt-3 grid gap-2">
         {term.sessions.map((session) => (
           <li className="flex scroll-mt-6 flex-wrap items-center justify-between gap-2 rounded-xl border border-ink/10 px-4 py-2 text-sm" id={session.ownEnrollmentId ? `session-row-${session.ownEnrollmentId}` : undefined} key={session.id}>
-            <Link className="min-h-11 py-2 font-medium text-ink underline-offset-4 hover:underline" href={`/classes/${session.id}`}>
+            <Link className="min-h-11 py-2 font-medium text-ink underline-offset-4 hover:underline" href={classDetailHref(session.id, termDetailHref(term.id, returnTo))}>
               {formatTaipeiShortDatetime(session.startAt)}–{formatTaipeiDatetimeLocal(session.endAt).split("T")[1]}
             </Link>
             <span className="flex flex-wrap items-center gap-2 text-ink-soft">
@@ -332,7 +340,7 @@ function TermSessionList({ term, openSessions }: { term: TermDetail; openSession
                   classSessionId={session.id}
                   control={session.rowControl}
                   enrollmentId={session.ownEnrollmentId}
-                  returnTo={`/classes/terms/${term.id}`}
+                  returnTo={termDetailHref(term.id, returnTo)}
                   termMode={term.termEnrollmentMode}
                 />
               </div>

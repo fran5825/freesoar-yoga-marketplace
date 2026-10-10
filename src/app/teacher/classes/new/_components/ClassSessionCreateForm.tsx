@@ -13,7 +13,7 @@ import {
 
 import { TagCheckbox } from "@/app/_components/tag-checkbox";
 import { SPECIALTY_GROUPS } from "@/app/teachers/join/_lib/application-fields";
-import { MEMBER_INFO_MAX_LENGTH } from "@/domain/class-session/validation";
+import { MEMBER_INFO_MAX_LENGTH, PRICE_NOTE_MAX_LENGTH } from "@/domain/class-session/validation";
 import {
   computeNextWeeklyOccurrenceDates,
   weeklyAfterDateForStartDate,
@@ -87,6 +87,7 @@ type SharedFields = {
   description: string;
   suitableFor: string; // member-flow 票 03／04：適合對象（單堂與系列皆選填）
   preparationNotes: string; // member-flow 票 03／04：準備事項（單堂與系列皆選填）
+  priceNote: string; // lightweight-payment-v0：價格說明（單堂與系列皆選填）
   requiresApproval: boolean;
   isPublic: boolean;
   openForEnrollment: boolean; // 系列：建立後直接開放報名（teacher-class-scheduling 票 01）
@@ -117,6 +118,7 @@ const initialShared: SharedFields = {
   description: "",
   suitableFor: "",
   preparationNotes: "",
+  priceNote: "",
   requiresApproval: false,
   isPublic: false,
   openForEnrollment: false,
@@ -146,6 +148,7 @@ const sharedKeyToErrorField: Record<keyof SharedFields, CreateClassFormField | n
   description: "description",
   suitableFor: "suitableFor",
   preparationNotes: "preparationNotes",
+  priceNote: "priceNote",
   requiresApproval: null,
   isPublic: null,
   openForEnrollment: null,
@@ -232,6 +235,7 @@ export type EditClassInitial = {
   // member-flow 票 03：目前的值（沒填過是空字串）；系列場次不在表單顯示、也不送出。
   suitableFor: string;
   preparationNotes: string;
+  priceNote: string;
   serviceTypes: string[];
   yogaStyles: string[];
   date: string;
@@ -270,6 +274,7 @@ function sharedFromEdit(edit: EditClassInitial): SharedFields {
     description: edit.description,
     suitableFor: edit.suitableFor,
     preparationNotes: edit.preparationNotes,
+    priceNote: edit.priceNote,
     serviceTypes: edit.serviceTypes,
     yogaStyles: edit.yogaStyles.filter((style) => YOGA_STYLE_VALUES.has(style)),
     yogaStylesOther: edit.yogaStyles.filter((style) => !YOGA_STYLE_VALUES.has(style)).join("、"),
@@ -446,6 +451,7 @@ export function ClassSessionCreateForm({
     if (shared.description.trim() !== edit.description) labels.push("課程說明");
     if (shared.suitableFor.trim() !== edit.suitableFor) labels.push("適合對象");
     if (shared.preparationNotes.trim() !== edit.preparationNotes) labels.push("準備事項");
+    if (shared.priceNote.trim() !== edit.priceNote) labels.push("價格說明");
     if (timeChanged) labels.push(isFollowingScope ? "上課時段" : "日期與時間");
     if (locationChanged) labels.push("地點");
     if (shared.capacity.trim() !== String(edit.capacity)) labels.push("名額上限");
@@ -583,6 +589,7 @@ export function ClassSessionCreateForm({
     ...placeSummaryRows,
     memberInfoSummaryRow("適合對象", shared.suitableFor),
     memberInfoSummaryRow("準備事項", shared.preparationNotes),
+    memberInfoSummaryRow("價格說明", shared.priceNote),
     { label: "公開列表", value: shared.isPublic ? "開放報名後列在公開課程列表" : "僅透過連結招募" },
     approvalSummaryRow,
     {
@@ -753,7 +760,11 @@ export function ClassSessionCreateForm({
             {/* member-flow 票 03／04：單堂、改單堂與改系列場次（兩種範圍）都顯示，帶入這一場目前的值。 */}
             <MemberInfoFields
               {...sharedFieldProps}
-              errors={{ suitableFor: fieldErrors.suitableFor, preparationNotes: fieldErrors.preparationNotes }}
+              errors={{
+                suitableFor: fieldErrors.suitableFor,
+                preparationNotes: fieldErrors.preparationNotes,
+                priceNote: fieldErrors.priceNote,
+              }}
             />
           </FormSection>
           <FormSection title="時間地點">
@@ -866,6 +877,7 @@ export function ClassSessionCreateForm({
               ...placeSummaryRows,
               memberInfoSummaryRow("適合對象", shared.suitableFor),
               memberInfoSummaryRow("準備事項", shared.preparationNotes),
+              memberInfoSummaryRow("價格說明", shared.priceNote),
               {
                 label: "公開列表",
                 value: shared.isPublic ? "列在公開課程列表" : "不列在公開課程列表",
@@ -937,7 +949,11 @@ export function ClassSessionCreateForm({
             <DescriptionField {...descriptionProps} error={fieldErrors.description} idPrefix="weekly-" />
             <MemberInfoFields
               {...sharedFieldProps}
-              errors={{ suitableFor: fieldErrors.suitableFor, preparationNotes: fieldErrors.preparationNotes }}
+              errors={{
+                suitableFor: fieldErrors.suitableFor,
+                preparationNotes: fieldErrors.preparationNotes,
+                priceNote: fieldErrors.priceNote,
+              }}
               idPrefix="weekly-"
             />
           </FormSection>
@@ -1087,7 +1103,11 @@ export function ClassSessionCreateForm({
             <DescriptionField {...descriptionProps} error={fieldErrors.description} idPrefix="fixed-" />
             <MemberInfoFields
               {...sharedFieldProps}
-              errors={{ suitableFor: fieldErrors.suitableFor, preparationNotes: fieldErrors.preparationNotes }}
+              errors={{
+                suitableFor: fieldErrors.suitableFor,
+                preparationNotes: fieldErrors.preparationNotes,
+                priceNote: fieldErrors.priceNote,
+              }}
               idPrefix="fixed-"
             />
           </FormSection>
@@ -1578,12 +1598,14 @@ function MemberInfoFields({
   updateShared,
   errors,
 }: Omit<FieldProps, "error"> & {
-  errors: { suitableFor?: string[]; preparationNotes?: string[] };
+  errors: { suitableFor?: string[]; preparationNotes?: string[]; priceNote?: string[] };
 }) {
-  const hasError = Boolean(errors.suitableFor?.length || errors.preparationNotes?.length);
+  const hasError = Boolean(
+    errors.suitableFor?.length || errors.preparationNotes?.length || errors.priceNote?.length,
+  );
   // 展開狀態由使用者決定（比照課程說明）：清空內容重寫時不會突然收起；已有內容或送出錯誤時展開。
   const [open, setOpen] = useState(
-    () => shared.suitableFor.length > 0 || shared.preparationNotes.length > 0,
+    () => shared.suitableFor.length > 0 || shared.preparationNotes.length > 0 || shared.priceNote.length > 0,
   );
 
   return (
@@ -1593,9 +1615,26 @@ function MemberInfoFields({
       open={open || hasError}
     >
       <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-ink">
-        適合對象與準備事項（選填）
+        價格、適合對象與準備事項（選填）
       </summary>
       <div className="grid gap-4 pb-3">
+        <div>
+          <label className={labelClassName} htmlFor={`${idPrefix}priceNote`}>
+            價格說明（選填）
+          </label>
+          <input
+            className={inputClassName}
+            id={`${idPrefix}priceNote`}
+            maxLength={PRICE_NOTE_MAX_LENGTH}
+            name="priceNote"
+            onChange={(event) => updateShared("priceNote", event.target.value)}
+            placeholder="例如：單堂 600 元；整期 4 堂 2200 元。"
+            type="text"
+            value={shared.priceNote}
+            {...errorAttributes(`${idPrefix}priceNote-error`, errors.priceNote)}
+          />
+          <FieldError id={`${idPrefix}priceNote-error`} messages={errors.priceNote} />
+        </div>
         <div>
           <label className={labelClassName} htmlFor={`${idPrefix}suitableFor`}>
             適合對象（選填）
@@ -1628,7 +1667,7 @@ function MemberInfoFields({
           />
           <FieldError id={`${idPrefix}preparationNotes-error`} messages={errors.preparationNotes} />
         </div>
-        <p className="text-xs leading-5 text-ink-faint">學員會在課程頁看到這兩段；沒填的那一段不會顯示。</p>
+        <p className="text-xs leading-5 text-ink-faint">學員會在課程頁看到這幾段；沒填的那一段不會顯示。</p>
       </div>
     </details>
   );

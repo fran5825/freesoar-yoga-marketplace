@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { classReturnLabel } from "@/lib/navigation/class-return-path";
+
 import { SignInOptions } from "../../_components/sign-in-options";
 import { signInToEnrollAction } from "../[classSessionId]/actions";
 
@@ -12,7 +14,7 @@ const buttonClass = "inline-flex min-h-11 w-full items-center justify-center rou
 export function ClassSignInGuide({ classSessionId, returnTo }: { classSessionId: string; returnTo: string }) {
   return (
     <div className="grid min-w-0 gap-6">
-      <Link className="w-fit py-2 text-sm text-clay underline" href={returnTo}>返回課程列表</Link>
+      <Link className="w-fit py-2 text-sm text-clay underline" href={returnTo}>{classReturnLabel(returnTo)}</Link>
       <section aria-labelledby="class-sign-in-heading" className="grid gap-4 rounded-2xl border border-pine/25 bg-white p-5 sm:p-6">
         <h1 className="text-2xl font-semibold tracking-tight text-ink" id="class-sign-in-heading">登入後查看這堂課</h1>
         <p className="text-sm leading-6 text-ink-soft">

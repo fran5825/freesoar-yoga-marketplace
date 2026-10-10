@@ -78,7 +78,7 @@ test("roster shows name and email, searches and filters, cancels pending enrolme
   await expect(roster.getByText(`Alice ${runId}`, { exact: true })).toBeVisible();
   await expect(row(erin.email!)).toContainText("已出席");
   await expect(row(nora.email!)).toContainText("未出席");
-  for (const historic of [erin.email!, nora.email!]) await expect(row(historic).getByRole("button")).toHaveCount(0);
+  for (const historic of [erin.email!, nora.email!]) await expect(row(historic).getByRole("button", { name: "取消這筆報名" })).toHaveCount(0);
   await expect(row(anonymous.email!)).toContainText("未填姓名");
   await expect(row(`NoMail ${runId}`)).toContainText("未提供 email");
   for (const name of ["全部・8", "待老師確認・1", "已報名・4", "已取消・1"]) await expect(tab(name)).toBeVisible();
@@ -119,7 +119,7 @@ test("roster shows name and email, searches and filters, cancels pending enrolme
   await page.getByRole("link", { name: `查看這筆（Carol ${runId}・已取消）` }).click();
   await expect(page).toHaveURL((url) => url.searchParams.get("rstatus") === "cancelled" && url.searchParams.get("rq") === "Carol" && url.hash === `#enrollment-${carol.enrollmentId}`);
   await expect(row(carol.email!)).toContainText("已取消");
-  await expect(row(carol.email!).getByRole("button")).toHaveCount(0);
+  await expect(row(carol.email!).getByRole("button", { name: "取消這筆報名" })).toHaveCount(0);
   await expect(header).toContainText("已報名 4 人・待老師確認 0 人・名額佔用 4／10");
 
   const returnTo = new URL(page.url()).searchParams.get("returnTo")!;
@@ -136,7 +136,7 @@ test("roster shows name and email, searches and filters, cancels pending enrolme
 
   // 竄改 enrollmentId 成 email：失敗，但網址不會出現 email，也不帶 item。
   await page.goto(rosterUrl("Alice", "confirmed"));
-  await row(alice.email!).locator('input[name="enrollmentId"]').evaluate((el: HTMLInputElement, value) => { el.value = value; }, alice.email!);
+  await row(alice.email!).locator("form", { has: page.getByRole("button", { name: "取消這筆報名" }) }).locator('input[name="enrollmentId"]').evaluate((el: HTMLInputElement, value) => { el.value = value; }, alice.email!);
   await roster.getByRole("button", { name: "取消這筆報名" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "確認取消報名" }).click();
   await expect(page.getByText(/^這筆報名沒有取消：/)).toBeVisible();
@@ -179,7 +179,7 @@ test("roster shows name and email, searches and filters, cancels pending enrolme
   const late = await member(startedClass.id, "late", `Late ${runId}`, "pending");
   await page.goto(`/admin/classes/${startedClass.id}`);
   await expect(row(late.email!)).toContainText("待老師確認");
-  await expect(row(late.email!).getByRole("button")).toHaveCount(0);
+  await expect(row(late.email!).getByRole("button", { name: "取消這筆報名" })).toHaveCount(0);
 
   // 非 admin：同一堂真的有名單的課程，詳情（含名單條件）一律 404。
   await context.clearCookies();

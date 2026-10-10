@@ -10,7 +10,7 @@ import {
 } from "@/domain/class-session/public-read-service";
 import { classDiscoveryHref, classDiscoveryWeekday, parseClassDiscoveryFilters, type DiscoveryParams } from "@/domain/class-session/class-discovery-filters";
 import { formatTaipeiDatetime, formatTaipeiShortDatetime } from "@/domain/class-session/timezone";
-import { classDetailHref } from "@/lib/navigation/class-return-path";
+import { classDetailHref, seriesDetailHref, termDetailHref } from "@/lib/navigation/class-return-path";
 import { SiteShell } from "../_components/site-shell";
 import { ClassOriginTag } from "./_components/ClassOriginTag";
 import { ClassFilters } from "./_components/ClassFilters";
@@ -39,7 +39,7 @@ export default async function PublicClassesPage({ searchParams }: { searchParams
           <Link className="mt-4 inline-flex rounded-full bg-pine px-5 py-3 text-sm font-medium text-white" href="/classes">清除篩選</Link>
         </section>
       ) : <section aria-label="課程結果" className="grid gap-4 sm:grid-cols-2">
-        {entries.map(entry => entry.kind === "term" ? <TermCard key={`term-${entry.item.id}`} term={entry.item} /> : entry.kind === "series" ? <SeriesCard key={`series-${entry.item.id}`} series={entry.item} /> : <SessionCard key={entry.item.id} returnTo={returnTo} session={entry.item} />)}
+        {entries.map(entry => entry.kind === "term" ? <TermCard key={`term-${entry.item.id}`} returnTo={returnTo} term={entry.item} /> : entry.kind === "series" ? <SeriesCard key={`series-${entry.item.id}`} returnTo={returnTo} series={entry.item} /> : <SessionCard key={entry.item.id} returnTo={returnTo} session={entry.item} />)}
       </section>}
     </SiteShell>
   );
@@ -47,10 +47,10 @@ export default async function PublicClassesPage({ searchParams }: { searchParams
 
 const cardClassName = "grid min-w-0 gap-3 rounded-2xl border border-ink/15 bg-white p-5 transition hover:border-pine/40 focus-visible:outline-2 focus-visible:outline-pine";
 
-function TermCard({ term }: { term: PublicTermListItem }) {
+function TermCard({ term, returnTo }: { term: PublicTermListItem; returnTo: string }) {
   const serviceTypes = getClassServiceTypes(term);
   return (
-    <Link className={cardClassName} href={`/classes/terms/${term.id}`}>
+    <Link className={cardClassName} href={termDetailHref(term.id, returnTo)}>
       <div className="flex flex-wrap gap-2">
         <span className="rounded-full bg-pine-tint px-3 py-1 text-xs font-medium text-pine-deep">期班・共 {term.totalCount} 堂・剩 {term.remainingCount} 堂</span>
         {term.canEnroll ? null : <span className="rounded-full bg-cream px-3 py-1 text-xs font-medium text-ink-soft">目前無法報名</span>}
@@ -65,10 +65,10 @@ function TermCard({ term }: { term: PublicTermListItem }) {
   );
 }
 
-function SeriesCard({ series }: { series: PublicSeriesListItem }) {
+function SeriesCard({ series, returnTo }: { series: PublicSeriesListItem; returnTo: string }) {
   const serviceTypes = getClassServiceTypes(series);
   return (
-    <Link className={cardClassName} href={`/classes/series/${series.id}`}>
+    <Link className={cardClassName} href={seriesDetailHref(series.id, returnTo)}>
       <div className="flex flex-wrap gap-2"><ClassOriginTag origin={series.origin} /><span className="rounded-full bg-pine-tint px-3 py-1 text-xs font-medium text-pine-deep">持續開課</span></div>
       <h2 className="min-w-0 break-words text-lg font-medium text-ink">{series.title}</h2>
       <p className="text-sm text-ink">{series.scheduleLabel}</p>
