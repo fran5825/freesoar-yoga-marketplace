@@ -149,14 +149,12 @@ export default async function OrganizerDashboardPage() {
         </div>
       )}
 
+      {/* inline-member-actions 票 04：沒有輪到團主處理的事項就整張不出現；有事項時是提示橫幅之後的第一張卡。 */}
+      {pendingActions.length > 0 || proposalActions.length > 0 ? (
       <section aria-labelledby="pending-title" className="rounded-2xl border border-ink/15 bg-white p-6">
         <h2 className="text-lg font-semibold text-ink" id="pending-title">待你處理</h2>
 
-        {pendingActions.length === 0 && proposalActions.length === 0 ? (
-          <p className="mt-4 text-sm leading-6 text-ink-soft">
-            目前沒有待處理事項。
-          </p>
-        ) : (
+        {(
           <div className="mt-4 grid gap-3">
             {draftCount > 0 ? (
               <Link
@@ -196,6 +194,7 @@ export default async function OrganizerDashboardPage() {
           </div>
         )}
       </section>
+      ) : null}
 
       {proposalWaiting.length > 0 ? (
         <section aria-labelledby="waiting-title" className="rounded-2xl border border-ink/15 bg-white p-6">

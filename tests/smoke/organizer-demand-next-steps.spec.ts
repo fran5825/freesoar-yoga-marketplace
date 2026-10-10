@@ -102,7 +102,8 @@ test.describe("organizer demand next steps", () => {
       "已公開，等待老師回應",
     );
     await page.goto("/organizer/dashboard");
-    await expect(page.getByText("目前沒有待處理事項。")).toBeVisible();
+    await expect(page.getByText("目前沒有待處理事項。")).toBeHidden();
+    await expect(page.getByRole("region", { name: "待你處理" })).toHaveCount(0);
     await page.goto(`/organizer/demands/${demand.id}`);
     const nextStep = page.getByRole("region", { name: "下一步提示" });
     await expect(nextStep).toContainText("目前進度");

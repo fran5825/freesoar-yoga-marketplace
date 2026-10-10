@@ -7,12 +7,18 @@ const todoCopy: Record<MemberTodo["kind"], { label: string; text: string }> = {
   pending: { label: "等老師確認", text: "報名已送出，老師確認後會顯示在「通知」" },
 };
 
-// 依既有 kind 分開本人可操作事項與等候事項，domain 判斷不變。
+// inline-member-actions 票 04：「待你處理」（輪到學員）沒有事項就整張不出現，有事項時放在頁面第一張卡；
+// 「等待老師確認」不算待你處理，另外一張卡、放在原本的位置，沒有同樣不出現。domain 判斷不變。
 export function MemberTodoList({ todos }: { todos: MemberTodo[] }) {
-  return <>
-    <TodoSection todos={todos.filter(todo => todo.kind === "review")} heading="待你處理" id="member-todo-heading" />
-    {todos.some(todo => todo.kind === "pending") ? <TodoSection todos={todos.filter(todo => todo.kind === "pending")} heading="等待老師確認" id="member-waiting-heading" /> : null}
-  </>;
+  const review = todos.filter((todo) => todo.kind === "review");
+
+  return review.length > 0 ? <TodoSection todos={review} heading="待你處理" id="member-todo-heading" /> : null;
+}
+
+export function MemberWaitingList({ todos }: { todos: MemberTodo[] }) {
+  const pending = todos.filter((todo) => todo.kind === "pending");
+
+  return pending.length > 0 ? <TodoSection todos={pending} heading="等待老師確認" id="member-waiting-heading" /> : null;
 }
 
 function TodoSection({ todos, heading, id }: { todos: MemberTodo[]; heading: string; id: string }) {

@@ -439,7 +439,8 @@ test.describe("enrollment smoke", () => {
     await page.goto("/member/enrollments");
     await expect(page.getByText("目前沒有任何報名")).toBeVisible();
     await expect(page.getByText(`Class ${testRunId}`)).toBeHidden();
-    await expect(page.getByText("目前沒有待處理事項")).toBeVisible();
+    await expect(page.getByText("目前沒有待處理事項")).toBeHidden();
+    await expect(page.getByRole("region", { name: "待你處理" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "去找一堂課" })).toHaveAttribute(
       "href",
       "/classes",

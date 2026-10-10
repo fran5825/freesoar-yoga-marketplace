@@ -135,7 +135,8 @@ test.describe("/member dashboard smoke", () => {
     await expect(page.getByRole("heading", { name: "我的總覽" })).toBeVisible();
     await expect(page.getByText("目前沒有任何通知")).toBeVisible();
     await expect(page.getByText("目前沒有任何報名")).toBeVisible();
-    await expect(page.getByText("目前沒有待處理事項")).toBeVisible();
+    await expect(page.getByText("目前沒有待處理事項")).toBeHidden();
+    await expect(page.getByRole("region", { name: "待你處理" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "去找一堂課" })).toHaveAttribute(
       "href",
       "/classes",
@@ -246,7 +247,7 @@ test.describe("/member dashboard smoke", () => {
     await page.goto(dashboardPath);
 
     // 等候區：2 筆 pending；本人待處理區不混入等候事項。
-    await expect(page.getByRole("region", { name: "待你處理" })).toContainText("目前沒有待處理事項");
+    await expect(page.getByRole("region", { name: "待你處理" })).toHaveCount(0);
     const todo = page.getByRole("region", { name: "等待老師確認" });
     await expect(todo.getByText("等老師確認")).toHaveCount(2);
     await expect(todo).toContainText(`Class ${testRunId}-pending-1`);

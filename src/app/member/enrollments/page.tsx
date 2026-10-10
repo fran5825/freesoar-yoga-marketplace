@@ -9,7 +9,7 @@ import { requireUser } from "@/lib/auth/session";
 import { CancelEnrollmentForm } from "../_components/CancelEnrollmentForm";
 import { EnrollmentStatusBadge } from "../_components/EnrollmentStatusBadge";
 import { ScrollToTarget } from "../../_components/ScrollToTarget";
-import { MemberTodoList } from "../_components/MemberTodoList";
+import { MemberTodoList, MemberWaitingList } from "../_components/MemberTodoList";
 import { TermRowAction, TermRowBadge, WithdrawTermInline } from "../_components/TermRowControls";
 
 import { cancelEnrollmentAction, submitReviewAction } from "./actions";
@@ -128,6 +128,7 @@ export default async function MemberEnrollmentsPage({
       <ScrollToTarget targetId={resolvedSearchParams?.focus} />
 
       <MemberTodoList todos={todos} />
+      <MemberWaitingList todos={todos} />
 
       {termCards.length > 0 ? (
         <section aria-label="整期報名" className="grid gap-4">

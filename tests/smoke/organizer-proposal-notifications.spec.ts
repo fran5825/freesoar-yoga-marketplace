@@ -154,7 +154,7 @@ test.describe("organizer proposal notifications", () => {
     await teacherPage.getByRole("button", { name: "確認授課" }).click();
     await expect(teacherPage.getByText(/你已確認授課/)).toBeVisible();
     await teacherPage.goto("/teacher/dashboard");
-    await expect(teacherPage.getByRole("region", { name: "待你處理" }).getByRole("link", { name: new RegExp(`通知旅程 ${id}`) })).toContainText("等待團主開放報名");
+    await expect(teacherPage.getByRole("region", { name: "等待對方回覆" }).getByRole("link", { name: new RegExp(`通知旅程 ${id}`) })).toContainText("等待團主開放報名");
     await teacherContext.close();
 
     expect(await notificationsFor(organizer.userId, proposal.id)).toEqual([
@@ -339,8 +339,8 @@ test.describe("organizer proposal notifications", () => {
     await addAuthSessionCookie(teacherContext, teacherA.sessionToken);
     const teacherPage = await teacherContext.newPage();
     await teacherPage.goto("/teacher/dashboard");
-    await expect(teacherPage.getByRole("region", { name: "待你處理" }).getByRole("link", { name: new RegExp(`時間已過 ${id}`) })).toContainText("合作邀請的時間已過，等待團主修改");
-    const confirmedPastItem = teacherPage.getByRole("region", { name: "待你處理" }).getByRole("link", { name: new RegExp(`確認後過期 ${id}`) });
+    await expect(teacherPage.getByRole("region", { name: "等待對方回覆" }).getByRole("link", { name: new RegExp(`時間已過 ${id}`) })).toContainText("合作邀請的時間已過，等待團主修改");
+    const confirmedPastItem = teacherPage.getByRole("region", { name: "等待對方回覆" }).getByRole("link", { name: new RegExp(`確認後過期 ${id}`) });
     await expect(confirmedPastItem).toContainText("合作邀請的時間已過，等待團主修改");
     await expect(confirmedPastItem).not.toContainText("等待團主開放報名");
     await teacherContext.close();
