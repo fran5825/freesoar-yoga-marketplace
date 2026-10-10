@@ -109,7 +109,7 @@ for (const origin of ["organizer", "teacher"] as const) {
     await page.keyboard.press("Enter");
     await expect(page.locator('section[aria-live="polite"]')).toBeVisible();
     await expect(page.locator('section[aria-live="polite"]')).toContainText("報名成功。");
-    await expect(page.getByRole("region", { name: "你的報名狀態" })).toContainText("已報名");
+    await expect(page.getByRole("region", { name: "課程重點" })).toContainText("已報名");
     const enrollment = await prisma.enrollment.findUniqueOrThrow({ where: { classSessionId_userId: { classSessionId: course.id, userId: member.userId } } });
     expect(enrollment.status).toBe("confirmed");
     expect(enrollment.consentedAt).not.toBeNull();
@@ -127,8 +127,8 @@ for (const origin of ["organizer", "teacher"] as const) {
     await keyboardActivate(page, page.getByRole("button", { name: "確認取消", exact: true }));
     await expect(page.locator('section[aria-live="polite"]')).toBeVisible();
     await expect(page.locator('section[aria-live="polite"]')).toContainText("報名已取消。");
-    await expect(page.getByRole("region", { name: "你的報名狀態" })).toContainText("已取消");
-    await expect(page.getByRole("region", { name: "你的報名狀態" })).toContainText("可以重新報名");
+    await expect(page.getByRole("region", { name: "課程重點" })).toContainText("已取消");
+    await expect(page.getByRole("region", { name: "課程重點" })).toContainText("可以重新報名");
     expect((await prisma.enrollment.findUniqueOrThrow({ where: { id: enrollment.id } })).status).toBe("cancelled");
     await screenshot(page, info, `${origin}-cancelled`);
     await keyboardActivate(page, page.getByRole("link", { name: "我的報名", exact: true }));
@@ -147,7 +147,7 @@ test("pending UI enrollment accepted by the teacher updates member detail, enrol
   await page.getByLabel("備註（選填）").fill(`pending-${run}`);
   await page.getByRole("checkbox", { name: /我了解此課程非醫療行為/ }).check();
   await page.getByRole("button", { name: "送出報名申請" }).click();
-  await expect(page.getByRole("region", { name: "你的報名狀態" })).toContainText("等待老師確認");
+  await expect(page.getByRole("region", { name: "課程重點" })).toContainText("等待老師確認");
   const enrollment = await prisma.enrollment.findUniqueOrThrow({ where: { classSessionId_userId: { classSessionId: course.id, userId: member.userId } } });
   expect(enrollment.status).toBe("pending");
   await screenshot(page, info, "pending-detail");
@@ -167,8 +167,8 @@ test("pending UI enrollment accepted by the teacher updates member detail, enrol
   await context.clearCookies();
   await addAuthSessionCookie(context, member.sessionToken);
   await page.goto(`/classes/${course.id}`);
-  await expect(page.getByRole("region", { name: "你的報名狀態" })).toContainText("已報名");
-  await expect(page.getByRole("region", { name: "你的報名狀態" })).not.toContainText("等待老師確認");
+  await expect(page.getByRole("region", { name: "課程重點" })).toContainText("已報名");
+  await expect(page.getByRole("region", { name: "課程重點" })).not.toContainText("等待老師確認");
   await screenshot(page, info, "accepted-detail");
   await page.goto("/member/enrollments");
   await expect(page.locator(`#enrollment-${enrollment.id}`)).toContainText("已報名");

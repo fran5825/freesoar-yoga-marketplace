@@ -187,13 +187,13 @@ test.describe("restore leave (UI)", () => {
     await addAuthSessionCookie(context, member.sessionToken);
 
     await page.goto(`/classes/${rows[0].classSessionId}`);
-    await page.getByText("請假這一堂…").click();
-    await expect(page.getByText("請假後，這一堂的名額會開放給單堂報名；整期的其他堂照常。開課前、名額還在時可以取消請假。")).toBeVisible();
-    await page.getByLabel("我確認這一堂要請假。").check();
-    await page.getByRole("button", { name: "確認請假" }).click();
+    await page.getByRole("region", { name: "課程重點" }).getByText("請假", { exact: true }).click();
+    await expect(page.getByRole("region", { name: "課程重點" }).getByText("請假後，這一堂的名額會開放給單堂報名；整期的其他堂照常。開課前、名額還在時可以取消請假。")).toBeVisible();
+    await page.getByRole("region", { name: "課程重點" }).getByLabel("我確認這一堂要請假。").check();
+    await page.getByRole("region", { name: "課程重點" }).getByRole("button", { name: "確認請假" }).click();
     await expect(page.getByText("已請假這一堂，整期的其他堂照常。")).toBeVisible();
 
-    const region = page.getByRole("region", { name: "你的報名狀態" });
+    const region = page.getByRole("region", { name: "課程重點" });
     await expect(region).toContainText("開課前、名額還在時可以取消請假");
     await region.getByRole("button", { name: "取消請假" }).click();
     await expect(page.getByText("已取消請假，這一堂照常上課。")).toBeVisible();
@@ -206,11 +206,11 @@ test.describe("restore leave (UI)", () => {
     await addAuthSessionCookie(context, member.sessionToken);
 
     await page.goto(`/classes/${rows[0].classSessionId}`);
-    await page.getByText("請假這一堂…").click();
-    await expect(page.getByText("請假後，這一堂會標示為請假；整期的其他堂照常。開課前可以取消請假。")).toBeVisible();
-    await page.getByLabel("我確認這一堂要請假。").check();
-    await page.getByRole("button", { name: "確認請假" }).click();
-    await expect(page.getByRole("region", { name: "你的報名狀態" })).toContainText("名額已為你保留");
+    await page.getByRole("region", { name: "課程重點" }).getByText("請假", { exact: true }).click();
+    await expect(page.getByRole("region", { name: "課程重點" }).getByText("請假後，這一堂會標示為請假；整期的其他堂照常。開課前可以取消請假。")).toBeVisible();
+    await page.getByRole("region", { name: "課程重點" }).getByLabel("我確認這一堂要請假。").check();
+    await page.getByRole("region", { name: "課程重點" }).getByRole("button", { name: "確認請假" }).click();
+    await expect(page.getByRole("region", { name: "課程重點" })).toContainText("名額已為你保留");
   });
 
   test("no button when it cannot work: seat taken, term withdrawn, term declined", async ({ context, page }, testInfo) => {
@@ -219,7 +219,7 @@ test.describe("restore leave (UI)", () => {
     await leave(full.rows[0].id);
     await createEnrollmentForUser(other.id, full.term.sessions[0].id, { notes: null });
     await addAuthSessionCookie(context, full.member.sessionToken);
-    const region = page.getByRole("region", { name: "你的報名狀態" });
+    const region = page.getByRole("region", { name: "課程重點" });
 
     await page.goto(`/classes/${full.rows[0].classSessionId}`);
     await expect(region).toContainText("這一堂名額已被報滿，請聯絡老師。");

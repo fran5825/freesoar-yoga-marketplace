@@ -130,7 +130,8 @@ export type MemberFacingClassSession = {
   teacherProfile: { displayName: string | null };
   // teacher-class-scheduling 票 09：屬於整期報名時有值（取消這一堂就是「請假」）。
   // enrollment-re-enrollment 票 02：已取消的報名能不能重新報名，由 service layer 一次算好（spec 4.6）。
-  ownEnrollment: { id: string; status: EnrollmentStatus; seriesEnrollmentId: string | null; reEnroll: ReEnrollState } | null;
+  // inline-member-actions 票 03：rowControl＝整期的這一堂要顯示請假、取消請假還是說明（不屬於整期時是 none）。
+  ownEnrollment: { id: string; status: EnrollmentStatus; seriesEnrollmentId: string | null; reEnroll: ReEnrollState; rowControl: TermRowControl } | null;
   termEnrollmentMode: TermEnrollmentMode | null;
   requiresApproval: boolean;
   canAcceptNewEnrollments: boolean;
@@ -193,6 +194,18 @@ export async function getClassSessionForMember(
         id: ownRow.id,
         status: ownRow.status,
         seriesEnrollmentId: ownRow.seriesEnrollmentId,
+        rowControl: getTermRowControl({
+          status: ownRow.status,
+          cancelledBy: ownRow.cancelledBy,
+          seriesEnrollmentId: ownRow.seriesEnrollmentId,
+          seriesEnrollmentStatus: ownRow.seriesEnrollment?.status ?? null,
+          termEnrollmentMode,
+          classStatus: classSession.status,
+          startAt: classSession.startAt,
+          capacity: classSession.capacity,
+          occupiedCount: _count.enrollments,
+          teacherApproved: teacherProfile.status === "approved",
+        }),
         reEnroll: getReEnrollState({
           status: ownRow.status,
           cancelledBy: ownRow.cancelledBy,

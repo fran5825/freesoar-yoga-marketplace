@@ -124,9 +124,9 @@ test.describe("cancelledBy is recorded for member and teacher actions (UI)", () 
     expect(await cancelledByOf(singleEnrollment.enrollmentId)).toEqual({ status: "cancelled", cancelledBy: "member" });
 
     await page.goto(`/classes/${term.sessions[0].id}`);
-    await page.getByText("請假這一堂…").click();
-    await page.getByLabel("我確認這一堂要請假。").check();
-    await page.getByRole("button", { name: "確認請假" }).click();
+    await page.getByRole("region", { name: "課程重點" }).getByText("請假", { exact: true }).click();
+    await page.getByRole("region", { name: "課程重點" }).getByLabel("我確認這一堂要請假。").check();
+    await page.getByRole("region", { name: "課程重點" }).getByRole("button", { name: "確認請假" }).click();
     await expect(page.getByText("已請假這一堂，整期的其他堂照常。")).toBeVisible();
     const leave = await prisma.enrollment.findFirstOrThrow({ where: { seriesEnrollmentId: joined.seriesEnrollmentId, classSessionId: term.sessions[0].id } });
     expect(await cancelledByOf(leave.id)).toEqual({ status: "cancelled", cancelledBy: "member" });
