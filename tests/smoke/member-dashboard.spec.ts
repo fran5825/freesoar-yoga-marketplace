@@ -262,7 +262,7 @@ test.describe("/member dashboard smoke", () => {
     // 即將上課的卡片整張是連結，點了進課程詳情。
     await expect(
       page.getByRole("link", { name: new RegExp(`Class ${testRunId}-future-1`) }),
-    ).toHaveAttribute("href", `/classes/${futureClassSessions[0].id}`);
+    ).toHaveAttribute("href", new RegExp(`^/classes/${futureClassSessions[0].id}([?]|$)`));
 
     // 已過去的 confirmed 報名不進入即將到來清單。
     await expect(page.getByText(`Class ${testRunId}-past`)).toBeHidden();

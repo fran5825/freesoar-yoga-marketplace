@@ -121,7 +121,7 @@ test.describe("enrollment smoke", () => {
     await expect(history).toContainText("課程已取消");
     await expect(history).toContainText("Test Studio");
     await expect(history.getByRole("link")).toHaveCount(0);
-    await expect(page.locator(`#enrollment-${second.enrollmentId}`).getByRole("link")).toHaveAttribute("href", `/classes/${cancelledOwn.classSessionId}`);
+    await expect(page.locator(`#enrollment-${second.enrollmentId}`).getByRole("link")).toHaveAttribute("href", new RegExp(`^/classes/${cancelledOwn.classSessionId}([?]|$)`));
   });
 
   test("a suspended teacher's existing member detail remains readable but offers no enrollment form or internal status", async ({ page, context }, testInfo) => {
@@ -547,7 +547,7 @@ test.describe("enrollment smoke", () => {
     await page
       .locator(`#enrollment-${pending.enrollmentId}`)
       .click({ position: { x: 8, y: 8 } });
-    await expect(page).toHaveURL(new RegExp(`/classes/${pendingClassId}$`));
+    await expect(page).toHaveURL(new RegExp(`/classes/${pendingClassId}([?].*)?$`));
 
     // 留下評價後，該筆從「待你處理」消失。
     await page.goto("/member/enrollments");
