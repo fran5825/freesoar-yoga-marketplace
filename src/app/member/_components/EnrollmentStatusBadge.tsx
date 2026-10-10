@@ -3,6 +3,8 @@ export const enrollmentStatusLabels: Record<string, string> = {
   pending: "等待老師確認",
   confirmed: "已報名",
   cancelled: "已取消",
+  attended: "已出席",
+  no_show: "未出席",
 };
 
 export function EnrollmentStatusBadge({ status }: { status: string }) {

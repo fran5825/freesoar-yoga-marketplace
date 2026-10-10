@@ -121,6 +121,8 @@
 
 ### 4.6 畫面與文案
 
+> 操作入口的位置後來改為就地操作（我的報名、期班頁、單堂頁第一張卡與同系列列表），見 [就地請假與精簡卡片 spec](./member-inline-actions-and-card-cleanup-spec.md)；本節的顯示條件與文案規則不變。
+
 單堂頁「你的報名狀態」區（`ClassEnrollmentPanel`）。可否重新報名由 service layer 的讀取函式（`getClassSessionForMember`）一併算好回傳，頁面只依結果顯示，不自己判斷；顯示表單的條件與 `createEnrollmentForUser` 的檢查一致，避免出現送出後必然失敗的表單：
 
 | 情況 | 畫面 |

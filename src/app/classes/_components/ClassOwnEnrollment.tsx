@@ -38,6 +38,14 @@ function statusMessage(classSession: MemberFacingClassSession): string {
     return "你的報名已送出，老師確認後才算成立，確認結果會顯示在「通知」。";
   }
 
+  if (own.status === "attended") {
+    return "你已參加這堂課程。";
+  }
+
+  if (own.status === "no_show") {
+    return "這堂課沒有記錄到你的出席。";
+  }
+
   if (own.status === "confirmed") {
     return own.seriesEnrollmentId ? "報名已成立，這一堂屬於你的整期報名，請依課程時間與地點準時參加。" : "報名已成立，請依課程時間與地點準時參加。";
   }

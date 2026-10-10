@@ -133,4 +133,18 @@ test.describe("my enrollments: term card inline actions", () => {
     await expect(page.locator(`#enrollment-${rows[0].id}`)).toBeVisible();
     expect(await noOverflow(page)).toBe(true);
   });
+
+  test("a past leave of a still-active term is listed below as 請假中, not 已取消", async ({ context, page }, testInfo) => {
+    const { member, rows } = await seedJoined("past-leave", testInfo);
+    await prisma.enrollment.update({ where: { id: rows[0].id }, data: { status: "cancelled", cancelledBy: "member" } });
+    await prisma.classSession.update({
+      where: { id: rows[0].classSessionId },
+      data: { startAt: new Date(Date.now() - 7_200_000), endAt: new Date(Date.now() - 3_600_000) },
+    });
+    await addAuthSessionCookie(context, member.sessionToken);
+
+    await page.goto("/member/enrollments");
+    await expect(page.locator(`#enrollment-${rows[0].id}`)).toContainText("請假中");
+    await expect(page.locator(`#enrollment-${rows[0].id}`)).not.toContainText("已取消");
+  });
 });

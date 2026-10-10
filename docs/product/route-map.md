@@ -15,9 +15,9 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 | `/teachers/join` | 老師加入與申請入口。**已擴充**（`teacher-join-gated-application` 已確認）：依登入狀態分支——未登入顯示品牌定位、審核流程、資料預覽、FAQ 與帶 `callbackUrl` 的登入 CTA（唯讀導覽，不渲染可填表單）；已登入才顯示完整申請表單（draft 儲存、送審、四種既有狀態顯示），行為與擴充前一致 | Visitor, Teacher |
 | `/organizers/request` | 團主提出需求入口 | Visitor, Organizer |
 | `/classes` | **已落地**（`teacher-initiated-open-classes` Slice D 已確認）：公開 class session 列表，任何人（含未登入 Visitor）都能瀏覽，可依課程類型／星期幾篩選；只顯示 `isPublic=true`、狀態符合、且授課老師 `approved` 的課程。**票 12（`teacher-class-scheduling`，2026-10-09）**：公開期班合併成一張卡片連到 `/classes/terms/[id]`，可報名依期班報名方式判斷；星期篩選一律用每一場實際日期（票 11）。**`class-discovery-series-cards`（2026-10-09）**：持續開課同樣合併成一張系列卡連到 `/classes/series/[id]`（卡片資料取自下一堂：預設第一個有名額的場次，勾「包含已額滿」則最近一場並標額滿），頁首改「找到 N 個課程」，單堂卡與期班卡精簡、整張卡可點 | Visitor, Member |
-| `/classes/[classSessionId]` | class session 詳情、share link 與 enrollment 入口（**`enrollment-re-enrollment`，2026-10-10**：學員自己取消的報名，開課前在這裡「重新報名」；整期請假可「取消請假」；不能時顯示原因，不顯示表單）。**已落地並擴充（`teacher-initiated-open-classes` Slice D 已確認）**：依登入狀態分支——已登入沿用既有 `getClassSessionForMember()`（不檢查 `isPublic`，維持既有 share-link 查看模式不變）；未登入改走新的 `getPublicClassSessionDetail()`，只顯示公開條件符合的課程，顯示唯讀詳情＋「登入後報名」連結（不渲染報名表單），不符合公開條件一律回傳 not-found，不揭露存在性（票 13 起改為通用登入引導，見下方） | Visitor, Member |
+| `/classes/[classSessionId]` | class session 詳情、share link 與 enrollment 入口（**`enrollment-re-enrollment`，2026-10-10**：學員自己取消的報名，開課前在這裡「重新報名」；整期請假可「取消請假」；不能時顯示原因，不顯示表單）。**`inline-member-actions`（2026-10-10）**：拿掉獨立的「你的報名狀態」卡，狀態與動作（取消報名、重新報名、整期請假與取消請假）放進第一張課程資訊卡；「同系列的其他場次」整期學員自己的列就地請假／取消請假；持續開課且系列頁看得到、所有日期都在系列頁時，這張卡改成一行「查看這個課程的所有日期」連結。**已落地並擴充（`teacher-initiated-open-classes` Slice D 已確認）**：依登入狀態分支——已登入沿用既有 `getClassSessionForMember()`（不檢查 `isPublic`，維持既有 share-link 查看模式不變）；未登入改走新的 `getPublicClassSessionDetail()`，只顯示公開條件符合的課程，顯示唯讀詳情＋「登入後報名」連結（不渲染報名表單），不符合公開條件一律回傳 not-found，不揭露存在性（票 13 起改為通用登入引導，見下方） | Visitor, Member |
 | `/classes/series/[recurringClassSeriesId]` | **已落地（`class-discovery-series-cards` 票 01，2026-10-09）**：持續開課的系列頁，訪客與學員都能看。顯示課程資訊（標頭取第一個有名額的未來公開場次，全部額滿則取最近一場並標額滿）、說明、適合對象、準備事項，與最近 8 堂場次（每場日期與剩餘名額，地點或時間不同會加註）；「看更多日期」用 `?show=` 每次加 8，上限 200。沒有整期報名，點日期進單堂頁報名。期班、不存在、沒有公開場次、非公開或老師非 `approved` 一律 not-found，不揭露存在性 | Visitor, Member |
-| `/classes/terms/[recurringClassSeriesId]` | **已落地（`teacher-class-scheduling` 票 08，2026-10-09）**：期班頁。顯示期間、上課時間、地點、老師、共幾堂／剩幾堂、報名方式與每一場（只列已開放／已完成，草稿只計數），提供「報名整期」；訪客看到公開期班與「登入並報名整期」（登入後回到同頁、由本人確認送出）。可見性比照單堂（見 `permissions.md` Member）。單堂課程頁屬於期班時顯示期班說明與連結；只收整期的期班單堂頁不提供報名。票 12 起單堂課程頁也列出同系列其他尚未開始、學員看得到的場次 | Visitor, Member |
+| `/classes/terms/[recurringClassSeriesId]` | **已落地（`teacher-class-scheduling` 票 08，2026-10-09）**：期班頁。顯示期間、上課時間、地點、老師、共幾堂／剩幾堂、報名方式與每一場（只列已開放／已完成，草稿只計數），提供「報名整期」；訪客看到公開期班與「登入並報名整期」（登入後回到同頁、由本人確認送出）。可見性比照單堂（見 `permissions.md` Member）。單堂課程頁屬於期班時顯示期班說明與連結；只收整期的期班單堂頁不提供報名。票 12 起單堂課程頁也列出同系列其他尚未開始、學員看得到的場次 **`inline-member-actions`（2026-10-10）**：「查看每一堂」每一列已報名標籤旁就地「請假／取消請假」，退出整期就地展開，做完回到本頁並顯示結果。 | Visitor, Member |
 | `/faq` | **已落地**：常見問題與信任說明；不建立付款、退款或取消政策 | Visitor |
 
 ## Auth Routes
@@ -77,7 +77,7 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 | Route | 目的 |
 |---|---|
 | `/member/dashboard` | **已落地**（`role-dashboards` 已確認）：彙整自己的近期通知、報名狀態與即將到來的已確認課程 |
-| `/member/enrollments` | 查看自己的 enrollments，並可取消（`enrollment` 已確認） |
+| `/member/enrollments` | 查看自己的 enrollments，並可取消（`enrollment` 已確認）。**`inline-member-actions`（2026-10-10）**：整期卡每一堂列就地「請假／取消請假」、卡底就地「退出整期」，不換頁；整期仍有效時請假中的堂收進整期卡；「待你處理」沒有事項時整張不出現，有事項時是第一張卡 |
 
 ## Admin Routes
 

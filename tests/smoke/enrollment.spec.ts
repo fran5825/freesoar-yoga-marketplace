@@ -557,7 +557,7 @@ test.describe("enrollment smoke", () => {
       .click();
     await page.locator(`#rating-${done.enrollmentId}`).selectOption("5");
     await page.getByRole("button", { name: "送出評價" }).click();
-    await expect(page.getByRole("region", { name: "待你處理" })).not.toContainText("待評價");
+    await expect(page.getByRole("region", { name: "待你處理" })).toHaveCount(0);
   });
 
   test("IDOR: an organizer cannot view another organizer's class session detail (404)", async ({

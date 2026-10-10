@@ -7,7 +7,6 @@ import { listOwnEnrollmentsForMember } from "@/domain/enrollment/read-service";
 import { requireUser } from "@/lib/auth/session";
 
 import { CancelEnrollmentForm } from "../_components/CancelEnrollmentForm";
-import { EnrollmentStatusBadge } from "../_components/EnrollmentStatusBadge";
 import { ScrollToTarget } from "../../_components/ScrollToTarget";
 import { MemberTodoList, MemberWaitingList } from "../_components/MemberTodoList";
 import { TermRowAction, TermRowBadge, WithdrawTermInline } from "../_components/TermRowControls";
@@ -218,7 +217,7 @@ export default async function MemberEnrollmentsPage({
                     {enrollment.classSession.title}
                   </Link>}
                 </h3>
-                <EnrollmentStatusBadge status={enrollment.status} />
+                <TermRowBadge control={enrollment.rowControl} status={enrollment.status} />
                 {enrollment.classSession.status === "cancelled" ? <span className="text-sm text-ink-soft">課程已取消</span> : null}
               </div>
               <p className="text-sm text-ink-soft">

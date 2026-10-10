@@ -146,3 +146,30 @@ test.describe("continuous series: the sibling card becomes a link to the series 
     await expect(page.getByRole("link", { name: "查看這個課程的所有日期" })).toHaveCount(0);
   });
 });
+
+test("attended and no-show records are described as what they are, not as a cancellation", async ({ context, page }, testInfo) => {
+  const id = runId(testInfo, "attended");
+  const teacher = await seedTeacher(id);
+  const member = await seedMember(id, "a");
+  const other = await seedMember(id, "b");
+  const { sessions } = await seedContinuous(teacher.teacherProfileId, { count: 1, title: `已結束 ${id}` });
+  await prisma.classSession.update({
+    where: { id: sessions[0].id },
+    data: { status: "completed", startAt: new Date(Date.now() - 7_200_000), endAt: new Date(Date.now() - 3_600_000) },
+  });
+  await prisma.enrollment.create({ data: { classSessionId: sessions[0].id, userId: member.id, status: "attended", consentedAt: new Date() } });
+  await prisma.enrollment.create({ data: { classSessionId: sessions[0].id, userId: other.id, status: "no_show", consentedAt: new Date() } });
+
+  await addAuthSessionCookie(context, member.sessionToken);
+  await page.goto(`/classes/${sessions[0].id}`);
+  const card = page.getByRole("region", { name: "課程重點" });
+  await expect(card).toContainText("已出席");
+  await expect(card).toContainText("你已參加這堂課程。");
+  await expect(card).not.toContainText("已取消");
+
+  await context.clearCookies();
+  await addAuthSessionCookie(context, other.sessionToken);
+  await page.goto(`/classes/${sessions[0].id}`);
+  await expect(card).toContainText("未出席");
+  await expect(card).not.toContainText("已取消");
+});
