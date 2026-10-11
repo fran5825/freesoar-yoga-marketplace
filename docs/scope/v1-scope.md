@@ -78,7 +78,7 @@ Build a professional but focused Free Soar Yoga marketplace MVP that supports:
 - Native mobile app
 - Advanced AI recommendation
 - Full payment/refund automation
-- Google Calendar two-way sync
+- Google Calendar full two-way sync（從 Google 修改課程回寫平台）；老師「連結 Google 日曆」（平台單向寫入＋讀回忙碌時段）已於 2026-10-11 核准納入，見 ADR 0009
 - LINE deep integration
 - Advanced enterprise permissions
 - Full Wellness / Academy / Retreat modules
