@@ -50,26 +50,26 @@ test("leave and cancel-leave work in place on all three pages, and every expande
   // 2. 期班頁
   await page.goto(`/classes/terms/${term.series.id}`);
   await page.locator("summary", { hasText: "查看每一堂" }).click();
-  row = page.locator(`#session-row-${rows[1].id}`);
+  row = page.locator(`#session-row-${rows[1].classSessionId}`);
   await row.getByText("請假", { exact: true }).click();
   expect(await fits(page)).toBe(true);
   await row.getByLabel("我確認這一堂要請假。").check();
   await row.getByRole("button", { name: "確認請假" }).click();
-  await expect(page.locator(`#session-row-${rows[1].id}`)).toContainText("請假中");
-  await page.locator(`#session-row-${rows[1].id}`).getByRole("button", { name: "取消請假" }).click();
-  await expect(page.locator(`#session-row-${rows[1].id}`)).toContainText("已報名");
+  await expect(page.locator(`#session-row-${rows[1].classSessionId}`)).toContainText("請假中");
+  await page.locator(`#session-row-${rows[1].classSessionId}`).getByRole("button", { name: "取消請假" }).click();
+  await expect(page.locator(`#session-row-${rows[1].classSessionId}`)).toContainText("已報名");
   expect(await statusOf(rows[1].id)).toBe("confirmed");
 
   // 3. 單堂頁（同系列列表）
   await page.goto(`/classes/${term.sessions[0].id}`);
-  row = page.getByRole("list", { name: "同系列的其他場次" }).locator(`#session-row-${rows[2].id}`);
+  row = page.getByRole("list", { name: "同系列的其他場次" }).locator(`#session-row-${rows[2].classSessionId}`);
   await row.getByText("請假", { exact: true }).click();
   expect(await fits(page)).toBe(true);
   await row.getByLabel("我確認這一堂要請假。").check();
   await row.getByRole("button", { name: "確認請假" }).click();
-  await expect(page.locator(`#session-row-${rows[2].id}`)).toContainText("請假中");
-  await page.locator(`#session-row-${rows[2].id}`).getByRole("button", { name: "取消請假" }).click();
-  await expect(page.locator(`#session-row-${rows[2].id}`)).toContainText("已報名");
+  await expect(page.locator(`#session-row-${rows[2].classSessionId}`)).toContainText("請假中");
+  await page.locator(`#session-row-${rows[2].classSessionId}`).getByRole("button", { name: "取消請假" }).click();
+  await expect(page.locator(`#session-row-${rows[2].classSessionId}`)).toContainText("已報名");
   expect(await statusOf(rows[2].id)).toBe("confirmed");
   expect(await fits(page)).toBe(true);
 });

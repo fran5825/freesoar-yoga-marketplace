@@ -71,7 +71,11 @@ async function cookieValue(context: BrowserContext, suffix: string): Promise<str
 }
 
 // 按下登入按鈕，等瀏覽器準備前往 Google（回一個假頁面，不真的連 Google），回傳 Auth.js 記下的回程網址（path＋query）。
-async function submitAndInterceptGoogle(page: Page, context: BrowserContext, buttonName: string): Promise<string> {
+// inline-member-enroll 票 08：課程頁的登入選項在第一張卡按「我要報名」展開後才出現（expandEnroll）。
+async function submitAndInterceptGoogle(page: Page, context: BrowserContext, buttonName: string, expandEnroll = false): Promise<string> {
+  if (expandEnroll) {
+    await page.getByRole("button", { name: "我要報名" }).click();
+  }
   await page.route("https://accounts.google.com/**", (route) =>
     route.fulfill({ status: 200, contentType: "text/html", body: "<p>google stub</p>" }),
   );
@@ -129,10 +133,9 @@ test.describe("direct Google sign-in from a class", () => {
     const classSessionId = await seedOpenClass(runId(testInfo, "class"));
     const returnTo = "/classes?timeOfDay=evening";
     await page.goto(`/classes/${classSessionId}?returnTo=${encodeURIComponent(returnTo)}`);
-    await expect(page.getByText(/第一次使用會自動建立帳號/)).toBeVisible();
-
-    const destination = await submitAndInterceptGoogle(page, context, "使用 Google 登入並報名");
-    const expected = `/classes/${classSessionId}?returnTo=${encodeURIComponent(returnTo)}`;
+    const destination = await submitAndInterceptGoogle(page, context, "使用 Google 登入並報名", true);
+    // 登入回來時報名表單直接展開（enroll=1），仍由本人勾選同意後才送出。
+    const expected = `/classes/${classSessionId}?returnTo=${encodeURIComponent(returnTo)}&enroll=1`;
     expect(destination).toBe(expected);
     expect(await cookieValue(context, "fsy_sign_in_return")).toBe(expected);
   });
@@ -141,7 +144,7 @@ test.describe("direct Google sign-in from a class", () => {
     const classSessionId = await seedOpenClass(runId(testInfo, "cancel"));
     const returnTo = "/classes?timeOfDay=evening";
     await page.goto(`/classes/${classSessionId}?returnTo=${encodeURIComponent(returnTo)}`);
-    const destination = await submitAndInterceptGoogle(page, context, "使用 Google 登入並報名");
+    const destination = await submitAndInterceptGoogle(page, context, "使用 Google 登入並報名", true);
     await page.goto(await authRedirectPath(page, "/api/auth/callback/google?error=access_denied"));
     await expect(signInFailedAlert(page)).toContainText("登入沒有完成，沒有送出任何報名。");
     await expect(page.getByRole("link", { name: "回到課程" })).toHaveAttribute("href", destination);
@@ -170,7 +173,7 @@ test.describe("direct Google sign-in from a class", () => {
       const classSessionId = await seedOpenClass(run);
       const returnTo = "/classes?timeOfDay=evening";
       await page.goto(`/classes/${classSessionId}?returnTo=${encodeURIComponent(returnTo)}`);
-      const destination = await submitAndInterceptGoogle(page, context, "使用 Google 登入並報名");
+      const destination = await submitAndInterceptGoogle(page, context, "使用 Google 登入並報名", true);
       const email = `member-${run}@${testEmailDomain}`;
       createdEmails.push(email);
       const member = await createUserSession({ email });
@@ -197,7 +200,7 @@ test.describe("direct Google sign-in from a class", () => {
   test("a later sign-in from another entry does not reuse the earlier class destination", async ({ context, page }, testInfo) => {
     const classSessionId = await seedOpenClass(runId(testInfo, "cross"));
     await page.goto(`/classes/${classSessionId}`);
-    await submitAndInterceptGoogle(page, context, "使用 Google 登入並報名");
+    await submitAndInterceptGoogle(page, context, "使用 Google 登入並報名", true);
 
     await page.goto(`/sign-in?callbackUrl=${encodeURIComponent("/teachers/join")}`);
     expect(await submitAndInterceptGoogle(page, context, "使用 Google 帳號繼續")).toBe("/teachers/join");
@@ -216,6 +219,7 @@ test.describe("direct Google sign-in from a class", () => {
     });
 
     await page.goto(`/classes/${classSessionId}`);
+    await page.getByRole("button", { name: "我要報名" }).click();
     await page.locator('input[name="provider"]').evaluate((input: HTMLInputElement) => {
       input.value = "github";
     });

@@ -1,3 +1,5 @@
+import type { NotificationSender } from "@/domain/notification/sender";
+import type { NotifyOptions } from "@/domain/notification/types";
 // teacher-class-scheduling 票 08：學員報名整期（docs/specs/teacher-class-scheduling-spec.md 4.7、第 6 節；ADR 0005）。
 // __internal__：只給 service.ts 的 auth-resolving 外層與 Playwright 併發測試直接呼叫。
 //
@@ -65,6 +67,9 @@ export type NotifyFn = (
   type: NotificationType,
   recipients: NotificationRecipient[],
   payload: NotificationPayload,
+  // teacher-series-rollup 票 07：與 notifyUsers 相同的選填參數（帶場次或系列 id）。
+  sender?: NotificationSender,
+  options?: NotifyOptions,
 ) => Promise<void>;
 
 class Rejected extends Error {
@@ -285,9 +290,12 @@ export async function createSeriesEnrollmentForUser(
           { userId: outcome.teacherUserId, role: "counterpart" },
         ],
         { classSessionTitle },
+        undefined,
+        // teacher-series-rollup 票 07：整期報名的通知帶系列 id。
+        { recurringClassSeriesId },
       );
     } else {
-      await notifyOverride("enrollment_confirmed", [{ userId, role: "self" }], { classSessionTitle });
+      await notifyOverride("enrollment_confirmed", [{ userId, role: "self" }], { classSessionTitle }, undefined, { recurringClassSeriesId });
     }
   } catch (notifyError) {
     console.error("[notification] series enrollment trigger failed", notifyError);

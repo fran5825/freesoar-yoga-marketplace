@@ -22,12 +22,15 @@ export function TermRowAction({
   classSessionId,
   termMode,
   returnTo,
+  rowAnchor,
 }: {
   control: TermRowControl;
   enrollmentId: string;
   classSessionId: string;
   termMode: "term_only" | "term_and_single" | null;
   returnTo: string;
+  // inline-member-enroll 票 06：共用場次列的列 ID（做完捲回這一列）。
+  rowAnchor?: string;
 }) {
   if (control.kind === "leave") {
     return (
@@ -36,6 +39,7 @@ export function TermRowAction({
         classSessionId={classSessionId}
         enrollmentId={enrollmentId}
         returnTo={returnTo}
+        rowAnchor={rowAnchor}
         summaryLabel="請假"
         termMode={termMode}
         variant="leave"
@@ -49,6 +53,7 @@ export function TermRowAction({
         <input name="enrollmentId" type="hidden" value={enrollmentId} />
         <input name="classSessionId" type="hidden" value={classSessionId} />
         <input name="returnTo" type="hidden" value={returnTo} />
+        {rowAnchor ? <input name="rowAnchor" type="hidden" value={rowAnchor} /> : null}
         <button
           className="rounded-full border border-pine/40 px-4 py-2 text-sm font-medium text-pine hover:bg-pine-tint focus-visible:outline-2 focus-visible:outline-pine"
           type="submit"

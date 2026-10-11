@@ -7,7 +7,7 @@ import { normalizeEmail, readEmailConfig } from "./email-config";
 import { renderNotificationEmail } from "./email-copy";
 import { shouldSendEmail } from "./email-policy";
 import { createResendTransport } from "./email-transport";
-import { getNotificationLink } from "./link";
+import { getNotificationLink, getSeriesNotificationLink } from "./link";
 import type { NotificationPayload, NotificationRecipient, NotifyOptions } from "./types";
 
 // transactional-email Slice D：站內通知之外，對寄送規則允許的收件人另建一筆 channel="email" 的記錄並寄出。
@@ -85,7 +85,12 @@ export async function deliverEmailChannel(
       }
 
       const copy = buildNotificationCopy(type, recipient.role, payload);
-      const link = getNotificationLink(
+      // teacher-series-rollup 票 07：批次通知（共 N 堂）連到系列頁，與通知頁合併後的一則同一個推導。
+      const seriesLink =
+        options.linkToSeries && options.recurringClassSeriesId
+          ? await getSeriesNotificationLink(recipient.userId, options.recurringClassSeriesId)
+          : null;
+      const link = seriesLink ?? getNotificationLink(
         type,
         {
           isOrganizer: user.organizerProfile !== null,
@@ -116,6 +121,7 @@ export async function deliverEmailChannel(
             targetType: recipient.target?.type ?? null,
             targetId: recipient.target?.id ?? null,
             eventKey: options.eventKeyBase ? `${options.eventKeyBase}:${recipient.userId}:email` : null,
+            recurringClassSeriesId: options.recurringClassSeriesId ?? null,
           },
           select: { id: true },
         });

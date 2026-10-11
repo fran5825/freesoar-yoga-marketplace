@@ -1,6 +1,6 @@
 # 09: 期班頁每一堂可單堂報名、備註收起
 
-來源：[spec Q1、Q5、2.1、2.2](../../../specs/member-inline-enroll-spec-draft.md)。
+來源：[spec Q1、Q5、2.1、2.2](../../../../specs/member-inline-enroll-spec.md)。
 
 **What to build:** 期班頁「查看每一堂」中可單堂報名的列，用票 06 的共用列就地報名；帶 `focus` 或 `open` 回來時，自動展開這個收合區再捲到那一列。重新報名表單的備註改用「加備註」。
 

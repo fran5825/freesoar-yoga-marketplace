@@ -9,9 +9,11 @@ import {
 import { organizationTypeLabels } from "@/domain/organizer-profile/organization-type-labels";
 import { getClassSessionDetailForAdmin } from "@/domain/class-session/admin-service";
 import { getClassServiceTypes } from "@/domain/class-session/service-types-display";
+import { getSeriesBadgeInfo, seriesBadgeLabel } from "@/domain/class-session/series-badge";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { requireAdmin } from "@/lib/auth/session";
 
+import { ActionBar } from "../../../_components/ActionBar";
 import { AdminConfirmButton } from "../../_components/AdminConfirmButton";
 import { AdminFlash } from "../../_components/AdminFlash";
 import {
@@ -75,6 +77,7 @@ export default async function AdminClassSessionDetailPage({
   }
 
   const started = hasClassSessionStarted(classSession.startAt);
+  const seriesBadge = await getSeriesBadgeInfo(classSessionId);
   const returnTo = safeAdminReturnTo("classes", resolvedSearchParams?.returnTo);
   const canCancelClassSession =
     CANCELLABLE_CLASS_SESSION_STATUSES.has(classSession.status) && !started;
@@ -123,6 +126,15 @@ export default async function AdminClassSessionDetailPage({
           >
             {classSessionStatusLabels[classSession.status]}
           </span>
+          {/* teacher-series-rollup 票 05（spec 2.3）：期班第幾堂／持續開課，點了到管理員唯讀系列頁。 */}
+          {seriesBadge ? (
+            <Link
+              className="inline-flex min-h-11 w-fit items-center rounded-full bg-pine-tint px-4 text-sm font-medium text-pine-deep transition hover:bg-pine/15"
+              href={`/admin/classes/series/${seriesBadge.seriesId}`}
+            >
+              {seriesBadgeLabel(seriesBadge)}
+            </Link>
+          ) : null}
         </div>
         <h1 className="mt-2 min-w-0 break-words text-3xl font-semibold tracking-tight text-ink">
           {classSession.title}
@@ -144,14 +156,38 @@ export default async function AdminClassSessionDetailPage({
             </dd>
           </div>
         </dl>
-        {canCancelClassSession ? (
-          <a
-            className="mt-4 inline-flex w-full justify-center rounded-full border border-rose-300 px-5 py-2 text-sm font-medium text-rose-800 transition hover:border-rose-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay sm:w-auto"
-            href="#class-actions"
-          >
-            前往取消操作
-          </a>
-        ) : null}
+        {/* teacher-series-rollup 票 05（spec 2.2）：管理員只有「取消課程」，可取消時它是操作列唯一一顆，
+            說明放在確認視窗；原本頁尾的取消區塊移除。 */}
+        <div className="mt-4">
+          <ActionBar
+            primary={
+              canCancelClassSession ? (
+                <form action={cancelClassSessionAdminAction}>
+                  <input name="returnTo" type="hidden" value={returnTo} />
+                  <input name="classSessionId" type="hidden" value={classSessionId} />
+                  <input name="confirmCancel" type="hidden" value="yes" />
+                  {/* 第三批票 12：整堂取消失敗時留在同一課程，保留名單條件；成功仍回原課程列表。 */}
+                  <input name="rq" type="hidden" value={roster.rq} />
+                  <input name="rstatus" type="hidden" value={roster.rstatus} />
+                  <AdminConfirmButton
+                    confirmLabel="確認取消課程"
+                    description={`取消後無法復原，也無法重新建立。${
+                      activeEnrollmentCount > 0
+                        ? `目前 ${activeEnrollmentCount} 筆報名（含待老師確認）會一併取消，學員會收到通知。`
+                        : "目前沒有需要一併取消的報名。"
+                    }`}
+                    pendingLabel="取消處理中…"
+                    title={`確定要取消「${classSession.title}」嗎？`}
+                    triggerClassName="min-h-11 rounded-full border border-rose-300 bg-white px-5 py-2 text-sm font-medium text-rose-800 transition hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay disabled:cursor-not-allowed disabled:opacity-60"
+                    triggerLabel="取消課程"
+                  />
+                </form>
+              ) : null
+            }
+            rest={[]}
+            secondary={null}
+          />
+        </div>
       </header>
 
       <AdminFlash
@@ -375,34 +411,6 @@ export default async function AdminClassSessionDetailPage({
         )}
       </section>
 
-      {canCancelClassSession ? (
-        <section className="grid scroll-mt-6 gap-3 rounded-2xl border border-rose-200 bg-white p-6" id="class-actions">
-          <h2 className="text-lg font-medium text-rose-800">取消課程</h2>
-          <p className="text-sm leading-6 text-ink-soft">
-            取消後無法復原，也無法重新建立，已報名的學員報名也會一併取消，並會收到通知。
-          </p>
-          <form action={cancelClassSessionAdminAction}>
-            <input name="returnTo" type="hidden" value={returnTo} />
-            <input name="classSessionId" type="hidden" value={classSessionId} />
-            <input name="confirmCancel" type="hidden" value="yes" />
-            {/* 第三批票 12：整堂取消失敗時留在同一課程，保留名單條件；成功仍回原課程列表。 */}
-            <input name="rq" type="hidden" value={roster.rq} />
-            <input name="rstatus" type="hidden" value={roster.rstatus} />
-            <AdminConfirmButton
-              confirmLabel="確認取消課程"
-              description={`取消後無法復原，也無法重新建立。${
-                activeEnrollmentCount > 0
-                  ? `目前 ${activeEnrollmentCount} 筆報名（含待老師確認）會一併取消，學員會收到通知。`
-                  : "目前沒有需要一併取消的報名。"
-              }`}
-              pendingLabel="取消處理中…"
-              title={`確定要取消「${classSession.title}」嗎？`}
-              triggerClassName="w-full rounded-full bg-rose-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-              triggerLabel="取消課程"
-            />
-          </form>
-        </section>
-      ) : null}
     </div>
   );
 }

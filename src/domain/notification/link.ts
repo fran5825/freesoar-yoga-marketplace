@@ -1,5 +1,8 @@
 import type { NotificationTargetType, NotificationType } from "@prisma/client";
 
+import { isPublicSeriesPageAvailable } from "@/domain/class-session/public-read-service";
+import { prisma } from "@/lib/prisma";
+
 // organizer-usability 票 11（方案 B）：通知沒有記錄「是哪一筆需求／課程」，也沒有記錄收件人是
 // 哪個角色，所以這裡只依「通知類型＋收件人目前擁有的身分」決定要連到哪一個列表頁，
 // 不連到單筆詳情。同一種通知可能給不同角色（例如 enrollment_pending_review 給學員與老師），
@@ -99,4 +102,32 @@ export function getNotificationLink(
       if (isOrganizer) return { href: "/organizer/classes", label: "前往我的課程" };
       return null;
   }
+}
+
+// teacher-series-rollup 票 07、08（spec 2.5）：屬於系列的批次通知與合併後的一則，連到系列頁。
+// 由 server 依「收件人是不是這個系列的授課老師」與系列種類推導，不存網址、不靠身分旗標：
+// 授課老師 → 老師系列管理頁；其他人（學員）→ 期班頁，持續開課只有系列頁看得到時才連，否則退回「我的報名」。
+export async function getSeriesNotificationLink(userId: string, recurringClassSeriesId: string): Promise<NotificationLink | null> {
+  const series = await prisma.recurringClassSeries.findUnique({
+    where: { id: recurringClassSeriesId },
+    select: { id: true, kind: true, teacherProfile: { select: { userId: true } } },
+  });
+
+  if (!series) {
+    return null;
+  }
+
+  const id = encodeURIComponent(series.id);
+
+  if (series.teacherProfile.userId === userId) {
+    return { href: `/teacher/classes/series/${id}`, label: "前往系列頁" };
+  }
+
+  if (series.kind === "term") {
+    return { href: `/classes/terms/${id}`, label: "前往期班頁" };
+  }
+
+  return (await isPublicSeriesPageAvailable(series.id))
+    ? { href: `/classes/series/${id}`, label: "前往課程頁" }
+    : { href: "/member/enrollments", label: "前往我的報名" };
 }

@@ -233,6 +233,12 @@ function redirectWithFeedback(
     ["message", message],
     ...returnContextParams(readReturnContext(formData)),
   ]);
+  // teacher-series-rollup 票 04：系列頁每一場的快速按鈕做完，捲回那一場（只接受 id 形式）。
+  const focus = readFormString(formData, "focus");
+
+  if (/^class-[A-Za-z0-9_-]{1,64}$/.test(focus)) {
+    query.set("focus", focus);
+  }
 
   redirect(`${getReturnPath(formData)}?${query.toString()}`);
 }

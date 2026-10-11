@@ -9,6 +9,7 @@ export function CancelEnrollmentForm({
   termMode = null,
   returnTo,
   summaryLabel,
+  rowAnchor,
 }: {
   action: (formData: FormData) => Promise<void>;
   enrollmentId: string;
@@ -21,6 +22,8 @@ export function CancelEnrollmentForm({
   returnTo?: string;
   // 列上的按鈕用短標籤（例如「請假」），預設沿用原本的文字。
   summaryLabel?: string;
+  // inline-member-enroll 票 06：共用場次列的列 ID，做完捲回這一列。
+  rowAnchor?: string;
 }) {
   const isLeave = variant === "leave";
 
@@ -32,6 +35,7 @@ export function CancelEnrollmentForm({
       <form action={action} className="grid gap-3 border-t border-amber-100 p-4">
         <input name="enrollmentId" type="hidden" value={enrollmentId} />
         {returnTo ? <input name="returnTo" type="hidden" value={returnTo} /> : null}
+        {rowAnchor ? <input name="rowAnchor" type="hidden" value={rowAnchor} /> : null}
         {classSessionId ? (
           <input name="classSessionId" type="hidden" value={classSessionId} />
         ) : null}

@@ -47,23 +47,22 @@ test("term sibling list: the member's own rows show a status and leave / cancel-
   const term = await seedTerm(teacher.teacherProfileId, { isPublic: true, count: 3, mode: "term_and_single", title: `同系列期班 ${id}` });
   const joined = await createSeriesEnrollmentForUser(member.id, term.series.id, { notes: null }, undefined, noNotify);
   if (!joined.ok) throw new Error("fixture");
-  const rows = await prisma.enrollment.findMany({ where: { seriesEnrollmentId: joined.seriesEnrollmentId }, orderBy: { classSession: { startAt: "asc" } } });
   await addAuthSessionCookie(context, member.sessionToken);
 
   await page.goto(`/classes/${term.sessions[0].id}`);
   const list = page.getByRole("list", { name: "同系列的其他場次" });
-  const row = list.locator(`#session-row-${rows[1].id}`);
+  const row = list.locator(`#session-row-${term.sessions[1].id}`);
   await expect(row).toContainText("已報名");
   await row.getByText("請假", { exact: true }).click();
   await row.getByLabel("我確認這一堂要請假。").check();
   await row.getByRole("button", { name: "確認請假" }).click();
 
-  await expect(page).toHaveURL(new RegExp(`focus=session-row-${rows[1].id}`));
+  await expect(page).toHaveURL(new RegExp(`focus=session-row-${term.sessions[1].id}`));
   await expect(page.locator("#action-feedback")).toContainText("已請假這一堂，整期的其他堂照常。");
-  await expect(page.locator(`#session-row-${rows[1].id}`)).toContainText("請假中");
-  await page.locator(`#session-row-${rows[1].id}`).getByRole("button", { name: "取消請假" }).click();
+  await expect(page.locator(`#session-row-${term.sessions[1].id}`)).toContainText("請假中");
+  await page.locator(`#session-row-${term.sessions[1].id}`).getByRole("button", { name: "取消請假" }).click();
   await expect(page.locator("#action-feedback")).toContainText("已取消請假，這一堂照常上課。");
-  await expect(page.locator(`#session-row-${rows[1].id}`)).toContainText("已報名");
+  await expect(page.locator(`#session-row-${term.sessions[1].id}`)).toContainText("已報名");
   expect(await noOverflow(page)).toBe(true);
 
   // 這一堂自己的請假在第一張卡。
@@ -75,7 +74,9 @@ test("term sibling list: the member's own rows show a status and leave / cancel-
   await expect(card.getByRole("button", { name: "取消請假" })).toBeVisible();
 });
 
-test("a visitor and a non-member see the term siblings as plain dates", async ({ context, page }, testInfo) => {
+// inline-member-enroll 票 08（spec Q1、Q7）：同系列列表每一列都能直接報名；訪客按「報名」會展開登入選項，
+// 不是整期學員的人沒有請假按鈕。
+test("a visitor and a non-member get an enroll button on each sibling row, but no leave buttons", async ({ context, page }, testInfo) => {
   const id = runId(testInfo, "plain");
   const teacher = await seedTeacher(id);
   const term = await seedTerm(teacher.teacherProfileId, { isPublic: true, count: 3, mode: "term_and_single", title: `素日期期班 ${id}` });
@@ -83,12 +84,14 @@ test("a visitor and a non-member see the term siblings as plain dates", async ({
   await page.goto(`/classes/${term.sessions[0].id}`);
   const list = page.getByRole("list", { name: "同系列的其他場次" });
   await expect(list.getByRole("link")).toHaveCount(2);
-  await expect(list.getByRole("button")).toHaveCount(0);
+  await expect(list.getByRole("button", { name: "報名", exact: true })).toHaveCount(2);
+  await expect(list.getByText("請假", { exact: true })).toHaveCount(0);
 
   const stranger = await seedMember(runId(testInfo, "plain-x"), "x");
   await addAuthSessionCookie(context, stranger.sessionToken);
   await page.goto(`/classes/${term.sessions[0].id}`);
-  await expect(page.getByRole("list", { name: "同系列的其他場次" }).getByRole("button")).toHaveCount(0);
+  await expect(page.getByRole("list", { name: "同系列的其他場次" }).getByRole("button", { name: "報名", exact: true })).toHaveCount(2);
+  await expect(page.getByRole("list", { name: "同系列的其他場次" }).getByText("請假", { exact: true })).toHaveCount(0);
 });
 
 test.describe("continuous series: the sibling card becomes a link to the series page only when every date is reachable there", () => {

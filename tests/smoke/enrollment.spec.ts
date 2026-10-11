@@ -157,8 +157,9 @@ test.describe("enrollment smoke", () => {
 
     await addAuthSessionCookie(context, organizerSessionToken);
     await page.goto(`/organizer/classes/${classSessionId}`);
-    await page.getByRole("checkbox", { name: "我確認要開放這堂課程的報名。" }).check();
+    // teacher-series-rollup 票 05：開放報名在操作列，按下後在確認視窗確認。
     await page.getByRole("button", { name: "開放報名" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "確定開放報名" }).click();
 
     await expect(page.getByText("已開放報名。")).toBeVisible();
     // organizer-usability-redesign 票 13：報名連結顯示完整網址（含網域），主要動作是複製。
@@ -170,6 +171,9 @@ test.describe("enrollment smoke", () => {
     await context.clearCookies();
     await addAuthSessionCookie(context, memberSessionToken);
     await page.goto(`/classes/${classSessionId}`);
+    // inline-member-enroll 票 08：報名表單在第一張卡按「我要報名」才展開，備註預設收起。
+    await page.getByRole("button", { name: "我要報名" }).click();
+    await page.getByRole("button", { name: "加備註" }).click();
     await page.getByLabel("備註（選填）").fill("測試備註內容");
     await page.getByRole("checkbox", { name: /我了解此課程非醫療行為/ }).check();
     await page.getByRole("button", { name: "確認報名" }).click();
@@ -206,6 +210,8 @@ test.describe("enrollment smoke", () => {
     await expect(page.getByText("開放報名", { exact: true })).toBeVisible();
     await expect(page.getByText("剩 2 個名額")).toBeVisible();
 
+    // inline-member-enroll 票 08：報名表單在第一張卡按「我要報名」才展開，備註預設收起。
+    await page.getByRole("button", { name: "我要報名" }).click();
     await page.getByRole("checkbox", { name: /我了解此課程非醫療行為/ }).check();
     await page.getByRole("button", { name: "確認報名" }).click();
 
@@ -239,6 +245,9 @@ test.describe("enrollment smoke", () => {
 
     await addAuthSessionCookie(context, sessionToken);
     await page.goto(`/classes/${classSessionId}`);
+    // inline-member-enroll 票 08：報名表單在第一張卡按「我要報名」才展開，備註預設收起。
+    await page.getByRole("button", { name: "我要報名" }).click();
+    await page.getByRole("button", { name: "加備註" }).click();
 
     // textarea 的 maxLength 只是體驗提升，這裡移除它連同表單的原生驗證，
     // 證明伺服器端才是權威（比照既有 admin-demands.spec.ts 的既定作法）。
@@ -260,6 +269,9 @@ test.describe("enrollment smoke", () => {
 
     // 未勾選 basicConsent 也要被伺服器端擋下（同一頁重新整理，繞過前端 required）。
     await page.goto(`/classes/${classSessionId}`);
+    // inline-member-enroll 票 08：報名表單在第一張卡按「我要報名」才展開，備註預設收起。
+    await page.getByRole("button", { name: "我要報名" }).click();
+    await page.getByRole("button", { name: "加備註" }).click();
     await page.getByLabel("備註（選填）").fill("正常長度的備註");
     await page.locator("form", { hasText: "確認報名" }).evaluate((form: HTMLFormElement) => {
       form.noValidate = true;
@@ -344,8 +356,9 @@ test.describe("enrollment smoke", () => {
 
     await addAuthSessionCookie(context, organizerSessionToken);
     await page.goto(`/organizer/classes/${classSessionId}`);
-    await page.getByRole("checkbox", { name: "我確認要開放這堂課程的報名。" }).check();
+    // teacher-series-rollup 票 05：開放報名在操作列，按下後在確認視窗確認。
     await page.getByRole("button", { name: "開放報名" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "確定開放報名" }).click();
 
     await expect(page.getByText("這堂課程已經開始，無法開放報名。")).toBeVisible();
 

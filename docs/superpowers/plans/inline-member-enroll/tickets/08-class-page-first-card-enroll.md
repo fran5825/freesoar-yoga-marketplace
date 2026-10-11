@@ -1,6 +1,6 @@
 # 08: 單堂頁：第一張卡內報名、同系列列表就地報名
 
-來源：[spec Q1、Q4、Q5](../../../specs/member-inline-enroll-spec-draft.md)。
+來源：[spec Q1、Q4、Q5](../../../../specs/member-inline-enroll-spec.md)。
 
 **What to build:** 沒報名的人在單堂頁，取消獨立的「報名這堂課程」卡（`ClassEnrollmentPanel`）與期班的合併報名卡（`TermClassEnrollPanel`）；第一張課程資訊卡標題下方放「我要報名」（需確認的課程為「申請報名」），按下後表單在這張卡內展開，期班的單堂頁在展開後先二選一（整期或只報這一堂）。手機底部固定「前往報名」列保留，按下去直接展開。「同系列的其他場次」每一列改用票 06 的共用列。備註一律用「加備註」。
 

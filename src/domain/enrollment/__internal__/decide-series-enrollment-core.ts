@@ -166,6 +166,9 @@ async function decide(
             ? termNotificationTitle(outcome.title, outcome.sessionCount)
             : termNotificationTitle(outcome.title, outcome.affectedCount + outcome.restoredSingleCount),
       },
+      undefined,
+      // teacher-series-rollup 票 07：整期報名的通知帶系列 id。
+      { recurringClassSeriesId: target.recurringClassSeriesId },
     );
   } catch (notifyError) {
     console.error("[notification] series enrollment decision trigger failed", notifyError);

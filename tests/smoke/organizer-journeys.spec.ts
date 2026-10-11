@@ -202,8 +202,9 @@ test.describe("organizer journeys", () => {
     await expect(page).toHaveURL(/\/organizer\/classes\/[^/?]+/);
     await expect(page.getByRole("link", { name: "查看來源需求" })).toHaveAttribute("href", `/organizer/demands/${demand.id}`);
 
-    await page.getByRole("checkbox", { name: "我確認要開放這堂課程的報名。" }).check();
+    // teacher-series-rollup 票 05：開放報名在操作列，按下後在確認視窗確認。
     await page.getByRole("button", { name: "開放報名" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "確定開放報名" }).click();
     await expect(page.getByText("已開放報名。")).toBeVisible();
     const link = await page.getByLabel("報名連結", { exact: true }).inputValue();
     await evidence(page, testInfo, "find", "06-opened-share");

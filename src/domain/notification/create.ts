@@ -24,6 +24,8 @@ export async function notifyUsers(
   sender: NotificationSender = inAppNotificationSender,
   options: NotifyOptions = {},
 ): Promise<void> {
+  const seriesId = await resolveSeriesId(options);
+  const resolvedOptions: NotifyOptions = { ...options, recurringClassSeriesId: seriesId };
   const seen = new Set<string>();
   const deduped = recipients.filter((recipient) => {
     if (seen.has(recipient.userId)) {
@@ -50,6 +52,7 @@ export async function notifyUsers(
             targetType: recipient.target?.type ?? null,
             targetId: recipient.target?.id ?? null,
             eventKey: options.eventKeyBase ? `${options.eventKeyBase}:${recipient.userId}` : null,
+            recurringClassSeriesId: seriesId,
           },
           select: { id: true, userId: true },
         });
@@ -107,8 +110,31 @@ export async function notifyUsers(
   }
 
   try {
-    await deliverEmailChannel(type, deduped, payload, options);
+    await deliverEmailChannel(type, deduped, payload, resolvedOptions);
   } catch (error) {
     console.error("[notification:email] unexpected failure", { type, error });
+  }
+}
+
+// teacher-series-rollup 票 07：呼叫端可以直接給系列 id，或只給場次 id 由這裡查出所屬系列。查詢失敗不影響發送（當作不屬於系列）。
+async function resolveSeriesId(options: NotifyOptions): Promise<string | null> {
+  if (options.recurringClassSeriesId !== undefined) {
+    return options.recurringClassSeriesId;
+  }
+
+  if (!options.classSessionId) {
+    return null;
+  }
+
+  try {
+    const session = await prisma.classSession.findUnique({
+      where: { id: options.classSessionId },
+      select: { recurringClassSeriesId: true },
+    });
+
+    return session?.recurringClassSeriesId ?? null;
+  } catch (error) {
+    console.error("[notification] failed to resolve series", { error });
+    return null;
   }
 }

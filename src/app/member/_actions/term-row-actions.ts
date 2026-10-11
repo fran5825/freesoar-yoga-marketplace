@@ -38,8 +38,10 @@ function finish(
   query.set("message", outcome.message);
 
   if (options.rowId) {
+    // inline-member-enroll 票 06：共用場次列用場次 id 當列 ID（rowAnchor），其他地方沿用報名 id。
+    const anchor = readFormString(formData, "rowAnchor");
     query.set("open", "sessions");
-    query.set("focus", outcome.ok ? `session-row-${options.rowId}` : "action-feedback");
+    query.set("focus", outcome.ok ? (/^session-row-[A-Za-z0-9_-]+$/.test(anchor) ? anchor : `session-row-${options.rowId}`) : "action-feedback");
   } else if (!outcome.ok) {
     query.set("focus", "action-feedback");
   }

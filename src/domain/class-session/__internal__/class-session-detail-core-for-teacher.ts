@@ -34,7 +34,8 @@ export const teacherFacingClassSessionSelect = {
   requiresApproval: true,
   demandRequest: { select: { targetLevel: true } },
   organization: { select: { name: true } },
-  recurringClassSeries: { select: { title: true, kind: true, coverPhotoId: true, coverPhoto: photoRefSelect } },
+  // teacher-series-rollup 票 03：系列卡要顯示上課時段，期班標籤要知道模式。
+  recurringClassSeries: { select: { title: true, kind: true, dayOfWeek: true, startTime: true, endTime: true, termEnrollmentMode: true, coverPhotoId: true, coverPhoto: photoRefSelect } },
   // 含 confirmed／pending 的報名，以及「已有付款紀錄（paid／refunded）」的報名——已付款後被取消的報名仍要讓老師看到並能標記退款
   // （lightweight-payment-v0 P9；其餘已取消且從未付款的報名不含）。
   enrollments: {
@@ -56,6 +57,8 @@ export const teacherFacingClassSessionSelect = {
       paymentRefundReason: true,
       // teacher-class-scheduling 票 10：標示整期或單堂；整期的逐場報名不能在單場個別確認。
       seriesEnrollmentId: true,
+      // teacher-series-rollup 票 03：系列卡算不重複學員。
+      userId: true,
       user: { select: { name: true, email: true } },
     },
   },

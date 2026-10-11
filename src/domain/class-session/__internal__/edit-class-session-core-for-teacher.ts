@@ -294,6 +294,9 @@ export async function editClassSessionForTeacher(
         "class_session_changed",
         notice.memberUserIds.map((userId) => ({ userId, role: "affected_member" as const })),
         { classSessionTitle: notice.title, changeSummary: buildChangeSummary(notice) },
+        undefined,
+        // teacher-series-rollup 票 07：帶場次 id，notifyUsers 查出所屬系列寫進通知。
+        { classSessionId },
       );
     } catch (notifyError) {
       console.error("[notification] class_session_changed trigger failed", notifyError);

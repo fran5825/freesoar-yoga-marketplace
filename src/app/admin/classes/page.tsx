@@ -10,7 +10,8 @@ import {
   listAllClassSessionsForAdmin,
   type AdminClassSessionSummary,
 } from "@/domain/class-session/admin-service";
-import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
+import { rollupClassList } from "@/domain/class-session/teacher-class-list";
+import { formatTaipeiDatetime, formatTaipeiShortDatetime } from "@/domain/class-session/timezone";
 import { getOrganizationNameForAdmin } from "@/domain/organizer-profile/admin-service";
 import { getTeacherDisplayNameForAdmin } from "@/domain/teacher-profile/service";
 import { requireAdmin } from "@/lib/auth/session";
@@ -84,6 +85,9 @@ export default async function AdminClassesPage({ searchParams }: AdminClassesPag
   const visibleClassSessions = sortAdminClasses(activeTab.statuses
     ? searched.filter((classSession) => activeTab.statuses?.includes(classSession.status))
     : searched, now);
+  // teacher-series-rollup 票 06（spec 2.1）：同一個系列在清單裡只出現一張系列卡，點進管理員唯讀系列頁。
+  // 管理員沒有標記完成，系列卡的待處理只看待確認與草稿。
+  const entries = rollupClassList(visibleClassSessions, now, { canCompleteOrigins: [] });
 
   return (
     <div className="flex flex-col gap-8">
@@ -99,7 +103,7 @@ export default async function AdminClassesPage({ searchParams }: AdminClassesPag
       <AdminRelationNotice kind="classes" query={query} label={relationLabel} />
       <AdminUpcomingNotice query={query} />
       <AdminFilterBar activeKey={activeTab.key} ariaLabel="課程狀態篩選" basePath="/admin/classes" tabs={tabs} q={query.q} relation={adminConditionParams(query)} />
-      <AdminListResults count={visibleClassSessions.length} query={query} />
+      <AdminListResults count={entries.length} query={query} />
 
       {classSessions.length === 0 && !query.q && !hasCondition ? (
         <section className="rounded-2xl border border-ink/15 bg-white p-6">
@@ -113,7 +117,28 @@ export default async function AdminClassesPage({ searchParams }: AdminClassesPag
             </p>
           ) : (
             <section className="grid gap-3">
-              {visibleClassSessions.map((classSession) => (
+              {entries.map((entry) => {
+                if (entry.kind === "series") {
+                  const first = entry.sessions[0];
+
+                  return (
+                    <AdminListCard
+                      href={`/admin/classes/series/${encodeURIComponent(entry.seriesId)}?${new URLSearchParams({ returnTo })}`}
+                      key={`series-${entry.seriesId}`}
+                      lines={[
+                        `${first.teacherDisplayName ?? "老師尚未填寫"}・${first.organizationName ?? "（老師自建課程）"}`,
+                        `${entry.sessions.length} 堂・${entry.next.startAt.getTime() > now.getTime() ? "下一堂" : "第一堂"} ${formatTaipeiShortDatetime(entry.next.startAt)}・已報名 ${entry.confirmedStudents} 位學員`,
+                      ]}
+                      statusLabel={entry.seriesKind === "term" ? "期班" : "持續開課"}
+                      statusToneClass="bg-pine-tint text-pine-deep"
+                      title={entry.title}
+                    />
+                  );
+                }
+
+                const classSession = entry.session;
+
+                return (
                 <AdminListCard
                   href={adminDetailHref("classes", classSession.id, returnTo)}
                   key={classSession.id}
@@ -127,7 +152,8 @@ export default async function AdminClassesPage({ searchParams }: AdminClassesPag
                   statusToneClass={classSessionStatusToneClasses[classSession.status]}
                   title={classSession.title}
                 />
-              ))}
+                );
+              })}
             </section>
           )}
         </>

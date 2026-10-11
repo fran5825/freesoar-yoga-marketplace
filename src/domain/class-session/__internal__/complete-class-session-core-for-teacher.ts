@@ -63,6 +63,9 @@ export async function completeClassSessionForTeacher(
             role: "affected_member" as const,
           })),
           { classSessionTitle: detail.title },
+          undefined,
+          // teacher-series-rollup 票 07：帶場次 id，notifyUsers 查出所屬系列。
+          { classSessionId },
         );
       }
     } catch (notifyError) {

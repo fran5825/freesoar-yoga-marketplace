@@ -5,6 +5,7 @@ import type {
   EnrollmentPaymentStatus,
   EnrollmentStatus,
   OrganizationType,
+  RecurringClassSeriesKind,
   TeacherProfileStatus,
 } from "@prisma/client";
 
@@ -41,6 +42,10 @@ export type AdminClassSessionSummary = {
   // 第三批票 09：只用來在「只看這個團體／老師」時依 id 篩選，不是授權依據。
   organizationId: string | null;
   teacherProfileId: string;
+  // teacher-series-rollup 票 06（spec 2.1）：清單把同一系列收成一張系列卡；人數算不重複學員。
+  recurringClassSeriesId: string | null;
+  recurringClassSeries: { title: string; kind: RecurringClassSeriesKind; dayOfWeek: number | null; startTime: string; endTime: string } | null;
+  enrollments: { status: string; userId: string }[];
 };
 
 // 第三批票 09：老師詳情「這位老師的課程」入口顯示的數量，與課程列表限定後的「全部」一致。
@@ -70,6 +75,9 @@ export async function listAllClassSessionsForAdmin(): Promise<AdminClassSessionS
       teacherProfile: { select: { displayName: true, status: true } },
       organization: { select: { name: true } },
       _count: { select: { enrollments: { where: { status: "confirmed" } } } },
+      recurringClassSeriesId: true,
+      recurringClassSeries: { select: { title: true, kind: true, dayOfWeek: true, startTime: true, endTime: true } },
+      enrollments: { where: { status: { in: ["pending", "confirmed"] } }, select: { status: true, userId: true } },
     },
     orderBy: { updatedAt: "desc" },
   });
@@ -92,7 +100,86 @@ export async function listAllClassSessionsForAdmin(): Promise<AdminClassSessionS
     confirmedEnrollmentCount: classSession._count.enrollments,
     organizationId: classSession.organizationId,
     teacherProfileId: classSession.teacherProfileId,
+    recurringClassSeriesId: classSession.recurringClassSeriesId,
+    recurringClassSeries: classSession.recurringClassSeries,
+    enrollments: classSession.enrollments,
   }));
+}
+
+// teacher-series-rollup 票 06（spec 2.1）：管理員唯讀系列頁。只給管理員（requireAdmin），
+// 不共用老師 own-scoped 的系列查詢；只讀，不提供任何系列層級的操作。單場操作沿用管理員既有單堂頁。
+export type AdminSeriesDetail = {
+  id: string;
+  title: string;
+  kind: RecurringClassSeriesKind;
+  dayOfWeek: number | null;
+  startTime: string;
+  endTime: string;
+  location: string;
+  teacherDisplayName: string | null;
+  sessions: {
+    id: string;
+    status: ClassSessionStatus;
+    startAt: Date;
+    endAt: Date;
+    capacity: number;
+    confirmedCount: number;
+    pendingCount: number;
+  }[];
+};
+
+export async function getSeriesDetailForAdmin(recurringClassSeriesId: string): Promise<AdminSeriesDetail | null> {
+  await requireAdmin();
+
+  const series = await prisma.recurringClassSeries.findUnique({
+    where: { id: recurringClassSeriesId },
+    select: {
+      id: true,
+      title: true,
+      kind: true,
+      dayOfWeek: true,
+      startTime: true,
+      endTime: true,
+      location: true,
+      teacherProfile: { select: { displayName: true, status: true } },
+      classSessions: {
+        orderBy: { startAt: "asc" },
+        select: {
+          id: true,
+          status: true,
+          startAt: true,
+          endAt: true,
+          capacity: true,
+          enrollments: { where: { status: { in: ["pending", "confirmed"] } }, select: { status: true } },
+        },
+      },
+    },
+  });
+
+  if (!series) {
+    return null;
+  }
+
+  return {
+    id: series.id,
+    title: series.title,
+    kind: series.kind,
+    dayOfWeek: series.dayOfWeek,
+    startTime: series.startTime,
+    endTime: series.endTime,
+    location: series.location,
+    // 第三批票 10：草稿老師的姓名管理員看不到。
+    teacherDisplayName: series.teacherProfile.status === "draft" ? null : series.teacherProfile.displayName,
+    sessions: series.classSessions.map((session) => ({
+      id: session.id,
+      status: session.status,
+      startAt: session.startAt,
+      endAt: session.endAt,
+      capacity: session.capacity,
+      confirmedCount: session.enrollments.filter((enrollment) => enrollment.status === "confirmed").length,
+      pendingCount: session.enrollments.filter((enrollment) => enrollment.status === "pending").length,
+    })),
+  };
 }
 
 // D7 修正版（codex round 2）：跟 Organizer own-scoped 用的 ClassSessionRosterEntry 不同，

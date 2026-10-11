@@ -303,7 +303,6 @@ test("A5 organization → limited classes → roster: cancel pending and confirm
   await page.getByRole("dialog").getByRole("button", { name: "確認取消報名" }).click();
   await expect(page.getByText(`已取消「Connie ${runId}」的報名，同一位學員不能再報名這堂課。`)).toBeVisible();
 
-  await page.getByRole("link", { name: "前往取消操作" }).click();
   await page.getByRole("button", { name: "取消課程", exact: true }).click();
   await expect(page.getByRole("dialog")).toContainText("目前 1 筆報名（含待老師確認）會一併取消");
   await shot(page, testInfo, "cancel-class-confirm", page.getByRole("dialog"));

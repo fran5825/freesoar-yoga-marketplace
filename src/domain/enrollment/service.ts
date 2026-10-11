@@ -200,13 +200,16 @@ export async function cancelOwnEnrollment(
     try {
       const classSession = await prisma.enrollment.findUnique({
         where: { id: enrollmentId },
-        select: { classSession: { select: { title: true } } },
+        select: { classSessionId: true, classSession: { select: { title: true } } },
       });
 
       await notifyUsers(
         "enrollment_cancelled",
         [{ userId, role: "self" }],
         { classSessionTitle: classSession?.classSession.title },
+        undefined,
+        // teacher-series-rollup 票 07：帶場次 id，notifyUsers 查出所屬系列。
+        { classSessionId: classSession?.classSessionId },
       );
     } catch (notifyError) {
       console.error("[notification] enrollment_cancelled trigger failed", notifyError);
@@ -312,7 +315,7 @@ export async function confirmPendingEnrollmentForTeacher(
     try {
       const enrollment = await prisma.enrollment.findUnique({
         where: { id: enrollmentId },
-        select: { userId: true, classSession: { select: { title: true } } },
+        select: { userId: true, classSessionId: true, classSession: { select: { title: true } } },
       });
 
       if (enrollment) {
@@ -320,6 +323,9 @@ export async function confirmPendingEnrollmentForTeacher(
           "enrollment_confirmed",
           [{ userId: enrollment.userId, role: "self" }],
           { classSessionTitle: enrollment.classSession.title },
+          undefined,
+          // teacher-series-rollup 票 07：帶場次 id，notifyUsers 查出所屬系列。
+          { classSessionId: enrollment.classSessionId },
         );
       }
     } catch (notifyError) {
@@ -435,7 +441,7 @@ export async function declinePendingEnrollmentForTeacher(
     try {
       const enrollment = await prisma.enrollment.findUnique({
         where: { id: enrollmentId },
-        select: { userId: true, classSession: { select: { title: true } } },
+        select: { userId: true, classSessionId: true, classSession: { select: { title: true } } },
       });
 
       if (enrollment) {
@@ -445,6 +451,9 @@ export async function declinePendingEnrollmentForTeacher(
           "enrollment_cancelled",
           [{ userId: enrollment.userId, role: "self" }],
           { classSessionTitle: enrollment.classSession.title },
+          undefined,
+          // teacher-series-rollup 票 07：帶場次 id，notifyUsers 查出所屬系列。
+          { classSessionId: enrollment.classSessionId },
         );
       }
     } catch (notifyError) {

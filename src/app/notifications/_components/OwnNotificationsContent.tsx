@@ -1,7 +1,8 @@
 import Link from "next/link";
 
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
-import { getNotificationLink } from "@/domain/notification/link";
+import { getNotificationLink, getSeriesNotificationLink } from "@/domain/notification/link";
+import { groupNotifications } from "@/domain/notification/grouping";
 import { listOwnNotifications } from "@/domain/notification/read-service";
 import { getOwnOrganizerContext } from "@/domain/organizer-profile/service";
 import { getOwnTeacherProfileApplicationSnapshot } from "@/domain/teacher-profile/service";
@@ -26,6 +27,16 @@ export async function OwnNotificationsContent() {
     isTeacher: teacherProfile !== null,
     isAdmin: currentUser.isAdmin,
   };
+  // teacher-series-rollup 票 08（spec 2.5）：同類型、同系列、同一天的通知只顯示一則。合併後的一則，
+  // 以及沒有單筆目標的系列通知（例如建立整個系列），連到系列頁；連結由 server 依收件人與系列推導。
+  const grouped = groupNotifications(notifications);
+  const seriesLinks = new Map(
+    await Promise.all(
+      [...new Set(grouped.filter((item) => item.recurringClassSeriesId && (item.count > 1 || !item.targetType)).map((item) => item.recurringClassSeriesId!))].map(
+        async (seriesId) => [seriesId, await getSeriesNotificationLink(currentUser.id, seriesId)] as const,
+      ),
+    ),
+  );
 
   return (
     <div className="flex flex-col gap-8">
@@ -42,15 +53,26 @@ export async function OwnNotificationsContent() {
         </section>
       ) : (
         <section className="grid gap-4">
-          {notifications.map((notification) => {
-            const link = getNotificationLink(notification.type, identity, notification);
+          {grouped.map((notification) => {
+            const seriesLink =
+              notification.recurringClassSeriesId && (notification.count > 1 || !notification.targetType)
+                ? seriesLinks.get(notification.recurringClassSeriesId)
+                : null;
+            const link = seriesLink ?? getNotificationLink(notification.type, identity, notification);
 
             return (
               <article
                 className="grid gap-2 rounded-2xl border border-ink/15 bg-white p-5"
                 key={notification.id}
               >
-                <h2 className="text-lg font-medium text-ink">{notification.title}</h2>
+                <h2 className="flex flex-wrap items-center gap-2 text-lg font-medium text-ink">
+                  {notification.title}
+                  {notification.count > 1 ? (
+                    <span className="rounded-full bg-pine-tint px-2 py-0.5 text-xs font-medium text-pine-deep">
+                      同一系列共 {notification.count} 則
+                    </span>
+                  ) : null}
+                </h2>
                 <p className="text-sm leading-6 text-ink-soft">{notification.body}</p>
                 <p className="text-xs text-ink-faint">
                   {formatTaipeiDatetime(notification.createdAt)}

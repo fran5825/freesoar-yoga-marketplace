@@ -1,8 +1,8 @@
-# 學員端就地報名：spec 草稿（待產品主人確認）
+# 學員端就地報名：spec
 
 建立日期：2026-10-10。來源：`/grill-with-docs`（2026-10-10，Q1–Q9 產品主人全部採用建議）。
 
-**狀態：草稿，尚未施工。** 本檔先獨立存放，避免與仍在進行的 `inline-member-actions`（分支 `worktree-inline-actions`）互相衝突；該分支合進 `main` 後，把本檔併入 `member-inline-actions-and-card-cleanup-spec.md` 的「報名端補強」章節，並取代該 spec 3.4 的「沒報名的人看到的報名卡不變」。
+**狀態：已施工（2026-10-11，`inline-member-enroll` 票 06–10）。** 取代 `member-inline-actions-and-card-cleanup-spec.md` 3.4、I7 的「沒報名的人看到的報名卡不變」。原本放在 `docs/superpowers/specs/` 的草稿已移到這裡。
 
 ## 1. 目標
 

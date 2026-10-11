@@ -101,9 +101,14 @@ export async function withdrawSeriesEnrollmentForUser(
   }
 
   try {
-    await notifyOverride("enrollment_cancelled", [{ userId, role: "self" }], {
-      classSessionTitle: termNotificationTitle(outcome.title, outcome.cancelledCount),
-    });
+    await notifyOverride(
+      "enrollment_cancelled",
+      [{ userId, role: "self" }],
+      { classSessionTitle: termNotificationTitle(outcome.title, outcome.cancelledCount) },
+      undefined,
+      // teacher-series-rollup 票 07：整期報名的通知帶系列 id。
+      { recurringClassSeriesId: target.recurringClassSeriesId },
+    );
   } catch (notifyError) {
     console.error("[notification] series enrollment withdrawn trigger failed", notifyError);
   }

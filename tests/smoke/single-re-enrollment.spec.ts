@@ -157,6 +157,8 @@ test.describe("single re-enrollment (UI)", () => {
     const region = page.getByRole("region", { name: "課程重點" });
     await expect(region).toContainText("可以重新報名");
     await region.getByText("重新報名…").click();
+    // inline-member-enroll 票 09：重新報名的備註也預設收起。
+    await region.getByRole("button", { name: "加備註" }).click();
     await region.getByLabel("備註（選填）").fill("想再來一次");
     await region.getByLabel("我了解此課程非醫療行為，會依自身身體狀況參與。").check();
     await region.getByRole("button", { name: "重新報名" }).click();

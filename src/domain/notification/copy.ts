@@ -107,10 +107,14 @@ const COPY_TABLE: CopyTable = {
       body: `你的回應已被選中，需求「${demandTitle ?? ""}」媒合成立，接下來會由團主建立課程場次。`,
     }),
   },
+  // teacher-series-rollup 票 07：建立系列、生成更多一人只發一則，內文寫堂數與日期範圍。
   class_session_created: {
-    self: ({ classSessionTitle }) => ({
+    self: ({ classSessionTitle, sessionCount, dateRange }) => ({
       title: "課程已建立",
-      body: `課程「${classSessionTitle ?? ""}」已經建立完成。`,
+      body:
+        sessionCount && sessionCount > 1
+          ? `課程「${classSessionTitle ?? ""}」共 ${sessionCount} 堂${dateRange ? `（${dateRange}）` : ""}已經建立完成。`
+          : `課程「${classSessionTitle ?? ""}」已經建立完成。`,
     }),
     counterpart: ({ classSessionTitle }) => ({
       title: "課程已建立",
@@ -181,18 +185,22 @@ const COPY_TABLE: CopyTable = {
       body: `「${classSessionTitle ?? ""}」有變更：${changeSummary ?? "上課資訊有變更"}。你的報名仍然有效，如果不能來，可以到我的報名取消。`,
     }),
   },
+  // teacher-series-rollup 票 07：取消整個系列、從這場以後全部取消一人只發一則，內文寫堂數與日期範圍。
   class_session_cancelled: {
-    self: ({ classSessionTitle }) => ({
+    self: ({ classSessionTitle, sessionCount, dateRange }) => ({
       title: "課程已取消",
-      body: `「${classSessionTitle ?? ""}」已經取消。`,
+      body: `「${classSessionTitle ?? ""}」${batchPart(sessionCount, dateRange)}已經取消。`,
     }),
-    counterpart: ({ classSessionTitle }) => ({
+    counterpart: ({ classSessionTitle, sessionCount, dateRange }) => ({
       title: "課程已取消",
-      body: `你的課程「${classSessionTitle ?? ""}」已經取消。`,
+      body: `你的課程「${classSessionTitle ?? ""}」${batchPart(sessionCount, dateRange)}已經取消。`,
     }),
-    affected_member: ({ classSessionTitle }) => ({
+    affected_member: ({ classSessionTitle, sessionCount, dateRange }) => ({
       title: "課程已取消",
-      body: `「${classSessionTitle ?? ""}」已經取消，你的報名也一併取消了。`,
+      body:
+        sessionCount && sessionCount > 1
+          ? `「${classSessionTitle ?? ""}」${batchPart(sessionCount, dateRange)}已經取消，你在這幾堂的報名也一併取消了。`
+          : `「${classSessionTitle ?? ""}」已經取消，你的報名也一併取消了。`,
     }),
   },
   class_session_completed: {
@@ -221,4 +229,9 @@ export function buildNotificationCopy(
   }
 
   return builder(payload);
+}
+
+// 批次通知的「共 N 堂（日期範圍）」；單堂時是空字串。
+function batchPart(sessionCount: number | undefined, dateRange: string | undefined): string {
+  return sessionCount && sessionCount > 1 ? `共 ${sessionCount} 堂${dateRange ? `（${dateRange}）` : ""}` : "";
 }

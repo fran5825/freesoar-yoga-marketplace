@@ -130,11 +130,13 @@ test.describe("teacher recurring class series smoke", () => {
 
     // Slice E：/teacher/classes 統一列表要能看到「這一場屬於哪個系列」，且能點回系列管理頁。
     // teacher-usability-redesign 票 04：我的課程預設只列「即將上課」，系列剛建立的場次是草稿。
+    // teacher-series-rollup 票 03：同一系列在列表只出現一張系列卡，整張連到系列管理頁。
     await page.goto("/teacher/classes?tab=drafts");
-    await expect(page.getByText(`系列：${baseSeriesInput.title}`).first()).toBeVisible();
-    // 系列管理頁的連結在單堂課詳情頁（列表卡片整張已經是連結，不能再包一個連結）。
+    await expect(page.locator(`#series-${series.id}`)).toHaveCount(1);
+    await expect(page.locator(`#series-${series.id}`).getByRole("link")).toHaveAttribute("href", new RegExp(`^/teacher/classes/series/${series.id}`));
+    // 單堂詳情頁標題旁的系列標籤也連回系列管理頁（票 02）。
     await page.goto(`/teacher/classes/${series.classSessions[0].id}`);
-    const seriesLink = page.getByRole("link", { name: `系列：${baseSeriesInput.title}` });
+    const seriesLink = page.getByRole("link", { name: /^持續開課/ });
     await expect(seriesLink).toBeVisible();
     await expect(seriesLink).toHaveAttribute("href", `/teacher/classes/series/${series.id}`);
   });

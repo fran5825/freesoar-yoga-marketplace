@@ -94,7 +94,8 @@ test.describe("on the teacher's class page", () => {
     await addAuthSessionCookie(context, teacher.sessionToken);
 
     await page.goto(`/teacher/classes/${classSession.id}`);
-    await expect(page.getByRole("heading", { name: "分享文案（可以直接複製，也可以先改幾個字）" })).toBeVisible(slow);
+    // teacher-series-rollup 票 02：分享文案收在「課程重點」卡裡，點開才展開。
+    await page.locator("summary", { hasText: "分享文案（可以直接複製，也可以先改幾個字）" }).click(slow);
     for (const label of ["招募公告（貼到 LINE 或 IG）", "課前一天提醒", "課後感謝"]) {
       await expect(page.locator("summary", { hasText: label })).toBeVisible();
     }
@@ -117,6 +118,7 @@ test.describe("on the teacher's class page", () => {
     const noPrice = await seedOpenClass("noprice", testInfo);
     await addAuthSessionCookie(context, noPrice.teacher.sessionToken);
     await page.goto(`/teacher/classes/${noPrice.classSession.id}`);
+    await page.locator("summary", { hasText: "分享文案（可以直接複製，也可以先改幾個字）" }).click(slow);
     await page.locator("summary", { hasText: "招募公告（貼到 LINE 或 IG）" }).click(slow);
     await expect(page.getByRole("textbox", { name: "招募公告（貼到 LINE 或 IG）" })).not.toHaveValue(/費用：/);
 

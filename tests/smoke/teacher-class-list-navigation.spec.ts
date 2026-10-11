@@ -337,11 +337,12 @@ test.describe("teacher series management (ticket 05)", () => {
     await expect(page.locator(`#class-${draftId}`)).not.toContainText("待確認");
     await expect(page.locator(`#class-${doneId}`)).toContainText("已完成");
     await expect(page.locator(`#class-${doneId}`)).toContainText("已報名 1 / 8 人");
-    // 開放報名的場次可以複製報名連結；草稿、已完成的場次沒有。
-    // teacher-class-scheduling 票 03：尚未開始的草稿多了「從這場以後全部取消」；已完成的場次沒有任何按鈕。
-    await expect(page.locator(`#class-${openId}`).getByRole("button", { name: /的報名連結$/ })).toBeVisible();
-    await expect(page.locator(`#class-${draftId}`).getByRole("button", { name: /的報名連結$/ })).toHaveCount(0);
-    await expect(page.locator(`#class-${draftId}`).getByRole("button", { name: /這一場以後全部取消$/ })).toHaveCount(1);
+    // teacher-series-rollup 票 04（spec 2.2）：每一場只露一顆依狀態的快速按鈕——開放中＝取消這一場、
+    // 草稿＝開放報名；已完成沒有按鈕。複製連結、從這場以後全部取消等其他操作在單堂頁。
+    await expect(page.locator(`#class-${openId}`).getByRole("button", { name: /^取消 .* 這一場$/ })).toBeVisible();
+    await expect(page.locator(`#class-${openId}`).getByRole("button", { name: /的報名連結$/ })).toHaveCount(0);
+    await expect(page.locator(`#class-${draftId}`).getByRole("button", { name: /^開放 .* 這一場的報名$/ })).toBeVisible();
+    await expect(page.locator(`#class-${draftId}`).getByRole("button", { name: /這一場以後全部取消$/ })).toHaveCount(0);
     await expect(page.locator(`#class-${doneId}`).getByRole("button")).toHaveCount(0);
 
     // 系列 → 場次 A → 確認一筆 → 返回系列，人數已更新。

@@ -353,10 +353,17 @@ export async function editSeriesFromOccurrenceForTeacher(
   // 通知在 commit 之後；每位學員一則，寫明影響他報名的幾堂。失敗只記錄，不撤銷修改。
   for (const member of outcome.members) {
     try {
-      await notifyUsers("class_session_changed", [{ userId: member.userId, role: "affected_member" }], {
-        classSessionTitle: outcome.seriesTitle,
-        changeSummary: `${outcome.summary}（影響你報名的 ${member.sessionCount} 堂）`,
-      });
+      await notifyUsers(
+        "class_session_changed",
+        [{ userId: member.userId, role: "affected_member" }],
+        {
+          classSessionTitle: outcome.seriesTitle,
+          changeSummary: `${outcome.summary}（影響你報名的 ${member.sessionCount} 堂）`,
+        },
+        undefined,
+        // teacher-series-rollup 票 07：改整個系列已是一人一則，補上系列 id。
+        { recurringClassSeriesId },
+      );
     } catch (notifyError) {
       console.error("[notification] class_session_changed (series) trigger failed", notifyError);
     }

@@ -8,16 +8,19 @@ export function PendingSubmitButton({
   children,
   className,
   pendingLabel = "處理中…",
+  ariaLabel,
 }: {
   children: React.ReactNode;
   className: string;
   pendingLabel?: string;
+  ariaLabel?: string;
 }) {
   const { pending } = useFormStatus();
 
   return (
     <button
       aria-busy={pending}
+      aria-label={ariaLabel}
       className={`${className} disabled:cursor-wait disabled:opacity-70`}
       disabled={pending}
       type="submit"

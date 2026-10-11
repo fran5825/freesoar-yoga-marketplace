@@ -3,7 +3,12 @@ import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
 import { cancelClassSessionForOrganizer } from "./__internal__/cancel-class-session-core";
-import { cancelClassSessionForTeacher } from "./__internal__/cancel-class-session-core-for-teacher";
+import {
+  cancelClassSessionForTeacher,
+  cancelClassSessionForTeacherInTransaction,
+  notifyClassSessionsCancelledForTeacher,
+  type CancelledClassSessionNotice,
+} from "./__internal__/cancel-class-session-core-for-teacher";
 import {
   openClassSessionForEnrollmentForTeacher,
   type OpenClassSessionForTeacherErrorCode,
@@ -463,6 +468,9 @@ export async function completeOwnClassSession(
             role: "affected_member" as const,
           })),
           { classSessionTitle: detail.title },
+          undefined,
+          // teacher-series-rollup 票 07：帶場次 id，notifyUsers 查出所屬系列。
+          { classSessionId },
         );
       }
     } catch (notifyError) {
@@ -1435,17 +1443,26 @@ export async function cancelRecurringClassSeriesForTeacher(
     select: { id: true },
   });
 
-  let cancelledCount = 0;
+  // teacher-series-rollup 票 07：逐場沿用同一段單堂取消 transaction，但通知等全部做完後合併成一人一則。
+  const cancelled: CancelledClassSessionNotice[] = [];
 
   for (const classSession of cancellableSessions) {
-    const result = await cancelClassSessionForTeacher(teacherProfileId, classSession.id);
+    try {
+      const result = await prisma.$transaction((tx) =>
+        cancelClassSessionForTeacherInTransaction(tx, teacherProfileId, classSession.id),
+      );
 
-    if (result.ok) {
-      cancelledCount += 1;
+      if (result.ok) {
+        cancelled.push(result.cancelled);
+      }
+    } catch (error) {
+      console.error("[class-session] cancel series occurrence failed", { classSessionId: classSession.id, error });
     }
   }
 
-  return { ok: true, cancelledCount };
+  await notifyClassSessionsCancelledForTeacher(teacherProfileId, cancelled);
+
+  return { ok: true, cancelledCount: cancelled.length };
 }
 
 function isAuthenticationRequiredError(error: unknown): boolean {

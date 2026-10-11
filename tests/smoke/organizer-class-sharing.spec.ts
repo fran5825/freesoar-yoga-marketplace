@@ -166,6 +166,8 @@ test.describe("organizer class sharing", () => {
     // 不安全的 returnTo 一律換成課程列表。
     await page.goto(`/classes/${unlistedId}?returnTo=${encodeURIComponent("https://evil.example/")}`);
     await expect(page.getByRole("link", { name: "返回課程列表" })).toHaveAttribute("href", "/classes");
+    // inline-member-enroll 票 08：登入選項在第一張卡按「我要報名」展開後才出現。
+    await page.getByRole("button", { name: "我要報名" }).click();
     await expect(page.locator('input[name="returnTo"]').first()).toHaveValue("/classes");
 
     // 不公開的課不會出現在公開探索。
@@ -181,6 +183,7 @@ test.describe("organizer class sharing", () => {
     await page.goto(`/classes/${unlistedId}`);
     await expect(page.getByRole("heading", { name: `連結報名 ${id}` })).toBeVisible();
     await expect(page.getByText(`秘密地點 連結報名 ${id}`)).toBeVisible();
+    await page.getByRole("button", { name: "我要報名" }).click();
     await page.getByLabel("我了解此課程非醫療行為，會依自身身體狀況參與。").check();
     await page.getByRole("button", { name: "確認報名" }).click();
     await expect(page.getByText("報名成功。")).toBeVisible();
@@ -234,7 +237,9 @@ test.describe("organizer class sharing", () => {
     const page = await context.newPage();
     await page.goto(`/organizer/classes/${classSessionId}`);
 
-    await expect(page.getByText("這堂課只透過連結招募，不會出現在公開課程列表。")).toBeVisible();
+    // teacher-series-rollup 票 05：說明收在複製按鈕旁的「ⓘ」，點開才顯示。
+    await page.getByLabel("報名連結的說明").click();
+    await expect(page.getByText(/這堂課只透過連結招募，不會出現在公開課程列表。/)).toBeVisible();
     await expect(page.getByText(/連結可以被轉傳/)).toBeVisible();
     const origin = new URL(page.url()).origin;
     const fullUrl = `${origin}/classes/${classSessionId}`;

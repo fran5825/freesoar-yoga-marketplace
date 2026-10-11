@@ -1,45 +1,138 @@
 import Link from "next/link";
 
+import { getClassAvailability } from "@/domain/class-session/availability";
 import { formatTaipeiShortDatetime } from "@/domain/class-session/timezone";
 import type { TermDetail } from "@/domain/enrollment/term-read-service";
 
 import { SignInOptions } from "../../_components/sign-in-options";
-import { enrollFromTermClassAction, signInToEnrollAction } from "../[classSessionId]/actions";
+import { enrollAction, enrollFromTermClassAction, signInToEnrollAction } from "../[classSessionId]/actions";
 import { EnrollReveal, OptionalNotes } from "./EnrollReveal";
 
-// teacher-class-scheduling 票 14（Q2、Q3、Q10、Q12）：屬於期班、而且還沒報名這一堂時的單堂頁報名區。
-// 原本「這堂課屬於期班」與「報名這堂課程」兩張卡合成這一張：說明屬於哪個期班，「我要報名」展開後
-// 二選一（報名整期／只報這一堂，預設整期；只有一個能選時只顯示那一個），結果也顯示在這張卡。
-// 只收整期的期班不會走到這裡（未報名者已轉到期班頁）。
+// inline-member-enroll 票 08（spec Q4）：沒報名的人在單堂頁，報名區放在第一張課程資訊卡最上方，
+// 取代原本獨立的「報名這堂課程」卡與期班合併報名卡。按「我要報名」（需確認的課程為「申請報名」）才展開表單；
+// 期班的單堂頁展開後先二選一（報整期／只報這一堂，預設整期；只有一個能選時只顯示那一個）。
+// 登入回來、手機底部按鈕帶回來、或送出失敗時，伺服器傳入 openForm，表單直接展開，仍由本人勾選同意後送出。
 const buttonClass =
   "inline-flex min-h-11 w-full items-center justify-center rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay sm:w-fit";
 
-export function TermClassEnrollPanel({
+const consent = (
+  <label className="flex items-start gap-3 text-sm leading-6 text-ink-soft">
+    <input className="mt-1 size-4 shrink-0 accent-pine" name="basicConsent" required type="checkbox" value="yes" />
+    我了解此課程非醫療行為，會依自身身體狀況參與。
+  </label>
+);
+
+type CardSession = {
+  id: string;
+  canAcceptNewEnrollments: boolean;
+  requiresApproval: boolean;
+  startAt: Date;
+  capacity: number;
+  activeEnrollmentCount: number;
+};
+
+export function ClassCardEnroll({
+  classSession,
+  signedIn,
+  returnTo,
+  openForm,
+  term,
+  termDetail,
+}: {
+  classSession: CardSession;
+  signedIn: boolean;
+  returnTo: string;
+  openForm: boolean;
+  term: { id: string; title: string; totalCount: number } | null;
+  termDetail: TermDetail | null;
+}) {
+  if (term) {
+    return (
+      <TermChoice
+        classSession={classSession}
+        openForm={openForm}
+        returnTo={returnTo}
+        signedIn={signedIn}
+        term={term}
+        termDetail={termDetail}
+      />
+    );
+  }
+
+  if (!classSession.canAcceptNewEnrollments) {
+    const availability = getClassAvailability(classSession);
+
+    return (
+      <div className="grid gap-2">
+        <p className="text-sm leading-6 text-ink-soft">
+          {availability.state === "started"
+            ? "這堂課程目前無法報名，可能已經開始。"
+            : availability.state === "full"
+              ? "這堂課名額已滿。"
+              : "這堂課目前不開放報名。"}
+        </p>
+        <Link className="w-fit py-2 text-sm text-clay underline" href={returnTo}>
+          看看其他課程
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <EnrollReveal
+      defaultOpen={openForm}
+      hint={classSession.requiresApproval ? "需老師確認" : "送出即成立"}
+      label={classSession.requiresApproval ? "申請報名" : "我要報名"}
+    >
+      {!signedIn ? (
+        <>
+          <p className="text-sm leading-6 text-ink-soft">
+            登入後即可{classSession.requiresApproval ? "送出報名申請，需老師確認才算成立" : "直接報名這堂課程"}。第一次使用會自動建立帳號；登入後會回到這堂課，要由你確認後才會送出報名。
+          </p>
+          <SignInOptions
+            action={signInToEnrollAction}
+            buttonClassName={buttonClass}
+            fields={{ classSessionId: classSession.id, returnTo, openForm: "1" }}
+            label={(provider) => `使用 ${provider} 登入並報名`}
+          />
+        </>
+      ) : (
+        <form action={enrollAction} className="grid gap-4">
+          <input name="classSessionId" type="hidden" value={classSession.id} />
+          <input name="returnTo" type="hidden" value={returnTo} />
+          {classSession.requiresApproval ? <p className="text-sm leading-6 text-ink-soft">送出後會等待老師確認，請到「通知」查看結果。</p> : null}
+          <OptionalNotes id="notes" />
+          {consent}
+          <button className={buttonClass} type="submit">
+            {classSession.requiresApproval ? "送出報名申請" : "確認報名"}
+          </button>
+        </form>
+      )}
+    </EnrollReveal>
+  );
+}
+
+function TermChoice({
   classSession,
   term,
   termDetail,
   signedIn,
   returnTo,
   openForm,
-  feedback,
 }: {
-  classSession: { id: string; canAcceptNewEnrollments: boolean; requiresApproval: boolean };
+  classSession: CardSession;
   term: { id: string; title: string; totalCount: number };
   termDetail: TermDetail | null;
   signedIn: boolean;
   returnTo: string;
   openForm: boolean;
-  feedback: { success: boolean; message: string } | null;
 }) {
   const termAvailable = Boolean(termDetail && !termDetail.termEnrollBlock && !termDetail.ownSeriesEnrollment);
   const singleAvailable = classSession.canAcceptNewEnrollments;
   const remaining = termDetail?.remainingCount ?? term.totalCount;
 
   return (
-    <section aria-labelledby="enrollment-heading" className="scroll-mt-6 grid gap-4 rounded-2xl border border-pine/25 bg-white p-5 sm:p-6" id="enroll">
-      <h2 className="text-lg font-medium text-ink" id="enrollment-heading">
-        報名
-      </h2>
+    <div className="grid gap-3">
       <p className="text-sm leading-6 text-ink-soft">
         這堂課屬於期班「
         <Link className="font-medium text-pine underline" href={`/classes/terms/${term.id}`}>
@@ -47,26 +140,6 @@ export function TermClassEnrollPanel({
         </Link>
         」，這一期共 {term.totalCount} 堂；可以報整期，也可以只報這一堂。
       </p>
-      {feedback ? (
-        <p
-          aria-live="polite"
-          className={
-            feedback.success
-              ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
-              : "rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
-          }
-        >
-          {feedback.message}
-          {feedback.success ? (
-            <>
-              {" "}
-              <Link className="font-medium underline" href="/member/enrollments">
-                查看我的報名
-              </Link>
-            </>
-          ) : null}
-        </p>
-      ) : null}
       {!termAvailable && !singleAvailable ? (
         <p className="text-sm leading-6 text-ink-soft">
           {termDetail?.ownSeriesEnrollment
@@ -76,7 +149,7 @@ export function TermClassEnrollPanel({
               : "這堂課目前無法報名，也不能報整期。你可以看看其他課程。"}
         </p>
       ) : (
-        <EnrollReveal defaultOpen={openForm} hint={classSession.requiresApproval ? "需老師確認" : "送出即成立"}>
+        <EnrollReveal defaultOpen={openForm} hint={classSession.requiresApproval ? "需老師確認" : "送出即成立"} label="我要報名">
           {!signedIn ? (
             <>
               <p className="text-sm leading-6 text-ink-soft">
@@ -116,17 +189,12 @@ export function TermClassEnrollPanel({
                 <>
                   <input name="choice" type="hidden" value={termAvailable ? "term" : "single"} />
                   <p className="text-sm leading-6 text-ink-soft">
-                    {termAvailable
-                      ? `這一堂目前無法單獨報名；可以報名整期（${remaining} 堂）。`
-                      : "這一期目前不能報整期；可以只報這一堂。"}
+                    {termAvailable ? `這一堂目前無法單獨報名；可以報名整期（${remaining} 堂）。` : "這一期目前不能報整期；可以只報這一堂。"}
                   </p>
                 </>
               )}
               <OptionalNotes id="notes" />
-              <label className="flex items-start gap-3 text-sm leading-6 text-ink-soft">
-                <input className="mt-1 size-4 shrink-0 accent-pine" name="basicConsent" required type="checkbox" value="yes" />
-                我了解此課程非醫療行為，會依自身身體狀況參與。
-              </label>
+              {consent}
               <button className={buttonClass} type="submit">
                 {classSession.requiresApproval ? "送出報名申請" : "確認報名"}
               </button>
@@ -134,6 +202,6 @@ export function TermClassEnrollPanel({
           )}
         </EnrollReveal>
       )}
-    </section>
+    </div>
   );
 }

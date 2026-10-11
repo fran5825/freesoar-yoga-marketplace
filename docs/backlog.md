@@ -228,6 +228,10 @@
 - 想做：選單亮起項目跟著使用者的來源。
 - 為什麼延後：要動 SiteShell 的選單判斷邏輯，範圍比返回連結大；返回連結先依 `docs/superpowers/plans/2026-10-10-member-back-links-plan.md` 修。
 
+### 24. 課程結束後自動標記完成（2026-10-11，從系列收合討論拆出）
+
+目前「標記完成」要老師或團主手動按，學員的評價邀請靠它觸發。若改成課程結束後自動完成，可以少一顆按鈕，但會動到課程狀態機（`open_for_enrollment → completed` 的觸發方式），需要另外決定與排程機制。見 `docs/specs/teacher-series-rollup-and-action-bar-spec.md` 2.2。
+
 ### 4. 新增 LINE 與 Facebook 登入
 
 - 目前只有 Google（`src/auth.ts` 的 `providers`）。

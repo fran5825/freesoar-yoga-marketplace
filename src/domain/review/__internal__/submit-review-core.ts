@@ -1,3 +1,5 @@
+import type { NotificationSender } from "@/domain/notification/sender";
+import type { NotifyOptions } from "@/domain/notification/types";
 // __internal__：不是通用 API。只給 (1) 唯一的 auth-resolving 外層（service.ts 的
 // submitOwnReview）與 (2) Playwright 決定性測試/驗證腳本直接呼叫。抽出這個 pure-core
 // 的理由跟 teacher-profile-suspension 一輪的 suspend-restore-core.ts 相同：
@@ -15,6 +17,9 @@ export type NotifyFn = (
   type: NotificationType,
   recipients: NotificationRecipient[],
   payload: NotificationPayload,
+  // teacher-series-rollup 票 07：與 notifyUsers 相同的選填參數（帶場次或系列 id）。
+  sender?: NotificationSender,
+  options?: NotifyOptions,
 ) => Promise<void>;
 
 export type SubmitReviewForUserErrorCode =
@@ -86,6 +91,9 @@ export async function submitReviewForUser(
             actorLabel: reviewer?.name ?? reviewer?.email ?? undefined,
             classSessionTitle: detail.title,
           },
+          undefined,
+          // teacher-series-rollup 票 07：帶場次 id，notifyUsers 查出所屬系列。
+          { classSessionId },
         );
       }
     } catch (notifyError) {

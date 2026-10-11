@@ -12,6 +12,8 @@ export type OwnNotification = {
   // 票 12：直達單筆的目標（舊通知為 null，連到列表頁）。
   targetType: NotificationTargetType | null;
   targetId: string | null;
+  // teacher-series-rollup 票 08：所屬課程系列（ADR 0008），用來合併。
+  recurringClassSeriesId: string | null;
 };
 
 // D3 修正版：只回傳真正送達的 in_app 記錄——排除 pending/failed（避免顯示成「已送達」
@@ -21,7 +23,7 @@ export async function listOwnNotifications(): Promise<OwnNotification[]> {
 
   return prisma.notification.findMany({
     where: { userId: currentUser.id, channel: "in_app", status: "sent" },
-    select: { id: true, type: true, title: true, body: true, createdAt: true, targetType: true, targetId: true },
+    select: { id: true, type: true, title: true, body: true, createdAt: true, targetType: true, targetId: true, recurringClassSeriesId: true },
     orderBy: { createdAt: "desc" },
   });
 }

@@ -137,10 +137,13 @@ test.describe("cancel from this session onward (domain)", () => {
     expect(enrollments.find((item) => item.classSessionId === upcoming[0].id)?.status).toBe("confirmed");
     expect(enrollments.find((item) => item.classSessionId === upcoming[1].id)?.status).toBe("cancelled");
     expect(enrollments.find((item) => item.classSessionId === upcoming[3].id)?.status).toBe("cancelled");
-    // 學員報名的兩場被取消，各收到一則取消通知（通知在 commit 之後發）。
-    expect(
-      await prisma.notification.count({ where: { userId: member.id, type: "class_session_cancelled" } }),
-    ).toBe(2);
+    // teacher-series-rollup 票 07：學員報名的兩場被取消，合成一則「共 2 堂」（通知在 commit 之後發）。
+    const cancelledNotices = await prisma.notification.findMany({
+      where: { userId: member.id, type: "class_session_cancelled", channel: "in_app" },
+    });
+    expect(cancelledNotices).toHaveLength(1);
+    expect(cancelledNotices[0].body).toContain("共 2 堂");
+    expect(cancelledNotices[0].recurringClassSeriesId).toBe(series.id);
     expect(await prisma.recurringClassSeries.count({ where: { id: series.id } })).toBe(1);
 
     // Q13：持續開課的系列取消後仍可生成更多。
@@ -173,16 +176,26 @@ test.describe("cancel from this session onward (domain)", () => {
   });
 });
 
+// 手機寬度時，操作列其餘的動作收在「更多」裡。
+async function openMore(page: import("@playwright/test").Page) {
+  const more = page.getByText("更多…", { exact: true });
+  if (await more.isVisible()) {
+    await more.click();
+  }
+}
+
 test.describe("cancel from this session onward (UI)", () => {
-  test("the series page lists the affected sessions; backing out writes nothing; confirming cancels them", async ({ context, page }, testInfo) => {
+  // teacher-series-rollup 票 04：系列頁每一場只露一顆快速按鈕，「從這場以後全部取消」改在單堂頁的操作列
+  // （版面夠寬時攤開，手機收進「更多」）。
+  test("the class page lists the affected sessions; backing out writes nothing; confirming cancels them", async ({ context, page }, testInfo) => {
     const teacher = await seedTeacher(runId(testInfo, "ui-series"), "ui-series");
     const { series, upcoming } = await seedSeries(teacher.teacherProfileId, `系列頁取消 ${testInfo.workerIndex}`);
 
     await addAuthSessionCookie(context, teacher.sessionToken);
-    await page.goto(`/teacher/classes/series/${series.id}`);
-    const triggers = page.getByRole("button", { name: /這一場以後全部取消/ });
-    await expect(triggers).toHaveCount(4);
-    await triggers.nth(1).click();
+    await page.goto(`/teacher/classes/${upcoming[1].id}`);
+    await openMore(page);
+    const trigger = page.getByRole("button", { name: "從這場以後全部取消" });
+    await trigger.click();
     const dialog = page.getByRole("dialog", { name: "從這場以後全部取消？" });
     await expect(dialog.getByRole("list", { name: "會被取消的場次" }).getByRole("listitem")).toHaveCount(3);
     await page.keyboard.press("Escape");
@@ -190,7 +203,7 @@ test.describe("cancel from this session onward (UI)", () => {
       await prisma.classSession.count({ where: { recurringClassSeriesId: series.id, status: "cancelled" } }),
     ).toBe(0);
 
-    await triggers.nth(1).click();
+    await trigger.click();
     await dialog.getByRole("button", { name: "確定取消 3 場" }).click();
     await expect(page.getByText("已取消這一場之後共 3 場尚未開始的課程，之前的場次照常。")).toBeVisible();
     expect(
@@ -207,7 +220,7 @@ test.describe("cancel from this session onward (UI)", () => {
 
     await addAuthSessionCookie(context, teacher.sessionToken);
     await page.goto(`/teacher/classes/${upcoming[2].id}`);
-    await expect(page.getByText(/可以把這一場和之後的 1 場一起取消/)).toBeVisible();
+    await openMore(page);
     await page.getByRole("button", { name: "從這場以後全部取消" }).click();
     await page
       .getByRole("dialog", { name: "從這場以後全部取消？" })

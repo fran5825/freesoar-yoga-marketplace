@@ -6,6 +6,7 @@ import { CancelEnrollmentForm } from "../../member/_components/CancelEnrollmentF
 import { EnrollmentStatusBadge } from "../../member/_components/EnrollmentStatusBadge";
 import { TermRowAction, TermRowBadge } from "../../member/_components/TermRowControls";
 import { cancelEnrollmentFromClassAction, enrollAction } from "../[classSessionId]/actions";
+import { OptionalNotes } from "./EnrollReveal";
 
 // inline-member-actions 票 03（spec 3.4）：已報名學員在單堂頁，狀態與動作直接放在第一張課程資訊卡裡，
 // 取代原本獨立的「你的報名狀態」卡。單堂的取消報名、重新報名與整期的請假、取消請假都是卡內按鈕、就地展開；
@@ -130,10 +131,8 @@ export function ClassOwnEnrollmentActions({
           <input name="returnTo" type="hidden" value={returnTo} />
           <input name="reEnroll" type="hidden" value="1" />
           {classSession.requiresApproval ? <p className="text-sm leading-6 text-ink-soft">送出後會等待老師確認，請到「通知」查看結果。</p> : null}
-          <div>
-            <label className="text-sm font-medium text-ink" htmlFor="notes">備註（選填）</label>
-            <textarea className="mt-2 min-h-20 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink focus-visible:outline-2 focus-visible:outline-pine" id="notes" maxLength={500} name="notes" />
-          </div>
+          {/* inline-member-enroll 票 09（spec Q5）：備註預設收起，點「加備註」才出現。 */}
+          <OptionalNotes id="notes" />
           <label className="flex items-start gap-3 text-sm leading-6 text-ink-soft">
             <input className="mt-1 size-4 shrink-0 accent-pine" name="basicConsent" required type="checkbox" value="yes" />
             我了解此課程非醫療行為，會依自身身體狀況參與。

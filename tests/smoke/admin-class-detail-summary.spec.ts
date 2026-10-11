@@ -103,17 +103,15 @@ test("class detail leads with time, place, teacher, origin and a full-roster enr
   await expect(content.getByText("需老師確認", { exact: true })).toBeVisible();
   await expect(content.getByText("公開", { exact: true })).toBeVisible();
 
-  // 順序：摘要 → 課程內容 → 團主、老師與團體 → 相關資料 → 名單 → 取消。
+  // 順序：摘要 → 課程內容 → 團主、老師與團體 → 相關資料 → 名單。
   const top = async (name: string) => (await page.getByRole("heading", { level: 2, name }).boundingBox())!.y;
-  const order = [await top("課程內容"), await top("團主、老師與團體"), await top("相關資料"), await top("報名名單（4 人）"), await top("取消課程")];
+  const order = [await top("課程內容"), await top("團主、老師與團體"), await top("相關資料"), await top("報名名單（4 人）")];
   expect([...order].sort((a, b) => a - b)).toEqual(order);
 
-  // 有合法取消時，摘要提供頁內跳轉。
-  await expect(page.getByRole("link", { name: "前往取消操作" })).toHaveAttribute("href", "#class-actions");
+  // teacher-series-rollup 票 05：有合法取消時，「取消課程」直接在標題下方的操作列（首屏看得到），不再放頁尾。
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: `.ai-runs/admin-usability/${testInfo.project.name}-class-summary.png`, fullPage: true });
-  await page.getByRole("link", { name: "前往取消操作" }).click();
-  await expect(page.getByRole("button", { name: "取消課程", exact: true })).toBeInViewport();
+  await expect(page.getByRole("group", { name: "課程操作" }).getByRole("button", { name: "取消課程", exact: true })).toBeInViewport();
 
   // 舊資料：課程風格退回單一 serviceType；直接報名、不公開、團主媒合；已結束的課沒有取消入口。
   await page.goto(`/admin/classes/${legacyClass.id}`);
@@ -123,5 +121,5 @@ test("class detail leads with time, place, teacher, origin and a full-roster enr
   await expect(content.getByText("直接報名", { exact: true })).toBeVisible();
   await expect(content.getByText("不公開", { exact: true })).toBeVisible();
   await expect(content.getByText("公開", { exact: true })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "前往取消操作" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "取消課程", exact: true })).toHaveCount(0);
 });

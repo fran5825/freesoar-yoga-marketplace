@@ -7,6 +7,7 @@ import {
 } from "@/app/organizer/classes/_components/status-labels";
 import { listOwnClassSessionsForTeacher } from "@/domain/class-session/read-service";
 import { getClassServiceTypes } from "@/domain/class-session/service-types-display";
+import { rollupClassList } from "@/domain/class-session/teacher-class-list";
 import { getTeacherClassNextStep } from "@/domain/class-session/teacher-next-step";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { getOwnTeacherProfileApplicationSnapshot } from "@/domain/teacher-profile/service";
@@ -18,6 +19,7 @@ import {
   teacherClassListTabLabels,
   type TeacherClassListTab,
 } from "./_lib/class-list-tabs";
+import { SeriesRollupCardView } from "./_components/SeriesRollupCard";
 import {
   parseListStatusFilter,
   parseListTab,
@@ -65,6 +67,19 @@ export default async function TeacherClassesPage({ searchParams }: TeacherClasse
   const statusFilter = parseListStatusFilter(tab, resolvedSearchParams?.status);
   const now = new Date();
   const visibleClassSessions = filterAndSortClassesForTab(classSessions, tab, now, statusFilter);
+  // teacher-series-rollup 票 03（spec 2.1）：同一個系列在這個分頁只出現一張系列卡。
+  const entries = rollupClassList(visibleClassSessions, now);
+  const tabCountLabel = (count: number) =>
+    statusFilter === "cancelled"
+      ? `${count} 堂已取消`
+      : tab === "drafts"
+        ? `${count} 堂草稿`
+        : tab === "upcoming"
+          ? `${count} 堂即將上課`
+          : tab === "past"
+            ? `${count} 堂已上過`
+            : `共 ${count} 堂`;
+  const seriesQuery = new URLSearchParams({ from: "list", tab, ...(statusFilter ? { status: statusFilter } : {}) }).toString();
   // 預設分頁不帶參數，連結維持原本的乾淨網址；回來時一樣回到即將上課。
   const returnContext =
     tab === "upcoming" && !statusFilter ? null : { kind: "list" as const, tab, status: statusFilter };
@@ -175,7 +190,21 @@ export default async function TeacherClassesPage({ searchParams }: TeacherClasse
         </section>
       ) : (
         <section aria-label={`${teacherClassListTabLabels[tab]}的課程`} className="grid gap-4">
-          {visibleClassSessions.map((classSession) => {
+          {entries.map((entry) => {
+            if (entry.kind === "series") {
+              return (
+                <SeriesRollupCardView
+                  card={entry}
+                  href={`/teacher/classes/series/${entry.seriesId}?${seriesQuery}`}
+                  key={`series-${entry.seriesId}`}
+                  now={now}
+                  originLabel={originLabels[entry.next.origin] ?? null}
+                  tabCountLabel={tabCountLabel}
+                />
+              );
+            }
+
+            const classSession = entry.session;
             const confirmedCount = classSession.enrollments.filter(
               (enrollment) => enrollment.status === "confirmed",
             ).length;
@@ -241,17 +270,6 @@ export default async function TeacherClassesPage({ searchParams }: TeacherClasse
                     </div>
                   </article>
                 </Link>
-                {/* 系列入口放在卡片連結外面，避免連結裡再包連結。 */}
-                {classSession.recurringClassSeriesId ? (
-                  <div className="border-t border-ink/10 bg-pine-tint/30 px-5">
-                    <Link
-                      className="inline-flex min-h-11 items-center text-sm font-medium text-pine hover:underline"
-                      href={`/teacher/classes/series/${classSession.recurringClassSeriesId}`}
-                    >
-                      系列：{classSession.recurringClassSeries?.title ?? "課程系列"} →
-                    </Link>
-                  </div>
-                ) : null}
               </div>
             );
           })}

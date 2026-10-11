@@ -8,11 +8,14 @@ import { useState, type ReactNode } from "react";
 export function EnrollReveal({
   defaultOpen,
   hint,
+  label = "我要報名",
   children,
 }: {
   defaultOpen: boolean;
   // 按鈕旁的說明，例如「送出即成立」或「需老師確認」。
   hint: string;
+  // inline-member-enroll 票 08：需老師確認的單堂課顯示「申請報名」。
+  label?: string;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -28,7 +31,7 @@ export function EnrollReveal({
         onClick={() => setOpen(true)}
         type="button"
       >
-        我要報名
+        {label}
       </button>
       <span className="text-sm text-ink-soft">{hint}</span>
     </div>

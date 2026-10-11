@@ -1,7 +1,8 @@
-// inline-member-actions 票 01：就地請假等操作做完要回到哪一頁。只允許站內三種頁面，其餘一律回「我的報名」，避免被當成 open redirect。
+// inline-member-actions 票 01：就地請假等操作做完要回到哪一頁。只允許站內幾種頁面，其餘一律回「我的報名」，避免被當成 open redirect。
+// inline-member-enroll 票 06（spec 2.2）：加入持續開課的系列頁（列上就地報名後回到系列頁）。
 
-// 只允許回到這三種頁面（站內相對路徑，不接受外部網址）；其餘一律回「我的報名」。
-const RETURN_PATH = /^\/(member\/enrollments|classes\/terms\/[A-Za-z0-9_-]+|classes\/[A-Za-z0-9_-]+)$/;
+// 只允許回到這幾種頁面（站內相對路徑，不接受外部網址）；其餘一律回「我的報名」。
+const RETURN_PATH = /^\/(member\/enrollments|classes\/terms\/[A-Za-z0-9_-]+|classes\/series\/[A-Za-z0-9_-]+|classes\/[A-Za-z0-9_-]+)$/;
 
 export function safeTermRowReturnPath(value: unknown): { path: string; query: URLSearchParams } {
   const fallback = { path: "/member/enrollments", query: new URLSearchParams() };

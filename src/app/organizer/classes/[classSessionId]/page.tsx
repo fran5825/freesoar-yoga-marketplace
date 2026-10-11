@@ -3,12 +3,15 @@ import { notFound, redirect } from "next/navigation";
 
 import { getOwnClassSessionDetailForOrganizer } from "@/domain/class-session/read-service";
 import { classOriginLabelsForOrganizer } from "@/domain/class-session/origin-labels";
+import { classActionPhase, getClassActionSlots, type ClassActionKey } from "@/domain/class-session/class-action-slots";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { listRosterEnrollmentsForClassSession } from "@/domain/enrollment/read-service";
 import { listReviewsForClassSession } from "@/domain/review/read-service";
 import { requireUser } from "@/lib/auth/session";
 
 import { demandRequestTargetLevelLabels } from "../../demands/_components/status-labels";
+import { ActionBar, InfoTip } from "../../../_components/ActionBar";
+import { ConfirmActionDialog } from "../../../teacher/classes/_components/ConfirmActionDialog";
 import { ClassShareLink } from "../_components/ClassShareLink";
 import {
   classSessionStatusLabels,
@@ -73,7 +76,86 @@ export default async function OrganizerClassSessionDetailPage({
     classSession.status === "completed"
       ? ((await listReviewsForClassSession(classSessionId)) ?? [])
       : [];
-  const hasEnded = hasClassSessionEnded(classSession.endAt);
+  // teacher-series-rollup 票 05（spec 2.2 角色別按鈕）：團主只有開放報名、複製連結、取消、標記完成（沒有改課）。
+  // 可用條件與原本各區塊相同；真正的檢查在 service。
+  const now = new Date();
+  const phase = classActionPhase({ ...classSession, now });
+  const available: ClassActionKey[] = [
+    ...(classSession.status === "draft" ? (["open"] as const) : []),
+    ...(classSession.status === "open_for_enrollment" ? (["copyLink"] as const) : []),
+    ...((classSession.status === "draft" || classSession.status === "open_for_enrollment") && classSession.startAt.getTime() > now.getTime()
+      ? (["cancel"] as const)
+      : []),
+    ...(phase === "ended_awaiting_completion" ? (["complete"] as const) : []),
+  ];
+  const slots = getClassActionSlots({ phase, available });
+  const filledClass = "min-h-11 rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep";
+  const actionNode = (key: ClassActionKey) => {
+    switch (key) {
+      case "open":
+        return (
+          <ConfirmActionDialog
+            action={openForEnrollmentAction}
+            confirmClassName={filledClass}
+            confirmLabel="確定開放報名"
+            hiddenFields={{ classSessionId }}
+            title="開放這堂課的報名？"
+            triggerClassName={filledClass}
+            triggerLabel="開放報名"
+          >
+            <p>
+              課程：<span className="break-words font-medium text-ink">{classSession.title}</span>
+            </p>
+            <p>開放後，會員就能看到並報名這堂課，此動作無法復原。</p>
+          </ConfirmActionDialog>
+        );
+      case "copyLink":
+        return (
+          <span className="inline-flex max-w-full items-start gap-1">
+            {/* organizer-usability-redesign 票 13：團主要看到完整網址並複製；沿用 ClassShareLink。 */}
+            <ClassShareLink classSessionId={classSessionId} />
+            <InfoTip label="報名連結的說明">
+              {classSession.isPublic
+                ? "這堂課也公開在課程列表。把連結傳給團員，他們登入後就能查看課程並報名。"
+                : "這堂課只透過連結招募，不會出現在公開課程列表。把連結傳給團員，他們登入後就能查看課程並報名。"}
+              連結可以被轉傳，收到連結的人登入後都能報名，平台不會另外確認是否為公司或社團成員。
+            </InfoTip>
+          </span>
+        );
+      case "complete":
+        return (
+          <ConfirmActionDialog
+            action={completeClassSessionAction}
+            confirmClassName={filledClass}
+            confirmLabel="確定標記完成"
+            hiddenFields={{ classSessionId }}
+            title="標記這堂課已完成？"
+            triggerClassName={filledClass}
+            triggerLabel="標記完成"
+          >
+            <p>確認這堂課程已經結束，標記後會顯示為「已完成」。</p>
+          </ConfirmActionDialog>
+        );
+      case "cancel":
+        return (
+          <ConfirmActionDialog
+            action={cancelClassSessionAction}
+            confirmLabel="確認取消課程"
+            hiddenFields={{ classSessionId }}
+            title="取消這堂課？"
+            triggerClassName="min-h-11 rounded-full border border-clay/40 bg-white px-5 py-2 text-sm font-medium text-clay transition hover:bg-clay-tint"
+            triggerLabel="取消課程"
+          >
+            <p>
+              課程：<span className="break-words font-medium text-ink">{classSession.title}</span>
+            </p>
+            <p>取消後無法復原，已報名的會員報名也會一併取消，並會收到通知。</p>
+          </ConfirmActionDialog>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="flex flex-col gap-8">
@@ -101,6 +183,14 @@ export default async function OrganizerClassSessionDetailPage({
             </Link>
           </p>
         ) : null}
+        {/* teacher-series-rollup 票 05（spec 2.2）：按鈕集中在標題下方一排，說明放進確認視窗或「ⓘ」。 */}
+        <div className="mt-4">
+          <ActionBar
+            primary={slots.primary ? actionNode(slots.primary) : null}
+            rest={slots.rest.map((key) => ({ key, node: actionNode(key) }))}
+            secondary={slots.secondary ? actionNode(slots.secondary) : null}
+          />
+        </div>
       </header>
 
       {feedback ? (
@@ -116,21 +206,6 @@ export default async function OrganizerClassSessionDetailPage({
         </section>
       ) : null}
 
-      {/* 票 14：開放報名後的主要動作是分享，放在課程資料之前，手機第一屏就看得到。 */}
-      {classSession.status === "open_for_enrollment" ? (
-        <section aria-labelledby="share-title" className="grid gap-3 rounded-2xl border border-pine/25 bg-white p-6">
-          <div>
-            <h2 className="text-lg font-medium text-ink" id="share-title">分享報名連結</h2>
-            <p className="mt-2 text-sm leading-6 text-ink-soft">
-              {classSession.isPublic
-                ? "這堂課也公開在課程列表。把連結傳給團員，他們登入後就能查看課程並報名。"
-                : "這堂課只透過連結招募，不會出現在公開課程列表。把連結傳給團員，他們登入後就能查看課程並報名。"}
-              連結可以被轉傳，收到連結的人登入後都能報名，平台不會另外確認是否為公司或社團成員。
-            </p>
-          </div>
-          <ClassShareLink classSessionId={classSessionId} />
-        </section>
-      ) : null}
 
       <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6 sm:grid-cols-2">
         <DetailField label="授課老師" value={classSession.teacherProfile.displayName} />
@@ -153,35 +228,6 @@ export default async function OrganizerClassSessionDetailPage({
         </div>
       </section>
 
-      {classSession.status === "draft" ? (
-        <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
-          <div>
-            <h2 className="text-lg font-medium text-ink">開放報名</h2>
-            <p className="mt-2 text-sm leading-6 text-ink-soft">
-              開放後，會員就能看到並報名這堂課，此動作無法復原。
-            </p>
-          </div>
-          <form action={openForEnrollmentAction} className="grid gap-3">
-            <input name="classSessionId" type="hidden" value={classSessionId} />
-            <label className="flex items-start gap-2 text-sm leading-6 text-ink-soft">
-              <input
-                className="mt-1 shrink-0"
-                name="confirmOpen"
-                required
-                type="checkbox"
-                value="yes"
-              />
-              我確認要開放這堂課程的報名。
-            </label>
-            <button
-              className="w-full rounded-full bg-emerald-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-800 sm:w-auto"
-              type="submit"
-            >
-              開放報名
-            </button>
-          </form>
-        </section>
-      ) : null}
 
       {["open_for_enrollment", "completed"].includes(classSession.status) ? (
         <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
@@ -257,69 +303,7 @@ export default async function OrganizerClassSessionDetailPage({
         </section>
       ) : null}
 
-      {classSession.status === "open_for_enrollment" && hasEnded ? (
-        <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-6">
-          <div>
-            <h2 className="text-lg font-medium text-ink">標記完成</h2>
-            <p className="mt-2 text-sm leading-6 text-ink-soft">
-              確認這堂課程已經結束，標記後會顯示為「已完成」。
-            </p>
-          </div>
-          <form action={completeClassSessionAction} className="grid gap-3">
-            <input name="classSessionId" type="hidden" value={classSessionId} />
-            <label className="flex items-start gap-2 text-sm leading-6 text-ink-soft">
-              <input
-                className="mt-1 shrink-0"
-                name="confirmComplete"
-                required
-                type="checkbox"
-                value="yes"
-              />
-              我確認這堂課程已經結束。
-            </label>
-            <button
-              className="w-full rounded-full bg-pine px-4 py-2 text-center text-sm font-medium text-white transition hover:bg-pine-deep sm:w-auto"
-              type="submit"
-            >
-              標記完成
-            </button>
-          </form>
-        </section>
-      ) : null}
 
-      {classSession.status === "draft" || classSession.status === "open_for_enrollment" ? (
-        <section className="rounded-2xl border border-rose-200 bg-white p-6">
-          <details className="grid gap-4">
-            <summary className="cursor-pointer list-none text-lg font-medium text-rose-800 marker:hidden">
-              取消課程…
-            </summary>
-            <div>
-              <p className="text-sm leading-6 text-ink-soft">
-                取消後無法復原，已報名的會員報名也會一併取消，並會收到通知。
-              </p>
-            </div>
-            <form action={cancelClassSessionAction} className="grid gap-3">
-              <input name="classSessionId" type="hidden" value={classSessionId} />
-              <label className="flex items-start gap-2 text-sm leading-6 text-ink-soft">
-                <input
-                  className="mt-1 shrink-0"
-                  name="confirmCancel"
-                  required
-                  type="checkbox"
-                  value="yes"
-                />
-                我確認要取消這堂課程，且已報名的會員也會一併取消。
-              </label>
-              <button
-                className="w-full rounded-full bg-rose-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-800 sm:w-auto"
-                type="submit"
-              >
-                確認取消課程
-              </button>
-            </form>
-          </details>
-        </section>
-      ) : null}
     </div>
   );
 }
@@ -343,8 +327,4 @@ function DetailField({
       </p>
     </div>
   );
-}
-
-function hasClassSessionEnded(endAt: Date): boolean {
-  return endAt.getTime() <= Date.now();
 }

@@ -106,6 +106,8 @@ async function startGoogleSignInFromClass(page: Page, context: BrowserContext): 
     route.fulfill({ status: 200, contentType: "text/html", body: "<p>google stub</p>" }),
   );
   const googleRequest = page.waitForRequest((request) => request.url().startsWith("https://accounts.google.com/"));
+  // inline-member-enroll 票 08：登入選項在第一張卡按「我要報名」（需確認的課程為「申請報名」）展開後才出現。
+  await page.getByRole("button", { name: /^(我要報名|申請報名)$/ }).click();
   await page.getByRole("button", { name: "使用 Google 登入並報名" }).click();
   await googleRequest;
   await page.waitForURL(/^https:\/\/accounts\.google\.com\//);
@@ -140,10 +142,11 @@ test.describe("public classes discovery smoke", () => {
     const returnLink = page.getByRole("link", { name: "返回課程列表", exact: true });
     const returnTo = await returnLink.getAttribute("href");
     expect(returnTo).toBe("/classes?timeOfDay=evening&location=%E4%BF%A1%E7%BE%A9%E5%8D%80&yogaStyle=%E5%93%88%E9%81%94");
+    // inline-member-enroll 票 08：報名區在第一張課程資訊卡內，沒有獨立的「報名這堂課程」卡。
     const summary = page.getByRole("region", { name: "課程重點" });
-    const panel = page.getByRole("region", { name: "報名這堂課程" });
-    expect((await summary.boundingBox())!.y).toBeLessThan((await panel.boundingBox())!.y);
-    expect((await panel.boundingBox())!.y).toBeLessThan((await page.getByRole("region", { name: "課程說明" }).boundingBox())!.y);
+    await expect(page.getByRole("region", { name: "報名這堂課程" })).toHaveCount(0);
+    await expect(summary.getByRole("button", { name: "我要報名" })).toBeVisible();
+    expect((await summary.boundingBox())!.y).toBeLessThan((await page.getByRole("region", { name: "課程說明" }).boundingBox())!.y);
     for (const width of [375, 390, 1280]) {
       await page.setViewportSize({ width, height: 900 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -151,7 +154,8 @@ test.describe("public classes discovery smoke", () => {
       if (width === 375 || width === 1280) await page.screenshot({ path: testInfo.outputPath(`visitor-${width}-viewport.png`) });
     }
     const signInDestination = await startGoogleSignInFromClass(page, context);
-    expect(signInDestination).toBe(`/classes/${id}?returnTo=${encodeURIComponent(returnTo!)}`);
+    // 登入回來時報名表單直接展開（enroll=1），仍由本人送出。
+    expect(signInDestination).toBe(`/classes/${id}?returnTo=${encodeURIComponent(returnTo!)}&enroll=1`);
     await addAuthSessionCookie(context, sessionToken);
     await page.goto(signInDestination);
     await expect(returnLink).toHaveAttribute("href", returnTo!);
@@ -159,6 +163,7 @@ test.describe("public classes discovery smoke", () => {
     const consent = page.getByRole("checkbox", { name: /我了解此課程非醫療行為/ });
     await expect(consent).not.toBeChecked();
     await page.setViewportSize({ width: 375, height: 900 });
+    await page.getByRole("button", { name: "加備註" }).click();
     await page.getByLabel("備註（選填）").focus();
     await expect(page.getByRole("link", { name: "前往報名", exact: true })).toBeHidden();
     await page.keyboard.press("Tab");
@@ -226,6 +231,8 @@ test.describe("public classes discovery smoke", () => {
     await expect(page.getByRole("button", { name: "確認報名" })).toBeHidden();
     await expect(page.getByLabel("備註（選填）")).toBeHidden();
 
+    // inline-member-enroll 票 08：按「我要報名」後才在第一張卡展開登入選項。
+    await page.getByRole("button", { name: "我要報名" }).click();
     await expect(page.getByRole("button", { name: "使用 Google 登入並報名" })).toBeVisible();
     await expect(page.getByText(/第一次使用會自動建立帳號/)).toBeVisible();
   });
@@ -262,12 +269,12 @@ test.describe("public classes discovery smoke", () => {
     await expect(page.getByText("老師開課", { exact: true })).toBeVisible();
     // 畫面 2：直接進 Google（票 05，不再經過站內登入頁）。Auth.js 記下的回程網址是同一堂課。
     const signInDestination = await startGoogleSignInFromClass(page, context);
-    expect(signInDestination).toBe(`/classes/${classSessionId}`);
+    expect(signInDestination).toBe(`/classes/${classSessionId}?enroll=1`);
 
     // 模擬 Google 登入完成 → 畫面 3：回到同一堂課，已是學員專區，但不會自動報名。
     await addAuthSessionCookie(context, sessionToken);
     await page.goto(signInDestination);
-    await expect(page).toHaveURL(new RegExp(`/classes/${classSessionId}$`));
+    await expect(page).toHaveURL(new RegExp(`/classes/${classSessionId}\\?enroll=1$`));
     await expect(page.getByRole("banner").getByText("學員專區", { exact: true })).toBeVisible();
     expect(await prisma.enrollment.count({ where: { classSessionId, userId } })).toBe(0);
 
@@ -360,6 +367,7 @@ test.describe("public classes discovery smoke", () => {
     const response = await page.goto(`/classes/${classSessionId}`);
     expect(response?.status()).toBe(200);
     await expect(page.getByRole("heading", { name: `Member Class ${testRunId}` })).toBeVisible();
+    await page.getByRole("button", { name: "我要報名" }).click();
     await expect(page.getByRole("button", { name: "確認報名" })).toBeVisible();
     await expect(page.getByRole("button", { name: "使用 Google 登入並報名" })).toBeHidden();
   });

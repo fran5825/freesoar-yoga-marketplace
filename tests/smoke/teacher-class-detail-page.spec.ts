@@ -155,9 +155,11 @@ test.describe("teacher class detail page", () => {
     await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
     await expect(page.getByRole("region", { name: "下一步" })).toContainText("開放報名");
 
-    // 區塊順序（票 03）：課程重點（含下一步與開放報名）→ 草稿先看課程內容 → 報名狀況 → 取消這堂課。
+    // 區塊順序（票 03）：課程重點（含下一步）→ 草稿先看課程內容 → 報名狀況。
+    // teacher-series-rollup 票 02：取消改在標題下方的操作列，沒有獨立的「取消這堂課」區塊。
     const headings = await page.getByRole("heading", { level: 2 }).allTextContents();
-    expect(headings).toEqual(["課程重點", "課程內容", "報名狀況", "取消這堂課"]);
+    expect(headings).toEqual(["課程重點", "課程內容", "報名狀況"]);
+    await expect(page.getByRole("group", { name: "課程操作" }).getByRole("button", { name: "開放報名" })).toBeVisible();
     await expect(page.getByText("放鬆紓壓", { exact: true })).toBeVisible();
     await expect(page.getByText("陰瑜伽", { exact: true })).toBeVisible();
 
@@ -395,7 +397,9 @@ test.describe("teacher copies the enrol link", () => {
     await expect(page.getByRole("button", { name: "複製報名連結" })).toHaveCount(0);
 
     await page.goto(`/teacher/classes/${openId}`);
-    await expect(page.getByText("這堂課不在公開課程列表，請把報名連結傳給學員。")).toBeVisible();
+    // teacher-series-rollup 票 02：說明收在複製按鈕旁的「ⓘ」，點開才顯示。
+    await page.getByLabel("報名連結的說明").click();
+    await expect(page.getByText(/這堂課不在公開課程列表，請把報名連結傳給學員。/)).toBeVisible();
     await page.getByRole("button", { name: "複製報名連結" }).click();
     await expect(page.getByRole("button", { name: "已複製連結" })).toBeVisible();
     const copied = await page.evaluate(() => navigator.clipboard.readText());

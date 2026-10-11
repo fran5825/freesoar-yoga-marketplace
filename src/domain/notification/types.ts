@@ -32,6 +32,12 @@ export type NotificationRecipient = {
 // `${eventKeyBase}:${userId}`，重試時資料庫的 unique 限制擋下第二筆，視為已發送。
 export type NotifyOptions = {
   eventKeyBase?: string;
+  // teacher-series-rollup 票 07（ADR 0008）：這則通知所屬的課程系列（站內與 email 記錄都寫入），通知頁依它合併。
+  // 只給 classSessionId 時由 notifyUsers 查出所屬系列；不屬於系列就是 null。
+  recurringClassSeriesId?: string | null;
+  classSessionId?: string;
+  // 批次動作的通知：email 的按鈕連到系列頁（與通知頁上的連結一致）。
+  linkToSeries?: boolean;
   // transactional-email：只給測試用，換掉 email 設定與寄信出口；正式流程一律讀環境設定。
   email?: { config?: EmailConfig; transport?: EmailTransport };
 };
@@ -45,4 +51,7 @@ export type NotificationPayload = {
   classSessionTitle?: string;
   // teacher-class-scheduling 票 04：改課時「改了什麼」的一句話摘要（只列有改的時間／地點）。
   changeSummary?: string;
+  // teacher-series-rollup 票 07：批次動作（建立系列、生成更多、取消整個系列、從這場以後全部取消）一人一則時的堂數與日期範圍。
+  sessionCount?: number;
+  dateRange?: string;
 };

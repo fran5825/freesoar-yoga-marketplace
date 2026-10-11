@@ -1,3 +1,5 @@
+import type { NotificationSender } from "@/domain/notification/sender";
+import type { NotifyOptions } from "@/domain/notification/types";
 // __internal__：不是通用 API。只給 (1) admin-service.ts 的 cancelEnrollmentForAdmin 與
 // (2) Playwright 測試直接呼叫。這裡不呼叫 requireAdmin()——跟既有 cancelOwnEnrollment 一樣
 // 是單一列的 updateMany，不需要 SELECT ... FOR UPDATE（沒有跨列連帶效果、沒有 capacity
@@ -15,6 +17,9 @@ export type NotifyFn = (
   type: NotificationType,
   recipients: NotificationRecipient[],
   payload: NotificationPayload,
+  // teacher-series-rollup 票 07：與 notifyUsers 相同的選填參數（帶場次或系列 id）。
+  sender?: NotificationSender,
+  options?: NotifyOptions,
 ) => Promise<void>;
 
 export type CancelEnrollmentForAdminErrorCode =
@@ -47,7 +52,7 @@ export async function cancelEnrollmentForAdminCore(
     try {
       const enrollment = await prisma.enrollment.findUnique({
         where: { id: enrollmentId },
-        select: { userId: true, classSession: { select: { title: true } } },
+        select: { userId: true, classSessionId: true, classSession: { select: { title: true } } },
       });
 
       if (enrollment) {
@@ -55,6 +60,9 @@ export async function cancelEnrollmentForAdminCore(
           "enrollment_cancelled",
           [{ userId: enrollment.userId, role: "self" }],
           { classSessionTitle: enrollment.classSession.title },
+          undefined,
+          // teacher-series-rollup 票 07：帶場次 id，notifyUsers 查出所屬系列。
+          { classSessionId: enrollment.classSessionId },
         );
       }
     } catch (notifyError) {

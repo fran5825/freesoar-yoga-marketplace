@@ -200,11 +200,9 @@ test.describe("class session completion smoke", () => {
 
     await addAuthSessionCookie(context, organizerSessionToken);
     await page.goto(`/organizer/classes/${classSessionId}`);
-    await expect(page.getByRole("heading", { name: "標記完成" })).toBeVisible();
-    await page
-      .getByRole("checkbox", { name: "我確認這堂課程已經結束。" })
-      .check();
-    await page.getByRole("button", { name: "標記完成" }).click();
+    // teacher-series-rollup 票 05：標記完成在操作列，按下後在確認視窗確認。
+    await page.getByRole("button", { name: "標記完成", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "確定標記完成" }).click();
 
     await expect(page.getByText("課程已標記完成。")).toBeVisible();
     await expect(page.getByText("已完成", { exact: true })).toBeVisible();

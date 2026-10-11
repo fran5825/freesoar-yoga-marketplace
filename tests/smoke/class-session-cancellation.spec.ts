@@ -335,11 +335,9 @@ test.describe("class session cancellation smoke", () => {
 
     await addAuthSessionCookie(context, organizerSessionToken);
     await page.goto(`/organizer/classes/${classSessionId}`);
-    await page.getByText("取消課程…").click();
-    await page
-      .getByRole("checkbox", { name: "我確認要取消這堂課程，且已報名的會員也會一併取消。" })
-      .check();
-    await page.getByRole("button", { name: "確認取消課程" }).click();
+    // teacher-series-rollup 票 05：取消在操作列，按下後在確認視窗確認。
+    await page.getByRole("button", { name: "取消課程", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "確認取消課程" }).click();
     await expect(page.getByText("課程已取消。")).toBeVisible();
     await expect(page.getByText("已取消", { exact: true })).toBeVisible();
 

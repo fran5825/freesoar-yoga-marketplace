@@ -154,7 +154,9 @@ test.describe("teacher term roster (UI)", () => {
 
     await addAuthSessionCookie(context, teacher.sessionToken);
     await page.goto(`/teacher/classes/${sessions[0].id}`);
-    await expect(page.getByText("整期", { exact: true }).first()).toBeVisible();
+    // teacher-series-rollup 票 02：頁首已標明期班，整期學員不再加「整期」標籤。
+    await expect(page.getByRole("link", { name: /^期班・第 1 堂／共 \d+ 堂$/ })).toBeVisible();
+    await expect(page.getByText("整期", { exact: true })).toHaveCount(0);
     await page.getByRole("link", { name: "到期班頁處理" }).click();
     await expect(page).toHaveURL(new RegExp(`/teacher/classes/series/${series.id}#term-enrollments`));
 

@@ -81,7 +81,8 @@ function nextWeeklyResolver(dayOfWeek: number, count: number) {
 }
 
 test.describe("series generation and open-all (domain)", () => {
-  test("generating with openForEnrollment creates open sessions and notifies once per session after commit", async ({}, testInfo) => {
+  // teacher-series-rollup 票 07：一次生成的多堂只發一則「共 N 堂」。
+  test("generating with openForEnrollment creates open sessions and notifies once for the batch after commit", async ({}, testInfo) => {
     const teacher = await seedTeacher(runId(testInfo, "gen-open"), "gen-open");
     const series = await seedSeries(teacher.teacherProfileId, "建立即開放系列");
 
@@ -96,11 +97,11 @@ test.describe("series generation and open-all (domain)", () => {
     const sessions = await prisma.classSession.findMany({ where: { recurringClassSeriesId: series.id } });
     expect(sessions).toHaveLength(3);
     expect(sessions.every((session) => session.status === "open_for_enrollment")).toBe(true);
-    expect(
-      await prisma.notification.count({
-        where: { userId: teacher.userId, type: "class_session_created" },
-      }),
-    ).toBe(3);
+    const createdNotices = await prisma.notification.findMany({
+      where: { userId: teacher.userId, type: "class_session_created", channel: "in_app" },
+    });
+    expect(createdNotices).toHaveLength(1);
+    expect(createdNotices[0].body).toContain("共 3 堂");
   });
 
   test("a rollback after sessions are written leaves no sessions and sends no notifications", async ({}, testInfo) => {

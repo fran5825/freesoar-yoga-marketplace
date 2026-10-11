@@ -1,18 +1,18 @@
 # 學員端就地報名：票券總覽
 
-來源：[spec 草稿](../../specs/member-inline-enroll-spec-draft.md)（產品主人 2026-10-10 以 `/grill-with-docs` 確認 Q1–Q9，含 2.3 價格做法）。純畫面、read service 與 server action 串接，不動 schema、權限、state machine，沒有 HEAVY 票、沒有需要產品主人放行的 Human Gate。
+來源：[spec 草稿](../../../specs/member-inline-enroll-spec.md)（產品主人 2026-10-10 以 `/grill-with-docs` 確認 Q1–Q9，含 2.3 價格做法）。純畫面、read service 與 server action 串接，不動 schema、權限、state machine，沒有 HEAVY 票、沒有需要產品主人放行的 Human Gate。
 
-**施工前提（spec Q8）：** `worktree-inline-actions`（`inline-member-actions` 票 01–05）合進 `main` 之後才開始；本批的 `ClassSummary`、`TermRowControls`、單堂頁與它重疊。合併後把本目錄移到 `docs/superpowers/plans/inline-member-actions/`，票號 06–10 接在後面，並把 spec 草稿併入 `member-inline-actions-and-card-cleanup-spec.md`。
+**施工前提（spec Q8）：** `worktree-inline-actions`（`inline-member-actions` 票 01–05）已於 2026-10-10 合進 `main`，本批在其後施工。spec 已移到 `docs/specs/member-inline-enroll-spec.md`，並在舊 spec 3.4、I7 註明被取代；本目錄保留原位（票號 06–10 接續 `inline-member-actions`）。
 
 ## 票券與相依
 
 | # | 票 | Mode | Human Gate | Blocked by | Status |
 |---|----|------|-----------|-----------|--------|
-| 06 | 共用「報名列」元件、列狀態、返回與價格規則 | STANDARD | no | `inline-member-actions` 合併 | 待開始 |
-| 07 | 系列頁（持續開課）每列可報名 | STANDARD | no | 06 | 待開始 |
-| 08 | 單堂頁：第一張卡內報名、同系列列表就地報名 | STANDARD | no | 06 | 待開始 |
-| 09 | 期班頁每一堂可單堂報名、備註收起 | STANDARD | no | 06 | 待開始 |
-| 10 | 驗收與文件同步 | STANDARD | no | 07、08、09 | 待開始 |
+| 06 | 共用「報名列」元件、列狀態、返回與價格規則 | STANDARD | no | `inline-member-actions` 合併 | 完成（2026-10-11） |
+| 07 | 系列頁（持續開課）每列可報名 | STANDARD | no | 06 | 完成（2026-10-11） |
+| 08 | 單堂頁：第一張卡內報名、同系列列表就地報名 | STANDARD | no | 06 | 完成（2026-10-11） |
+| 09 | 期班頁每一堂可單堂報名、備註收起 | STANDARD | no | 06 | 完成（2026-10-11） |
+| 10 | 驗收與文件同步 | STANDARD | no | 07、08、09 | 完成（2026-10-11） |
 
 ```text
 06 ──> 07 ──┐
@@ -31,3 +31,11 @@
 - 測試用獨立埠與獨立資料庫（例如 3600 以外的空埠）；改動只 commit 自己的檔案，push 前重查 `origin/main..main`。
 
 <!-- codex-peer-reviewed: 2026-10-10T04:28:49Z rounds=2 verdict=approved -->
+
+## 進度紀錄（2026-10-11）
+
+- 票 06：`session-enroll-rows.ts`（列狀態，含整期列沿用 `TermRowControl`、重新報名、不可重報原因、整期已退出／被婉拒的已取消列只寫原因）、`EnrollRow`／`RowExpander` 元件、`enroll-row-actions.ts`（就地報名、取消單堂、訪客登入回到同一列並自動展開）、返回路徑白名單加入系列頁、每一場價格與繳費規則顯示在展開區。
+- 票 07：系列頁每一列可報名。票 09：期班頁「查看每一堂」用共用列，帶 `focus`／`open` 回來時自動展開；重新報名的備註改「加備註」。
+- 票 08：單堂頁取消兩張獨立報名卡，報名區在第一張卡內（`ClassCardEnroll`），同系列列表用共用列，標題旁加期班／持續開課標籤；登入回來一律帶 `enroll=1` 讓表單展開。
+- 票 10：新測試 `inline-enroll-rows.spec.ts`；更新約 20 支跟著新畫面的舊測試。桌面完整套件與兩個專案的受影響套件都通過；Codex 程式碼審查 3 輪通過。
+

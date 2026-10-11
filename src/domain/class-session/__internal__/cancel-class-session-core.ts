@@ -13,7 +13,8 @@ import type { NotificationType } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 
 import { notifyUsers } from "@/domain/notification/create";
-import type { NotificationPayload, NotificationRecipient } from "@/domain/notification/types";
+import type { NotificationSender } from "@/domain/notification/sender";
+import type { NotificationPayload, NotificationRecipient, NotifyOptions } from "@/domain/notification/types";
 import { prisma } from "@/lib/prisma";
 
 // 供 D10 端到端失敗隔離測試注入；預設值就是「解析收件人 + 呼叫 notifyUsers」的真正邏輯。
@@ -21,6 +22,9 @@ export type NotifyFn = (
   type: NotificationType,
   recipients: NotificationRecipient[],
   payload: NotificationPayload,
+  // teacher-series-rollup 票 07：與 notifyUsers 相同的選填參數（帶系列 id 等）。
+  sender?: NotificationSender,
+  options?: NotifyOptions,
 ) => Promise<void>;
 
 export type DemandLockHooks = {
@@ -198,7 +202,8 @@ async function cancelClassSessionCore(
         recipients.push({ userId: memberUserId, role: "affected_member" });
       }
 
-      await notifyOverride("class_session_cancelled", recipients, { classSessionTitle: title });
+      // teacher-series-rollup 票 07：帶場次 id，notifyUsers 查出所屬系列（管理員也可能取消系列場次）。
+      await notifyOverride("class_session_cancelled", recipients, { classSessionTitle: title }, undefined, { classSessionId });
     } catch (notifyError) {
       console.error("[notification] class_session_cancelled trigger failed", notifyError);
     }

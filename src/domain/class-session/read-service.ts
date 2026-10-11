@@ -142,7 +142,17 @@ export type TeacherFacingClassSession = {
   // Slice E：統一列表要顯示常規/固定期課程系列的名稱，不是只顯示一個沒有名字的 id——
   // recurringClassSeriesId 本身不足以讓老師分辨「這是哪一個系列」。
   // teacher-class-scheduling 票 10：kind 讓名單標示整期或單堂。
-  recurringClassSeries: { title: string; kind: RecurringClassSeriesKind; coverPhotoId: string | null; coverPhoto: PhotoRef } | null;
+  // teacher-series-rollup 票 03：系列卡顯示上課時段；期班標籤與名單「單堂」標籤要知道報名方式。
+  recurringClassSeries: {
+    title: string;
+    kind: RecurringClassSeriesKind;
+    dayOfWeek: number | null;
+    startTime: string;
+    endTime: string;
+    termEnrollmentMode: TermEnrollmentMode | null;
+    coverPhotoId: string | null;
+    coverPhoto: PhotoRef;
+  } | null;
   // teacher-initiated-open-classes 第 8 節（Gate G2/G3）：涵蓋 pending，讓老師端 roster 能
   // 看到並操作等待審核的報名；status 一起帶出讓 UI 分辨要不要顯示確認/拒絕按鈕。
   enrollments: {
@@ -151,6 +161,8 @@ export type TeacherFacingClassSession = {
     notes: string | null;
     // 票 10：屬於整期報名時有值；整期的逐場報名不能在單場個別確認。
     seriesEnrollmentId: string | null;
+    // teacher-series-rollup 票 03：系列卡算不重複學員。
+    userId: string;
     // lightweight-payment-v0：付款狀態與對帳資訊（P9：已付款後被取消的報名仍會出現）。
     paymentStatus: EnrollmentPaymentStatus;
     transferNote: string | null;

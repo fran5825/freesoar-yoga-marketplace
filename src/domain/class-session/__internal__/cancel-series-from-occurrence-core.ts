@@ -13,7 +13,7 @@ import { prisma } from "@/lib/prisma";
 
 import {
   cancelClassSessionForTeacherInTransaction,
-  notifyClassSessionCancelledForTeacher,
+  notifyClassSessionsCancelledForTeacher,
   type CancelledClassSessionNotice,
 } from "./cancel-class-session-core-for-teacher";
 
@@ -95,9 +95,8 @@ export async function cancelSeriesFromOccurrenceForTeacherProfile(
     return outcome;
   }
 
-  for (const cancelled of outcome.cancelled) {
-    await notifyClassSessionCancelledForTeacher(teacherProfileId, cancelled);
-  }
+  // teacher-series-rollup 票 07：每位收件人只收一則「共 N 堂」。
+  await notifyClassSessionsCancelledForTeacher(teacherProfileId, outcome.cancelled);
 
   return { ok: true, cancelledCount: outcome.cancelled.length };
 }

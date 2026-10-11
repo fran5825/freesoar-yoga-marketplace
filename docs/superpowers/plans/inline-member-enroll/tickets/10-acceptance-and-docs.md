@@ -1,6 +1,6 @@
 # 10: 驗收與文件同步
 
-來源：[spec](../../../specs/member-inline-enroll-spec-draft.md)。
+來源：[spec](../../../../specs/member-inline-enroll-spec.md)。
 
 **What to build:** 桌面與手機走完整報名路徑驗收，並把文件同步成最新規則。
 

@@ -19,15 +19,20 @@ import {
 import { PAYMENT_NOTE_MAX_LENGTH } from "@/domain/enrollment/payment-limits";
 import { requireUser } from "@/lib/auth/session";
 
-import {
-  CancelFromHereDialog,
-  occurrencesFromHere,
-} from "../../_components/CancelFromHereDialog";
 import { ConfirmActionDialog } from "../../_components/ConfirmActionDialog";
-import { PaymentStatusBadge } from "../../_components/EnrollmentPaymentControls";
+import { PaymentStatusBadge, RosterRow } from "../../_components/EnrollmentPaymentControls";
+import { PendingSubmitButton } from "../../_components/PendingSubmitButton";
+import { ScrollToTarget } from "../../../../_components/ScrollToTarget";
 import { CopyEnrollLinkButton } from "../../_components/CopyEnrollLinkButton";
-import { markSeriesEnrollmentPaidAction, markSeriesEnrollmentRefundedAction } from "../../actions";
-import { teacherClassDetailHref } from "../../_lib/return-context";
+import {
+  cancelOwnClassSessionAction,
+  completeOwnClassSessionAction,
+  markSeriesEnrollmentPaidAction,
+  markSeriesEnrollmentRefundedAction,
+  openOwnClassSessionForEnrollmentAction,
+} from "../../actions";
+import { classActionPhase } from "@/domain/class-session/class-action-slots";
+import { parseListStatusFilter, parseListTab, teacherClassDetailHref, teacherClassListHref } from "../../_lib/return-context";
 import {
   addMakeupSessionAction,
   cancelRecurringClassSeriesAction,
@@ -41,7 +46,7 @@ const dayOfWeekLabels = ["週日", "週一", "週二", "週三", "週四", "週�
 
 type RecurringClassSeriesPageProps = {
   params: Promise<{ recurringClassSeriesId: string }>;
-  searchParams?: Promise<{ result?: string; message?: string }>;
+  searchParams?: Promise<{ result?: string; message?: string; from?: string; tab?: string; status?: string; focus?: string }>;
 };
 
 // teacher-initiated-open-classes Slice B：常規／固定期課程系列管理頁。
@@ -72,6 +77,12 @@ export default async function RecurringClassSeriesPage({
       : null;
 
   const series = await getOwnRecurringClassSeriesDetailForTeacher(recurringClassSeriesId);
+  // teacher-series-rollup 票 03：從「我的課程」的系列卡進來時，回到同一個分頁並捲回這張系列卡。
+  const listTab = parseListTab(resolvedSearchParams?.tab);
+  const backHref =
+    resolvedSearchParams?.from === "list"
+      ? `${teacherClassListHref(listTab, parseListStatusFilter(listTab, resolvedSearchParams?.status))}#series-${recurringClassSeriesId}`
+      : "/teacher/classes";
 
   if (!series) {
     notFound();
@@ -103,7 +114,7 @@ export default async function RecurringClassSeriesPage({
       <header className="border-b border-ink/15 pb-6">
         <Link
           className="inline-flex min-h-11 items-center text-sm font-medium text-clay hover:underline"
-          href="/teacher/classes"
+          href={backHref}
         >
           ← 回我的課程
         </Link>
@@ -147,6 +158,8 @@ export default async function RecurringClassSeriesPage({
           {feedback.message}
         </section>
       ) : null}
+
+      <ScrollToTarget targetId={resolvedSearchParams?.focus} />
 
       {/* 期班：把期班頁連結傳給學員，學員打開就能報整期（只收整期時只能報整期）。 */}
       {isTerm ? (
@@ -301,29 +314,8 @@ export default async function RecurringClassSeriesPage({
                       <span aria-hidden="true">→</span>
                     </span>
                   </Link>
-                  {/* 複製與取消按鈕放在場次連結外面，避免連結裡再包按鈕。 */}
-                  {occurrence.status === "open_for_enrollment" || isCancellableOccurrence(occurrence, now) ? (
-                    <div className="flex flex-wrap gap-x-2 pl-3">
-                      {/* 票 14（Q14）：只收整期的期班只留「複製期班報名連結」，不提供每一堂的連結。 */}
-                      {occurrence.status === "open_for_enrollment" && series.termEnrollmentMode !== "term_only" ? (
-                        <CopyEnrollLinkButton
-                          ariaLabel={`複製 ${formatTaipeiDatetime(occurrence.startAt)} 這一場的報名連結`}
-                          className="min-h-11 rounded-full px-3 text-sm font-medium text-pine underline-offset-4 hover:underline"
-                          classSessionId={occurrence.id}
-                        />
-                      ) : null}
-                      {isCancellableOccurrence(occurrence, now) ? (
-                        <CancelFromHereDialog
-                          affected={occurrencesFromHere(series.occurrences, occurrence, now)}
-                          canGenerateMore={canGenerateMore}
-                          fromClassSessionId={occurrence.id}
-                          recurringClassSeriesId={series.id}
-                          seriesTitle={series.title}
-                          triggerAriaLabel={`從 ${formatTaipeiDatetime(occurrence.startAt)} 這一場以後全部取消`}
-                        />
-                      ) : null}
-                    </div>
-                  ) : null}
+                  {/* teacher-series-rollup 票 04（spec 2.2）：每一場只放一顆依狀態的快速按鈕，放在場次連結外面；其他單場操作點進單堂頁。 */}
+                  <OccurrenceQuickAction now={now} occurrence={occurrence} seriesId={series.id} seriesTitle={series.title} />
                 </li>
               );
             })}
@@ -478,132 +470,136 @@ function TermEnrollmentsSection({
       ) : (
         <ul className="grid gap-2">
           {termEnrollments.map((item) => (
-            <li className="grid min-w-0 gap-2 rounded-2xl border border-ink/10 bg-cream p-3 text-sm" key={item.id}>
-              <p className="flex flex-wrap items-center gap-2">
-                <span className="min-w-0 break-words font-medium text-ink">{item.memberLabel}</span>
-                <span className="rounded-full bg-white px-2 py-0.5 text-xs text-ink-soft">
-                  {termEnrollmentStatusLabels[item.status]}
-                </span>
-                {item.status === "pending" || item.status === "confirmed" ? (
-                  <span className="text-ink-soft">之後 {item.activeUpcomingCount} 堂</span>
-                ) : null}
-              </p>
-              {item.notes ? (
-                <p className="min-w-0 whitespace-pre-wrap break-words text-ink-soft">{item.notes}</p>
-              ) : null}
-              {item.leaveDates.length > 0 ? (
-                <p className="text-ink-soft">
-                  請假：{item.leaveDates.map((date) => formatTaipeiDatetime(date)).join("、")}
-                </p>
-              ) : null}
-              {item.adminCancelledDates.length > 0 ? (
-                <p className="text-ink-soft">
-                  管理員取消：{item.adminCancelledDates.map((date) => formatTaipeiDatetime(date)).join("、")}
-                </p>
-              ) : null}
-              {item.unrecordedCancelDates.length > 0 ? (
-                <p className="text-ink-soft">
-                  已取消（原因未記錄）：{item.unrecordedCancelDates.map((date) => formatTaipeiDatetime(date)).join("、")}
-                </p>
-              ) : null}
-              {item.status === "pending" || item.status === "confirmed" ? (
-                <div className="grid gap-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <PaymentStatusBadge status={item.paymentSummary === "partial" ? "unpaid" : item.paymentSummary} />
-                    {item.paymentSummary === "partial" ? (
-                      <span className="text-xs text-ink-faint">部分場次已收款</span>
-                    ) : null}
-                  </div>
-                  {item.transferNote ? (
-                    <p className="min-w-0 break-words text-ink-soft">
-                      <span className="text-ink-faint">學員的轉帳備註：</span>
-                      {item.transferNote}
+            <RosterRow
+              action={
+                <>
+                  {item.status === "pending" || item.status === "confirmed" ? (
+                    <>
+                      {item.canMarkPaid ? (
+                        <ConfirmActionDialog
+                          action={markSeriesEnrollmentPaidAction}
+                          confirmClassName="min-h-11 rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep"
+                          confirmLabel="整期標記為已收款"
+                          hiddenFields={{ seriesEnrollmentId: item.id, returnSeriesId: seriesId }}
+                          textField={{
+                            name: "note",
+                            label: "收款備註（選填）",
+                            placeholder: "例如：已收到整期款項",
+                            maxLength: PAYMENT_NOTE_MAX_LENGTH,
+                          }}
+                          title="整期標記為已收款？"
+                          triggerAriaLabel={`標記 ${item.memberLabel} 整期為已收款`}
+                          triggerClassName="min-h-11 rounded-full border border-pine/40 bg-white px-4 py-2 text-sm font-medium text-pine transition hover:bg-pine-tint"
+                          triggerLabel="整期標記已收款"
+                        >
+                          <p>
+                            學員：<span className="break-words font-medium text-ink">{item.memberLabel}</span>
+                          </p>
+                          <p>會把這位學員整期仍有效的每一堂都記錄為已收款。飛索不會經手任何金錢。</p>
+                        </ConfirmActionDialog>
+                      ) : null}
+                      {item.canMarkRefunded ? (
+                        <ConfirmActionDialog
+                          action={markSeriesEnrollmentRefundedAction}
+                          confirmLabel="整期標記為已退款"
+                          hiddenFields={{ seriesEnrollmentId: item.id, returnSeriesId: seriesId }}
+                          textField={{
+                            name: "note",
+                            label: "退款說明（選填，學員看得到）",
+                            placeholder: "例如：整期退費",
+                            maxLength: PAYMENT_NOTE_MAX_LENGTH,
+                          }}
+                          title="整期標記為已退款？"
+                          triggerAriaLabel={`標記 ${item.memberLabel} 整期為已退款`}
+                          triggerClassName="min-h-11 rounded-full border border-ink/25 bg-white px-4 py-2 text-sm font-medium text-ink-soft transition hover:bg-cream"
+                          triggerLabel="整期標記已退款"
+                        >
+                          <p>
+                            學員：<span className="break-words font-medium text-ink">{item.memberLabel}</span>
+                          </p>
+                          <p>請先在你的銀行 App 完成退款，再回來標記。飛索不會替你轉帳。</p>
+                        </ConfirmActionDialog>
+                      ) : null}
+                    </>
+                  ) : null}
+                  {item.status === "pending" ? (
+                    <>
+                      <form action={decideTermEnrollmentAction}>
+                        <input name="recurringClassSeriesId" type="hidden" value={seriesId} />
+                        <input name="seriesEnrollmentId" type="hidden" value={item.id} />
+                        <input name="decision" type="hidden" value="confirm" />
+                        <button
+                          aria-label={`確認 ${item.memberLabel} 的整期報名`}
+                          className="min-h-11 rounded-full border border-emerald-300 bg-white px-4 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-50"
+                          type="submit"
+                        >
+                          確認整期報名
+                        </button>
+                      </form>
+                      <ConfirmActionDialog
+                        action={decideTermEnrollmentAction}
+                        confirmLabel="確定婉拒整期"
+                        hiddenFields={{ recurringClassSeriesId: seriesId, seriesEnrollmentId: item.id, decision: "decline" }}
+                        title="婉拒這筆整期報名？"
+                        triggerAriaLabel={`婉拒 ${item.memberLabel} 的整期報名`}
+                        triggerClassName="min-h-11 rounded-full border border-ink/25 bg-white px-4 py-2 text-sm font-medium text-ink-soft transition hover:bg-cream"
+                        triggerLabel="婉拒"
+                      >
+                        <p>
+                          學員：<span className="break-words font-medium text-ink">{item.memberLabel}</span>
+                        </p>
+                        <p>會取消報整期時新增的 {item.declineCancelCount} 堂，學員會收到一則通知。</p>
+                        {item.declineRestoreCount > 0 ? (
+                          <p>學員原本單堂報名的 {item.declineRestoreCount} 堂會恢復為單堂，維持原本狀態。</p>
+                        ) : null}
+                        <p>婉拒後，這位學員不能再報這一期的整期。</p>
+                      </ConfirmActionDialog>
+                    </>
+                  ) : null}
+                </>
+              }
+              inline={
+                <>
+                  <span className="rounded-full bg-white px-2 py-0.5 text-xs text-ink-soft">
+                    {termEnrollmentStatusLabels[item.status]}
+                  </span>
+                  {item.status === "pending" || item.status === "confirmed" ? (
+                    <>
+                      <span className="text-ink-soft">之後 {item.activeUpcomingCount} 堂</span>
+                      <PaymentStatusBadge status={item.paymentSummary === "partial" ? "unpaid" : item.paymentSummary} />
+                      {item.paymentSummary === "partial" ? <span className="text-xs text-ink-faint">部分場次已收款</span> : null}
+                      {item.transferNote ? (
+                        <span className="min-w-0 break-words text-ink-soft">
+                          <span className="text-ink-faint">轉帳備註：</span>
+                          {item.transferNote}
+                        </span>
+                      ) : null}
+                    </>
+                  ) : null}
+                </>
+              }
+              key={item.id}
+              title={item.memberLabel}
+            >
+              {item.notes || item.leaveDates.length > 0 || item.adminCancelledDates.length > 0 || item.unrecordedCancelDates.length > 0 ? (
+                <div className="mt-2 grid gap-1">
+                  {item.notes ? <p className="min-w-0 whitespace-pre-wrap break-words text-ink-soft">{item.notes}</p> : null}
+                  {item.leaveDates.length > 0 ? (
+                    <p className="text-ink-soft">請假：{item.leaveDates.map((date) => formatTaipeiDatetime(date)).join("、")}</p>
+                  ) : null}
+                  {item.adminCancelledDates.length > 0 ? (
+                    <p className="text-ink-soft">
+                      管理員取消：{item.adminCancelledDates.map((date) => formatTaipeiDatetime(date)).join("、")}
                     </p>
                   ) : null}
-                  <div className="flex flex-wrap gap-2">
-                    {item.canMarkPaid ? (
-                      <ConfirmActionDialog
-                        action={markSeriesEnrollmentPaidAction}
-                        confirmClassName="min-h-11 rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep"
-                        confirmLabel="整期標記為已收款"
-                        hiddenFields={{ seriesEnrollmentId: item.id, returnSeriesId: seriesId }}
-                        textField={{
-                          name: "note",
-                          label: "收款備註（選填）",
-                          placeholder: "例如：已收到整期款項",
-                          maxLength: PAYMENT_NOTE_MAX_LENGTH,
-                        }}
-                        title="整期標記為已收款？"
-                        triggerAriaLabel={`標記 ${item.memberLabel} 整期為已收款`}
-                        triggerClassName="min-h-11 rounded-full border border-pine/40 bg-white px-4 py-2 text-sm font-medium text-pine transition hover:bg-pine-tint"
-                        triggerLabel="整期標記已收款"
-                      >
-                        <p>
-                          學員：<span className="break-words font-medium text-ink">{item.memberLabel}</span>
-                        </p>
-                        <p>會把這位學員整期仍有效的每一堂都記錄為已收款。飛索不會經手任何金錢。</p>
-                      </ConfirmActionDialog>
-                    ) : null}
-                    {item.canMarkRefunded ? (
-                      <ConfirmActionDialog
-                        action={markSeriesEnrollmentRefundedAction}
-                        confirmLabel="整期標記為已退款"
-                        hiddenFields={{ seriesEnrollmentId: item.id, returnSeriesId: seriesId }}
-                        textField={{
-                          name: "note",
-                          label: "退款說明（選填，學員看得到）",
-                          placeholder: "例如：整期退費",
-                          maxLength: PAYMENT_NOTE_MAX_LENGTH,
-                        }}
-                        title="整期標記為已退款？"
-                        triggerAriaLabel={`標記 ${item.memberLabel} 整期為已退款`}
-                        triggerClassName="min-h-11 rounded-full border border-ink/25 bg-white px-4 py-2 text-sm font-medium text-ink-soft transition hover:bg-cream"
-                        triggerLabel="整期標記已退款"
-                      >
-                        <p>
-                          學員：<span className="break-words font-medium text-ink">{item.memberLabel}</span>
-                        </p>
-                        <p>請先在你的銀行 App 完成退款，再回來標記。飛索不會替你轉帳。</p>
-                      </ConfirmActionDialog>
-                    ) : null}
-                  </div>
-                </div>
-              ) : null}
-              {item.status === "pending" ? (
-                <div className="flex flex-wrap gap-2">
-                  <form action={decideTermEnrollmentAction}>
-                    <input name="recurringClassSeriesId" type="hidden" value={seriesId} />
-                    <input name="seriesEnrollmentId" type="hidden" value={item.id} />
-                    <input name="decision" type="hidden" value="confirm" />
-                    <button
-                      aria-label={`確認 ${item.memberLabel} 的整期報名`}
-                      className="min-h-11 rounded-full border border-emerald-300 bg-white px-4 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-50"
-                      type="submit"
-                    >
-                      確認整期報名
-                    </button>
-                  </form>
-                  <ConfirmActionDialog
-                    action={decideTermEnrollmentAction}
-                    confirmLabel="確定婉拒整期"
-                    hiddenFields={{ recurringClassSeriesId: seriesId, seriesEnrollmentId: item.id, decision: "decline" }}
-                    title="婉拒這筆整期報名？"
-                    triggerAriaLabel={`婉拒 ${item.memberLabel} 的整期報名`}
-                    triggerClassName="min-h-11 rounded-full border border-ink/25 bg-white px-4 py-2 text-sm font-medium text-ink-soft transition hover:bg-cream"
-                    triggerLabel="婉拒"
-                  >
-                    <p>
-                      學員：<span className="break-words font-medium text-ink">{item.memberLabel}</span>
+                  {item.unrecordedCancelDates.length > 0 ? (
+                    <p className="text-ink-soft">
+                      已取消（原因未記錄）：{item.unrecordedCancelDates.map((date) => formatTaipeiDatetime(date)).join("、")}
                     </p>
-                    <p>會取消報整期時新增的 {item.declineCancelCount} 堂，學員會收到一則通知。</p>
-                    {item.declineRestoreCount > 0 ? (
-                      <p>學員原本單堂報名的 {item.declineRestoreCount} 堂會恢復為單堂，維持原本狀態。</p>
-                    ) : null}
-                    <p>婉拒後，這位學員不能再報這一期的整期。</p>
-                  </ConfirmActionDialog>
+                  ) : null}
                 </div>
               ) : null}
-            </li>
+            </RosterRow>
           ))}
         </ul>
       )}
@@ -620,4 +616,85 @@ function isCancellableOccurrence(occurrence: RecurringClassSeriesOccurrence, now
     ["draft", "open_for_enrollment"].includes(occurrence.status) &&
     occurrence.startAt.getTime() > now
   );
+}
+
+// teacher-series-rollup 票 04（spec 2.2）：系列頁每一場只露一顆依狀態的快速按鈕。
+// 草稿＝開放報名、開放中且未開始＝取消課程、已結束待完成＝標記完成；做完回到系列頁並捲回這一場。
+function OccurrenceQuickAction({
+  occurrence,
+  seriesId,
+  seriesTitle,
+  now,
+}: {
+  occurrence: RecurringClassSeriesOccurrence;
+  seriesId: string;
+  seriesTitle: string;
+  now: number;
+}) {
+  const phase = classActionPhase({ status: occurrence.status, startAt: occurrence.startAt, endAt: occurrence.endAt, now: new Date(now) });
+  const when = formatTaipeiDatetime(occurrence.startAt);
+  const hidden = (
+    <>
+      <input name="classSessionId" type="hidden" value={occurrence.id} />
+      <input name="returnSeriesId" type="hidden" value={seriesId} />
+      <input name="focus" type="hidden" value={`class-${occurrence.id}`} />
+    </>
+  );
+
+  if (phase === "draft" && occurrence.startAt.getTime() > now) {
+    return (
+      <form action={openOwnClassSessionForEnrollmentAction} className="pl-3">
+        {hidden}
+        <PendingSubmitButton
+          ariaLabel={`開放 ${when} 這一場的報名`}
+          className="min-h-11 rounded-full bg-pine px-4 py-2 text-sm font-medium text-white transition hover:bg-pine-deep"
+        >
+          開放報名
+        </PendingSubmitButton>
+      </form>
+    );
+  }
+
+  if (phase === "open_before_start") {
+    return (
+      <div className="pl-3">
+        <ConfirmActionDialog
+          action={cancelOwnClassSessionAction}
+          confirmLabel="確定取消這一場"
+          hiddenFields={{ classSessionId: occurrence.id, returnSeriesId: seriesId, focus: `class-${occurrence.id}` }}
+          title="取消這一場？"
+          triggerAriaLabel={`取消 ${when} 這一場`}
+          triggerClassName="min-h-11 rounded-full border border-clay/40 bg-white px-4 py-2 text-sm font-medium text-clay transition hover:bg-clay-tint"
+          triggerLabel="取消課程"
+        >
+          <p>
+            系列：<span className="break-words font-medium text-ink">{seriesTitle}</span>
+          </p>
+          <p>場次：{when}</p>
+          <p>
+            {occurrence.confirmedCount + occurrence.pendingCount > 0
+              ? `目前已報名 ${occurrence.confirmedCount} 人、待確認 ${occurrence.pendingCount} 人；取消後這些報名都會一起取消，學員會收到通知。`
+              : "目前沒有人報名。"}
+          </p>
+          <p>只取消這一場，系列的其他場次照常。取消後無法復原。</p>
+        </ConfirmActionDialog>
+      </div>
+    );
+  }
+
+  if (phase === "ended_awaiting_completion") {
+    return (
+      <form action={completeOwnClassSessionAction} className="pl-3">
+        {hidden}
+        <PendingSubmitButton
+          ariaLabel={`把 ${when} 這一場標記完成`}
+          className="min-h-11 rounded-full bg-pine px-4 py-2 text-sm font-medium text-white transition hover:bg-pine-deep"
+        >
+          標記完成
+        </PendingSubmitButton>
+      </form>
+    );
+  }
+
+  return null;
 }

@@ -16,15 +16,24 @@ import { getTeacherClassNextStep } from "@/domain/class-session/teacher-next-ste
 import { effectiveCoverUrl } from "@/domain/teacher-photo/display";
 import { getOwnTeacherProfileApplicationSnapshot } from "@/domain/teacher-profile/service";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
+import { classActionPhase, getClassActionSlots, type ClassActionKey } from "@/domain/class-session/class-action-slots";
+import { getSeriesBadgeInfo, seriesBadgeLabel } from "@/domain/class-session/series-badge";
 import { requireUser } from "@/lib/auth/session";
 
+import { ActionBar, InfoTip } from "../../../_components/ActionBar";
 import {
   CancelFromHereDialog,
   occurrencesFromHere,
 } from "../_components/CancelFromHereDialog";
 import { ConfirmActionDialog } from "../_components/ConfirmActionDialog";
 import { CopyEnrollLinkButton } from "../_components/CopyEnrollLinkButton";
-import { EnrollmentPaymentControls } from "../_components/EnrollmentPaymentControls";
+import {
+  PaymentActionButton,
+  PaymentDetailLines,
+  PaymentInline,
+  RosterRow,
+  SingleEnrollmentTag,
+} from "../_components/EnrollmentPaymentControls";
 import { PendingSubmitButton } from "../_components/PendingSubmitButton";
 import { ShareTemplates } from "../_components/ShareTemplates";
 import {
@@ -122,7 +131,9 @@ export default async function TeacherClassSessionDetailPage({
     (enrollment) => enrollment.status === "cancelled" && enrollment.paymentStatus !== "unpaid",
   );
   // teacher-class-scheduling 票 10：期班的場次，名單標示整期或單堂。
-  const isTermSession = classSession.recurringClassSeries?.kind === "term";
+  // teacher-series-rollup 票 02（spec 2.4）：頁首已標明期班，整期學員不加標籤；只有「整期和單堂都收」的期班，單堂報名的學員加「單堂」。
+  const showSingleTag =
+    classSession.recurringClassSeries?.kind === "term" && classSession.recurringClassSeries.termEnrollmentMode === "term_and_single";
   const nextStep = getTeacherClassNextStep({
     status: classSession.status,
     origin: classSession.origin,
@@ -177,6 +188,102 @@ export default async function TeacherClassSessionDetailPage({
   const cancelFromHere = series
     ? occurrencesFromHere(series.occurrences, classSession, new Date().getTime())
     : [];
+
+  // teacher-series-rollup 票 02（spec 2.2）：依狀態挑兩顆常駐按鈕，其餘攤開或收進「更多」。
+  // 可用條件沿用原本的判斷（只對自己開的課開放、取消、完成；改課條件同 domain）；真正的檢查在 server。
+  const seriesBadge = classSession.recurringClassSeriesId ? await getSeriesBadgeInfo(classSession.id) : null;
+  const phase = classActionPhase(classSession);
+  const notStarted = classSession.startAt.getTime() > new Date().getTime();
+  const available: ClassActionKey[] = [
+    ...(canOpen ? (["open"] as const) : []),
+    ...(canEdit ? (["edit"] as const) : []),
+    ...(classSession.status === "open_for_enrollment" ? (["copyLink"] as const) : []),
+    ...(canCancel && notStarted ? (["cancel"] as const) : []),
+    ...(canComplete && phase === "ended_awaiting_completion" ? (["complete"] as const) : []),
+    ...(canCancel && notStarted && series && cancelFromHere.length > 1 ? (["cancelFromHere"] as const) : []),
+  ];
+  const slots = getClassActionSlots({ phase, available });
+  const actionNode = (key: ClassActionKey, place: "primary" | "secondary" | "rest") => {
+    const filled = place === "primary";
+
+    switch (key) {
+      case "open":
+        return (
+          <span className="inline-flex items-center gap-1">
+            <form action={openOwnClassSessionForEnrollmentAction}>
+              <input name="classSessionId" type="hidden" value={classSession.id} />
+              {returnInputs}
+              <PendingSubmitButton className={filled ? primaryButtonClassName : secondaryButtonClassName}>開放報名</PendingSubmitButton>
+            </form>
+            <InfoTip label="開放報名的說明">
+              開放報名不會改變公開列表設定：這堂課
+              {classSession.isPublic ? "會列在公開課程列表" : "不會列在公開課程列表，學員要有課程連結才能報名"}。
+            </InfoTip>
+          </span>
+        );
+      case "edit":
+        return (
+          <a className={`inline-flex items-center ${filled ? primaryButtonClassName : secondaryButtonClassName}`} href={`/teacher/classes/${classSession.id}/edit`}>
+            修改課程
+          </a>
+        );
+      case "copyLink":
+        return (
+          <span className="inline-flex items-start gap-1">
+            <CopyEnrollLinkButton
+              classSessionId={classSession.id}
+              className={filled ? primaryButtonClassName : "min-h-11 rounded-full border border-pine/40 bg-white px-4 py-2 text-sm font-medium text-pine transition hover:bg-pine-tint"}
+            />
+            <InfoTip label="報名連結的說明">
+              {classSession.isPublic
+                ? "這堂課也列在公開課程列表；想直接邀請學員，可以把報名連結傳給他們。"
+                : "這堂課不在公開課程列表，請把報名連結傳給學員。"}
+              學員需要先登入飛索帳號，才能打開連結並報名。
+            </InfoTip>
+          </span>
+        );
+      case "complete":
+        return (
+          <form action={completeOwnClassSessionAction}>
+            <input name="classSessionId" type="hidden" value={classSession.id} />
+            {returnInputs}
+            <PendingSubmitButton className={filled ? primaryButtonClassName : secondaryButtonClassName}>標記完成</PendingSubmitButton>
+          </form>
+        );
+      case "cancel":
+        return (
+          <ConfirmActionDialog
+            action={cancelOwnClassSessionAction}
+            confirmLabel="確定取消課程"
+            hiddenFields={{ classSessionId: classSession.id, ...returnFields }}
+            title="取消這堂課？"
+            triggerClassName="min-h-11 rounded-full border border-clay/40 bg-white px-5 py-2 text-sm font-medium text-clay transition hover:bg-clay-tint"
+            triggerLabel="取消課程"
+          >
+            <p>
+              課程：<span className="break-words font-medium text-ink">{classSession.title}</span>
+            </p>
+            <p>時間：{timeText}</p>
+            <p>
+              {confirmedEnrollments.length + pendingEnrollments.length > 0
+                ? `目前已報名 ${confirmedEnrollments.length} 人、待確認 ${pendingEnrollments.length} 人；取消後這些報名都會一起取消，學員會收到通知。`
+                : "目前沒有人報名。"}
+            </p>
+            <p>取消後無法復原，這堂課也不能再開放報名。</p>
+          </ConfirmActionDialog>
+        );
+      case "cancelFromHere":
+        return series ? (
+          <CancelFromHereDialog
+            affected={cancelFromHere}
+            canGenerateMore={series.dayOfWeek !== null}
+            fromClassSessionId={classSession.id}
+            recurringClassSeriesId={series.id}
+            seriesTitle={series.title}
+          />
+        ) : null;
+    }
+  };
 
   const contentSection = (
     <section
@@ -270,19 +377,48 @@ export default async function TeacherClassSessionDetailPage({
               const memberName = enrollment.user.name ?? enrollment.user.email ?? "會員";
 
               return (
-                <li
-                  className="min-w-0 rounded-2xl border border-amber-200 bg-amber-50/60 p-3 text-sm"
+                <RosterRow
+                  action={
+                    enrollment.seriesEnrollmentId ? null : (
+                      <>
+                        <form action={confirmPendingEnrollmentAction}>
+                          <input name="enrollmentId" type="hidden" value={enrollment.id} />
+                          <input name="classSessionId" type="hidden" value={classSession.id} />
+                          {returnInputs}
+                          <PendingSubmitButton className="min-h-11 rounded-full border border-emerald-300 bg-white px-4 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-50">
+                            確認報名
+                          </PendingSubmitButton>
+                        </form>
+                        <ConfirmActionDialog
+                          action={declinePendingEnrollmentAction}
+                          confirmLabel="確定婉拒"
+                          hiddenFields={{
+                            enrollmentId: enrollment.id,
+                            classSessionId: classSession.id,
+                            ...returnFields,
+                          }}
+                          title="婉拒這筆報名？"
+                          triggerAriaLabel={`婉拒 ${memberName} 的報名`}
+                          triggerClassName="min-h-11 rounded-full border border-ink/25 bg-white px-4 py-2 text-sm font-medium text-ink-soft transition hover:bg-cream"
+                          triggerLabel="婉拒"
+                        >
+                          <p>
+                            學員：<span className="break-words font-medium text-ink">{memberName}</span>
+                          </p>
+                          <p>
+                            課程：<span className="break-words text-ink">{classSession.title}</span>（{timeText}）
+                          </p>
+                          <p>婉拒後這筆報名會取消，學員會收到通知；之後無法再恢復這筆報名。</p>
+                        </ConfirmActionDialog>
+                      </>
+                    )
+                  }
+                  inline={showSingleTag && !enrollment.seriesEnrollmentId ? <SingleEnrollmentTag /> : null}
                   key={enrollment.id}
+                  title={memberName}
+                  tone="pending"
                 >
-                  <p className="min-w-0 break-words font-medium text-ink">
-                    {memberName}
-                    {isTermSession ? <EnrollmentSourceTag isTerm={Boolean(enrollment.seriesEnrollmentId)} /> : null}
-                  </p>
-                  {enrollment.notes ? (
-                    <p className="mt-1 min-w-0 whitespace-pre-wrap break-words text-ink-soft">
-                      {enrollment.notes}
-                    </p>
-                  ) : null}
+                  <PaymentDetailLines paymentNote={null} paymentStatus="unpaid" refundReason={null} studentNotes={enrollment.notes} />
                   {enrollment.seriesEnrollmentId && classSession.recurringClassSeriesId ? (
                     <p className="mt-2 text-ink-soft">
                       整期報名要一次確認或婉拒：
@@ -293,40 +429,8 @@ export default async function TeacherClassSessionDetailPage({
                         到期班頁處理
                       </Link>
                     </p>
-                  ) : (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <form action={confirmPendingEnrollmentAction}>
-                      <input name="enrollmentId" type="hidden" value={enrollment.id} />
-                      <input name="classSessionId" type="hidden" value={classSession.id} />
-                      {returnInputs}
-                      <PendingSubmitButton className="min-h-11 rounded-full border border-emerald-300 bg-white px-4 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-50">
-                        確認報名
-                      </PendingSubmitButton>
-                    </form>
-                    <ConfirmActionDialog
-                      action={declinePendingEnrollmentAction}
-                      confirmLabel="確定婉拒"
-                      hiddenFields={{
-                        enrollmentId: enrollment.id,
-                        classSessionId: classSession.id,
-                        ...returnFields,
-                      }}
-                      title="婉拒這筆報名？"
-                      triggerAriaLabel={`婉拒 ${memberName} 的報名`}
-                      triggerClassName="min-h-11 rounded-full border border-ink/25 bg-white px-4 py-2 text-sm font-medium text-ink-soft transition hover:bg-cream"
-                      triggerLabel="婉拒"
-                    >
-                      <p>
-                        學員：<span className="break-words font-medium text-ink">{memberName}</span>
-                      </p>
-                      <p>
-                        課程：<span className="break-words text-ink">{classSession.title}</span>（{timeText}）
-                      </p>
-                      <p>婉拒後這筆報名會取消，學員會收到通知；之後無法再恢復這筆報名。</p>
-                    </ConfirmActionDialog>
-                  </div>
-                  )}
-                </li>
+                  ) : null}
+                </RosterRow>
               );
             })}
           </ul>
@@ -342,33 +446,39 @@ export default async function TeacherClassSessionDetailPage({
             <p className="mt-2 text-sm leading-6 text-ink-soft">目前還沒有會員報名。</p>
           ) : (
             <ul className="mt-2 grid gap-2">
-              {confirmedEnrollments.map((enrollment) => (
-                <li
-                  className="min-w-0 rounded-2xl border border-ink/10 bg-cream p-3 text-sm"
-                  key={enrollment.id}
-                >
-                  <p className="min-w-0 break-words font-medium text-ink">
-                    {enrollment.user.name ?? enrollment.user.email ?? "會員"}
-                    {isTermSession ? <EnrollmentSourceTag isTerm={Boolean(enrollment.seriesEnrollmentId)} /> : null}
-                  </p>
-                  {enrollment.notes ? (
-                    <p className="mt-1 min-w-0 whitespace-pre-wrap break-words text-ink-soft">
-                      {enrollment.notes}
-                    </p>
-                  ) : null}
-                  <EnrollmentPaymentControls
-                    classSessionId={classSession.id}
-                    enrollmentId={enrollment.id}
-                    enrollmentStatus={enrollment.status}
-                    hiddenReturnFields={returnFields}
-                    memberName={enrollment.user.name ?? enrollment.user.email ?? "會員"}
-                    paymentNote={enrollment.paymentNote}
-                    paymentStatus={enrollment.paymentStatus}
-                    refundReason={enrollment.paymentRefundReason}
-                    transferNote={enrollment.transferNote}
-                  />
-                </li>
-              ))}
+              {confirmedEnrollments.map((enrollment) => {
+                const memberName = enrollment.user.name ?? enrollment.user.email ?? "會員";
+
+                return (
+                  <RosterRow
+                    action={
+                      <PaymentActionButton
+                        classSessionId={classSession.id}
+                        enrollmentId={enrollment.id}
+                        enrollmentStatus={enrollment.status}
+                        hiddenReturnFields={returnFields}
+                        memberName={memberName}
+                        paymentStatus={enrollment.paymentStatus}
+                      />
+                    }
+                    inline={
+                      <>
+                        {showSingleTag && !enrollment.seriesEnrollmentId ? <SingleEnrollmentTag /> : null}
+                        <PaymentInline paymentStatus={enrollment.paymentStatus} transferNote={enrollment.transferNote} />
+                      </>
+                    }
+                    key={enrollment.id}
+                    title={memberName}
+                  >
+                    <PaymentDetailLines
+                      paymentNote={enrollment.paymentNote}
+                      paymentStatus={enrollment.paymentStatus}
+                      refundReason={enrollment.paymentRefundReason}
+                      studentNotes={enrollment.notes}
+                    />
+                  </RosterRow>
+                );
+              })}
             </ul>
           )}
           {cancelledWithPayment.length > 0 ? (
@@ -380,27 +490,29 @@ export default async function TeacherClassSessionDetailPage({
                 這些報名已取消。若你已收款，請退款後在這裡標記已退款，學員才看得到最終結果。
               </p>
               <ul className="mt-2 grid gap-2">
-                {cancelledWithPayment.map((enrollment) => (
-                  <li
-                    className="min-w-0 rounded-2xl border border-ink/10 bg-cream p-3 text-sm"
-                    key={enrollment.id}
-                  >
-                    <p className="min-w-0 break-words font-medium text-ink">
-                      {enrollment.user.name ?? enrollment.user.email ?? "會員"}
-                    </p>
-                    <EnrollmentPaymentControls
-                      classSessionId={classSession.id}
-                      enrollmentId={enrollment.id}
-                      enrollmentStatus={enrollment.status}
-                      hiddenReturnFields={returnFields}
-                      memberName={enrollment.user.name ?? enrollment.user.email ?? "會員"}
-                      paymentNote={enrollment.paymentNote}
-                      paymentStatus={enrollment.paymentStatus}
-                      refundReason={enrollment.paymentRefundReason}
-                      transferNote={enrollment.transferNote}
-                    />
-                  </li>
-                ))}
+                {cancelledWithPayment.map((enrollment) => {
+                  const memberName = enrollment.user.name ?? enrollment.user.email ?? "會員";
+
+                  return (
+                    <RosterRow
+                      action={
+                        <PaymentActionButton
+                          classSessionId={classSession.id}
+                          enrollmentId={enrollment.id}
+                          enrollmentStatus={enrollment.status}
+                          hiddenReturnFields={returnFields}
+                          memberName={memberName}
+                          paymentStatus={enrollment.paymentStatus}
+                        />
+                      }
+                      inline={<PaymentInline cancelled paymentStatus={enrollment.paymentStatus} transferNote={enrollment.transferNote} />}
+                      key={enrollment.id}
+                      title={memberName}
+                    >
+                      <PaymentDetailLines paymentNote={enrollment.paymentNote} paymentStatus={enrollment.paymentStatus} refundReason={enrollment.paymentRefundReason} />
+                    </RosterRow>
+                  );
+                })}
               </ul>
             </div>
           ) : null}
@@ -417,17 +529,26 @@ export default async function TeacherClassSessionDetailPage({
 
   return (
     <div className="flex flex-col gap-6 sm:gap-8">
-      <header className="border-b border-ink/15 pb-6">
+      <header className="grid gap-3 border-b border-ink/15 pb-6">
         <Link
-          className="inline-flex min-h-11 items-center text-sm font-medium text-clay hover:underline"
+          className="inline-flex min-h-11 w-fit items-center text-sm font-medium text-clay hover:underline"
           href={backLink.href}
         >
           {backLink.label}
         </Link>
-        <h1 className="mt-1 min-w-0 break-words text-3xl font-semibold tracking-tight text-ink">
+        <h1 className="min-w-0 break-words text-3xl font-semibold tracking-tight text-ink">
           {classSession.title}
         </h1>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* teacher-series-rollup 票 02（spec 2.3）：明確標出期班第幾堂或持續開課，點了到系列頁。 */}
+          {seriesBadge ? (
+            <Link
+              className="inline-flex min-h-11 w-fit items-center rounded-full bg-pine-tint px-4 text-sm font-medium text-pine-deep transition hover:bg-pine/15"
+              href={`/teacher/classes/series/${seriesBadge.seriesId}`}
+            >
+              {seriesBadgeLabel(seriesBadge)}
+            </Link>
+          ) : null}
           <span
             className={`w-fit rounded-full px-3 py-1 text-xs font-medium ${classSessionStatusToneClasses[classSession.status]}`}
           >
@@ -436,15 +557,13 @@ export default async function TeacherClassSessionDetailPage({
           <span className="w-fit rounded-full bg-sand px-3 py-1 text-xs font-medium text-ink-soft">
             {originLabels[classSession.origin] ?? classSession.origin}
           </span>
-          {classSession.recurringClassSeriesId ? (
-            <Link
-              className="inline-flex min-h-11 w-fit items-center rounded-full bg-pine-tint px-4 text-xs font-medium text-pine transition hover:bg-pine/15"
-              href={`/teacher/classes/series/${classSession.recurringClassSeriesId}`}
-            >
-              系列：{classSession.recurringClassSeries?.title ?? "課程系列"}
-            </Link>
-          ) : null}
         </div>
+        {/* teacher-series-rollup 票 02（spec 2.2）：按鈕集中在這一排，說明放進確認視窗或「ⓘ」。 */}
+        <ActionBar
+          primary={slots.primary ? actionNode(slots.primary, "primary") : null}
+          rest={slots.rest.map((key) => ({ key, node: actionNode(key, "rest") }))}
+          secondary={slots.secondary ? actionNode(slots.secondary, "secondary") : null}
+        />
       </header>
 
       {feedback ? (
@@ -476,81 +595,31 @@ export default async function TeacherClassSessionDetailPage({
           />
           <DetailItem label="待確認" value={`${pendingEnrollments.length} 人`} />
         </dl>
-        <section
-          aria-labelledby="next-step-title"
-          className={`grid gap-3 rounded-xl border p-4 ${nextStepToneClasses[nextStep.kind]}`}
-        >
-          <div>
-            <h3 className="text-sm font-medium" id="next-step-title">
-              下一步
-            </h3>
-            <p className="mt-1 text-base leading-7">{nextStep.message}</p>
-          </div>
-          {canOpen || canComplete || canEdit || pendingEnrollments.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {canOpen ? (
-                <form action={openOwnClassSessionForEnrollmentAction}>
-                  <input name="classSessionId" type="hidden" value={classSession.id} />
-                  {returnInputs}
-                  <PendingSubmitButton className={primaryButtonClassName}>
-                    開放報名
-                  </PendingSubmitButton>
-                </form>
-              ) : null}
-              {pendingEnrollments.length > 0 ? (
-                <a className={`inline-flex items-center ${primaryButtonClassName}`} href="#pending-enrollments">
-                  前往確認報名
-                </a>
-              ) : null}
-              {canComplete ? (
-                <form action={completeOwnClassSessionAction}>
-                  <input name="classSessionId" type="hidden" value={classSession.id} />
-                  {returnInputs}
-                  <PendingSubmitButton className={secondaryButtonClassName}>
-                    標記完成
-                  </PendingSubmitButton>
-                </form>
-              ) : null}
-              {canEdit ? (
-                <a
-                  className={`inline-flex items-center ${secondaryButtonClassName}`}
-                  href={`/teacher/classes/${classSession.id}/edit`}
-                >
-                  修改課程
-                </a>
-              ) : null}
-            </div>
-          ) : null}
-          {canOpen ? (
-            <p className="text-xs leading-5">
-              開放報名不會改變公開列表設定：這堂課
-              {classSession.isPublic ? "會列在公開課程列表" : "不會列在公開課程列表，學員要有課程連結才能報名"}。
-            </p>
+        {/* 下一步只留一行狀態說明；有人待確認時直接連到名單。 */}
+        <section aria-label="下一步" className={`flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border px-4 py-3 text-sm leading-6 ${nextStepToneClasses[nextStep.kind]}`}>
+          <p>
+            <span className="font-medium">下一步：</span>
+            {nextStep.message}
+          </p>
+          {pendingEnrollments.length > 0 ? (
+            <a className="font-medium underline" href="#pending-enrollments">
+              前往確認報名
+            </a>
           ) : null}
         </section>
-
-        {/* 開放報名後才能分享：學員端只開放「開放報名」與「已完成」的課程連結。 */}
+        {/* teacher-showcase-photos 票 08：分享文案收在這裡，需要時才展開。 */}
         {classSession.status === "open_for_enrollment" ? (
-          <section aria-labelledby="share-title" className="grid gap-2 border-t border-ink/10 pt-4">
-            <h3 className="text-sm font-medium text-ink" id="share-title">
-              分享給學員
-            </h3>
-            <p className="text-sm leading-6 text-ink-soft">
-              {classSession.isPublic
-                ? "這堂課也列在公開課程列表；想直接邀請學員，可以把報名連結傳給他們。"
-                : "這堂課不在公開課程列表，請把報名連結傳給學員。"}
-              學員需要先登入飛索帳號，才能打開連結並報名。
-            </p>
-            <CopyEnrollLinkButton classSessionId={classSession.id} />
-            {/* teacher-showcase-photos 票 08：不呼叫 AI，只是把課程資料套進固定模板；沒填的欄位整行不出現。 */}
-            <h3 className="mt-3 text-sm font-medium text-ink" id="share-templates-title">
+          <details className="rounded-xl border border-ink/10 px-4 py-2">
+            <summary className="min-h-11 cursor-pointer py-2 text-sm font-medium text-ink" id="share-templates-title">
               分享文案（可以直接複製，也可以先改幾個字）
-            </h3>
-            <ShareTemplates
-              enrollPath={`/classes/${classSession.id}`}
-              templates={Object.entries(shareTemplates).map(([key, template]) => ({ key, ...template }))}
-            />
-          </section>
+            </summary>
+            <div className="pb-2">
+              <ShareTemplates
+                enrollPath={`/classes/${classSession.id}`}
+                templates={Object.entries(shareTemplates).map(([key, template]) => ({ key, ...template }))}
+              />
+            </div>
+          </details>
         ) : null}
       </section>
 
@@ -600,65 +669,7 @@ export default async function TeacherClassSessionDetailPage({
         </section>
       ) : null}
 
-      {canCancel ? (
-        <section
-          aria-labelledby="cancel-title"
-          className="grid gap-3 rounded-2xl border border-ink/10 p-5 sm:p-6"
-        >
-          <h2 className="text-base font-medium text-ink" id="cancel-title">
-            取消這堂課
-          </h2>
-          <p className="text-sm leading-6 text-ink-soft">
-            取消後這堂課不能再開放報名，已報名與待確認的報名會一起取消。
-          </p>
-          <div>
-            <ConfirmActionDialog
-              action={cancelOwnClassSessionAction}
-              confirmLabel="確定取消課程"
-              hiddenFields={{ classSessionId: classSession.id, ...returnFields }}
-              title="取消這堂課？"
-              triggerClassName="min-h-11 rounded-full border border-clay/40 px-5 py-2 text-sm font-medium text-clay transition hover:bg-clay-tint"
-              triggerLabel="取消課程"
-            >
-              <p>
-                課程：<span className="break-words font-medium text-ink">{classSession.title}</span>
-              </p>
-              <p>時間：{timeText}</p>
-              <p>
-                {confirmedEnrollments.length + pendingEnrollments.length > 0
-                  ? `目前已報名 ${confirmedEnrollments.length} 人、待確認 ${pendingEnrollments.length} 人；取消後這些報名都會一起取消，學員會收到通知。`
-                  : "目前沒有人報名。"}
-              </p>
-              <p>取消後無法復原，這堂課也不能再開放報名。</p>
-            </ConfirmActionDialog>
-          </div>
-          {series && cancelFromHere.length > 1 ? (
-            <div className="grid gap-1 border-t border-ink/10 pt-3">
-              <p className="text-sm leading-6 text-ink-soft">
-                這堂課屬於系列「{series.title}」。如果之後都不上了，可以把這一場和之後的 {cancelFromHere.length - 1} 場一起取消。
-              </p>
-              <div>
-                <CancelFromHereDialog
-                  affected={cancelFromHere}
-                  canGenerateMore={series.dayOfWeek !== null}
-                  fromClassSessionId={classSession.id}
-                  recurringClassSeriesId={series.id}
-                  seriesTitle={series.title}
-                />
-              </div>
-            </div>
-          ) : null}
-        </section>
-      ) : null}
     </div>
-  );
-}
-
-function EnrollmentSourceTag({ isTerm }: { isTerm: boolean }) {
-  return (
-    <span className="ml-2 rounded-full bg-pine-tint px-2 py-0.5 text-xs font-normal text-pine-deep">
-      {isTerm ? "整期" : "單堂"}
-    </span>
   );
 }
 

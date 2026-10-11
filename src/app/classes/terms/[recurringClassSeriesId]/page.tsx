@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 
 import { formatTaipeiDatetimeLocal, formatTaipeiShortDatetime } from "@/domain/class-session/timezone";
+import { loadEnrollRows, type EnrollRow as EnrollRowData } from "@/domain/enrollment/session-enroll-rows";
 import { getTermDetailForViewer, type TermDetail, type TermEnrollBlock } from "@/domain/enrollment/term-read-service";
 import { getCurrentUser } from "@/lib/auth/session";
 import { classDetailHref, classReturnLabel, safeParentReturnPath, termDetailHref } from "@/lib/navigation/class-return-path";
@@ -9,10 +10,11 @@ import { classDetailHref, classReturnLabel, safeParentReturnPath, termDetailHref
 import { SignInOptions } from "../../../_components/sign-in-options";
 import { SiteShell } from "../../../_components/site-shell";
 import { ScrollToTarget } from "../../../_components/ScrollToTarget";
-import { TermRowAction, TermRowBadge, WithdrawTermInline } from "../../../member/_components/TermRowControls";
+import { WithdrawTermInline } from "../../../member/_components/TermRowControls";
 import { DetailCover, TeacherByline } from "../../_components/ClassCover";
 import { ClassInfoSections } from "../../_components/ClassInfoSections";
 import { EnrollReveal, OptionalNotes } from "../../_components/EnrollReveal";
+import { EnrollRow, PageFeedback, readRowFeedback, type RowFeedback } from "../../_components/EnrollRow";
 import { enrollTermAction, signInToEnrollTermAction } from "./actions";
 
 // teacher-class-scheduling 票 08：學員端的期班頁（規格 4.7、4.8）。
@@ -47,9 +49,16 @@ export default async function TermPage({
     );
   }
 
-  const feedback = query?.result && query.message ? { success: query.result === "success", message: query.message } : null;
+  // inline-member-enroll 票 09：每一堂列上的操作（單堂報名、請假等）結果指向那一列（focus=session-row-…），
+  // 顯示在頁面頂部或那一列上方；整期報名、退出整期的結果維持在整期報名區。
+  const rowFeedback = readRowFeedback(query);
+  const rowRelated = Boolean(rowFeedback?.focus?.startsWith("session-row-"));
+  const feedback = rowFeedback?.message && !rowRelated ? { success: rowFeedback.success, message: rowFeedback.message } : null;
   const canStartEnroll = !term.ownSeriesEnrollment && !term.termEnrollBlock;
   const openForm = query?.enroll === "1" || (feedback !== null && !feedback.success);
+  const rows = await loadEnrollRows(term.sessions.map((session) => session.id), user?.id ?? null);
+  const openSessions =
+    query?.open === "sessions" || Boolean(query?.open?.startsWith("session-row-")) || Boolean(query?.focus?.startsWith("session-row-"));
 
   return (
     <SiteShell
@@ -88,8 +97,9 @@ export default async function TermPage({
           </div>
         </section>
 
+        {rowRelated ? <PageFeedback feedback={rowFeedback} /> : null}
         <ScrollToTarget targetId={query?.focus} />
-        <TermSessionList openSessions={query?.open === "sessions"} returnTo={returnTo} term={term} />
+        <TermSessionList feedback={rowRelated ? rowFeedback : null} openSessions={openSessions} returnTo={returnTo} rows={rows} signedIn={Boolean(user)} term={term} />
 
         <ClassInfoSections
           description={term.description}
@@ -319,40 +329,46 @@ function TermEnrollArea({
 }
 
 // Q11：預設收起，只列日期時段、自己的狀態、地點或時間不同的提示；不顯示人數。
-function TermSessionList({ term, returnTo, openSessions }: { term: TermDetail; returnTo: string; openSessions: boolean }) {
+// inline-member-enroll 票 09：每一堂用共用場次列，可單堂報名的列直接報名，整期學員的列請假／取消請假，都不必進單堂頁。
+function TermSessionList({
+  term,
+  returnTo,
+  openSessions,
+  rows,
+  signedIn,
+  feedback,
+}: {
+  term: TermDetail;
+  returnTo: string;
+  openSessions: boolean;
+  rows: Map<string, EnrollRowData>;
+  signedIn: boolean;
+  feedback: RowFeedback | null;
+}) {
+  const termHref = termDetailHref(term.id, returnTo);
+
   return (
     <details className={cardClass} open={openSessions}>
       <summary className="cursor-pointer text-base font-medium text-ink">查看每一堂（共 {term.totalCount} 堂）</summary>
       {term.termEnrollmentMode === "term_and_single" ? (
-        <p className="mt-3 text-sm leading-6 text-ink-soft">只想上其中幾堂，可以點進該堂單獨報名。</p>
+        <p className="mt-3 text-sm leading-6 text-ink-soft">只想上其中幾堂，在那一堂按「{term.requiresApproval ? "申請報名" : "報名"}」即可單獨報名。</p>
       ) : null}
       <ul aria-label="這一期的上課日期" className="mt-3 grid gap-2">
-        {term.sessions.map((session) => (
-          <li className="flex scroll-mt-6 flex-wrap items-center justify-between gap-2 rounded-xl border border-ink/10 px-4 py-2 text-sm" id={session.ownEnrollmentId ? `session-row-${session.ownEnrollmentId}` : undefined} key={session.id}>
-            <Link className="min-h-11 py-2 font-medium text-ink underline-offset-4 hover:underline" href={classDetailHref(session.id, termDetailHref(term.id, returnTo))}>
-              {formatTaipeiShortDatetime(session.startAt)}–{formatTaipeiDatetimeLocal(session.endAt).split("T")[1]}
-            </Link>
-            <span className="flex flex-wrap items-center gap-2 text-ink-soft">
-              {session.ownEnrollmentStatus ? <TermRowBadge control={session.rowControl} status={session.ownEnrollmentStatus} /> : null}
-              {session.status === "completed" ? "已結束" : null}
-              {session.canEnrollSingle ? <span className="text-pine">可單堂報名</span> : null}
-            </span>
-            {session.ownEnrollmentId ? (
-              <div className="w-full">
-                <TermRowAction
-                  classSessionId={session.id}
-                  control={session.rowControl}
-                  enrollmentId={session.ownEnrollmentId}
-                  returnTo={termDetailHref(term.id, returnTo)}
-                  termMode={term.termEnrollmentMode}
-                />
-              </div>
-            ) : null}
-            {session.location !== term.location ? (
-              <span className="w-full break-words text-ink-soft">這一堂地點：{session.location}</span>
-            ) : null}
-          </li>
-        ))}
+        {term.sessions.map((session) => {
+          const row = rows.get(session.id);
+          const main = (
+            <>
+              <Link className="inline-flex min-h-11 items-center font-medium text-ink underline-offset-4 hover:underline" href={classDetailHref(session.id, termHref)}>
+                {formatTaipeiShortDatetime(session.startAt)}–{formatTaipeiDatetimeLocal(session.endAt).split("T")[1]}
+              </Link>
+              {session.location !== term.location ? (
+                <span className="block break-words text-ink-soft">這一堂地點：{session.location}</span>
+              ) : null}
+            </>
+          );
+
+          return row ? <EnrollRow feedback={feedback} key={session.id} main={main} returnTo={termHref} row={row} signedIn={signedIn} /> : null;
+        })}
       </ul>
       {term.draftCount > 0 ? <p className="mt-3 text-sm leading-6 text-ink-faint">另有 {term.draftCount} 堂尚未開放報名。</p> : null}
     </details>

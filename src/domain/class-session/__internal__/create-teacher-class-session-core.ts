@@ -15,6 +15,7 @@ import {
   type ConflictLockHooks,
 } from "@/domain/class-session/conflict-check";
 import { notifyUsers } from "@/domain/notification/create";
+import { formatDateRange } from "@/domain/notification/date-range";
 
 export type CreateTeacherClassSessionInput = {
   title: string;
@@ -59,6 +60,9 @@ export type CreatedClassSessionNotice = {
   classSessionId: string;
   title: string;
   teacherUserId: string;
+  // teacher-series-rollup 票 07：同一系列一次建立多堂時合併成一則（堂數、日期範圍、系列 id）。
+  startAt: Date;
+  recurringClassSeriesId: string | null;
 };
 
 export type CreateClassSessionForTeacherInTransactionResult =
@@ -137,7 +141,7 @@ export async function createClassSessionForTeacherInTransaction(
       requiresApproval: input.requiresApproval === true,
       status: input.openForEnrollment === true ? "open_for_enrollment" : "draft",
     },
-    select: { id: true, title: true },
+    select: { id: true, title: true, startAt: true, recurringClassSeriesId: true },
   });
 
   return {
@@ -146,6 +150,8 @@ export async function createClassSessionForTeacherInTransaction(
       classSessionId: classSession.id,
       title: classSession.title,
       teacherUserId: teacherProfile.userId,
+      startAt: classSession.startAt,
+      recurringClassSeriesId: classSession.recurringClassSeriesId,
     },
   };
 }
@@ -155,12 +161,30 @@ export async function createClassSessionForTeacherInTransaction(
 export async function notifyClassSessionsCreated(
   createdList: CreatedClassSessionNotice[],
 ): Promise<void> {
+  // teacher-series-rollup 票 07（ADR 0008）：同一位老師、同一個系列一次建立的多堂只發一則
+  // （站內與 email 都是），內文寫堂數與日期範圍；不屬於系列的單堂維持一堂一則。
+  const groups = new Map<string, CreatedClassSessionNotice[]>();
+
   for (const created of createdList) {
+    const key = created.recurringClassSeriesId ? `${created.teacherUserId}:${created.recurringClassSeriesId}` : `single:${created.classSessionId}`;
+    groups.set(key, [...(groups.get(key) ?? []), created]);
+  }
+
+  for (const group of groups.values()) {
+    const sorted = [...group].sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
+    const first = sorted[0];
+
     try {
       await notifyUsers(
         "class_session_created",
-        [{ userId: created.teacherUserId, role: "self" }],
-        { classSessionTitle: created.title },
+        [{ userId: first.teacherUserId, role: "self" }],
+        {
+          classSessionTitle: first.title,
+          ...(sorted.length > 1 ? { sessionCount: sorted.length, dateRange: formatDateRange(sorted[0].startAt, sorted.at(-1)!.startAt) } : {}),
+        },
+        undefined,
+        // 一次建立多堂的批次通知連到系列頁。
+        { recurringClassSeriesId: first.recurringClassSeriesId, linkToSeries: sorted.length > 1 },
       );
     } catch (notifyError) {
       console.error("[notification] class_session_created trigger failed", notifyError);

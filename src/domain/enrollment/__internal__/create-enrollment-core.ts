@@ -1,3 +1,5 @@
+import type { NotificationSender } from "@/domain/notification/sender";
+import type { NotifyOptions } from "@/domain/notification/types";
 // __internal__：不是通用 API。只給 (1) 唯一的 auth-resolving 外層（service.ts 的
 // createOwnEnrollment）與 (2) Playwright 併發測試直接呼叫——這是本輪唯一有多個不同
 // 使用者競爭同一個有限資源（capacity）的 concurrency-sensitive 場景，比照
@@ -18,6 +20,9 @@ export type NotifyFn = (
   type: NotificationType,
   recipients: NotificationRecipient[],
   payload: NotificationPayload,
+  // teacher-series-rollup 票 07：與 notifyUsers 相同的選填參數（帶場次或系列 id）。
+  sender?: NotificationSender,
+  options?: NotifyOptions,
 ) => Promise<void>;
 
 export type DemandLockHooks = {
@@ -283,12 +288,17 @@ export async function createEnrollmentForUser(
               : []),
           ],
           { classSessionTitle: classSession?.title },
+          undefined,
+          // teacher-series-rollup 票 07：帶場次 id，notifyUsers 查出所屬系列。
+          { classSessionId },
         );
       } else {
         await notifyOverride(
           "enrollment_confirmed",
           [{ userId, role: "self" }],
           { classSessionTitle: classSession?.title },
+          undefined,
+          { classSessionId },
         );
       }
     } catch (notifyError) {

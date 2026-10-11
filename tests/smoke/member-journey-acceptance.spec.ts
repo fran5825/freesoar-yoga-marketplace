@@ -89,6 +89,9 @@ for (const origin of ["organizer", "teacher"] as const) {
     }
     const returnTo = await page.getByRole("link", { name: "返回課程列表", exact: true }).getAttribute("href");
     expect(returnTo).toContain(`location=${encodeURIComponent(run)}`);
+    // inline-member-enroll 票 08：用鍵盤按「我要報名」展開表單，再按「加備註」展開備註。
+    await keyboardActivate(page, page.getByRole("button", { name: "我要報名", exact: true }));
+    await keyboardActivate(page, page.getByRole("button", { name: "加備註", exact: true }));
     const notes = page.getByLabel("備註（選填）");
     await keyboardReach(page, notes);
     await page.keyboard.type(`keyboard-${run}`);
@@ -144,6 +147,9 @@ test("pending UI enrollment accepted by the teacher updates member detail, enrol
   await addAuthSessionCookie(context, member.sessionToken);
   await page.goto(`/classes?location=${encodeURIComponent(run)}`);
   await page.getByRole("link", { name: new RegExp(course.title) }).click();
+  // inline-member-enroll 票 08：需老師確認的課程按「申請報名」展開表單。
+  await page.getByRole("button", { name: "申請報名" }).click();
+  await page.getByRole("button", { name: "加備註" }).click();
   await page.getByLabel("備註（選填）").fill(`pending-${run}`);
   await page.getByRole("checkbox", { name: /我了解此課程非醫療行為/ }).check();
   await page.getByRole("button", { name: "送出報名申請" }).click();

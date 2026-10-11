@@ -34,21 +34,21 @@ test("a term member takes leave and cancels it from the row; the list stays open
   await page.goto(`/classes/terms/${term.series.id}`);
   await expect(page.getByText("某一堂不能來，到「查看每一堂」按那一堂的「請假」，其他堂照常。")).toBeVisible();
   await page.locator("summary", { hasText: "查看每一堂" }).click();
-  const row = page.locator(`#session-row-${rows[1].id}`);
+  const row = page.locator(`#session-row-${rows[1].classSessionId}`);
   await row.getByText("請假", { exact: true }).click();
   await expect(row.getByText("請假後，這一堂的名額會開放給單堂報名；整期的其他堂照常。開課前、名額還在時可以取消請假。")).toBeVisible();
   await row.getByLabel("我確認這一堂要請假。").check();
   await row.getByRole("button", { name: "確認請假" }).click();
 
-  await expect(page).toHaveURL(new RegExp(`focus=session-row-${rows[1].id}`));
+  await expect(page).toHaveURL(new RegExp(`focus=session-row-${rows[1].classSessionId}`));
   await expect(page.locator("#action-feedback")).toContainText("已請假這一堂，整期的其他堂照常。");
-  await expect(page.locator(`#session-row-${rows[1].id}`)).toContainText("請假中");
-  await expect(page.locator(`#session-row-${rows[1].id}`)).toBeInViewport();
+  await expect(page.locator(`#session-row-${rows[1].classSessionId}`)).toContainText("請假中");
+  await expect(page.locator(`#session-row-${rows[1].classSessionId}`)).toBeInViewport();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
-  await page.locator(`#session-row-${rows[1].id}`).getByRole("button", { name: "取消請假" }).click();
+  await page.locator(`#session-row-${rows[1].classSessionId}`).getByRole("button", { name: "取消請假" }).click();
   await expect(page.locator("#action-feedback")).toContainText("已取消請假，這一堂照常上課。");
-  await expect(page.locator(`#session-row-${rows[1].id}`)).toContainText("已報名");
+  await expect(page.locator(`#session-row-${rows[1].classSessionId}`)).toContainText("已報名");
   expect(await prisma.enrollment.findUniqueOrThrow({ where: { id: rows[1].id }, select: { status: true, cancelledBy: true } })).toEqual({ status: "confirmed", cancelledBy: null });
 });
 
@@ -58,7 +58,7 @@ test("term_only shows the keep-the-seat wording on the row", async ({ context, p
 
   await page.goto(`/classes/terms/${term.series.id}`);
   await page.locator("summary", { hasText: "查看每一堂" }).click();
-  const row = page.locator(`#session-row-${rows[0].id}`);
+  const row = page.locator(`#session-row-${rows[0].classSessionId}`);
   await row.getByText("請假", { exact: true }).click();
   await expect(row.getByText("請假後，這一堂會標示為請假；整期的其他堂照常。開課前可以取消請假。")).toBeVisible();
 });
@@ -76,19 +76,23 @@ test("withdrawing from the term page uses the inline control and leaves no row b
   await expect(page.locator("#action-feedback")).toContainText("已退出整期，取消了之後的 3 堂。");
   expect((await prisma.seriesEnrollment.findUniqueOrThrow({ where: { id: joined.seriesEnrollmentId } })).status).toBe("withdrawn");
   await page.locator("summary", { hasText: "查看每一堂" }).click();
-  await expect(page.locator(`#session-row-${rows[0].id}`).getByRole("button")).toHaveCount(0);
+  await expect(page.locator(`#session-row-${rows[0].classSessionId}`).getByRole("button")).toHaveCount(0);
 });
 
-test("a visitor and a non-member see no row buttons", async ({ context, page }, testInfo) => {
+// inline-member-enroll 票 09：不是整期學員的人沒有請假按鈕；「整期和單堂都收」的期班，每一堂可以直接單堂報名。
+test("a visitor and a non-member see no leave buttons, only single enroll on the rows", async ({ context, page }, testInfo) => {
   const { term } = await seedJoined("visitor", testInfo);
 
   await page.goto(`/classes/terms/${term.series.id}`);
   await page.locator("summary", { hasText: "查看每一堂" }).click();
-  await expect(page.getByRole("list", { name: "這一期的上課日期" }).getByRole("button")).toHaveCount(0);
+  const list = page.getByRole("list", { name: "這一期的上課日期" });
+  await expect(list.getByText("請假", { exact: true })).toHaveCount(0);
+  await expect(list.getByRole("button", { name: "取消請假" })).toHaveCount(0);
+  await expect(list.getByRole("button", { name: "報名", exact: true }).first()).toBeVisible();
 
   const stranger = await seedMember(runId(testInfo, "visitor-x"), "x");
   await addAuthSessionCookie(context, stranger.sessionToken);
   await page.goto(`/classes/terms/${term.series.id}`);
   await page.locator("summary", { hasText: "查看每一堂" }).click();
-  await expect(page.getByRole("list", { name: "這一期的上課日期" }).getByRole("button")).toHaveCount(0);
+  await expect(page.getByRole("list", { name: "這一期的上課日期" }).getByText("請假", { exact: true })).toHaveCount(0);
 });
