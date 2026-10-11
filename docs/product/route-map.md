@@ -44,8 +44,8 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 | `/teacher/availability` | **2026-09-26 起轉址到 `/teacher/profile`**（可授課時間併入老師資料的第一個分頁）。以下為原說明：**已落地**（`teacher-availability` 已確認）：管理固定 availability 與 exception |
 | `/teacher/demands` | 查看 eligible demand requests |
 | `/teacher/demands/[demandRequestId]` | 查看需求詳情並提交 response |
-| `/teacher/classes` | 查看自己的 class sessions（含團主媒合與自建兩種來源）。2026-10-04 老師 usability 票 04：分「即將上課（預設）／草稿／過往／全部」分頁（`?tab=drafts|past|all`，全部可加 `status=cancelled`），只是畫面分組、不是新狀態；審核通過才在頂端顯示「＋ 建立課程」；卡片整張連到單堂詳情，系列入口在卡片連結外。操作都在單堂詳情頁 |
-| `/teacher/classes/[classSessionId]` | 單堂詳情（own-scoped，別人的課 404）。票 03：頂端課程重點＋下一步操作，婉拒／取消先在確認視窗說明影響。票 04：返回上下文只收白名單參數 `from=list&tab=…&status=cancelled` 或 `from=series&series=<這堂課自己的系列 id>`，不接受任意 return URL；操作後回到同一堂並保留上下文 |
+| `/teacher/classes` | 查看自己的 class sessions（含團主媒合與自建兩種來源）。2026-10-04 老師 usability 票 04：分「即將上課（預設）／草稿／過往／全部」分頁（`?tab=drafts|past|all`，全部可加 `status=cancelled`），只是畫面分組、不是新狀態；審核通過才在頂端顯示「＋ 建立課程」；卡片整張連到單堂詳情，系列入口在卡片連結外。操作都在單堂詳情頁。2026-10-11 `teacher-my-calendar` 第一階段：頁首下方「清單／月曆」切換；月曆用 `?view=calendar&month=YYYY-MM&day=YYYY-MM-DD`（白名單，壞月份退回本月、日期不在該月就忽略），從星期日開始，顯示自己要教的課（含人數、已取消刪除線、草稿虛線框）、自己設定的可授課時間（淡色底）與合作邀請（待你確認／已確認，等團主開課）；月曆模式不套用分頁、只讀該月摘要。見 [spec](../specs/teacher-my-calendar-spec.md) |
+| `/teacher/classes/[classSessionId]` | 單堂詳情（own-scoped，別人的課 404）。票 03：頂端課程重點＋下一步操作，婉拒／取消先在確認視窗說明影響。票 04：返回上下文只收白名單參數 `from=list&tab=…&status=cancelled` 或 `from=series&series=<這堂課自己的系列 id>`，或（`teacher-my-calendar`）`from=calendar&month=YYYY-MM&day=YYYY-MM-DD`，不接受任意 return URL；操作後回到同一堂並保留上下文。頁面網址與操作表單共用同一套解析；「修改課程」連結、改課頁返回連結與存檔後導向也帶著同一組參數 |
 | `/teacher/classes/new` | **新增**（`teacher-initiated-open-classes` 已確認）：approved 老師建立單堂、常規（每週固定星期）或固定期課程；僅 `approved` 老師可建立，其餘狀態顯示引導文案 |
 | `/teacher/classes/series/[recurringClassSeriesId]` | **新增**（`teacher-initiated-open-classes` 已確認）：管理單一常規/固定期課程系列——列出已生成場次、手動生成更多（僅常規模式）、取消整個系列 |
 | `/teacher/class-proposals/[proposalId]` | **已落地（票 05 唯讀、票 06 確認／婉拒）**（organizer-usability-redesign）：受邀老師查看自己收到的合作邀請最新內容，確認授課或附原因婉拒；不是自己的邀請一律 not-found。未確認的邀請不會出現在「我的課程」 |

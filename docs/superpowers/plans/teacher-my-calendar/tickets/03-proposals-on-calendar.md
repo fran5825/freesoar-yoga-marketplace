@@ -6,7 +6,7 @@
 
 **Blocked by:** 01
 
-**Status:** draft
+**Status:** done
 
 **Workflow mode:** STANDARD
 
@@ -15,6 +15,6 @@
 **Risk flags:** 新增按月、只查本人的邀請查詢；範圍要和老師總覽一致（團主就是自己的邀請不列、草稿不給老師看）。
 
 - [x] 只查寄給本人、狀態為 `pending_confirmation` 或 `confirmed`、日期和月份重疊的邀請；團主是自己的不列；沒有日期的不顯示
-- [ ] 兩種標籤與各自的樣式（電腦版文字、手機版色點）（標籤已有單元測試，畫面待驗收）
-- [ ] 點擊進合作邀請頁
-- [ ] 單元測試：狀態篩選（`converted`／`declined`／`withdrawn`／`draft` 不出現）；畫面驗兩種標籤
+- [x] 兩種標籤與各自的樣式（電腦版文字、手機版色點）
+- [x] 點擊進合作邀請頁
+- [x] 單元測試：狀態篩選（`converted`／`declined`／`withdrawn`／`draft` 不出現）；畫面驗兩種標籤

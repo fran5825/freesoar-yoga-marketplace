@@ -179,6 +179,8 @@ export default async function TeacherClassSessionDetailPage({
     <input key={name} name={name} type="hidden" value={value} />
   ));
   const backLink = teacherClassBackLink(returnContext, classSession.id);
+  // teacher-my-calendar spec 2.4：修改課程也帶著返回參數，存檔回來仍回到原本的列表或月曆。
+  const returnQuery = Object.keys(returnFields).length > 0 ? `?${new URLSearchParams(returnFields).toString()}` : "";
   const timeText = `${formatTaipeiDatetime(classSession.startAt)}–${formatTaipeiDatetime(classSession.endAt)}`;
   // teacher-class-scheduling 票 03：系列中的場次可以「從這場以後全部取消」，需要列出之後的場次。
   const series =
@@ -223,7 +225,7 @@ export default async function TeacherClassSessionDetailPage({
         );
       case "edit":
         return (
-          <a className={`inline-flex items-center ${filled ? primaryButtonClassName : secondaryButtonClassName}`} href={`/teacher/classes/${classSession.id}/edit`}>
+          <a className={`inline-flex items-center ${filled ? primaryButtonClassName : secondaryButtonClassName}`} href={`/teacher/classes/${classSession.id}/edit${returnQuery}`}>
             修改課程
           </a>
         );

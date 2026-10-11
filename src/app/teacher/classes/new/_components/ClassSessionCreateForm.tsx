@@ -232,6 +232,8 @@ type FieldErrors = Partial<Record<CreateClassFormField, string[]>>;
 // 日期（YYYY-MM-DD）與時:分（HH:mm）傳入。
 export type EditClassInitial = {
   classSessionId: string;
+  // teacher-my-calendar spec 2.4：返回參數（已在頁面用白名單解析過），存檔成功後帶回詳情頁。
+  returnFields?: Record<string, string>;
   title: string;
   description: string;
   // member-flow 票 03：目前的值（沒填過是空字串）；系列場次不在表單顯示、也不送出。
@@ -723,6 +725,11 @@ export function ClassSessionCreateForm({
       {mode === "single" ? (
         <form aria-busy={isPending} className="grid gap-6" onSubmit={handleSubmit}>
           {edit ? <input name="classSessionId" type="hidden" value={edit.classSessionId} /> : null}
+          {edit?.returnFields
+            ? Object.entries(edit.returnFields).map(([name, value]) => (
+                <input key={name} name={name} type="hidden" value={value} />
+              ))
+            : null}
           {formErrorBanner}
           {edit?.series ? (
             <FormSection title="套用範圍">

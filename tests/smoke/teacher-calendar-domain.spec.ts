@@ -2,6 +2,13 @@ import { expect, test } from "@playwright/test";
 
 import { buildTeacherCalendarView, calendarTimeLabel, toCalendarEntry } from "../../src/app/teacher/classes/_lib/calendar-view";
 import { parseTeacherCalendarParams, teacherCalendarHref } from "../../src/app/teacher/classes/_lib/calendar-params";
+import {
+  parseReturnContext,
+  readReturnContextFromForm,
+  returnContextParams,
+  teacherClassBackLink,
+  teacherClassDetailHref,
+} from "../../src/app/teacher/classes/_lib/return-context";
 import { availabilityForDay, availabilityByDay } from "../../src/domain/teacher-calendar/availability";
 import { coveredTaipeiDays, groupItemsByDay, type CalendarItem } from "../../src/domain/teacher-calendar/day-items";
 import {
@@ -161,4 +168,33 @@ test("calendar view selects today in the current month, otherwise the first day"
   expect(buildTeacherCalendarView(data, { now, selectedDay: null })).toMatchObject({ today: "2026-10-12", initialDay: "2026-10-12", isCurrentMonth: true, prevMonth: "2026-09", nextMonth: "2026-11", monthLabel: "2026 年 10 月" });
   expect(buildTeacherCalendarView({ ...data, month: "2026-11" }, { now, selectedDay: null })).toMatchObject({ initialDay: "2026-11-01", isCurrentMonth: false });
   expect(buildTeacherCalendarView(data, { now, selectedDay: "2026-10-20" }).initialDay).toBe("2026-10-20");
+});
+
+test("calendar return context is whitelisted and round-trips through links and forms", () => {
+  const context = parseReturnContext({ from: "calendar", month: "2026-10", day: "2026-10-12" }, null);
+  expect(context).toEqual({ kind: "calendar", month: "2026-10", day: "2026-10-12" });
+  expect(teacherClassDetailHref("c1", context)).toBe("/teacher/classes/c1?from=calendar&month=2026-10&day=2026-10-12");
+  expect(teacherClassBackLink(context, "c1")).toEqual({ href: "/teacher/classes?view=calendar&month=2026-10&day=2026-10-12", label: "← 回我的課程" });
+
+  // 日期不在該月就忽略日期；月份壞掉就整個不收，回到預設清單
+  expect(parseReturnContext({ from: "calendar", month: "2026-10", day: "2026-11-01" }, null)).toEqual({ kind: "calendar", month: "2026-10", day: null });
+  for (const month of ["2026-13", "//evil.example", "https://evil.example", undefined]) {
+    expect(parseReturnContext({ from: "calendar", month }, null)).toBeNull();
+  }
+  expect(teacherClassBackLink(parseReturnContext({ from: "calendar", month: "nope" }, null), "c1").href).toBe("/teacher/classes#class-c1");
+
+  // 操作表單（server action）用同一套解析
+  const form = new FormData();
+  for (const [name, value] of returnContextParams(context)) form.set(name, value);
+  expect(readReturnContextFromForm(form)).toEqual(context);
+  const listForm = new FormData();
+  listForm.set("from", "list");
+  listForm.set("tab", "past");
+  expect(readReturnContextFromForm(listForm)).toEqual({ kind: "list", tab: "past", status: null });
+  // 表單的系列只檢查格式（所屬系列由詳情頁再比對）；頁面網址則必須是自己的系列
+  const seriesForm = new FormData();
+  seriesForm.set("from", "series");
+  seriesForm.set("series", "s1");
+  expect(readReturnContextFromForm(seriesForm)).toEqual({ kind: "series", seriesId: "s1" });
+  expect(parseReturnContext({ from: "series", series: "s1" }, "s2")).toBeNull();
 });

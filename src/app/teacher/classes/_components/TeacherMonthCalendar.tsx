@@ -124,7 +124,7 @@ export function TeacherMonthCalendar({ view }: { view: TeacherCalendarView }) {
 
               return (
                 <div
-                  className={`relative min-h-14 min-w-0 border-r border-ink/10 last:border-r-0 md:min-h-28 ${
+                  className={`relative min-h-14 min-w-0 overflow-hidden border-r border-ink/10 last:border-r-0 md:min-h-28 ${
                     hasAvailability ? "bg-pine-tint" : "bg-white"
                   } ${isSelected ? "outline-2 -outline-offset-2 outline-pine" : ""}`}
                   data-day={day}
@@ -153,9 +153,9 @@ export function TeacherMonthCalendar({ view }: { view: TeacherCalendarView }) {
                     </span>
                   </button>
                   {/* 電腦版：課名＋人數 */}
-                  <ul className="hidden gap-1 px-1.5 pb-1.5 md:grid">
+                  <ul className="hidden min-w-0 grid-cols-1 gap-1 px-1.5 pb-1.5 md:grid">
                     {info.entries.slice(0, MAX_ENTRIES_IN_CELL).map((entry) => (
-                      <li key={entry.key}>
+                      <li className="min-w-0" key={entry.key}>
                         <Link
                           className={`block truncate rounded-md px-1.5 py-0.5 text-xs transition hover:opacity-80 ${cellEntryClasses[entry.tone]}`}
                           href={entryHref(entry, view.month, day)}

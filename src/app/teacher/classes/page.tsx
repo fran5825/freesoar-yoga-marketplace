@@ -10,6 +10,8 @@ import { getClassServiceTypes } from "@/domain/class-session/service-types-displ
 import { rollupClassList } from "@/domain/class-session/teacher-class-list";
 import { getTeacherClassNextStep } from "@/domain/class-session/teacher-next-step";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
+import { taipeiMonthKey } from "@/domain/teacher-calendar/month";
+import { getOwnTeacherCalendarMonth } from "@/domain/teacher-calendar/read-service";
 import { getOwnTeacherProfileApplicationSnapshot } from "@/domain/teacher-profile/service";
 import { requireUser } from "@/lib/auth/session";
 
@@ -20,6 +22,9 @@ import {
   type TeacherClassListTab,
 } from "./_lib/class-list-tabs";
 import { SeriesRollupCardView } from "./_components/SeriesRollupCard";
+import { TeacherMonthCalendar } from "./_components/TeacherMonthCalendar";
+import { isCalendarView, parseTeacherCalendarParams, teacherCalendarHref } from "./_lib/calendar-params";
+import { buildTeacherCalendarView } from "./_lib/calendar-view";
 import {
   parseListStatusFilter,
   parseListTab,
@@ -28,7 +33,15 @@ import {
 } from "./_lib/return-context";
 
 type TeacherClassesPageProps = {
-  searchParams?: Promise<{ result?: string; message?: string; tab?: string; status?: string }>;
+  searchParams?: Promise<{
+    result?: string;
+    message?: string;
+    tab?: string;
+    status?: string;
+    view?: string;
+    month?: string;
+    day?: string;
+  }>;
 };
 
 // teacher-initiated-open-classes：老師自建課程的來源徽章文字，跟團主媒合區分。
@@ -57,15 +70,20 @@ export default async function TeacherClassesPage({ searchParams }: TeacherClasse
     redirect("/sign-in");
   }
 
-  const [classSessions, resolvedSearchParams, profile] = await Promise.all([
-    listOwnClassSessionsForTeacher(),
+  const [resolvedSearchParams, profile] = await Promise.all([
     searchParams,
     getOwnTeacherProfileApplicationSnapshot(),
   ]);
+  const now = new Date();
+  // teacher-my-calendar spec 2.1：月曆模式只讀那一個月的摘要，不讀整份清單，也不套用分頁。
+  const showCalendar = isCalendarView(resolvedSearchParams?.view);
+  const calendarParams = parseTeacherCalendarParams(resolvedSearchParams ?? {}, taipeiMonthKey(now));
+  const [classSessions, calendarMonth] = showCalendar
+    ? [[], await getOwnTeacherCalendarMonth(calendarParams.month)]
+    : [await listOwnClassSessionsForTeacher(), null];
 
   const tab = parseListTab(resolvedSearchParams?.tab);
   const statusFilter = parseListStatusFilter(tab, resolvedSearchParams?.status);
-  const now = new Date();
   const visibleClassSessions = filterAndSortClassesForTab(classSessions, tab, now, statusFilter);
   // teacher-series-rollup 票 03（spec 2.1）：同一個系列在這個分頁只出現一張系列卡。
   const entries = rollupClassList(visibleClassSessions, now);
@@ -134,6 +152,40 @@ export default async function TeacherClassesPage({ searchParams }: TeacherClasse
         </section>
       ) : null}
 
+      <nav aria-label="檢視方式" className="inline-flex w-fit rounded-full border border-ink/20 bg-white p-1">
+        {[
+          { label: "清單", href: teacherClassListHref(tab, statusFilter), active: !showCalendar },
+          { label: "月曆", href: teacherCalendarHref(calendarParams.month), active: showCalendar },
+        ].map((item) => (
+          <Link
+            aria-current={item.active ? "page" : undefined}
+            className={
+              item.active
+                ? "inline-flex min-h-11 items-center rounded-full bg-pine px-5 text-sm font-medium text-white"
+                : "inline-flex min-h-11 items-center rounded-full px-5 text-sm font-medium text-ink-soft transition hover:text-ink"
+            }
+            href={item.href}
+            key={item.label}
+          >
+            {item.label}
+          </Link>
+        ))}
+      </nav>
+
+      {showCalendar ? (
+        calendarMonth ? (
+          <TeacherMonthCalendar
+            view={buildTeacherCalendarView(calendarMonth, { now, selectedDay: calendarParams.day })}
+          />
+        ) : (
+          <section className="rounded-2xl border border-ink/15 bg-white p-6">
+            <h2 className="text-lg font-medium text-ink">還沒有老師資料</h2>
+            <p className="mt-2 text-sm leading-6 text-ink-soft">
+              完成老師申請後，你的課程與可授課時間會顯示在這裡。
+            </p>
+          </section>
+        )
+      ) : (
       <nav aria-label="課程分類" className="-mx-1 flex flex-wrap gap-2 px-1">
         {TEACHER_CLASS_LIST_TABS.map((item) => (
           <Link
@@ -150,8 +202,9 @@ export default async function TeacherClassesPage({ searchParams }: TeacherClasse
           </Link>
         ))}
       </nav>
+      )}
 
-      {tab === "all" ? (
+      {!showCalendar && tab === "all" ? (
         <div className="-mt-2 flex flex-wrap items-center gap-2 text-sm">
           <span className="text-ink-soft">顯示：</span>
           <Link
@@ -171,7 +224,7 @@ export default async function TeacherClassesPage({ searchParams }: TeacherClasse
         </div>
       ) : null}
 
-      {visibleClassSessions.length === 0 ? (
+      {showCalendar ? null : visibleClassSessions.length === 0 ? (
         <section className="rounded-2xl border border-ink/15 bg-white p-6">
           <h2 className="text-lg font-medium text-ink">
             {statusFilter === "cancelled" ? "沒有已取消的課程" : `${teacherClassListTabLabels[tab]}：沒有課程`}

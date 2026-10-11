@@ -11,15 +11,17 @@ import { getOwnTeacherProfileApplicationSnapshot } from "@/domain/teacher-profil
 import { requireUser } from "@/lib/auth/session";
 
 import { ClassSessionCreateForm } from "../../new/_components/ClassSessionCreateForm";
+import { parseReturnContext, returnContextParams, teacherClassDetailHref } from "../../_lib/return-context";
 
 type EditClassSessionPageProps = {
   params: Promise<{ classSessionId: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 // teacher-class-scheduling 票 04：改課頁（單堂）。只讀自己的課（與詳情頁同一個 own-scoped 讀取），
 // 別人的課一律 404。不能改的課（團主媒合、系列場次、已開始／完成／取消、老師非 approved）只顯示原因與返回連結；
 // 真正的檢查在 domain 的鎖內，這裡只是避免顯示一張送出一定會被拒的表單。
-export default async function EditClassSessionPage({ params }: EditClassSessionPageProps) {
+export default async function EditClassSessionPage({ params, searchParams }: EditClassSessionPageProps) {
   try {
     await requireUser();
   } catch {
@@ -27,16 +29,20 @@ export default async function EditClassSessionPage({ params }: EditClassSessionP
   }
 
   const { classSessionId } = await params;
-  const [classSession, profile] = await Promise.all([
+  const [classSession, profile, resolvedSearchParams] = await Promise.all([
     getOwnClassSessionDetailForTeacher(classSessionId),
     getOwnTeacherProfileApplicationSnapshot(),
+    searchParams,
   ]);
 
   if (!classSession) {
     notFound();
   }
 
-  const detailHref = `/teacher/classes/${classSession.id}`;
+  // teacher-my-calendar spec 2.4：從列表、系列或月曆進來的返回參數，一路帶回詳情頁（同一套白名單）。
+  const returnContext = parseReturnContext(resolvedSearchParams ?? {}, classSession.recurringClassSeriesId);
+  const returnFields = Object.fromEntries(returnContextParams(returnContext));
+  const detailHref = teacherClassDetailHref(classSession.id, returnContext);
   // 名單也含「已付款後被取消」的報名（付款計畫 P9），人數只算仍有效的報名。
   const activeEnrollmentCount = classSession.enrollments.filter(
     (enrollment) => enrollment.status === "confirmed" || enrollment.status === "pending",
@@ -134,6 +140,7 @@ export default async function EditClassSessionPage({ params }: EditClassSessionP
             requiresApproval: classSession.requiresApproval,
             isPublic: classSession.isPublic,
             enrolledCount: activeEnrollmentCount,
+            returnFields,
             series: series
               ? { id: series.id, title: series.title, following, isTerm: series.kind === "term" }
               : undefined,

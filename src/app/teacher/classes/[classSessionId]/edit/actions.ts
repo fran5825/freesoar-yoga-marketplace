@@ -9,6 +9,7 @@ import {
 } from "@/domain/class-session/service";
 
 import { appendWarning, applyCoverFromForm } from "../../_lib/apply-cover";
+import { readReturnContextFromForm, returnContextParams } from "../../_lib/return-context";
 import {
   buildCreateClassFieldErrors,
   type CreateClassFormState,
@@ -83,9 +84,14 @@ export async function editOwnClassSessionAction(
       ? `課程已更新，已通知 ${result.notifiedMemberCount} 位已報名的學員。`
       : "課程已更新。";
 
-  redirect(
-    `/teacher/classes/${classSessionId}?result=success&message=${encodeURIComponent(appendWarning(message, coverWarning))}`,
-  );
+  // teacher-my-calendar spec 2.4：帶回返回參數，詳情頁的「← 回我的課程」仍回到原本的列表或月曆。
+  const query = new URLSearchParams([
+    ["result", "success"],
+    ["message", appendWarning(message, coverWarning)],
+    ...returnContextParams(readReturnContextFromForm(formData)),
+  ]);
+
+  redirect(`/teacher/classes/${classSessionId}?${query.toString()}`);
 }
 
 async function editFollowingSessions(
