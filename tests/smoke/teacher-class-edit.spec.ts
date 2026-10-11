@@ -310,7 +310,11 @@ test.describe("teacher class edit (UI)", () => {
     await addAuthSessionCookie(context, teacher.sessionToken);
     await page.goto(`/teacher/classes/${classSession.id}`);
     await expect(page.getByText("課程內容建立後目前無法修改")).toHaveCount(0);
-    await page.getByRole("link", { name: "修改課程" }).click();
+    // teacher-series-rollup 操作列：手機寬度的其餘動作收在「更多…」裡。
+    if (testInfo.project.name.includes("mobile")) {
+      await page.getByRole("group", { name: "課程操作" }).getByText("更多…").click();
+    }
+    await page.getByRole("link", { name: "修改課程" }).filter({ visible: true }).click();
     await expect(page.getByRole("heading", { name: "修改課程" })).toBeVisible();
     await expect(page.locator("#title")).toHaveValue("原本的課名");
 
