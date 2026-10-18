@@ -15,13 +15,14 @@ import { DetailCover, TeacherByline } from "../../_components/ClassCover";
 import { ClassInfoSections } from "../../_components/ClassInfoSections";
 import { EnrollReveal, OptionalNotes } from "../../_components/EnrollReveal";
 import { EnrollRow, PageFeedback, readRowFeedback, type RowFeedback } from "../../_components/EnrollRow";
+import { StickyEnrollBar } from "../../_components/StickyEnrollBar";
 import { enrollTermAction, signInToEnrollTermAction } from "./actions";
 
 // teacher-class-scheduling 票 08：學員端的期班頁（規格 4.7、4.8）。
 // 票 14（2026-10-09 產品主人 Q3–Q13）：資訊卡只留期間、上課時間、地點、老師；「我要報名」在同一張卡內展開，
 // 報名結果也顯示在這張卡；每一堂清單預設收起；手機底部固定「我要報名」；沒填的說明卡不顯示。
 const buttonClass =
-  "inline-flex min-h-11 w-full items-center justify-center rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay sm:w-fit";
+  "inline-flex min-h-11 w-full items-center justify-center rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold sm:w-fit";
 const cardClass = "min-w-0 rounded-2xl border border-ink/15 bg-white p-5 sm:p-6";
 const dayOfWeekLabels = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
 
@@ -66,8 +67,8 @@ export default async function TermPage({
       publicMainClassName="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-5 py-8 sm:px-8"
       signedInClassName="flex flex-col gap-6"
     >
-      <div className={canStartEnroll ? "grid min-w-0 gap-6 pb-24 sm:pb-0" : "grid min-w-0 gap-6"}>
-        <Link className="w-fit py-2 text-sm text-clay underline" href={returnTo}>
+      <div className={canStartEnroll ? "group grid min-w-0 gap-6 pb-24 sm:pb-0" : "grid min-w-0 gap-6"}>
+        <Link className="inline-flex min-h-11 w-fit items-center text-sm text-gold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold" href={returnTo}>
           {classReturnLabel(returnTo)}
         </Link>
         <DetailCover url={term.coverUrl} />
@@ -79,7 +80,7 @@ export default async function TermPage({
           {term.serviceTypes.length + term.yogaStyles.length > 0 ? (
             <ul aria-label="課程風格與瑜伽類型" className="flex flex-wrap gap-2">
               {[...term.serviceTypes, ...term.yogaStyles].map((tag) => (
-                <li className="rounded-full border border-ink/15 px-3 py-0.5 text-xs text-ink-soft" key={tag}>
+                <li className="rounded-full bg-sand px-3 py-1 text-xs font-medium text-ink-soft" key={tag}>
                   {tag}
                 </li>
               ))}
@@ -92,7 +93,7 @@ export default async function TermPage({
             課程資訊與報名
           </h2>
           <TermFacts term={term} />
-          <div className="grid gap-4 border-t border-ink/10 pt-5">
+          <div className="grid gap-4 border-t border-ink/10 pt-5" data-sticky-enroll-target>
             <TermEnrollArea feedback={feedback} openForm={openForm} returnTo={returnTo} signedIn={Boolean(user)} term={term} />
           </div>
         </section>
@@ -111,12 +112,7 @@ export default async function TermPage({
         />
 
         {canStartEnroll ? (
-          <a
-            className="fixed inset-x-0 bottom-0 z-20 border-t border-pine/20 bg-cream px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-center text-sm font-medium text-pine underline focus-visible:outline-2 focus-visible:outline-pine sm:hidden"
-            href={`${termDetailHref(term.id, returnTo)}${returnTo === "/classes" ? "?" : "&"}enroll=1#enroll-term`}
-          >
-            我要報名
-          </a>
+          <StickyEnrollBar href={`${termDetailHref(term.id, returnTo)}${returnTo === "/classes" ? "?" : "&"}enroll=1#enroll-term`} label="我要報名" />
         ) : null}
       </div>
     </SiteShell>
@@ -127,7 +123,7 @@ export default async function TermPage({
 function TermUnavailable({ recurringClassSeriesId, returnTo, signedIn }: { recurringClassSeriesId: string; returnTo: string; signedIn: boolean }) {
   return (
     <div className="grid min-w-0 gap-6">
-      <Link className="w-fit py-2 text-sm text-clay underline" href={returnTo}>
+      <Link className="inline-flex min-h-11 w-fit items-center text-sm text-gold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold" href={returnTo}>
         {classReturnLabel(returnTo)}
       </Link>
       <section className="grid gap-4 rounded-2xl border border-pine/25 bg-white p-5 sm:p-6">
@@ -244,8 +240,8 @@ function TermEnrollArea({
       id="action-feedback"
       className={
         feedback.success
-          ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
-          : "rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
+          ? "rounded-xl border border-pine/15 bg-pine-tint px-4 py-3 text-sm leading-6 text-pine-deep"
+          : "rounded-xl border border-gold/25 bg-gold-tint px-4 py-3 text-sm leading-6 text-gold-deep"
       }
     >
       {feedback.message}

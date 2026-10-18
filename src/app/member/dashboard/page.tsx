@@ -52,7 +52,7 @@ export default async function MemberDashboardPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-ink">即將上課</h2>
           <Link
-            className="text-sm font-medium text-clay hover:underline"
+            className="text-sm font-medium text-gold hover:underline"
             href="/member/enrollments"
           >
             查看全部報名
@@ -111,7 +111,7 @@ export default async function MemberDashboardPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-ink">近期通知</h2>
           <Link
-            className="text-sm font-medium text-clay hover:underline"
+            className="text-sm font-medium text-gold hover:underline"
             href="/member/notifications"
           >
             查看全部通知

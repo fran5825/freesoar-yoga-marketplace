@@ -5,7 +5,7 @@ export const organizerInputClassName =
 
 // 聯絡資料還沒填時，欄位框用陶土色標出來（票 05：缺項標紅）。
 export const organizerInputMissingClassName =
-  "mt-2 w-full rounded-xl border border-clay bg-clay-tint px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15";
+  "mt-2 w-full rounded-xl border border-gold bg-gold-tint px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15";
 
 export function OrganizerField({
   label,

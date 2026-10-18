@@ -1,0 +1,436 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-18T08:29:50.281Z",
+  "title": "Design System: Free Soar Yoga 飛索",
+  "extensions": {
+    "colorMeta": {
+      "cream": {
+        "role": "neutral",
+        "displayName": "奶油 Cream",
+        "canonical": "#f7f4ee",
+        "tonalRamp": [
+          "#555753",
+          "#838480",
+          "#b1b1ac",
+          "#e0ded8",
+          "#f9f7f2",
+          "#fbfaf7",
+          "#fdfcfb",
+          "#fefefd"
+        ]
+      },
+      "sand": {
+        "role": "neutral",
+        "displayName": "沙色 Sand",
+        "canonical": "#ebe2d7",
+        "tonalRamp": [
+          "#51524c",
+          "#7d7b74",
+          "#a9a49c",
+          "#d5cdc3",
+          "#f0e9e1",
+          "#f5f1eb",
+          "#faf8f5",
+          "#fdfcfb"
+        ]
+      },
+      "sage": {
+        "role": "neutral",
+        "displayName": "鼠尾草 Sage",
+        "canonical": "#dfe8dc",
+        "tonalRamp": [
+          "#4d544e",
+          "#777e77",
+          "#a1a89f",
+          "#cad3c8",
+          "#e7eee5",
+          "#eff4ee",
+          "#f7f9f6",
+          "#fcfdfc"
+        ]
+      },
+      "sky-mist": {
+        "role": "tertiary",
+        "displayName": "晨空藍 Sky Mist",
+        "canonical": "#e4ecef",
+        "tonalRamp": [
+          "#4f5554",
+          "#7a8080",
+          "#a4abac",
+          "#cfd6d9",
+          "#ebf1f3",
+          "#f2f6f7",
+          "#f8fafb",
+          "#fcfdfd"
+        ]
+      },
+      "sky-ink": {
+        "role": "tertiary",
+        "displayName": "晨空深藍 Sky Ink",
+        "canonical": "#2c4552",
+        "tonalRamp": [
+          "#182325",
+          "#1e2d32",
+          "#23363f",
+          "#29404c",
+          "#61747d",
+          "#96a2a9",
+          "#cad1d4",
+          "#eaecee"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "墨綠 Ink",
+        "canonical": "#29382f",
+        "tonalRamp": [
+          "#171f1a",
+          "#1c2620",
+          "#212d26",
+          "#26342c",
+          "#5f6a63",
+          "#949c97",
+          "#cacdcb",
+          "#eaebea"
+        ]
+      },
+      "ink-soft": {
+        "role": "neutral",
+        "displayName": "淺墨綠 Ink Soft",
+        "canonical": "#56645b",
+        "tonalRamp": [
+          "#242c27",
+          "#333c36",
+          "#414c45",
+          "#4f5c54",
+          "#808b84",
+          "#abb2ad",
+          "#d5d8d6",
+          "#eef0ef"
+        ]
+      },
+      "ink-faint": {
+        "role": "neutral",
+        "displayName": "淡墨綠 Ink Faint",
+        "canonical": "#686e66",
+        "tonalRamp": [
+          "#2a2f2b",
+          "#3c413c",
+          "#4d534d",
+          "#5f655e",
+          "#8e928c",
+          "#b4b7b3",
+          "#d9dbd9",
+          "#f0f1f0"
+        ]
+      },
+      "pine": {
+        "role": "primary",
+        "displayName": "松林綠 Pine",
+        "canonical": "#345343",
+        "tonalRamp": [
+          "#1a2720",
+          "#22342a",
+          "#294034",
+          "#304d3e",
+          "#677e72",
+          "#9aa9a1",
+          "#ccd4d0",
+          "#ebeeec"
+        ]
+      },
+      "pine-deep": {
+        "role": "primary",
+        "displayName": "深松綠 Pine Deep",
+        "canonical": "#293f35",
+        "tonalRamp": [
+          "#17211c",
+          "#1c2a23",
+          "#21322a",
+          "#263b31",
+          "#5f6f68",
+          "#949f9a",
+          "#cacfcd",
+          "#eaeceb"
+        ]
+      },
+      "pine-tint": {
+        "role": "primary",
+        "displayName": "晨霧綠 Pine Tint",
+        "canonical": "#eef2ee",
+        "tonalRamp": [
+          "#525753",
+          "#7f8380",
+          "#abafac",
+          "#d8dcd8",
+          "#f2f5f2",
+          "#f7f9f7",
+          "#fbfcfb",
+          "#fdfefd"
+        ]
+      },
+      "gold": {
+        "role": "secondary",
+        "displayName": "晨光金 Dawn Gold",
+        "canonical": "#7d5a2a",
+        "tonalRamp": [
+          "#302919",
+          "#46371e",
+          "#5c4523",
+          "#725328",
+          "#9e835f",
+          "#bead95",
+          "#dfd6ca",
+          "#f2efea"
+        ]
+      },
+      "gold-deep": {
+        "role": "secondary",
+        "displayName": "深晨光金 Dawn Gold Deep",
+        "canonical": "#5e4320",
+        "tonalRamp": [
+          "#272216",
+          "#372c19",
+          "#46351c",
+          "#563e1f",
+          "#867258",
+          "#afa190",
+          "#d7d0c7",
+          "#efece9"
+        ]
+      },
+      "gold-tint": {
+        "role": "secondary",
+        "displayName": "晨光淡金 Dawn Gold Tint",
+        "canonical": "#f4ecdc",
+        "tonalRamp": [
+          "#54554e",
+          "#828077",
+          "#afab9f",
+          "#ddd6c8",
+          "#f7f1e5",
+          "#faf6ee",
+          "#fcfaf6",
+          "#fefdfc"
+        ]
+      },
+      "gold-glow": {
+        "role": "secondary",
+        "displayName": "亮金 Gold Glow（僅裝飾）",
+        "canonical": "#c8a35a",
+        "tonalRamp": [
+          "#473f27",
+          "#6c5c36",
+          "#917844",
+          "#b69553",
+          "#d6ba83",
+          "#e4d1ad",
+          "#f1e8d6",
+          "#faf6ef"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "只用在首頁主標。"
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "各頁頁面主標與首頁段落大標。"
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "卡片與區塊標題，全站最常見的標題層級。"
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "全站正文。"
+      },
+      "body-lead": {
+        "displayName": "Body Lead",
+        "purpose": "首頁主標下方引言。"
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "中文小標（eyebrow），晨光金、字距 0.2em。"
+      }
+    },
+    "shadows": [
+      {
+        "name": "menu-soft",
+        "value": "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+        "purpose": "只用在浮在內容上方的下拉選單。"
+      }
+    ],
+    "motion": [
+      {
+        "name": "state-transition",
+        "value": "150ms cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "hover 與 focus 的顏色、框線過渡（Tailwind transition 預設）。"
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "實心松綠膠囊按鈕，每個畫面最多一個。",
+      "html": "<button class=\"ds-btn-primary\">成為合作老師</button>",
+      "css": ".ds-btn-primary{background:#345343;color:#fff;border:none;border-radius:9999px;padding:12px 24px;min-height:44px;font-weight:500;font-size:16px;transition:background 150ms}.ds-btn-primary:hover{background:#293f35}.ds-btn-primary:focus-visible{outline:2px solid #7d5a2a;outline-offset:2px;}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "外框膠囊按鈕，次要行動。",
+      "html": "<button class=\"ds-btn-secondary\">搜尋課程</button>",
+      "css": ".ds-btn-secondary{background:rgb(255 255 255 / .5);color:#29382f;border:1px solid rgb(52 83 67 / .3);border-radius:9999px;padding:12px 24px;min-height:44px;font-weight:500;font-size:16px;transition:border-color 150ms}.ds-btn-secondary:hover{border-color:#345343}.ds-btn-secondary:focus-visible{outline:2px solid #7d5a2a;outline-offset:2px;}"
+    },
+    {
+      "name": "Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "資訊標籤，例如瑜伽類型。",
+      "html": "<span class=\"ds-chip\">哈達瑜伽</span>",
+      "css": ".ds-chip{display:inline-block;background:#eef2ee;color:#293f35;border-radius:9999px;padding:4px 12px;font-size:12px;font-weight:500}"
+    },
+    {
+      "name": "Content Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "白色卡片加細框，浮在奶油色頁面上。",
+      "html": "<article class=\"ds-card\"><h3 class=\"ds-card-title\">週三晚上 · 竹北社區瑜伽</h3><p class=\"ds-card-body\">適合初學者，一起回到身體，慢慢找回安住。</p></article>",
+      "css": ".ds-card{background:#fff;border:1px solid rgb(41 56 47 / .12);border-radius:16px;padding:20px;color:#29382f}.ds-card-title{margin:0;font-size:18px;font-weight:500}.ds-card-body{margin:8px 0 0;font-size:14px;line-height:24px;color:#56645b}"
+    },
+    {
+      "name": "Sky Band",
+      "kind": "custom",
+      "refersTo": "sky-band",
+      "description": "晨空藍大面積安靜區塊，只用在大片留白處。",
+      "html": "<section class=\"ds-sky\"><p class=\"ds-sky-eyebrow\">在展翅之前</p><p class=\"ds-sky-text\">先安靜下來，找到適合你們的練習。</p></section>",
+      "css": ".ds-sky{background:#e4ecef;color:#2c4552;border-radius:24px;padding:32px}.ds-sky-eyebrow{margin:0;font-size:14px;letter-spacing:.2em;font-weight:500}.ds-sky-text{margin:12px 0 0;font-size:20px;font-weight:500;line-height:1.5}"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "白底細框輸入框，12px 圓角。",
+      "html": "<input class=\"ds-input\" placeholder=\"例如：竹北某公司瑜伽社\" />",
+      "css": ".ds-input{background:#fff;color:#29382f;border:1px solid rgb(41 56 47 / .2);border-radius:12px;padding:8px 12px;min-height:44px;font-size:16px}.ds-input::placeholder{color:#56645b}.ds-input:focus-visible{outline:2px solid #7d5a2a;outline-offset:2px;}"
+    },
+    {
+      "name": "Public Navigation",
+      "kind": "nav",
+      "refersTo": "nav",
+      "description": "公開 header 導覽，連結 hover 變晨光金。",
+      "html": "<nav class=\"ds-nav\"><a href=\"#\">發起團課</a><a href=\"#\">搜尋課程</a><a href=\"#\">老師合作</a><a href=\"#\">關於飛索</a><a class=\"ds-nav-cta\" href=\"#\">登入／註冊</a></nav>",
+      "css": ".ds-nav{display:flex;flex-wrap:wrap;align-items:center;gap:24px;font-size:14px}.ds-nav a{color:#56645b;text-decoration:none;padding:8px 4px;transition:color 150ms}.ds-nav a:hover{color:#7d5a2a}.ds-nav a:focus-visible{outline:2px solid #7d5a2a;outline-offset:2px;}.ds-nav .ds-nav-cta{background:#345343;color:#fff;border-radius:9999px;padding:8px 20px;font-weight:500}.ds-nav .ds-nav-cta:hover{background:#293f35;color:#fff}"
+    },
+    {
+      "name": "Warm Notice",
+      "kind": "custom",
+      "refersTo": "notice-warm",
+      "description": "晨光淡金提醒框。",
+      "html": "<p class=\"ds-notice-warm\">報名截止前都可以取消，不收任何費用。</p>",
+      "css": ".ds-notice-warm{background:#f4ecdc;color:#5e4320;border:1px solid rgb(125 90 42 / .25);border-radius:12px;padding:12px 16px;font-size:14px;line-height:24px;margin:0}"
+    }
+  ],
+  "narrative": {
+    "northStar": "展翅前的靜 The Stillness Before Flight",
+    "overview": "飛索的畫面是起飛前那一口安靜的呼吸：先安住，才有力氣展翅。大部分版面是安靜的，奶油色的底、充足的留白、柔和的圓角，讓老師、團主和學員一進來就放鬆，願意慢慢讀。安靜之中要有一點「往上」的感覺：晨空藍像清晨的天空，只在大面積留白處出現；晨光金像剛升起的光，只用在小小的重點上。\n\n「柔軟而篤定」是這個系統的手感：形狀柔軟（膠囊按鈕、大圓角卡片、有機形狀），但該做的下一步一定清楚、紮實，不讓人猶豫。溫柔不等於模糊。\n\n這是一個以文字和留白為主的系統。目前沒有任何真實照片或插畫素材（見 `PRODUCT.md`），畫面不可以用示意圖假裝成真實課程現場。",
+    "keyCharacteristics": [
+      "奶油色頁面底，白色卡片靠色差與細框浮起，幾乎沒有陰影。",
+      "松綠是唯一的主行動色，每個畫面最多一個實心松綠按鈕。",
+      "晨空藍只做大面積的安靜底色，晨光金只做小面積重點。",
+      "膠囊按鈕、16px 圓角卡片、有機形狀的品牌圖形。",
+      "手機優先，觸控目標至少 44px。"
+    ],
+    "rules": [
+      {
+        "name": "The One Pine Rule",
+        "body": "每個畫面最多一個實心松綠按鈕。其他行動用外框按鈕或文字連結。",
+        "section": "colors"
+      },
+      {
+        "name": "The Sky Is Space Rule",
+        "body": "晨空藍只出現在大面積的留白區塊，代表「空間」與「天空」。它不是強調色，不用在按鈕、icon、文字或小卡片上。",
+        "section": "colors"
+      },
+      {
+        "name": "The Dawn Is Small Rule",
+        "body": "晨光金只做小面積重點：小標、連結 hover、focus 外框、裝飾線。不要整塊鋪滿金色。",
+        "section": "colors"
+      },
+      {
+        "name": "The No Hardcoded Color Rule",
+        "body": "顏色一律用色票 token。目前公開頁有 10 種寫死的色碼，分散在首頁、`/about`、`/faq`、footer 與老師申請表單（例如 `#5d6a61`、`#6d7d70`、`#cfdbd1`），要在階段 D 收回 token 或補上正式 token。",
+        "section": "colors"
+      },
+      {
+        "name": "The No Italic Emphasis Rule",
+        "body": "標題裡不用斜體強調某幾個字（`AGENTS.md` 避免清單）。中文本來就沒有真正的斜體，強行傾斜只會看起來歪掉。",
+        "section": "typography"
+      },
+      {
+        "name": "The No Mono Label Rule",
+        "body": "不用等寬字體做小標籤（`AGENTS.md` 避免清單）。目前載入了 `Geist_Mono` 但公開頁沒有使用。",
+        "section": "typography"
+      },
+      {
+        "name": "The Chinese First Rule",
+        "body": "介面以繁體中文為主，字級、行高、斷行都要先以中文的可讀性來判斷。",
+        "section": "typography"
+      },
+      {
+        "name": "The Breath Rule",
+        "body": "有疑慮時，多留白、少放東西。寧可讓一個段落只說一件事，也不要把三件事塞進同一張卡片。",
+        "section": "layout"
+      },
+      {
+        "name": "The Flat By Default Rule",
+        "body": "卡片、按鈕在靜止時都不加陰影。只有浮在內容上的東西（下拉選單）才可以用最淡的陰影。",
+        "section": "elevation"
+      },
+      {
+        "name": "The Light Only Rule",
+        "body": "V1 只設計淺色畫面。原本 `globals.css` 裡 Next.js 範本留下的 dark mode 區塊已在 2026-10-18 階段 D0 移除，深色模式的裝置也會看到淺色畫面。",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** 用奶油色（cream）當頁面底色，白色卡片加細框浮在上面。",
+      "**Do** 每個畫面只放一個實心松綠主要按鈕，其餘用外框按鈕或文字連結。",
+      "**Do** 把晨空藍保留給大面積、安靜的區塊；晨空藍底上的字一律用晨空深藍。",
+      "**Do** 小標用晨光金、字距 0.2em。",
+      "**Do** 所有可點的東西至少 44px 高，並保留清楚的 focus 外框。",
+      "**Do** 沒有真實素材時，用文字、留白與品牌圖形撐起畫面。"
+    ],
+    "donts": [
+      "**Don't** 在標題裡用斜體強調某幾個字。",
+      "**Don't** 用 01／02／03 編號當區塊標籤。",
+      "**Don't** 用等寬字體做小標籤。",
+      "**Don't** 把奶油色背景或膠囊按鈕當成「常見套路」拿掉，它們是刻意的品牌設計。",
+      "**Don't** 用亮金（gold-glow）當文字顏色，對比度不夠；淡墨綠（ink-faint）不要放在沙色底上。",
+      "**Don't** 寫死色碼，一律用色票 token。",
+      "**Don't** 用漸層文字、發光陰影、炫技動畫；`bolder` 與 `overdrive` 的方向和飛索相反。",
+      "**Don't** 用示意照片、假的推薦語、假的學員人數或評分，假裝成真實內容。",
+      "**Don't** 用倒數計時、限量、搶課這類製造焦慮的視覺元素。"
+    ]
+  }
+}

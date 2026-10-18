@@ -163,7 +163,7 @@ export function ProposalManageActions({
         ) : null}
         {isWithdrawing ? null : (
           <button
-            className="rounded-full border border-clay/40 bg-white px-5 py-2 text-sm font-medium text-clay-deep"
+            className="rounded-full border border-gold/40 bg-white px-5 py-2 text-sm font-medium text-gold-deep"
             onClick={() => setIsWithdrawing(true)}
             type="button"
           >
@@ -183,7 +183,7 @@ export function ProposalManageActions({
       ) : null}
 
       {isWithdrawing ? (
-        <div className="grid gap-3 rounded-xl border border-clay/25 bg-white p-4 text-sm">
+        <div className="grid gap-3 rounded-xl border border-gold/25 bg-white p-4 text-sm">
           <p className="font-medium text-ink">確定要撤回這份邀請？</p>
           <p className="text-ink-soft">
             {status === "confirmed"
@@ -204,7 +204,7 @@ export function ProposalManageActions({
           />
           <div className="flex flex-col gap-2 sm:flex-row">
             <button
-              className="rounded-full bg-clay-deep px-5 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-ink/15"
+              className="rounded-full bg-gold-deep px-5 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-ink/15"
               disabled={isBusy}
               onClick={handleWithdraw}
               type="button"

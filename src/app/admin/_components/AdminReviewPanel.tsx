@@ -79,7 +79,7 @@ export function AdminReviewPanel({
         <input name={idField} type="hidden" value={id} />
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <button
-            className="w-full rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+            className="w-full rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             disabled={busy}
             type="submit"
           >
@@ -89,7 +89,7 @@ export function AdminReviewPanel({
             <button
               aria-controls="reject-form"
               aria-expanded={false}
-              className="w-full rounded-full border border-rose-300 px-5 py-2 text-sm font-medium text-rose-800 transition hover:border-rose-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+              className="w-full rounded-full border border-rose-300 px-5 py-2 text-sm font-medium text-rose-800 transition hover:border-rose-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               disabled={busy}
               onClick={() => setIsRejectOpen(true)}
               type="button"
@@ -125,14 +125,14 @@ export function AdminReviewPanel({
           <AdminActionError hidden={Boolean(stale)} nextStep="已填的原因仍保留，修正後可以再送出一次。" state={rejectState} />
           <div className="flex flex-col gap-3 sm:flex-row">
             <button
-              className="w-full rounded-full bg-rose-700 px-5 py-2 text-sm font-medium text-white transition hover:bg-rose-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+              className="w-full rounded-full bg-rose-700 px-5 py-2 text-sm font-medium text-white transition hover:bg-rose-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               disabled={busy}
               type="submit"
             >
               {rejectPending ? labels.rejectPending : "送出退回"}
             </button>
             <button
-              className="w-full rounded-full border border-ink/30 px-5 py-2 text-sm font-medium text-ink transition hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+              className="w-full rounded-full border border-ink/30 px-5 py-2 text-sm font-medium text-ink transition hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               disabled={busy}
               onClick={() => setIsRejectOpen(false)}
               type="button"

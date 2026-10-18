@@ -60,7 +60,7 @@ export function OrganizerRequestExplainer({
       </section>
 
       <section>
-        <div className="ml-6 max-w-2xl border-l-4 border-clay/50 pl-4">
+        <div className="max-w-2xl">
           <p className="text-base leading-7 text-ink-soft">
             飛索協助團體把上課需求整理清楚，也重視清楚溝通，而不是低價競標：
           </p>
@@ -69,7 +69,7 @@ export function OrganizerRequestExplainer({
               <li className="flex items-start gap-3" key={point}>
                 <span
                   aria-hidden="true"
-                  className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-clay"
+                  className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-gold"
                 />
                 <span className="text-sm leading-6 text-ink-soft">{point}</span>
               </li>
@@ -78,7 +78,12 @@ export function OrganizerRequestExplainer({
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3">
+      {/* 2026-10-18 impeccable 改版（診斷報告 O2）：步驟卡前補上 h2，標題層級不跳號。 */}
+      <section aria-labelledby="organizer-steps-heading" className="grid gap-4">
+        <h2 className="text-2xl font-semibold tracking-tight text-ink" id="organizer-steps-heading">
+          開始的三個步驟
+        </h2>
+        <div className="grid gap-4 md:grid-cols-3">
         {howItWorksSteps.map((step, index) => (
           <article
             className="rounded-2xl border border-ink/12 bg-white p-5"
@@ -95,13 +100,13 @@ export function OrganizerRequestExplainer({
             </p>
           </article>
         ))}
+        </div>
       </section>
 
       <section className="grid gap-6 rounded-2xl border border-ink/12 p-5 md:grid-cols-[0.8fr_1.2fr] md:p-6">
         <div>
-          <p className="text-sm font-medium text-clay">適合對象</p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-ink">
-            這些團體最常與我們合作
+          <h2 className="text-2xl font-semibold tracking-tight text-ink">
+            適合這些團體
           </h2>
         </div>
         <ul className="space-y-3">
@@ -110,9 +115,7 @@ export function OrganizerRequestExplainer({
               className="flex gap-3 text-sm leading-6 text-ink-soft"
               key={example}
             >
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-ink/20 text-xs font-medium text-ink-soft">
-                •
-              </span>
+              <span aria-hidden="true" className="mt-2.5 size-1.5 shrink-0 rounded-full bg-gold" />
               <span>{example}</span>
             </li>
           ))}

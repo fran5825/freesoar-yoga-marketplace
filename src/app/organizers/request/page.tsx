@@ -56,7 +56,7 @@ export default async function OrganizersRequestPage({ searchParams }: Organizers
           <OrganizerEntryCards viewer="organizer" />
           <p className="text-sm">
             <Link
-              className="font-medium text-clay underline-offset-4 hover:underline"
+              className="font-medium text-gold underline-offset-4 hover:underline"
               href="/organizer/dashboard"
             >
               回到我的總覽

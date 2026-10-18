@@ -33,7 +33,7 @@ export function SeriesRollupCardView<T extends RollupSession>({
       id={`series-${card.seriesId}`}
     >
       <Link
-        className="grid gap-3 p-5 transition hover:bg-pine-tint/40 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-clay"
+        className="grid gap-3 p-5 transition hover:bg-pine-tint/40 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold"
         href={href}
       >
         <article className="grid gap-3">
@@ -57,7 +57,7 @@ export function SeriesRollupCardView<T extends RollupSession>({
               已報名 {card.confirmedStudents} 位學員
               {card.pendingStudents > 0 ? `・待確認 ${card.pendingStudents} 位` : ""}
             </span>
-            <span className={urgent ? "font-medium text-clay-deep" : "text-ink-soft"}>{urgent ?? "查看每一堂"} →</span>
+            <span className={urgent ? "font-medium text-gold-deep" : "text-ink-soft"}>{urgent ?? "查看每一堂"} →</span>
           </div>
         </article>
       </Link>

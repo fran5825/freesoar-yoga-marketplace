@@ -54,7 +54,7 @@ const modeOptions: { value: Mode; label: string }[] = [
 ];
 
 const inputClassName =
-  "mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15 aria-[invalid=true]:border-clay";
+  "mt-2 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15 aria-[invalid=true]:border-gold";
 const labelClassName = "text-sm font-medium text-ink";
 const submitButtonClassName =
   "min-h-11 w-full rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-pine-deep disabled:cursor-wait disabled:opacity-70 sm:w-auto";
@@ -631,7 +631,7 @@ export function ClassSessionCreateForm({
 
   const formErrorBanner = bannerState ? (
     <div
-      className="rounded-xl border border-clay/40 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep"
+      className="rounded-xl border border-gold/40 bg-gold-tint px-4 py-3 text-sm leading-6 text-gold-deep"
       id="create-form-error"
       role="alert"
       tabIndex={-1}
@@ -1040,7 +1040,7 @@ export function ClassSessionCreateForm({
                 第一堂課的日期，必須是上面選的星期幾；之後每週同一天生成。不填的話，從最近的下一個星期幾開始；起始日期需晚於今天。
               </p>
               {isStartDateWeekdayMismatch && startDateWeekday !== null ? (
-                <p className="mt-2 text-sm leading-6 text-clay" role="alert">
+                <p className="mt-2 text-sm leading-6 text-gold" role="alert">
                   起始日期 {modeFields.startDate} 是{dayOfWeekLabel(startDateWeekday)}，跟上面選的
                   {dayOfWeekLabel(Number(modeFields.dayOfWeek))}不同。請改選一個
                   {dayOfWeekLabel(Number(modeFields.dayOfWeek))}，或把星期幾改成
@@ -1217,7 +1217,7 @@ function FieldError({ id, messages }: { id: string; messages?: string[] }) {
   }
 
   return (
-    <p className="mt-2 text-sm leading-6 text-clay" id={id}>
+    <p className="mt-2 text-sm leading-6 text-gold" id={id}>
       {messages.join(" ")}
     </p>
   );
@@ -1324,7 +1324,7 @@ function ServiceTypesField({
         <input key={value} name="serviceTypes" type="hidden" value={value} />
       ))}
       {showError ? (
-        <p className="mt-2 text-sm leading-6 text-clay" role="alert">
+        <p className="mt-2 text-sm leading-6 text-gold" role="alert">
           請至少選擇一種課程風格。
         </p>
       ) : null}
@@ -1371,7 +1371,7 @@ function FixedDatesField({
               <span>{formatDateWithWeekday(date)}</span>
               <button
                 aria-label={`移除 ${date}`}
-                className="text-pine hover:text-clay"
+                className="text-pine hover:text-gold"
                 onClick={() => onRemove(date)}
                 type="button"
               >
@@ -1388,7 +1388,7 @@ function FixedDatesField({
         每一個日期都會用上面同一組開始／結束時間生成一場課程。
       </p>
       {showError ? (
-        <p className="mt-2 text-sm leading-6 text-clay" role="alert">
+        <p className="mt-2 text-sm leading-6 text-gold" role="alert">
           請至少選一個上課日期。
         </p>
       ) : null}
@@ -1456,7 +1456,7 @@ function YogaStylesField({
         value={shared.yogaStylesOther}
       />
       {showError ? (
-        <p className="mt-2 text-sm leading-6 text-clay" role="alert">
+        <p className="mt-2 text-sm leading-6 text-gold" role="alert">
           請至少選擇一種瑜伽類型，或在「其他」填寫。
         </p>
       ) : null}
@@ -1571,7 +1571,7 @@ function TimeRangeFields({
         時間為 24 小時制，例如 12:00 是中午、13:00 是下午一點。
       </p>
       {isEndNotAfterStart ? (
-        <p className="text-sm leading-6 text-clay" role="alert">
+        <p className="text-sm leading-6 text-gold" role="alert">
           結束時間要晚於開始時間。
         </p>
       ) : null}

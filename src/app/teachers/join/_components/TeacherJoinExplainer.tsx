@@ -12,10 +12,21 @@ import {
 // 「/sign-in」連結，要等 Slice 3 才會補上 callbackUrl。
 const signInHref = `/sign-in?callbackUrl=${encodeURIComponent("/teachers/join")}`;
 
-const collaborationPrinciples = [
-  "尊重老師的時間安排與教學界線。",
-  "讓團主的需求被清楚整理，老師能被正確理解，回應真正適合自己的團課機會。",
-  "透過審核與清楚流程，守住課程品質與平台信任。",
+// 2026-10-18 impeccable 改版（診斷報告 J1／Q8）：訪客版首屏先說加入的好處，只寫產品真實有的能力，
+// 不放人數、推薦語或成效承諾；審核流程、欄位預覽與常見問題往下移。
+const joinBenefits = [
+  {
+    title: "被合適的團體看見",
+    description: "團主的需求經過平台整理與審核才公開，你會看到清楚的人數、時段與地點，再決定要不要回應。",
+  },
+  {
+    title: "開設自己的固定課",
+    description: "除了回應團主需求，也可以自己開單堂、持續開課或期班，讓學員直接報名。",
+  },
+  {
+    title: "先從大新竹生活圈開始",
+    description: "目前以新竹縣市與竹北一帶的公司、社區與教室為主。",
+  },
 ];
 
 const reviewProcessSteps = [
@@ -66,37 +77,31 @@ const optionalFieldPreviewLabels = applicationSections
 export function TeacherJoinExplainer() {
   return (
     <>
-      <section>
-        <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
-          一起建立清楚、安心的瑜伽團課合作
+      <section aria-labelledby="teacher-join-heading">
+        <h1
+          className="max-w-3xl break-keep text-balance text-4xl font-semibold tracking-tight text-ink wrap-break-word sm:text-5xl"
+          id="teacher-join-heading"
+        >
+          把你的教學，帶給真正需要的團體
         </h1>
-        <div className="mt-6 ml-6 max-w-2xl border-l-4 border-clay/50 pl-4">
-          <p className="text-base leading-7 text-ink-soft">
-            飛索重視老師的專業，也提供老師管理日常課程的工具：
-          </p>
-          <ul className="mt-4 space-y-3">
-            {collaborationPrinciples.map((principle) => (
-              <li className="flex items-start gap-3" key={principle}>
-                <span
-                  aria-hidden="true"
-                  className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-clay"
-                />
-                <span className="text-sm leading-6 text-ink-soft">
-                  {principle}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className="mt-7 ml-6">
-          <a
-            className="inline-flex rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white"
-            href={signInHref}
-          >
-            登入／建立帳號並開始申請
-          </a>
-        </div>
-        <p className="mt-4 ml-6 text-sm leading-6 text-ink-faint">
+        <p className="mt-6 max-w-2xl text-lg leading-8 text-ink-soft">
+          飛索整理大新竹生活圈公司社團、社區與小團體的上課需求，讓你依自己的時間、風格與界線選擇合作。
+        </p>
+        <ul className="mt-10 grid gap-6 md:grid-cols-3 md:gap-8">
+          {joinBenefits.map((benefit) => (
+            <li className="border-t border-ink/15 pt-5" key={benefit.title}>
+              <h2 className="text-lg font-medium text-ink">{benefit.title}</h2>
+              <p className="mt-2 text-sm leading-6 text-ink-soft">{benefit.description}</p>
+            </li>
+          ))}
+        </ul>
+        <a
+          className="mt-10 inline-flex min-h-12 items-center rounded-full bg-pine px-7 text-center font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+          href={signInHref}
+        >
+          登入／建立帳號並開始申請
+        </a>
+        <p className="mt-4 max-w-2xl text-sm leading-6 text-ink-faint">
           登入或建立帳號後，就會看到完整的申請表單；下方可以先了解審核流程與需要準備的資料。
         </p>
       </section>
@@ -136,9 +141,8 @@ export function TeacherJoinExplainer() {
         className="grid gap-6 border-y border-pine/15 bg-pine-tint/60 py-6"
       >
         <div>
-          <p className="text-sm font-medium text-pine">申請前可以先準備</p>
           <h2
-            className="mt-2 text-2xl font-semibold tracking-tight text-ink"
+            className="text-2xl font-semibold tracking-tight text-ink"
             id="application-preview-title"
           >
             申請前可以先準備這些
@@ -153,10 +157,8 @@ export function TeacherJoinExplainer() {
             <h3 className="text-sm font-medium text-ink">送審必填</h3>
             <ul className="mt-3 space-y-2">
               {requiredFieldPreviewLabels.map((label) => (
-                <li
-                  className="rounded-full bg-sage px-3 py-1 text-sm text-pine"
-                  key={label}
-                >
+                <li className="flex items-start gap-3 text-sm leading-6 text-ink" key={label}>
+                  <span aria-hidden="true" className="mt-2 size-1.5 shrink-0 rounded-full bg-pine" />
                   {label}
                 </li>
               ))}
@@ -166,10 +168,8 @@ export function TeacherJoinExplainer() {
             <h3 className="text-sm font-medium text-ink">建議，可留空</h3>
             <ul className="mt-3 space-y-2">
               {optionalFieldPreviewLabels.map((label) => (
-                <li
-                  className="rounded-full bg-sand px-3 py-1 text-sm text-clay"
-                  key={label}
-                >
+                <li className="flex items-start gap-3 text-sm leading-6 text-ink-soft" key={label}>
+                  <span aria-hidden="true" className="mt-2 size-1.5 shrink-0 rounded-full bg-gold-glow" />
                   {label}
                 </li>
               ))}
@@ -180,9 +180,8 @@ export function TeacherJoinExplainer() {
 
       <section aria-labelledby="faq-title" className="grid gap-6">
         <div>
-          <p className="text-sm font-medium text-clay">FAQ</p>
           <h2
-            className="mt-2 text-2xl font-semibold tracking-tight text-ink"
+            className="text-2xl font-semibold tracking-tight text-ink"
             id="faq-title"
           >
             常見問題

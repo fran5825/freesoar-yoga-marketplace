@@ -20,21 +20,21 @@ const dotClasses: Record<CalendarEntryTone, string> = {
   active: "bg-pine",
   draft: "border border-dashed border-ink-faint bg-white",
   cancelled: "bg-ink/25",
-  proposal: "bg-clay",
+  proposal: "bg-gold",
 };
 
 const cellEntryClasses: Record<CalendarEntryTone, string> = {
   active: "bg-white text-ink border border-pine/30",
   draft: "border border-dashed border-ink/30 bg-white/70 text-ink-faint",
   cancelled: "bg-white/60 text-ink-faint line-through",
-  proposal: "bg-clay-tint text-clay-deep border border-clay/30",
+  proposal: "bg-gold-tint text-gold-deep border border-gold/30",
 };
 
 const detailEntryClasses: Record<CalendarEntryTone, string> = {
   active: "border border-ink/15 bg-white",
   draft: "border border-dashed border-ink/30 bg-white/70 text-ink-faint",
   cancelled: "border border-ink/10 bg-white/60 text-ink-faint",
-  proposal: "border border-clay/30 bg-clay-tint",
+  proposal: "border border-gold/30 bg-gold-tint",
 };
 
 const legend: { tone: CalendarEntryTone; label: string }[] = [
@@ -85,7 +85,7 @@ export function TeacherMonthCalendar({ view }: { view: TeacherCalendarView }) {
           <h2 className="text-lg font-medium text-ink">{view.monthLabel}</h2>
           {view.isCurrentMonth ? null : (
             <Link
-              className="inline-flex min-h-11 items-center text-sm font-medium text-clay hover:underline"
+              className="inline-flex min-h-11 items-center text-sm font-medium text-gold hover:underline"
               href={teacherCalendarHref(view.today.slice(0, 7), view.today)}
             >
               回到本月
@@ -168,7 +168,7 @@ export function TeacherMonthCalendar({ view }: { view: TeacherCalendarView }) {
                     {hidden > 0 ? (
                       <li>
                         <button
-                          className="text-xs font-medium text-clay hover:underline"
+                          className="text-xs font-medium text-gold hover:underline"
                           onClick={() => selectDay(day)}
                           type="button"
                         >
@@ -218,7 +218,7 @@ export function TeacherMonthCalendar({ view }: { view: TeacherCalendarView }) {
                     </span>
                     <span
                       className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        entry.tone === "proposal" ? "bg-white text-clay-deep" : "bg-sand text-ink-soft"
+                        entry.tone === "proposal" ? "bg-white text-gold-deep" : "bg-sand text-ink-soft"
                       }`}
                     >
                       {entry.badge}

@@ -134,7 +134,7 @@ export default async function TeacherDashboardPage() {
             <h2 className="text-lg font-medium text-ink" id="todo-title">
               待你處理
             </h2>
-            <Link className="text-sm font-medium text-clay hover:underline" href="/teacher/classes">
+            <Link className="text-sm font-medium text-gold hover:underline" href="/teacher/classes">
               看全部課程 →
             </Link>
           </div>
@@ -305,11 +305,11 @@ function TodoLinks({ items }: { items: TeacherTodoItem[] }) {
         <li key={`${item.href}-${item.label}`}>
           <Link
             className={`grid gap-1 rounded-2xl border p-4 transition hover:bg-sand ${
-              item.kind === "action" ? "border-clay/30 bg-clay-tint" : "border-amber-200 bg-amber-50"
+              item.kind === "action" ? "border-gold/30 bg-gold-tint" : "border-amber-200 bg-amber-50"
             }`}
             href={item.href}
           >
-            <span className={`text-sm font-medium ${item.kind === "action" ? "text-clay-deep" : "text-amber-900"}`}>
+            <span className={`text-sm font-medium ${item.kind === "action" ? "text-gold-deep" : "text-amber-900"}`}>
               {item.label}
             </span>
             <span className="text-sm leading-6 text-ink-soft">{item.message}</span>

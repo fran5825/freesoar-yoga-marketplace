@@ -99,14 +99,14 @@ export default async function AdminOrganizationsPage({ searchParams }: { searchP
               {/* 第三批票 09：數量 > 0 才給入口（不做死連結）；需求數只算非草稿，與限定列表「全部」一致。 */}
               <div className="flex flex-wrap gap-x-6 gap-y-2 border-t border-ink/10 pt-4 text-sm text-ink-soft">
                 {organization.demandRequestCount > 0 ? (
-                  <Link className="font-medium text-clay underline underline-offset-4" href={adminListHref("demands", { status: "all", organizationId: organization.id })}>
+                  <Link className="font-medium text-gold underline underline-offset-4" href={adminListHref("demands", { status: "all", organizationId: organization.id })}>
                     查看需求（{organization.demandRequestCount}）
                   </Link>
                 ) : (
                   <span>需求數：0</span>
                 )}
                 {organization.classSessionCount > 0 ? (
-                  <Link className="font-medium text-clay underline underline-offset-4" href={adminListHref("classes", { organizationId: organization.id })}>
+                  <Link className="font-medium text-gold underline underline-offset-4" href={adminListHref("classes", { organizationId: organization.id })}>
                     查看課程（{organization.classSessionCount}）
                   </Link>
                 ) : (

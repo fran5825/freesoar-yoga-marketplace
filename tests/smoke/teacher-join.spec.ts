@@ -49,7 +49,7 @@ test.describe("/teachers/join smoke", () => {
 
     await expect(
       page.getByRole("heading", {
-        name: "一起建立清楚、安心的瑜伽團課合作",
+        name: "把你的教學，帶給真正需要的團體",
       }),
     ).toBeVisible();
     await expect(

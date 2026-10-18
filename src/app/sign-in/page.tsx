@@ -58,18 +58,18 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
     <div className="flex min-h-screen flex-col bg-cream text-ink">
       <PublicHeader />
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-5 py-16 sm:py-24">
-        <p className="text-sm font-medium tracking-[0.2em] text-clay">讓團體練習，自然發生</p>
+        <p className="text-sm font-medium tracking-[0.2em] text-gold">讓團體練習，自然發生</p>
         <h1 className="mt-4 text-3xl font-semibold leading-tight tracking-[-0.02em] sm:text-4xl">
           登入或建立帳號
         </h1>
 
           <div className="mt-8 rounded-3xl border border-ink/10 bg-white p-7">
             {signInFailed ? (
-              <div className="mb-6 rounded-2xl border border-clay/30 bg-cream p-4" role="alert">
+              <div className="mb-6 rounded-2xl border border-gold/30 bg-cream p-4" role="alert">
                 <p className="font-medium text-ink">登入沒有完成，沒有送出任何報名。</p>
                 <p className="mt-1 text-sm leading-6 text-ink-soft">你可以再試一次，或先回到剛才的頁面。</p>
                 {returnsToClass ? (
-                  <Link className="mt-3 inline-flex py-1 text-sm text-clay underline" href={callbackUrl}>
+                  <Link className="mt-3 inline-flex py-1 text-sm text-gold underline" href={callbackUrl}>
                     回到課程
                   </Link>
                 ) : null}
@@ -83,7 +83,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             <div className="mt-7">
               <SignInOptions
                 action={startSignInAction}
-                buttonClassName="w-full rounded-full bg-pine px-6 py-3 font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+                buttonClassName="w-full rounded-full bg-pine px-6 py-3 font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
                 fields={{ callbackUrl }}
                 label={(provider) => `使用 ${provider} 帳號繼續`}
               />

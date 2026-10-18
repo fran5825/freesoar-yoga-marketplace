@@ -84,7 +84,7 @@ export default async function EditClassSessionPage({ params, searchParams }: Edi
     <div className="flex flex-col gap-8">
       <header className="border-b border-ink/15 pb-6">
         <Link
-          className="inline-flex min-h-11 items-center text-sm font-medium text-clay hover:underline"
+          className="inline-flex min-h-11 items-center text-sm font-medium text-gold hover:underline"
           href={detailHref}
         >
           ← 回課程詳情

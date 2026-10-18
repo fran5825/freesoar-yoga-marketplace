@@ -7,7 +7,7 @@ import {
 import type { OwnDemandRequestSummary } from "@/domain/demand-request/service";
 
 const kindClassNames: Record<DemandNextStep["kind"], string> = {
-  action: "border-clay/30 bg-clay-tint",
+  action: "border-gold/30 bg-gold-tint",
   waiting: "border-pine/20 bg-pine-tint",
   info: "border-ink/15 bg-sand",
 };
@@ -42,7 +42,7 @@ export function NextStepCard({
       className={`grid gap-3 rounded-2xl border p-5 ${kindClassNames[nextStep.kind]}`}
     >
       <div>
-        <p className="text-xs font-medium text-clay-deep">
+        <p className="text-xs font-medium text-gold-deep">
           {kindLabels[nextStep.kind]}
         </p>
         <p className="mt-1 text-base font-medium leading-7 text-ink">

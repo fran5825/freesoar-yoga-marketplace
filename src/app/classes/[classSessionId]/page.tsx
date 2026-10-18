@@ -25,6 +25,7 @@ import { ClassOwnEnrollmentActions, ClassOwnEnrollmentStatus } from "../_compone
 import { ScrollToTarget } from "../../_components/ScrollToTarget";
 import { ClassSignInGuide } from "../_components/ClassSignInGuide";
 import { ClassInfoSections } from "../_components/ClassInfoSections";
+import { StickyEnrollBar } from "../_components/StickyEnrollBar";
 
 export default async function MemberClassSessionPage({ params, searchParams }: {
   params: Promise<{ classSessionId: string }>;
@@ -107,7 +108,7 @@ export default async function MemberClassSessionPage({ params, searchParams }: {
     memberSession?.ownEnrollment || seriesLink ? (
       <>
         {memberSession?.ownEnrollment ? <ClassOwnEnrollmentActions classSession={memberSession} detailHref={detailHref} returnTo={returnTo} /> : null}
-        {seriesLink ? <Link className="w-fit py-2 text-sm font-medium text-clay underline" href={seriesLink}>查看這個課程的所有日期</Link> : null}
+        {seriesLink ? <Link className="w-fit py-2 text-sm font-medium text-gold underline" href={seriesLink}>查看這個課程的所有日期</Link> : null}
       </>
     ) : null;
   const enrollHref = `${detailHref}${detailHref.includes("?") ? "&" : "?"}enroll=1#enroll`;
@@ -115,14 +116,14 @@ export default async function MemberClassSessionPage({ params, searchParams }: {
   return (
     <SiteShell signedInArea="member" publicMainClassName="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-5 py-8 sm:px-8" signedInClassName="flex flex-col gap-6">
       <div className={canEnroll ? "group grid min-w-0 gap-6 pb-24 sm:pb-0" : "grid min-w-0 gap-6"}>
-        <Link className="w-fit py-2 text-sm text-clay underline" href={returnTo}>{classReturnLabel(returnTo)}</Link>
+        <Link className="inline-flex min-h-11 w-fit items-center text-sm text-gold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold" href={returnTo}>{classReturnLabel(returnTo)}</Link>
         <DetailCover url={classSession.coverUrl} />
         <header className="border-b border-ink/15 pb-5">
           <h1 className="min-w-0 break-words text-2xl font-semibold tracking-tight text-ink">{classSession.title}</h1>
           <div className="mt-3 flex flex-wrap items-center gap-3">
             {badge ? (
               badgeHref ? (
-                <Link className="inline-flex min-h-8 items-center rounded-full bg-pine-tint px-3 py-1 text-xs font-medium text-pine-deep hover:bg-pine/15" href={badgeHref}>{seriesBadgeLabel(badge)}</Link>
+                <Link className="relative inline-flex min-h-8 items-center rounded-full bg-pine-tint px-3 py-1 text-xs font-medium text-pine-deep after:absolute after:inset-x-0 after:-inset-y-1.5 after:content-[''] hover:bg-pine/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold" href={badgeHref}>{seriesBadgeLabel(badge)}</Link>
               ) : (
                 <span className="rounded-full bg-pine-tint px-3 py-1 text-xs font-medium text-pine-deep">{seriesBadgeLabel(badge)}</span>
               )
@@ -131,7 +132,7 @@ export default async function MemberClassSessionPage({ params, searchParams }: {
             <ClassAvailabilityBadge availability={availability} canAcceptNewEnrollments={classSession.canAcceptNewEnrollments} />
           </div>
         </header>
-        {feedback && !(rowRelated && !rowFeedback?.success && rowFeedback?.open === rowFeedback?.focus) ? <section aria-live="polite" id="action-feedback" className={feedback.success ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900" : "rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"}>{feedback.message}{feedback.success ? <> <Link className="font-medium underline" href="/member/enrollments">查看我的報名</Link></> : null}</section> : null}
+        {feedback && !(rowRelated && !rowFeedback?.success && rowFeedback?.open === rowFeedback?.focus) ? <section aria-live="polite" id="action-feedback" className={feedback.success ? "rounded-xl border border-pine/15 bg-pine-tint px-4 py-3 text-sm leading-6 text-pine-deep" : "rounded-xl border border-gold/25 bg-gold-tint px-4 py-3 text-sm leading-6 text-gold-deep"}>{feedback.message}{feedback.success ? <> <Link className="font-medium underline" href="/member/enrollments">查看我的報名</Link></> : null}</section> : null}
         <ScrollToTarget targetId={query?.focus} />
         <ClassSummary actionsSlot={summaryActions} classSession={classSession} id="enroll" statusSlot={ownStatusSlot} termPeriod={termPeriod} />
         {/* 票 14（Q6）：課程說明、適合對象、準備事項有填才顯示（取代學員流程票 03 的「尚未提供」）。 */}
@@ -161,7 +162,7 @@ export default async function MemberClassSessionPage({ params, searchParams }: {
             </ul>
           </section>
         ) : null}
-        {canEnroll ? <a href={enrollHref} className="fixed inset-x-0 bottom-0 z-20 border-t border-pine/20 bg-cream px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-center text-sm font-medium text-pine underline focus-visible:outline-2 focus-visible:outline-pine group-has-[form:focus-within]:hidden sm:hidden">{useTermPanel ? "我要報名" : "前往報名"}</a> : null}
+        {canEnroll ? <StickyEnrollBar href={enrollHref} label={useTermPanel ? "我要報名" : "前往報名"} /> : null}
       </div>
     </SiteShell>
   );

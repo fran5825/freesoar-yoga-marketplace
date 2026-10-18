@@ -13,7 +13,7 @@ import { EnrollReveal, OptionalNotes } from "./EnrollReveal";
 // 期班的單堂頁展開後先二選一（報整期／只報這一堂，預設整期；只有一個能選時只顯示那一個）。
 // 登入回來、手機底部按鈕帶回來、或送出失敗時，伺服器傳入 openForm，表單直接展開，仍由本人勾選同意後送出。
 const buttonClass =
-  "inline-flex min-h-11 w-full items-center justify-center rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay sm:w-fit";
+  "inline-flex min-h-11 w-full items-center justify-center rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold sm:w-fit";
 
 const consent = (
   <label className="flex items-start gap-3 text-sm leading-6 text-ink-soft">
@@ -71,7 +71,7 @@ export function ClassCardEnroll({
               ? "這堂課名額已滿。"
               : "這堂課目前不開放報名。"}
         </p>
-        <Link className="w-fit py-2 text-sm text-clay underline" href={returnTo}>
+        <Link className="w-fit py-2 text-sm text-gold underline" href={returnTo}>
           看看其他課程
         </Link>
       </div>

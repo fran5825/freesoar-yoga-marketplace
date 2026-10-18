@@ -27,7 +27,7 @@ const reasonCopy: Record<EnrollRowReason, string> = {
 };
 
 const submitClass =
-  "inline-flex min-h-11 w-full items-center justify-center rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay sm:w-fit";
+  "inline-flex min-h-11 w-full items-center justify-center rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold sm:w-fit";
 
 // message 為 null：只有 open／focus（例如登入回來要自動展開那一列），沒有結果訊息。
 export type RowFeedback = { success: boolean; message: string | null; focus: string | null; open: string | null };
@@ -54,7 +54,7 @@ export function EnrollRow({
   return (
     <li className="grid scroll-mt-6 gap-3 rounded-xl border border-ink/10 px-4 py-3 text-sm" id={rowId}>
       {rowError ? (
-        <p aria-live="polite" className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900">
+        <p aria-live="polite" className="rounded-xl border border-gold/25 bg-gold-tint px-3 py-2 text-sm leading-6 text-gold-deep">
           {rowError}
         </p>
       ) : null}
@@ -228,8 +228,8 @@ export function PageFeedback({ feedback }: { feedback: RowFeedback | null }) {
       aria-live="polite"
       className={
         feedback.success
-          ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
-          : "rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"
+          ? "rounded-xl border border-pine/15 bg-pine-tint px-4 py-3 text-sm leading-6 text-pine-deep"
+          : "rounded-xl border border-gold/25 bg-gold-tint px-4 py-3 text-sm leading-6 text-gold-deep"
       }
       id="action-feedback"
     >

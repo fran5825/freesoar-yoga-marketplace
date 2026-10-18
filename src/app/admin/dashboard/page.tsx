@@ -37,7 +37,7 @@ function PendingGroup({
           {title}・{total}
         </h3>
         <Link
-          className="text-sm font-medium text-clay underline underline-offset-4"
+          className="text-sm font-medium text-gold underline underline-offset-4"
           href={listHref}
         >
           {total > items.length ? `看全部 ${total} 筆 →` : "前往審核 →"}
@@ -47,7 +47,7 @@ function PendingGroup({
         {items.map((item) => (
           <li key={item.id}>
             <Link
-              className="grid gap-1 rounded-xl border border-ink/15 bg-white px-4 py-3 transition hover:bg-sand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay sm:grid-cols-[1fr_auto] sm:items-center sm:gap-4"
+              className="grid gap-1 rounded-xl border border-ink/15 bg-white px-4 py-3 transition hover:bg-sand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold sm:grid-cols-[1fr_auto] sm:items-center sm:gap-4"
               href={`${detailBasePath}/${item.id}`}
             >
               <span className="min-w-0 break-words text-sm font-medium text-ink">
@@ -149,12 +149,12 @@ export default async function AdminDashboardPage() {
                 <p className="text-sm font-medium text-ink">{stat.label}</p>
                 <p className="mt-2 text-3xl font-semibold text-ink">{stat.value}</p>
                 {stat.hint ? <p className="mt-1 text-xs text-ink-soft">{stat.hint}</p> : null}
-                {stat.href ? <p className="mt-3 text-sm font-medium text-clay">查看列表 →</p> : null}
+                {stat.href ? <p className="mt-3 text-sm font-medium text-gold">查看列表 →</p> : null}
               </>
             );
             return stat.href ? (
               <Link
-                className="rounded-2xl border border-ink/15 bg-white p-5 transition hover:bg-sand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+                className="rounded-2xl border border-ink/15 bg-white p-5 transition hover:bg-sand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
                 href={stat.href}
                 key={stat.label}
               >

@@ -9,7 +9,7 @@ export type CoverChoices = {
 };
 
 const optionClass =
-  "relative grid min-w-0 cursor-pointer gap-2 rounded-xl border border-ink/20 bg-white p-2 text-sm text-ink-soft transition has-[:checked]:border-pine has-[:checked]:bg-pine-tint/60 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-clay";
+  "relative grid min-w-0 cursor-pointer gap-2 rounded-xl border border-ink/20 bg-white p-2 text-sm text-ink-soft transition has-[:checked]:border-pine has-[:checked]:bg-pine-tint/60 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-gold";
 
 export function CoverPhotoField({
   choices,

@@ -30,7 +30,7 @@ export function RowExpander({
             className={
               open
                 ? "inline-flex min-h-11 items-center rounded-full border border-pine/40 px-4 py-2 text-sm font-medium text-pine hover:bg-pine-tint focus-visible:outline-2 focus-visible:outline-pine"
-                : "inline-flex min-h-11 items-center rounded-full bg-pine px-4 py-2 text-sm font-medium text-white hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+                : "inline-flex min-h-11 items-center rounded-full bg-pine px-4 py-2 text-sm font-medium text-white hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
             }
             onClick={() => setOpen((value) => !value)}
             type="button"

@@ -55,7 +55,7 @@ export default async function SeriesPage({
       signedInClassName="flex flex-col gap-6"
     >
       <div className="grid min-w-0 gap-6">
-        <Link className="w-fit py-2 text-sm text-clay underline" href={returnTo}>
+        <Link className="inline-flex min-h-11 w-fit items-center text-sm text-gold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold" href={returnTo}>
           {classReturnLabel(returnTo)}
         </Link>
         <header className="border-b border-ink/15 pb-5">

@@ -114,7 +114,7 @@ export default async function OrganizerProfilePage({
                       {organizationTypeLabels[organization.type]}
                     </span>
                     {organization.isContactComplete ? null : (
-                      <span className="rounded-full bg-clay-tint px-3 py-0.5 text-xs font-medium text-clay-deep">
+                      <span className="rounded-full bg-gold-tint px-3 py-0.5 text-xs font-medium text-gold-deep">
                         還需要補聯絡資料
                       </span>
                     )}

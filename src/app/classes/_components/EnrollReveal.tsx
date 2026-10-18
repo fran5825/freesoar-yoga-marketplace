@@ -27,7 +27,7 @@ export function EnrollReveal({
   return (
     <div className="flex flex-wrap items-center gap-3">
       <button
-        className="inline-flex min-h-11 items-center justify-center rounded-full bg-pine px-6 py-3 text-sm font-medium text-white hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+        className="inline-flex min-h-11 items-center justify-center rounded-full bg-pine px-6 py-3 text-sm font-medium text-white hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
         onClick={() => setOpen(true)}
         type="button"
       >

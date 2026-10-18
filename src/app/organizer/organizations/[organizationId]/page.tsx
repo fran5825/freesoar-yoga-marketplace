@@ -57,7 +57,7 @@ export default async function OrganizationPage({ params, searchParams }: Organiz
       </header>
 
       {missingContactLabels.length > 0 ? (
-        <div className="rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep">
+        <div className="rounded-xl border border-gold/25 bg-gold-tint px-4 py-3 text-sm leading-6 text-gold-deep">
           還缺 {missingContactLabels.length} 項聯絡資料：{missingContactLabels.join("、")}。送出需求審核前需要補齊。
         </div>
       ) : null}

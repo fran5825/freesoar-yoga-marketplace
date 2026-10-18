@@ -33,7 +33,7 @@ export function AdminStaleNotice({
         {keptInputNote}
       </p>
       {/* 用一般 <a> 整頁載入，確保拿到最新狀態，不沿用這頁的舊畫面。 */}
-      <a className="mt-2 inline-block font-medium text-clay underline underline-offset-4" href={kind === "changed" ? detailHref : returnTo}>
+      <a className="mt-2 inline-block font-medium text-gold underline underline-offset-4" href={kind === "changed" ? detailHref : returnTo}>
         {kind === "changed" ? "重新載入，查看目前狀態" : backToListLabel}
       </a>
     </div>

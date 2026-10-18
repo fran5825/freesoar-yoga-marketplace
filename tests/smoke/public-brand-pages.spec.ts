@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 const publicPages = [
-  { path: "/", heading: "連結好老師與你的瑜伽團課平台" },
+  { path: "/", heading: "讓好的瑜伽老師，被需要的團體找到" },
   { path: "/about", heading: "讓自由與覺察，長成有品質的共同練習" },
   { path: "/faq", heading: "開始以前，先把重要的事說清楚" },
 ];
@@ -31,7 +31,8 @@ test.describe("public brand foundation", () => {
     await expect(page).toHaveTitle("飛索・瑜伽團課共創平台");
     await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /品牌導向的瑜伽團課 marketplace/);
     await expect(page.getByRole("link", { name: "了解老師加入" })).toHaveAttribute("href", "/teachers/join");
-    await expect(page.getByRole("link", { name: "我想發起團課 →" })).toHaveAttribute("href", "/organizers/request");
+    await expect(page.getByRole("link", { name: "成為合作老師" })).toHaveAttribute("href", "/teachers/join");
+    await expect(page.getByRole("link", { name: "提出團課需求" })).toHaveAttribute("href", "/organizers/request");
     await expect(page.getByRole("link", { name: "關於我們" }).first()).toHaveAttribute("href", "/about");
     await expect(page.getByRole("link", { name: "常見問題" }).first()).toHaveAttribute("href", "/faq");
     await expect(page.getByRole("link", { name: "登入" }).first()).toHaveAttribute("href", "/sign-in");
@@ -40,7 +41,7 @@ test.describe("public brand foundation", () => {
   test("faq states the current trust boundary without payment or outcome promises", async ({ page }) => {
     await page.goto("/faq");
 
-    await expect(page.getByText("目前 V1 不提供完整的線上付款與退款自動化。", { exact: false })).toBeAttached();
+    await expect(page.getByText("目前平台不提供完整的線上付款與退款自動化。", { exact: false })).toBeAttached();
     await expect(page.getByText("不構成醫療建議、療效承諾或所有風險的保證。", { exact: false })).toBeAttached();
   });
 

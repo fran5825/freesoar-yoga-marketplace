@@ -17,7 +17,7 @@ export function AdminListCard({
 }) {
   return (
     <Link
-      className="grid min-w-0 gap-2 rounded-2xl border border-ink/15 bg-white p-4 transition hover:bg-sand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] sm:items-center sm:gap-5 sm:py-3"
+      className="grid min-w-0 gap-2 rounded-2xl border border-ink/15 bg-white p-4 transition hover:bg-sand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] sm:items-center sm:gap-5 sm:py-3"
       href={href}
     >
       {/* 第四批票 14：沒有空白的長名稱在手機上會撐出卡片（break-words 不會縮小最小寬度），改用 wrap-anywhere。 */}

@@ -45,7 +45,7 @@ export default async function AdminSeriesPage({
   return (
     <div className="flex flex-col gap-8">
       <header className="border-b border-ink/15 pb-6">
-        <Link className="text-sm font-medium text-clay underline underline-offset-4" href={returnTo}>
+        <Link className="text-sm font-medium text-gold underline underline-offset-4" href={returnTo}>
           ← 回課程列表
         </Link>
         <p className="mt-4 w-fit rounded-full bg-pine-tint px-3 py-1 text-xs font-medium text-pine-deep">
@@ -66,7 +66,7 @@ export default async function AdminSeriesPage({
           {series.sessions.map((session) => (
             <li key={session.id}>
               <Link
-                className="grid min-h-11 gap-2 rounded-2xl border border-ink/10 bg-cream p-3 text-sm transition hover:border-pine/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay sm:grid-cols-[1fr_auto] sm:items-center"
+                className="grid min-h-11 gap-2 rounded-2xl border border-ink/10 bg-cream p-3 text-sm transition hover:border-pine/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold sm:grid-cols-[1fr_auto] sm:items-center"
                 href={adminDetailHref("classes", session.id, returnTo)}
               >
                 <span className="flex flex-wrap items-center gap-2">

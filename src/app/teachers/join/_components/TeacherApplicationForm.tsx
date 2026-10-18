@@ -345,9 +345,9 @@ function SubmittedApplicationSummary({
       aria-labelledby="application-form-title"
       className="grid gap-6 border-y border-pine/15 bg-pine-tint/60 py-6"
     >
-      <div className="grid gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+      <div className="grid gap-3 rounded-2xl border border-gold/25 bg-gold-tint p-5">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="w-fit rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
+          <span className="w-fit rounded-full bg-white px-3 py-1 text-xs font-medium text-gold-deep">
             審核中
           </span>
           <h2
@@ -441,7 +441,7 @@ function SectionProgress({
 }) {
   if (requiredCount === 0) {
     return (
-      <span className="rounded-full bg-sand px-3 py-1 text-xs font-medium text-clay">
+      <span className="rounded-full bg-sand px-3 py-1 text-xs font-medium text-gold">
         全部選填
       </span>
     );
@@ -449,14 +449,14 @@ function SectionProgress({
 
   if (missingCount === 0) {
     return (
-      <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800">
+      <span className="rounded-full bg-pine-tint px-3 py-1 text-xs font-medium text-pine-deep">
         必填已完成
       </span>
     );
   }
 
   return (
-    <span className="rounded-full bg-clay-tint px-3 py-1 text-xs font-medium text-clay-deep">
+    <span className="rounded-full bg-gold-tint px-3 py-1 text-xs font-medium text-gold-deep">
       必填 {requiredCount - missingCount} / {requiredCount}
     </span>
   );
@@ -476,14 +476,14 @@ function RequirementBadge({
   }
 
   return (
-    <span className="rounded-full bg-sand px-3 py-1 text-xs font-medium text-clay">
+    <span className="rounded-full bg-sand px-3 py-1 text-xs font-medium text-gold">
       選填，通過後再補也可以
     </span>
   );
 }
 
 const controlClassName =
-  "mt-3 w-full rounded-xl border border-ink/20 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15 disabled:cursor-not-allowed disabled:bg-[#efece4] disabled:text-ink-soft";
+  "mt-3 w-full rounded-xl border border-ink/20 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15 disabled:cursor-not-allowed disabled:bg-sand/60 disabled:text-ink-soft";
 
 function FieldControl({
   field,
@@ -721,13 +721,13 @@ export function TeacherApplicationForm() {
         label: mutationBlockedCopy.saveButton,
         className:
           mutationBlockedStatus === "approved"
-            ? "bg-emerald-100 text-emerald-800"
+            ? "bg-pine-tint text-pine-deep"
             : mutationBlockedStatus === "suspended"
               ? "bg-ink/10 text-ink-soft"
-              : "bg-amber-100 text-amber-800",
+              : "bg-gold-tint text-gold-deep",
       }
     : isRejectedProfile
-      ? { label: "已退回，待修正", className: "bg-clay-tint text-clay-deep" }
+      ? { label: "已退回，待修正", className: "bg-gold-tint text-gold-deep" }
       : { label: "草稿", className: "bg-sage text-pine" };
 
   function updateField(fieldName: FormFieldName, value: string) {
@@ -944,7 +944,7 @@ export function TeacherApplicationForm() {
         />
 
         {legacyChoiceValues[field.name] ? (
-          <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900">
+          <p className="mt-2 rounded-xl border border-gold/25 bg-gold-tint px-3 py-2 text-sm leading-6 text-gold-deep">
             你先前填寫的「{legacyChoiceValues[field.name]}
             」不在選項內，這次不會保留，請改從上方勾選。
           </p>
@@ -958,7 +958,7 @@ export function TeacherApplicationForm() {
 
         {showReminder ? (
           <p
-            className="mt-2 rounded-xl border border-clay/25 bg-clay-tint px-3 py-2 text-sm leading-6 text-clay"
+            className="mt-2 rounded-xl border border-gold/25 bg-gold-tint px-3 py-2 text-sm leading-6 text-gold"
             id={`${inputId}-reminder`}
           >
             {getReadinessMessage(field.name)}
@@ -978,14 +978,14 @@ export function TeacherApplicationForm() {
 
   // 比照團主開需求表單：不用先按「檢查準備狀態」，缺幾項、缺哪些隨時看得到，點名稱可跳到該欄位。
   const readinessSummary = mutationBlockedCopy ? null : isReadyForFutureSubmit ? (
-    <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900">
+    <div className="rounded-xl border border-pine/15 bg-pine-tint px-4 py-3 text-sm leading-6 text-pine-deep">
       <p>必填欄位都填好了，可以送出審核。</p>
-      <p className="mt-1 text-emerald-800">
+      <p className="mt-1 text-pine-deep">
         選填欄位已填 {optionalFieldsWithValue} / {optionalFieldNames.length} 項，通過後再補也可以。
       </p>
     </div>
   ) : (
-    <div className="rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep">
+    <div className="rounded-xl border border-gold/25 bg-gold-tint px-4 py-3 text-sm leading-6 text-gold-deep">
       <p>
         <span className="font-medium">
           還缺 {missingRequiredFields.length} 項才能送審：
@@ -1070,8 +1070,8 @@ export function TeacherApplicationForm() {
         <div
           className={
             draftSaveFeedback.kind === "success"
-              ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
-              : "rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay"
+              ? "rounded-xl border border-pine/15 bg-pine-tint px-4 py-3 text-sm leading-6 text-pine-deep"
+              : "rounded-xl border border-gold/25 bg-gold-tint px-4 py-3 text-sm leading-6 text-gold"
           }
         >
           <p>{draftSaveFeedback.message}</p>
@@ -1107,8 +1107,8 @@ export function TeacherApplicationForm() {
         <div
           className={
             submitFeedback.kind === "success"
-              ? "rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
-              : "rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay"
+              ? "rounded-xl border border-pine/15 bg-pine-tint px-4 py-3 text-sm leading-6 text-pine-deep"
+              : "rounded-xl border border-gold/25 bg-gold-tint px-4 py-3 text-sm leading-6 text-gold"
           }
         >
           <p>{submitFeedback.message}</p>
@@ -1133,7 +1133,7 @@ export function TeacherApplicationForm() {
   );
 
   const submitConfirmation = isConfirmingSubmit && confirmSnapshot ? (
-    <div className="rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep">
+    <div className="rounded-xl border border-gold/25 bg-gold-tint px-4 py-3 text-sm leading-6 text-gold-deep">
       <p className="font-medium text-ink">確認送出審核</p>
       <p className="mt-2">
         {isRejectedProfile
@@ -1176,7 +1176,7 @@ export function TeacherApplicationForm() {
           {isSubmitting ? "正在送出..." : "確認送出審核"}
         </button>
         <button
-          className="min-h-11 rounded-full border border-clay/40 bg-white px-4 py-2 text-sm font-medium text-ink disabled:cursor-not-allowed disabled:text-ink-faint"
+          className="min-h-11 rounded-full border border-gold/40 bg-white px-4 py-2 text-sm font-medium text-ink disabled:cursor-not-allowed disabled:text-ink-faint"
           disabled={isSubmitting}
           onClick={handleCancelSubmitConfirmation}
           type="button"
@@ -1201,18 +1201,18 @@ export function TeacherApplicationForm() {
   const rejectedBanner = isRejectedProfile ? (
     <section
       aria-labelledby="rejected-banner-title"
-      className="min-w-0 rounded-2xl border border-clay/25 bg-clay-tint p-5"
+      className="min-w-0 rounded-2xl border border-gold/25 bg-gold-tint p-5"
     >
       <h2
-        className="text-xl font-semibold tracking-tight text-clay-deep"
+        className="text-xl font-semibold tracking-tight text-gold-deep"
         id="rejected-banner-title"
       >
         這份申請需要修正
       </h2>
-      <h3 className="mt-3 text-sm font-medium text-clay-deep">
+      <h3 className="mt-3 text-sm font-medium text-gold-deep">
         平台的退回說明
       </h3>
-      <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-clay">
+      <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-gold">
         {rejectionReason && rejectionReason.trim().length > 0
           ? rejectionReason
           : "平台尚未提供具體說明。你可以先檢查必填欄位並補充教學經歷，準備好後再重新送審。"}
@@ -1236,16 +1236,16 @@ export function TeacherApplicationForm() {
         <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
           一起建立清楚、安心的瑜伽團課合作
         </h1>
-        <div className="mt-6 ml-6 max-w-2xl border-l-4 border-clay/50 pl-4">
+        <div className="mt-6 max-w-2xl">
           <p className="text-base leading-7 text-ink-soft">
-            飛索重視老師的專業，也提供老師管理日常課程的工具：
+            飛索和老師合作時，會守住這三件事：
           </p>
           <ul className="mt-4 space-y-3">
             {collaborationPrinciples.map((principle) => (
               <li className="flex items-start gap-3" key={principle}>
                 <span
                   aria-hidden="true"
-                  className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-clay"
+                  className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-gold"
                 />
                 <span className="text-sm leading-6 text-ink-soft">
                   {principle}
@@ -1255,7 +1255,7 @@ export function TeacherApplicationForm() {
           </ul>
         </div>
         {mutationBlockedCopy ? null : (
-          <p className="mt-4 ml-6 text-sm leading-6 text-ink-faint">
+          <p className="mt-4 max-w-2xl text-sm leading-6 text-ink-faint">
             {isRejectedProfile
               ? "下方會顯示被退回的申請資料；你可以依修正方向調整後重新送審。"
               : "填好下方 7 項必填就能直接送出審核，不需要先儲存草稿；想分次填寫也可以先儲存。"}

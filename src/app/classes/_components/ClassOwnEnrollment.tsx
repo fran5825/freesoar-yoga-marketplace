@@ -13,7 +13,7 @@ import { OptionalNotes } from "./EnrollReveal";
 // 不能操作時只顯示原因。可否操作全部由 service layer 算好（ownEnrollment.reEnroll／rowControl）。
 
 const buttonClass =
-  "inline-flex min-h-11 w-full items-center justify-center rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay sm:w-fit";
+  "inline-flex min-h-11 w-full items-center justify-center rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold sm:w-fit";
 
 export function ClassOwnEnrollmentStatus({ classSession }: { classSession: MemberFacingClassSession }) {
   const own = classSession.ownEnrollment;

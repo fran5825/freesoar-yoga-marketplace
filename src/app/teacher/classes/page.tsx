@@ -234,7 +234,7 @@ export default async function TeacherClassesPage({ searchParams }: TeacherClasse
           </p>
           {tab !== "all" && classSessions.length > 0 ? (
             <Link
-              className="mt-4 inline-flex min-h-11 items-center text-sm font-medium text-clay hover:underline"
+              className="mt-4 inline-flex min-h-11 items-center text-sm font-medium text-gold hover:underline"
               href={teacherClassListHref("all")}
             >
               看全部課程（{classSessions.length} 堂）
@@ -279,7 +279,7 @@ export default async function TeacherClassesPage({ searchParams }: TeacherClasse
                 key={classSession.id}
               >
                 <Link
-                  className="grid gap-3 p-5 transition hover:bg-pine-tint/40 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-clay"
+                  className="grid gap-3 p-5 transition hover:bg-pine-tint/40 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold"
                   href={teacherClassDetailHref(classSession.id, returnContext)}
                 >
                   <article className="grid gap-3">
@@ -314,7 +314,7 @@ export default async function TeacherClassesPage({ searchParams }: TeacherClasse
                       <span
                         className={
                           nextStep.kind === "action"
-                            ? "font-medium text-clay-deep"
+                            ? "font-medium text-gold-deep"
                             : "text-ink-soft"
                         }
                       >

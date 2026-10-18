@@ -70,7 +70,7 @@ export default async function AdminTeacherDetailPage({
     <div className="flex flex-col gap-8">
       <header className="border-b border-ink/15 pb-6">
         <Link
-          className="text-sm font-medium text-clay underline underline-offset-4"
+          className="text-sm font-medium text-gold underline underline-offset-4"
           href={returnTo}
         >
           ← 回老師列表
@@ -94,7 +94,7 @@ export default async function AdminTeacherDetailPage({
         ) : null}
         {hasAction ? (
           <a
-            className="mt-4 inline-flex w-full justify-center rounded-full border border-pine/40 px-5 py-2 text-sm font-medium text-pine transition hover:border-pine focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay sm:w-auto"
+            className="mt-4 inline-flex w-full justify-center rounded-full border border-pine/40 px-5 py-2 text-sm font-medium text-pine transition hover:border-pine focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold sm:w-auto"
             href="#teacher-actions"
           >
             {teacher.status === "submitted" ? "前往審核操作" : "前往狀態操作"}
@@ -131,7 +131,7 @@ export default async function AdminTeacherDetailPage({
           <p className="text-sm font-medium text-ink">課程</p>
           {classSessionCount > 0 ? (
             <Link
-              className="w-fit text-sm font-medium text-clay underline underline-offset-4"
+              className="w-fit text-sm font-medium text-gold underline underline-offset-4"
               href={adminListHref("classes", { teacherProfileId: teacher.id })}
             >
               這位老師的課程（{classSessionCount}）
@@ -173,7 +173,7 @@ export default async function AdminTeacherDetailPage({
                       下架原因（必填，老師會看到）
                     </label>
                     <textarea
-                      className="min-h-16 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink focus:outline-2 focus:outline-clay"
+                      className="min-h-16 w-full rounded-xl border border-ink/25 bg-white px-3 py-2 text-sm leading-6 text-ink focus:outline-2 focus:outline-gold"
                       id={`remove-reason-${photo.id}`}
                       maxLength={500}
                       minLength={5}
@@ -186,7 +186,7 @@ export default async function AdminTeacherDetailPage({
                       description="照片會立即從所有頁面消失，老師的頭像與課程封面若用到它也會一併拿掉；無法復原，老師可以重新上傳。"
                       pendingLabel="下架處理中…"
                       title="確定要下架這張照片嗎？"
-                      triggerClassName="w-fit rounded-full border border-rose-300 px-4 py-1.5 text-sm font-medium text-rose-800 transition hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay disabled:cursor-not-allowed disabled:opacity-60"
+                      triggerClassName="w-fit rounded-full border border-rose-300 px-4 py-1.5 text-sm font-medium text-rose-800 transition hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold disabled:cursor-not-allowed disabled:opacity-60"
                       triggerLabel="下架這張照片"
                     />
                   </form>
@@ -210,7 +210,7 @@ export default async function AdminTeacherDetailPage({
       </section>
 
       <details className="group rounded-2xl border border-ink/15 bg-white p-6">
-        <summary className="cursor-pointer text-lg font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay">
+        <summary className="cursor-pointer text-lg font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold">
           其他資料：證照、價格與上課偏好
         </summary>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">

@@ -439,7 +439,7 @@ export function ProposalForm({
       必要資料都填好了，可以送出邀請給老師確認。
     </div>
   ) : (
-    <div className="rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep">
+    <div className="rounded-xl border border-gold/25 bg-gold-tint px-4 py-3 text-sm leading-6 text-gold-deep">
       <span className="font-medium">還缺 {missing.length} 項才能送出邀請：</span>
       {missing.map((item, index) => (
         <span key={item.anchor}>
@@ -453,7 +453,7 @@ export function ProposalForm({
   );
 
   const confirmation = isConfirming ? (
-    <div className="rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep">
+    <div className="rounded-xl border border-gold/25 bg-gold-tint px-4 py-3 text-sm leading-6 text-gold-deep">
       <p className="font-medium text-ink">{isSelfTeaching ? "確認由你自己授課" : "確認送出合作邀請"}</p>
       <dl className="mt-2 grid gap-1 text-ink [overflow-wrap:anywhere]">
         <div className="flex flex-wrap gap-x-2">
@@ -486,7 +486,7 @@ export function ProposalForm({
           {isSubmitting ? "正在送出..." : isSelfTeaching ? "確認由我授課" : "確認送出邀請"}
         </button>
         <button
-          className="rounded-full border border-clay/40 bg-white px-4 py-2 text-sm font-medium text-ink disabled:cursor-not-allowed disabled:text-ink-faint"
+          className="rounded-full border border-gold/40 bg-white px-4 py-2 text-sm font-medium text-ink disabled:cursor-not-allowed disabled:text-ink-faint"
           disabled={isBusy}
           onClick={() => setIsConfirming(false)}
           type="button"
@@ -555,7 +555,7 @@ export function ProposalForm({
         老師正在確認這份邀請。儲存修改後，老師會看到最新的內容並需要重新確認；老師之前開著的舊頁面無法再確認舊內容。
       </p>
     ) : status === "confirmed" ? (
-      <p className="rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep">
+      <p className="rounded-xl border border-gold/25 bg-gold-tint px-4 py-3 text-sm leading-6 text-gold-deep">
         老師已確認這份安排。修改內容會讓老師的確認失效、釋放已保留的時段，邀請回到草稿，需要再送出給老師確認一次。
       </p>
     ) : status === "declined" ? (
@@ -616,13 +616,13 @@ export function ProposalForm({
           ) : null}
           {selectedOrganization && !selectedOrganization.isContactComplete ? (
             <div
-              className="rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep [overflow-wrap:anywhere]"
+              className="rounded-xl border border-gold/25 bg-gold-tint px-4 py-3 text-sm leading-6 text-gold-deep [overflow-wrap:anywhere]"
               role="status"
             >
               送出邀請前，需要先補齊「{selectedOrganization.name}」的聯絡資料。草稿會先幫你存好，補完會回到這裡。
               <div className="mt-2">
                 <button
-                  className="rounded-full border border-clay/40 bg-white px-4 py-1.5 text-sm font-medium text-clay-deep disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-full border border-gold/40 bg-white px-4 py-1.5 text-sm font-medium text-gold-deep disabled:cursor-not-allowed disabled:opacity-60"
                   disabled={isBusy}
                   onClick={() =>
                     handleSave(

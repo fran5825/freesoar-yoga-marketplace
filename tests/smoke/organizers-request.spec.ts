@@ -95,7 +95,7 @@ test.describe("/organizers/request states", () => {
     createdEmails.push(email);
 
     await page.goto("/");
-    await expect(page.getByRole("link", { name: "我想發起團課 →" })).toHaveAttribute(
+    await expect(page.getByRole("link", { name: "提出團課需求" })).toHaveAttribute(
       "href",
       "/organizers/request",
     );

@@ -59,7 +59,7 @@ function TemplateCard({ label, text }: { label: string; text: string }) {
         />
         <div className="flex flex-wrap items-center gap-3">
           <button
-            className="min-h-11 rounded-full border border-pine/40 bg-white px-4 py-2 text-sm font-medium text-pine transition hover:bg-pine-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+            className="min-h-11 rounded-full border border-pine/40 bg-white px-4 py-2 text-sm font-medium text-pine transition hover:bg-pine-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
             onClick={copy}
             type="button"
           >

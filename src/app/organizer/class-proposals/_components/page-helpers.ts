@@ -55,7 +55,7 @@ export const proposalStatusLabels: Record<OrganizerClassProposalStatus, string> 
 
 export const proposalStatusToneClasses: Record<OrganizerClassProposalStatus, string> = {
   draft: "bg-sage text-pine",
-  pending_confirmation: "bg-clay-tint text-clay-deep",
+  pending_confirmation: "bg-gold-tint text-gold-deep",
   confirmed: "bg-pine-tint text-pine",
   declined: "bg-amber-50 text-amber-900",
   withdrawn: "bg-sand text-ink-soft",

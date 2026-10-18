@@ -159,7 +159,7 @@ export default async function OrganizerDemandsPage({
 
                 return (
                   <Link
-                    className="grid gap-2 rounded-2xl border border-ink/15 bg-white p-5 transition hover:bg-sand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+                    className="grid gap-2 rounded-2xl border border-ink/15 bg-white p-5 transition hover:bg-sand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
                     href={`/organizer/demands/${demandRequest.id}`}
                     key={demandRequest.id}
                   >
@@ -174,7 +174,7 @@ export default async function OrganizerDemandsPage({
                       </span>
                     </div>
                     <p
-                      className={`text-sm ${nextStep.kind === "action" ? "font-medium text-clay-deep" : "text-ink-soft"}`}
+                      className={`text-sm ${nextStep.kind === "action" ? "font-medium text-gold-deep" : "text-ink-soft"}`}
                     >
                       {nextStep.shortMessage}
                     </p>
@@ -189,7 +189,7 @@ export default async function OrganizerDemandsPage({
           )}
 
           <Link
-            className="rounded-2xl border border-dashed border-pine/40 p-5 text-center text-sm font-medium text-pine transition hover:bg-pine-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+            className="rounded-2xl border border-dashed border-pine/40 p-5 text-center text-sm font-medium text-pine transition hover:bg-pine-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
             href="/organizer/demands/new"
           >
             ＋ 發起新需求

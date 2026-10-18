@@ -33,7 +33,7 @@ export function AdminFilterBar({
         return (
           <Link
             aria-current={isActive ? "page" : undefined}
-            className={`rounded-full border px-4 py-2 text-sm transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay ${
+            className={`rounded-full border px-4 py-2 text-sm transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold ${
               isActive
                 ? "border-pine bg-pine-tint font-medium text-pine"
                 : "border-ink/20 text-ink-soft hover:border-ink/40"

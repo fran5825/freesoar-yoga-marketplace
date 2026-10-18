@@ -23,7 +23,7 @@ type TeacherPhotosPageProps = {
 };
 
 const smallButton =
-  "inline-flex min-h-11 items-center rounded-full border border-ink/25 bg-white px-4 py-2 text-sm font-medium text-ink-soft transition hover:border-pine hover:text-pine focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay disabled:opacity-50";
+  "inline-flex min-h-11 items-center rounded-full border border-ink/25 bg-white px-4 py-2 text-sm font-medium text-ink-soft transition hover:border-pine hover:text-pine focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold disabled:opacity-50";
 
 // teacher-showcase-photos 票 03（spec S2、S4、S7）：老師的頭像與個人照片，最多 5 張。
 // 沒有照片就整塊不顯示在公開頁上（有填才顯示）；這裡只是管理畫面。
@@ -113,7 +113,7 @@ export default async function TeacherPhotosPage({ searchParams }: TeacherPhotosP
                   <form action={setPublicPageAction}>
                     <input name="enabled" type="hidden" value={publicPage.enabled ? "no" : "yes"} />
                     <button
-                      className="inline-flex min-h-11 items-center rounded-full bg-pine px-6 py-3 text-sm font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+                      className="inline-flex min-h-11 items-center rounded-full bg-pine px-6 py-3 text-sm font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
                       type="submit"
                     >
                       {publicPage.enabled ? "關閉公開頁" : "公開我的老師頁"}
@@ -158,7 +158,7 @@ export default async function TeacherPhotosPage({ searchParams }: TeacherPhotosP
                 </p>
                 <div>
                   <button
-                    className="inline-flex min-h-11 items-center rounded-full bg-pine px-6 py-3 text-sm font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay disabled:opacity-50"
+                    className="inline-flex min-h-11 items-center rounded-full bg-pine px-6 py-3 text-sm font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold disabled:opacity-50"
                     disabled={!list.storageConfigured || atLimit}
                     type="submit"
                   >

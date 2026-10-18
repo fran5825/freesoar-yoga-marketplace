@@ -68,7 +68,7 @@ const originLabels: Record<string, string> = {
 };
 
 const nextStepToneClasses = {
-  action: "border-clay/30 bg-clay-tint text-clay-deep",
+  action: "border-gold/30 bg-gold-tint text-gold-deep",
   waiting: "border-amber-200 bg-amber-50 text-amber-900",
   info: "border-pine/15 bg-pine-tint text-pine-deep",
 } as const;
@@ -259,7 +259,7 @@ export default async function TeacherClassSessionDetailPage({
             confirmLabel="確定取消課程"
             hiddenFields={{ classSessionId: classSession.id, ...returnFields }}
             title="取消這堂課？"
-            triggerClassName="min-h-11 rounded-full border border-clay/40 bg-white px-5 py-2 text-sm font-medium text-clay transition hover:bg-clay-tint"
+            triggerClassName="min-h-11 rounded-full border border-gold/40 bg-white px-5 py-2 text-sm font-medium text-gold transition hover:bg-gold-tint"
             triggerLabel="取消課程"
           >
             <p>
@@ -533,7 +533,7 @@ export default async function TeacherClassSessionDetailPage({
     <div className="flex flex-col gap-6 sm:gap-8">
       <header className="grid gap-3 border-b border-ink/15 pb-6">
         <Link
-          className="inline-flex min-h-11 w-fit items-center text-sm font-medium text-clay hover:underline"
+          className="inline-flex min-h-11 w-fit items-center text-sm font-medium text-gold hover:underline"
           href={backLink.href}
         >
           {backLink.label}

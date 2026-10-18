@@ -34,6 +34,14 @@ test.afterAll(async () => {
   await prisma.$disconnect();
 });
 
+// 2026-10-18 impeccable 改版：手機上 /classes 的篩選表單預設收合，要先點「篩選課程」展開；桌機沒有這顆按鈕。
+async function openClassFilters(page: Page) {
+  const toggle = page.getByRole("button", { name: /^篩選課程/ });
+  if ((await toggle.isVisible()) && (await toggle.getAttribute("aria-expanded")) !== "true") {
+    await toggle.click();
+  }
+}
+
 async function seedApprovedTeacher(testRunId: string) {
   const teacherEmail = `teacher-${testRunId}@${testEmailDomain}`;
   createdEmails.push(teacherEmail);
@@ -131,6 +139,7 @@ test.describe("public classes discovery smoke", () => {
     createdEmails.push(email);
     const { userId, sessionToken } = await createUserSession({ email });
     await page.goto("/classes");
+    await openClassFilters(page);
     await page.getByLabel("地點", { exact: true }).fill("  信義區  ");
     await page.getByLabel("時段", { exact: true }).selectOption("evening");
     await page.getByLabel("瑜伽類型", { exact: true }).selectOption("哈達");
@@ -198,6 +207,7 @@ test.describe("public classes discovery smoke", () => {
     const day = futureDateTime(14, "23:00").slice(0, 10);
     const id = await seedPublicClassSession({ testRunId: run, teacherProfileId: teacher.teacherProfileId, title: `Date ${run}`, startAt: `${day}T23:00`, endAt: `${day}T23:30` });
     await page.goto("/classes");
+    await openClassFilters(page);
     await page.getByLabel("日期", { exact: true }).selectOption("custom");
     await expect(page.getByLabel("開始日期", { exact: true })).toBeVisible();
     await page.getByLabel("開始日期", { exact: true }).fill(day);
@@ -487,6 +497,7 @@ test.describe("public classes discovery smoke", () => {
     await expect(openCard).not.toContainText("開放報名"); // class-discovery-series-cards 票 03：列表預設只有可報名的課，不再重複標「開放報名」
     await expect(openCard).toContainText("剩 10 個名額");
     await expect(fullCard).toBeHidden();
+    await openClassFilters(page);
     await page.getByText("更多篩選", { exact: true }).click();
     await page.getByLabel("包含額滿課程").check();
     await page.getByRole("button", { name: "套用篩選" }).click();

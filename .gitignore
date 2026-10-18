@@ -44,3 +44,12 @@ next-env.d.ts
 
 # local photo storage (STORAGE_DRIVER=local, dev/test only)
 /.local-storage/
+
+# impeccable design tool: keep config.json, design.json and critique/*.md tracked; ignore per-machine and temp output
+/.impeccable/config.local.json
+/.impeccable/live/
+/.impeccable/review/
+/.impeccable/mocks/
+/.impeccable/build/
+/.claude/skills/impeccable/scripts/bin/
+/.impeccable/hook.cache.json

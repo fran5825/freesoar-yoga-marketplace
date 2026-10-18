@@ -48,7 +48,7 @@ export function PaymentRulesField({ defaultValue }: { defaultValue: string }) {
         <span className="w-full text-xs text-ink-faint">點一下加入範例句，再自己修改：</span>
         {EXAMPLES.map((example) => (
           <button
-            className="inline-flex min-h-9 items-center rounded-full border border-ink/20 px-3 py-1.5 text-left text-xs text-ink-soft transition hover:border-pine hover:text-pine focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+            className="inline-flex min-h-9 items-center rounded-full border border-ink/20 px-3 py-1.5 text-left text-xs text-ink-soft transition hover:border-pine hover:text-pine focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
             key={example}
             onClick={() => insert(example)}
             type="button"

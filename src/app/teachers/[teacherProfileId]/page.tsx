@@ -53,7 +53,7 @@ export default async function PublicTeacherPage({ params }: Params) {
           {page.specialties.length > 0 ? (
             <ul aria-label="擅長類型" className="mt-3 flex flex-wrap gap-2">
               {page.specialties.map((specialty) => (
-                <li className="rounded-full border border-ink/15 px-3 py-0.5 text-xs text-ink-soft" key={specialty}>
+                <li className="rounded-full bg-pine-tint px-3 py-1 text-xs font-medium text-pine-deep" key={specialty}>
                   {specialty}
                 </li>
               ))}
@@ -62,22 +62,23 @@ export default async function PublicTeacherPage({ params }: Params) {
         </div>
       </header>
 
+      {/* 2026-10-18 impeccable 改版（診斷報告 P1）：關於我、教學風格不再是一樣的白卡片，讓老師的文字成為頁面主角。 */}
       {page.bio ? (
-        <section aria-labelledby="teacher-bio-heading" className={sectionClass}>
+        <section aria-labelledby="teacher-bio-heading" className="min-w-0 py-2">
           <h2 className="text-lg font-medium text-ink" id="teacher-bio-heading">關於我</h2>
-          <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-ink-soft">{page.bio}</p>
+          <p className="mt-3 max-w-2xl whitespace-pre-wrap break-words text-base leading-8 text-ink-soft">{page.bio}</p>
         </section>
       ) : null}
 
       {page.teachingStyle ? (
-        <section aria-labelledby="teacher-style-heading" className={sectionClass}>
+        <section aria-labelledby="teacher-style-heading" className="min-w-0 rounded-3xl bg-sage/60 p-6 sm:p-8">
           <h2 className="text-lg font-medium text-ink" id="teacher-style-heading">教學風格</h2>
-          <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-ink-soft">{page.teachingStyle}</p>
+          <p className="mt-3 max-w-2xl whitespace-pre-wrap break-words text-base leading-8 text-ink">{page.teachingStyle}</p>
         </section>
       ) : null}
 
       {page.photos.length > 0 ? (
-        <section aria-labelledby="teacher-photos-heading" className={sectionClass}>
+        <section aria-labelledby="teacher-photos-heading" className="min-w-0">
           <h2 className="text-lg font-medium text-ink" id="teacher-photos-heading">照片</h2>
           <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
             {page.photos.map((photo, index) => (

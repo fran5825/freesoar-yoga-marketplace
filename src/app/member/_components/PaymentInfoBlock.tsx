@@ -101,7 +101,7 @@ export function PaymentInfoBlock({
           </p>
           <div>
             <button
-              className="inline-flex min-h-11 items-center rounded-full border border-pine px-5 py-2 text-sm font-medium text-pine transition hover:bg-pine-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+              className="inline-flex min-h-11 items-center rounded-full border border-pine px-5 py-2 text-sm font-medium text-pine transition hover:bg-pine-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
               type="submit"
             >
               儲存備註

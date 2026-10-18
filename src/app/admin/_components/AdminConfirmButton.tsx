@@ -55,7 +55,7 @@ export function AdminConfirmButton({
       <button
         className={
           triggerClassName ??
-          "w-full rounded-full bg-rose-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay sm:w-auto"
+          "w-full rounded-full bg-rose-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold sm:w-auto"
         }
         disabled={isSubmitting}
         onClick={openDialog}
@@ -84,14 +84,14 @@ export function AdminConfirmButton({
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button
             autoFocus
-            className="rounded-full border border-ink/30 px-4 py-2 text-sm font-medium text-ink transition hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+            className="rounded-full border border-ink/30 px-4 py-2 text-sm font-medium text-ink transition hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
             onClick={() => dialogRef.current?.close()}
             type="button"
           >
             返回
           </button>
           <button
-            className="rounded-full bg-rose-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+            className="rounded-full bg-rose-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
             onClick={confirm}
             type="button"
           >

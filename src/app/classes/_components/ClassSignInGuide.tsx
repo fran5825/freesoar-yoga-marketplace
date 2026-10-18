@@ -5,7 +5,7 @@ import { classReturnLabel } from "@/lib/navigation/class-return-path";
 import { SignInOptions } from "../../_components/sign-in-options";
 import { signInToEnrollAction } from "../[classSessionId]/actions";
 
-const buttonClass = "inline-flex min-h-11 w-full items-center justify-center rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay sm:w-fit";
+const buttonClass = "inline-flex min-h-11 w-full items-center justify-center rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold sm:w-fit";
 
 // organizer-usability-redesign 票 13（spec 3.4、13.8）：訪客打開公開規則讀不到的課程網址
 // （不存在、草稿、僅透過連結招募、已取消、老師不是 approved）時，一律顯示這個通用登入引導。
@@ -14,7 +14,7 @@ const buttonClass = "inline-flex min-h-11 w-full items-center justify-center rou
 export function ClassSignInGuide({ classSessionId, returnTo }: { classSessionId: string; returnTo: string }) {
   return (
     <div className="grid min-w-0 gap-6">
-      <Link className="w-fit py-2 text-sm text-clay underline" href={returnTo}>{classReturnLabel(returnTo)}</Link>
+      <Link className="w-fit py-2 text-sm text-gold underline" href={returnTo}>{classReturnLabel(returnTo)}</Link>
       <section aria-labelledby="class-sign-in-heading" className="grid gap-4 rounded-2xl border border-pine/25 bg-white p-5 sm:p-6">
         <h1 className="text-2xl font-semibold tracking-tight text-ink" id="class-sign-in-heading">登入後查看這堂課</h1>
         <p className="text-sm leading-6 text-ink-soft">

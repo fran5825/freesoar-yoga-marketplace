@@ -134,7 +134,7 @@ export default async function OrganizerDashboardPage() {
       </header>
 
       {isContactComplete ? null : (
-        <div className="rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep">
+        <div className="rounded-xl border border-gold/25 bg-gold-tint px-4 py-3 text-sm leading-6 text-gold-deep">
           送出需求前需要先補齊組織聯絡資訊（聯絡窗口、電話、信箱）。{" "}
           <Link
             className="font-medium underline underline-offset-4"
@@ -158,37 +158,37 @@ export default async function OrganizerDashboardPage() {
           <div className="mt-4 grid gap-3">
             {draftCount > 0 ? (
               <Link
-                className="grid gap-1 rounded-2xl border border-clay/30 bg-clay-tint p-4 transition hover:bg-sand"
+                className="grid gap-1 rounded-2xl border border-gold/30 bg-gold-tint p-4 transition hover:bg-sand"
                 href="/organizer/demands?status=draft"
               >
                 <p className="text-sm font-medium text-ink">
                   {draftCount} 筆草稿還沒送出
                 </p>
-                <p className="text-sm text-clay-deep">
+                <p className="text-sm text-gold-deep">
                   補齊欄位後送出審核
                 </p>
               </Link>
             ) : null}
             {proposalActions.map((item) => (
               <Link
-                className="grid gap-1 rounded-2xl border border-clay/30 bg-clay-tint p-4 transition hover:bg-sand"
+                className="grid gap-1 rounded-2xl border border-gold/30 bg-gold-tint p-4 transition hover:bg-sand"
                 href={item.href}
                 key={`${item.href}-${item.label}`}
               >
-                <p className="text-sm font-medium text-clay-deep">{item.label}</p>
+                <p className="text-sm font-medium text-gold-deep">{item.label}</p>
                 <p className="min-w-0 break-words text-sm text-ink">{item.message}</p>
               </Link>
             ))}
             {pendingNonDraftActions.map(({ demandRequest, nextStep }) => (
               <Link
-                className="grid gap-1 rounded-2xl border border-clay/30 bg-clay-tint p-4 transition hover:bg-sand"
+                className="grid gap-1 rounded-2xl border border-gold/30 bg-gold-tint p-4 transition hover:bg-sand"
                 href={`/organizer/demands/${demandRequest.id}`}
                 key={demandRequest.id}
               >
                 <p className="min-w-0 break-words text-sm font-medium text-ink">
                   {demandRequest.title ?? "尚未命名的需求"}
                 </p>
-                <p className="text-sm text-clay-deep">{nextStep.shortMessage}</p>
+                <p className="text-sm text-gold-deep">{nextStep.shortMessage}</p>
               </Link>
             ))}
           </div>
@@ -219,7 +219,7 @@ export default async function OrganizerDashboardPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-ink">近期通知</h2>
           <Link
-            className="text-sm font-medium text-clay hover:underline"
+            className="text-sm font-medium text-gold hover:underline"
             href="/notifications"
           >
             查看全部通知
@@ -256,7 +256,7 @@ export default async function OrganizerDashboardPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-ink">我的需求</h2>
           <Link
-            className="text-sm font-medium text-clay hover:underline"
+            className="text-sm font-medium text-gold hover:underline"
             href="/organizer/demands"
           >
             查看全部需求

@@ -2,7 +2,7 @@ import type { ClassAvailability } from "@/domain/class-session/availability";
 
 const stateStyles: Record<ClassAvailability["state"], { label: string; className: string }> = {
   open: { label: "開放報名", className: "bg-pine-tint text-pine" },
-  full: { label: "已額滿", className: "bg-amber-50 text-amber-800" },
+  full: { label: "已額滿", className: "bg-gold-tint text-gold-deep" },
   started: { label: "已開始", className: "bg-ink/5 text-ink-soft" },
 };
 

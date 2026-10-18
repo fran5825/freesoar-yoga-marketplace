@@ -80,7 +80,7 @@ export async function OwnNotificationsContent() {
                 {link ? (
                   <p>
                     <Link
-                      className="text-sm font-medium text-clay hover:underline"
+                      className="text-sm font-medium text-gold hover:underline"
                       href={link.href}
                     >
                       {link.label} →

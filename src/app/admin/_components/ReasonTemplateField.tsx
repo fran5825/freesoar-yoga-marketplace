@@ -51,7 +51,7 @@ export function ReasonTemplateField({
         <div aria-label="常用原因" className="mt-2 flex flex-wrap gap-2" role="group">
           {templates.map((template) => (
             <button
-              className="rounded-full border border-ink/25 px-3 py-1 text-xs text-ink-soft transition hover:border-ink/50 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+              className="rounded-full border border-ink/25 px-3 py-1 text-xs text-ink-soft transition hover:border-ink/50 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
               key={template.label}
               onClick={() => setValue(template.text)}
               type="button"

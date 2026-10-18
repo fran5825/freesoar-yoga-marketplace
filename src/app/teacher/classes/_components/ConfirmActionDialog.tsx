@@ -17,7 +17,7 @@ export function ConfirmActionDialog({
   confirmLabel,
   action,
   hiddenFields,
-  confirmClassName = "min-h-11 rounded-full bg-clay px-5 py-2 text-sm font-medium text-white transition hover:bg-clay-deep",
+  confirmClassName = "min-h-11 rounded-full bg-gold px-5 py-2 text-sm font-medium text-white transition hover:bg-gold-deep",
   textField,
 }: {
   triggerLabel: string;

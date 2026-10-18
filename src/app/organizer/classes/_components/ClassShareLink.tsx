@@ -42,16 +42,16 @@ export function ClassShareLink({ classSessionId }: { classSessionId: string }) {
       </label>
       <div className="flex flex-wrap items-center gap-3">
         <button
-          className="min-h-11 rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+          className="min-h-11 rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
           onClick={copy}
           type="button"
         >
           {status === "copied" ? "已複製連結" : "複製報名連結"}
         </button>
-        <a className="py-2 text-sm font-medium text-clay underline-offset-4 hover:underline" href={path}>
+        <a className="py-2 text-sm font-medium text-gold underline-offset-4 hover:underline" href={path}>
           開啟課程頁
         </a>
-        <a className="py-2 text-sm font-medium text-clay underline-offset-4 hover:underline" href="#roster">
+        <a className="py-2 text-sm font-medium text-gold underline-offset-4 hover:underline" href="#roster">
           看報名名單
         </a>
       </div>

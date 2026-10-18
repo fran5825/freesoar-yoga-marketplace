@@ -83,7 +83,7 @@ export default async function OrganizationsPage({ searchParams }: OrganizationsP
                       聯絡資料完整
                     </span>
                   ) : (
-                    <span className="rounded-full bg-clay-tint px-3 py-1 text-xs font-medium text-clay-deep">
+                    <span className="rounded-full bg-gold-tint px-3 py-1 text-xs font-medium text-gold-deep">
                       還需要補聯絡資料
                     </span>
                   )}

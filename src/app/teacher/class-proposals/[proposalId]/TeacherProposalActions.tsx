@@ -111,7 +111,7 @@ export function TeacherProposalActions({
           />
           <div className="flex flex-col gap-2 sm:flex-row">
             <button
-              className="rounded-full bg-clay-deep px-5 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-ink/15 disabled:text-ink-soft"
+              className="rounded-full bg-gold-deep px-5 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-ink/15 disabled:text-ink-soft"
               disabled={isBusy || reason.trim().length === 0}
               onClick={() => run(() => onDecline(proposalId, version, reason))}
               type="button"
@@ -138,7 +138,7 @@ export function TeacherProposalActions({
             確認授課
           </button>
           <button
-            className="rounded-full border border-clay/40 bg-white px-5 py-2.5 text-sm font-medium text-clay-deep"
+            className="rounded-full border border-gold/40 bg-white px-5 py-2.5 text-sm font-medium text-gold-deep"
             onClick={() => setMode("declining")}
             type="button"
           >

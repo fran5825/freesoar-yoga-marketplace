@@ -73,7 +73,7 @@ export default async function AdminDemandDetailPage({
     <div className="flex flex-col gap-8">
       <header className="border-b border-ink/15 pb-6">
         <Link
-          className="text-sm font-medium text-clay underline underline-offset-4"
+          className="text-sm font-medium text-gold underline underline-offset-4"
           href={returnTo}
         >
           ← 回需求列表
@@ -97,7 +97,7 @@ export default async function AdminDemandDetailPage({
         ) : null}
         {demand.status === "submitted" ? (
           <a
-            className="mt-4 inline-flex w-full justify-center rounded-full border border-pine/40 px-5 py-2 text-sm font-medium text-pine transition hover:border-pine focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay sm:w-auto"
+            className="mt-4 inline-flex w-full justify-center rounded-full border border-pine/40 px-5 py-2 text-sm font-medium text-pine transition hover:border-pine focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold sm:w-auto"
             href="#demand-actions"
           >
             前往審核操作
@@ -132,7 +132,7 @@ export default async function AdminDemandDetailPage({
             <p className="mt-3 text-sm leading-6 text-ink">
               已成立的課程：
               <Link
-                className="font-medium text-clay underline underline-offset-4 wrap-anywhere"
+                className="font-medium text-gold underline underline-offset-4 wrap-anywhere"
                 href={adminDetailHref("classes", demand.classSession.id)}
               >
                 查看課程「{demand.classSession.title}」
@@ -188,7 +188,7 @@ export default async function AdminDemandDetailPage({
       </section>
 
       <details className="rounded-2xl border border-ink/15 bg-white p-6">
-        <summary className="cursor-pointer text-lg font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay">
+        <summary className="cursor-pointer text-lg font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold">
           其他資料：每堂長度與團體類型
         </summary>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">

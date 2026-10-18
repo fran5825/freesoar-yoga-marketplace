@@ -10,7 +10,7 @@ const originLabels: Record<ClassSessionOrigin, string> = {
 
 export function ClassOriginTag({ origin }: { origin: ClassSessionOrigin }) {
   return (
-    <span className="rounded-full border border-ink/15 px-3 py-1 text-xs font-medium text-ink-soft">
+    <span className="rounded-full bg-sand px-3 py-1 text-xs font-medium text-ink-soft">
       {originLabels[origin]}
     </span>
   );

@@ -45,7 +45,7 @@ export function OrganizerEntryCards({
       {cards.map((card) => (
         <li key={card.intent}>
           <Link
-            className="flex h-full flex-col gap-2 rounded-2xl border border-ink/15 bg-white p-5 sm:gap-3 sm:p-6 transition hover:border-pine/40 hover:bg-sand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+            className="flex h-full flex-col gap-2 rounded-2xl border border-ink/15 bg-white p-5 sm:gap-3 sm:p-6 transition hover:border-pine/40 hover:bg-sand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
             href={getOrganizerIntentHref(card.intent, viewer)}
           >
             <Heading className="text-lg font-semibold text-ink sm:text-xl">{card.title}</Heading>

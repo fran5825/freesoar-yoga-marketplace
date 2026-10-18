@@ -22,7 +22,7 @@ export function PublicHeaderMenu({ children }: { children: ReactNode }) {
         aria-controls="public-header-menu"
         aria-expanded={isOpen}
         aria-label={isOpen ? "關閉選單" : "選單"}
-        className="rounded-full p-2 text-ink transition hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay md:hidden"
+        className="inline-flex size-11 items-center justify-center rounded-full text-ink transition hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold md:hidden"
         onClick={() => setOpenedAtPath(isOpen ? null : pathname)}
         type="button"
       >

@@ -18,10 +18,10 @@ export function ProfileTabs({ active }: { active: (typeof tabs)[number]["key"] }
         return (
           <Link
             aria-current={isActive ? "page" : undefined}
-            className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay ${
+            className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold ${
               isActive
                 ? "border-pine text-pine"
-                : "border-transparent text-ink-soft hover:text-clay"
+                : "border-transparent text-ink-soft hover:text-gold"
             }`}
             href={tab.href}
             key={tab.key}

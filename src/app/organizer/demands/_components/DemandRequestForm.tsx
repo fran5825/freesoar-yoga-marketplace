@@ -656,7 +656,7 @@ export function DemandRequestForm({
 
   const readinessSummary =
     !isLocked && !isReadyForSubmit ? (
-      <div className="rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep">
+      <div className="rounded-xl border border-gold/25 bg-gold-tint px-4 py-3 text-sm leading-6 text-gold-deep">
         <span className="font-medium">
           還缺 {missingRequiredFields.length + (isOrganizationReady ? 0 : 1)} 項才能送審：
         </span>
@@ -713,7 +713,7 @@ export function DemandRequestForm({
   );
 
   const submitConfirmation = isConfirmingSubmit ? (
-    <div className="rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep">
+    <div className="rounded-xl border border-gold/25 bg-gold-tint px-4 py-3 text-sm leading-6 text-gold-deep">
       <p className="font-medium text-ink">確認送出需求</p>
       <dl className="mt-2 grid gap-1 text-ink [overflow-wrap:anywhere]">
         <div className="flex flex-wrap gap-x-2">
@@ -742,7 +742,7 @@ export function DemandRequestForm({
           {isSubmitting ? "正在送出..." : "確認送出"}
         </button>
         <button
-          className="rounded-full border border-clay/40 bg-white px-4 py-2 text-sm font-medium text-ink disabled:cursor-not-allowed disabled:text-ink-faint"
+          className="rounded-full border border-gold/40 bg-white px-4 py-2 text-sm font-medium text-ink disabled:cursor-not-allowed disabled:text-ink-faint"
           disabled={isSubmitting}
           onClick={handleCancelSubmitConfirmation}
           type="button"
@@ -800,13 +800,13 @@ export function DemandRequestForm({
               </p>
             ) : (
               <div
-                className="rounded-xl border border-clay/25 bg-clay-tint px-4 py-3 text-sm leading-6 text-clay-deep [overflow-wrap:anywhere]"
+                className="rounded-xl border border-gold/25 bg-gold-tint px-4 py-3 text-sm leading-6 text-gold-deep [overflow-wrap:anywhere]"
                 role="status"
               >
                 送出需求審核前，需要先補齊「{selectedOrganization.name}」的聯絡資料（聯絡窗口、電話、信箱）。草稿會先幫你存好，補完會回到這裡。
                 <div className="mt-2">
                   <button
-                    className="rounded-full border border-clay/40 bg-white px-4 py-1.5 text-sm font-medium text-clay-deep disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-full border border-gold/40 bg-white px-4 py-1.5 text-sm font-medium text-gold-deep disabled:cursor-not-allowed disabled:opacity-60"
                     disabled={isSavingDraft || isSubmitting}
                     onClick={() =>
                       handleSaveDraft(
@@ -1150,7 +1150,7 @@ function TextField({
       <input
         aria-invalid={error ? true : undefined}
         className={`mt-2 w-full rounded-xl border bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15 disabled:cursor-not-allowed disabled:bg-cream ${
-          error ? "border-clay bg-clay-tint" : "border-ink/25"
+          error ? "border-gold bg-gold-tint" : "border-ink/25"
         }`}
         disabled={disabled}
         inputMode={inputMode}
@@ -1162,7 +1162,7 @@ function TextField({
         value={value}
       />
       {error ? (
-        <p className="mt-2 text-xs font-medium leading-5 text-clay-deep" role="alert">
+        <p className="mt-2 text-xs font-medium leading-5 text-gold-deep" role="alert">
           {error}
         </p>
       ) : null}

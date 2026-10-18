@@ -115,7 +115,7 @@ export default async function AdminClassSessionDetailPage({
     <div className="flex flex-col gap-8">
       <header className="border-b border-ink/15 pb-6">
         <Link
-          className="text-sm font-medium text-clay underline underline-offset-4"
+          className="text-sm font-medium text-gold underline underline-offset-4"
           href={returnTo}
         >
           ← 回課程列表
@@ -178,7 +178,7 @@ export default async function AdminClassSessionDetailPage({
                     }`}
                     pendingLabel="取消處理中…"
                     title={`確定要取消「${classSession.title}」嗎？`}
-                    triggerClassName="min-h-11 rounded-full border border-rose-300 bg-white px-5 py-2 text-sm font-medium text-rose-800 transition hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay disabled:cursor-not-allowed disabled:opacity-60"
+                    triggerClassName="min-h-11 rounded-full border border-rose-300 bg-white px-5 py-2 text-sm font-medium text-rose-800 transition hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold disabled:cursor-not-allowed disabled:opacity-60"
                     triggerLabel="取消課程"
                   />
                 </form>
@@ -284,13 +284,13 @@ export default async function AdminClassSessionDetailPage({
               {roster.rstatus !== "all" ? <input name="rstatus" type="hidden" value={roster.rstatus} /> : null}
               <label className="text-sm font-medium text-ink" htmlFor="roster-search">搜尋學員</label>
               <div className="flex flex-col gap-2 sm:flex-row">
-                <input className="min-w-0 flex-1 rounded-xl border border-ink/30 bg-white px-3 py-2 text-base text-ink focus:outline-2 focus:outline-clay" defaultValue={roster.rq} id="roster-search" key={roster.rq} maxLength={200} name="rq" placeholder="姓名或 email" type="search" />
-                <button className="rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay" type="submit">搜尋學員</button>
+                <input className="min-w-0 flex-1 rounded-xl border border-ink/30 bg-white px-3 py-2 text-base text-ink focus:outline-2 focus:outline-gold" defaultValue={roster.rq} id="roster-search" key={roster.rq} maxLength={200} name="rq" placeholder="姓名或 email" type="search" />
+                <button className="rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold" type="submit">搜尋學員</button>
               </div>
               {roster.rq ? (
                 <div className="flex flex-wrap gap-3 text-sm text-ink-soft">
                   <p className="min-w-0 wrap-anywhere">關鍵字：{roster.rq}</p>
-                  <Link className="font-medium text-clay underline underline-offset-4" href={adminClassRosterHref(classSessionId, returnTo, { rstatus: roster.rstatus })}>清除關鍵字</Link>
+                  <Link className="font-medium text-gold underline underline-offset-4" href={adminClassRosterHref(classSessionId, returnTo, { rstatus: roster.rstatus })}>清除關鍵字</Link>
                 </div>
               ) : null}
             </form>
@@ -298,7 +298,7 @@ export default async function AdminClassSessionDetailPage({
               {rosterTabs.map((tab) => (
                 <Link
                   aria-current={tab.key === roster.rstatus ? "page" : undefined}
-                  className={`rounded-full border px-4 py-2 text-sm transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay ${
+                  className={`rounded-full border px-4 py-2 text-sm transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold ${
                     tab.key === roster.rstatus ? "border-pine bg-pine-tint font-medium text-pine" : "border-ink/20 text-ink-soft hover:border-ink/40"
                   }`}
                   href={adminClassRosterHref(classSessionId, returnTo, { rq: roster.rq, rstatus: tab.key })}
@@ -362,7 +362,7 @@ export default async function AdminClassSessionDetailPage({
                           description="這只是記錄老師已經收到款項，飛索不經手任何金錢。標記會留下紀錄，並顯示為 Admin 標記。"
                           pendingLabel="處理中…"
                           title={`確定要將「${memberDisplay(entry)}」標記為已收款嗎？`}
-                          triggerClassName="rounded-full border border-pine/40 px-3 py-1.5 text-xs font-medium text-pine transition hover:bg-pine-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay disabled:cursor-not-allowed disabled:opacity-60"
+                          triggerClassName="rounded-full border border-pine/40 px-3 py-1.5 text-xs font-medium text-pine transition hover:bg-pine-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold disabled:cursor-not-allowed disabled:opacity-60"
                           triggerLabel="標記已收款"
                         />
                       </form>
@@ -379,7 +379,7 @@ export default async function AdminClassSessionDetailPage({
                           description="請確認老師已經在銀行 App 退款。這只是記錄，飛索不會替任何人轉帳。"
                           pendingLabel="處理中…"
                           title={`確定要將「${memberDisplay(entry)}」標記為已退款嗎？`}
-                          triggerClassName="rounded-full border border-ink/25 px-3 py-1.5 text-xs font-medium text-ink-soft transition hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay disabled:cursor-not-allowed disabled:opacity-60"
+                          triggerClassName="rounded-full border border-ink/25 px-3 py-1.5 text-xs font-medium text-ink-soft transition hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold disabled:cursor-not-allowed disabled:opacity-60"
                           triggerLabel="標記已退款"
                         />
                       </form>
@@ -398,7 +398,7 @@ export default async function AdminClassSessionDetailPage({
                           description={`課程：${classSession.title}。${entry.status === "pending" ? "這筆報名還在等老師確認。" : ""}取消後無法復原，同一位學員也不能再報名這堂課；學員會收到通知。`}
                           pendingLabel="取消處理中…"
                           title={`確定要取消「${memberDisplay(entry)}」的報名嗎？`}
-                          triggerClassName="rounded-full border border-rose-300 px-3 py-1.5 text-xs font-medium text-rose-800 transition hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay disabled:cursor-not-allowed disabled:opacity-60"
+                          triggerClassName="rounded-full border border-rose-300 px-3 py-1.5 text-xs font-medium text-rose-800 transition hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold disabled:cursor-not-allowed disabled:opacity-60"
                           triggerLabel="取消這筆報名"
                         />
                       </form>
@@ -483,7 +483,7 @@ function RelatedField({
       <h3 className="font-medium text-ink">{label}</h3>
       {href ? (
         <Link
-          className="mt-2 inline-block font-medium leading-6 text-clay underline underline-offset-4 wrap-anywhere"
+          className="mt-2 inline-block font-medium leading-6 text-gold underline underline-offset-4 wrap-anywhere"
           href={href}
         >
           {linkText}

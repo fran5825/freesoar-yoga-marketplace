@@ -92,7 +92,7 @@ export function TeacherStatusPanel({
           <input name="teacherProfileId" type="hidden" value={teacherProfileId} />
           <input name="confirmRestore" type="hidden" value="yes" />
           <button
-            className="w-full rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+            className="w-full rounded-full bg-pine px-5 py-2 text-sm font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             disabled={busy}
             type="submit"
           >

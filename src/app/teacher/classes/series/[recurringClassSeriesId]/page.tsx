@@ -113,12 +113,12 @@ export default async function RecurringClassSeriesPage({
     <div className="flex flex-col gap-6 sm:gap-8">
       <header className="border-b border-ink/15 pb-6">
         <Link
-          className="inline-flex min-h-11 items-center text-sm font-medium text-clay hover:underline"
+          className="inline-flex min-h-11 items-center text-sm font-medium text-gold hover:underline"
           href={backHref}
         >
           ← 回我的課程
         </Link>
-        <p className="mt-1 text-sm font-medium text-clay">系列管理</p>
+        <p className="mt-1 text-sm font-medium text-gold">系列管理</p>
         <h1 className="mt-1 min-w-0 break-words text-3xl font-semibold tracking-tight text-ink">
           {series.title}
         </h1>
@@ -187,7 +187,7 @@ export default async function RecurringClassSeriesPage({
       {openableDrafts.length > 0 ? (
         <section
           aria-labelledby="open-all-title"
-          className="grid gap-3 rounded-2xl border border-clay/30 bg-clay-tint p-5 sm:p-6"
+          className="grid gap-3 rounded-2xl border border-gold/30 bg-gold-tint p-5 sm:p-6"
         >
           <h2 className="text-lg font-medium text-ink" id="open-all-title">
             還有 {openableDrafts.length} 場草稿沒開放報名
@@ -287,7 +287,7 @@ export default async function RecurringClassSeriesPage({
               return (
                 <li className="grid scroll-mt-6 gap-1" id={`class-${occurrence.id}`} key={occurrence.id}>
                   <Link
-                    className={`grid min-h-11 gap-2 rounded-2xl border p-3 text-sm transition hover:border-pine/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay sm:grid-cols-[1fr_auto] sm:items-center ${
+                    className={`grid min-h-11 gap-2 rounded-2xl border p-3 text-sm transition hover:border-pine/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold sm:grid-cols-[1fr_auto] sm:items-center ${
                       isOver ? "border-ink/10 bg-cream/60 text-ink-soft" : "border-ink/10 bg-cream text-ink"
                     }`}
                     href={teacherClassDetailHref(occurrence.id, { kind: "series", seriesId: series.id })}
@@ -307,7 +307,7 @@ export default async function RecurringClassSeriesPage({
                         已報名 {occurrence.confirmedCount} / {occurrence.capacity} 人
                       </span>
                       {occurrence.pendingCount > 0 ? (
-                        <span className="font-medium text-clay-deep">
+                        <span className="font-medium text-gold-deep">
                           待確認 {occurrence.pendingCount} 人
                         </span>
                       ) : null}
@@ -405,7 +405,7 @@ export default async function RecurringClassSeriesPage({
               confirmLabel={`確定取消 ${cancellableOccurrences.length} 場`}
               hiddenFields={{ recurringClassSeriesId: series.id }}
               title="取消這個系列尚未開始的場次？"
-              triggerClassName="min-h-11 rounded-full border border-clay/40 px-5 py-2 text-left text-sm font-medium text-clay transition hover:bg-clay-tint"
+              triggerClassName="min-h-11 rounded-full border border-gold/40 px-5 py-2 text-left text-sm font-medium text-gold transition hover:bg-gold-tint"
               triggerLabel="取消整個系列（僅影響尚未開始的場次）"
             >
               <p>
@@ -664,7 +664,7 @@ function OccurrenceQuickAction({
           hiddenFields={{ classSessionId: occurrence.id, returnSeriesId: seriesId, focus: `class-${occurrence.id}` }}
           title="取消這一場？"
           triggerAriaLabel={`取消 ${when} 這一場`}
-          triggerClassName="min-h-11 rounded-full border border-clay/40 bg-white px-4 py-2 text-sm font-medium text-clay transition hover:bg-clay-tint"
+          triggerClassName="min-h-11 rounded-full border border-gold/40 bg-white px-4 py-2 text-sm font-medium text-gold transition hover:bg-gold-tint"
           triggerLabel="取消課程"
         >
           <p>

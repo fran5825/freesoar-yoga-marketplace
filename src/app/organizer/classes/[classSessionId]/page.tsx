@@ -143,7 +143,7 @@ export default async function OrganizerClassSessionDetailPage({
             confirmLabel="確認取消課程"
             hiddenFields={{ classSessionId }}
             title="取消這堂課？"
-            triggerClassName="min-h-11 rounded-full border border-clay/40 bg-white px-5 py-2 text-sm font-medium text-clay transition hover:bg-clay-tint"
+            triggerClassName="min-h-11 rounded-full border border-gold/40 bg-white px-5 py-2 text-sm font-medium text-gold transition hover:bg-gold-tint"
             triggerLabel="取消課程"
           >
             <p>
@@ -176,7 +176,7 @@ export default async function OrganizerClassSessionDetailPage({
         {classSession.demandRequestId ? (
           <p className="mt-3 text-sm">
             <Link
-              className="font-medium text-clay underline-offset-4 hover:underline"
+              className="font-medium text-gold underline-offset-4 hover:underline"
               href={`/organizer/demands/${classSession.demandRequestId}`}
             >
               查看來源需求

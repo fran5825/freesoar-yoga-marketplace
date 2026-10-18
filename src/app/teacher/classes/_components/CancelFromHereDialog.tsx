@@ -38,7 +38,7 @@ export function CancelFromHereDialog({
       hiddenFields={{ recurringClassSeriesId, fromClassSessionId }}
       title="從這場以後全部取消？"
       triggerAriaLabel={triggerAriaLabel}
-      triggerClassName="min-h-11 rounded-full px-3 text-sm font-medium text-clay underline-offset-4 hover:underline"
+      triggerClassName="min-h-11 rounded-full px-3 text-sm font-medium text-gold underline-offset-4 hover:underline"
       triggerLabel="從這場以後全部取消"
     >
       <p>

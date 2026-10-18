@@ -79,17 +79,17 @@ export function RoleNav({
   }
 
   const linkClassName = (href: string) =>
-    `whitespace-nowrap rounded-full px-3 py-2 text-sm transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay ${
+    `whitespace-nowrap rounded-full px-3 py-2 text-sm transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold ${
       isActive(href)
         ? "bg-pine-tint font-medium text-pine"
-        : "text-ink-soft hover:text-clay"
+        : "text-ink-soft hover:text-gold"
     }`;
 
   return (
     <header className="border-b border-ink/10 bg-cream">
       <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-5 py-3 sm:px-8">
         <Link
-          className="flex flex-col leading-tight focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-clay"
+          className="flex flex-col leading-tight focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
           href={area?.home ?? "/"}
         >
           <span className="text-base font-semibold tracking-[0.04em] text-ink">
@@ -104,7 +104,7 @@ export function RoleNav({
           aria-controls="role-nav-menu"
           aria-expanded={isMenuOpen}
           aria-label={isMenuOpen ? "關閉選單" : "選單"}
-          className="rounded-full p-2 text-ink transition hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay md:hidden"
+          className="rounded-full p-2 text-ink transition hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold md:hidden"
           onClick={() => setIsMenuOpen((open) => !open)}
           type="button"
         >
@@ -135,7 +135,7 @@ export function RoleNav({
           <div className="flex flex-wrap items-center gap-2 md:order-2">
             {primaryAction ? (
               <Link
-                className="whitespace-nowrap rounded-full bg-pine px-4 py-2 text-sm font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+                className="whitespace-nowrap rounded-full bg-pine px-4 py-2 text-sm font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
                 href={primaryAction.href}
                 onClick={() => setIsMenuOpen(false)}
               >
@@ -147,7 +147,7 @@ export function RoleNav({
                 <button
                   aria-controls="role-switch-menu"
                   aria-expanded={isRoleOpen}
-                  className="whitespace-nowrap rounded-full border border-ink/30 px-4 py-2 text-sm font-medium text-ink transition hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+                  className="whitespace-nowrap rounded-full border border-ink/30 px-4 py-2 text-sm font-medium text-ink transition hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
                   onClick={() => setIsRoleOpen((open) => !open)}
                   type="button"
                 >
@@ -169,11 +169,11 @@ export function RoleNav({
                       >
                         <Link
                           aria-current={option === currentRole ? "page" : undefined}
-                          className={`block whitespace-nowrap rounded-xl px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay ${
+                          className={`block whitespace-nowrap rounded-xl px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold ${
                             option === currentRole
                               ? "bg-pine-tint font-medium text-pine"
                               : option.isJoin
-                                ? "text-clay hover:bg-sand"
+                                ? "text-gold hover:bg-sand"
                                 : "text-ink-soft hover:bg-sand hover:text-ink"
                           }`}
                           href={option.href}
@@ -195,7 +195,7 @@ export function RoleNav({
             </span>
             <form action={signOutAction}>
               <button
-                className="whitespace-nowrap rounded-full border border-ink/30 px-4 py-2 text-sm font-medium text-ink transition hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+                className="whitespace-nowrap rounded-full border border-ink/30 px-4 py-2 text-sm font-medium text-ink transition hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
                 type="submit"
               >
                 登出

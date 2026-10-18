@@ -58,7 +58,7 @@ export default async function OrganizerClassesPage() {
             {proposals.map((proposal) => (
               <li key={proposal.id}>
                 <Link
-                  className="grid gap-2 rounded-2xl border border-ink/15 bg-white p-5 transition hover:bg-sand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+                  className="grid gap-2 rounded-2xl border border-ink/15 bg-white p-5 transition hover:bg-sand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
                   href={`/organizer/class-proposals/${proposal.id}`}
                 >
                   <div className="flex flex-wrap items-center gap-3">

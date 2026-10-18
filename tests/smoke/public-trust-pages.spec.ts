@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 const publicRoutes = [
   {
     path: "/",
-    heading: "連結好老師與你的瑜伽團課平台",
+    heading: "讓好的瑜伽老師，被需要的團體找到",
     title: "飛索・瑜伽團課共創平台",
   },
   {
@@ -18,7 +18,7 @@ const publicRoutes = [
   },
   {
     path: "/teachers/join",
-    heading: "一起建立清楚、安心的瑜伽團課合作",
+    heading: "把你的教學，帶給真正需要的團體",
     title: "飛索・瑜伽團課共創平台",
   },
   {
@@ -74,8 +74,8 @@ test.describe("public trust pages", () => {
     await page.goto("/");
 
     const main = page.getByRole("main");
-    await expect(main.getByRole("link", { name: "我想發起團課 →", exact: true })).toHaveAttribute("href", "/organizers/request");
-    await expect(main.getByRole("link", { name: "找一堂適合我的課", exact: true })).toHaveAttribute("href", "/classes");
+    await expect(main.getByRole("link", { name: "成為合作老師", exact: true })).toHaveAttribute("href", "/teachers/join");
+    await expect(main.getByRole("link", { name: "找一堂課", exact: true })).toHaveAttribute("href", "/classes");
     await expect(main.getByRole("link", { name: "提出團課需求" })).toHaveAttribute("href", "/organizers/request");
     await expect(main.getByRole("link", { name: "探索課程" })).toHaveAttribute("href", "/classes");
     await expect(main.getByRole("link", { name: "了解老師加入" })).toHaveAttribute("href", "/teachers/join");
@@ -86,7 +86,7 @@ test.describe("public trust pages", () => {
 
     const paymentQuestion = page.locator("summary", { hasText: "目前可以在平台上付款或申請退款嗎？" });
     await paymentQuestion.press("Enter");
-    await expect(page.getByText(/目前 V1 不提供完整的線上付款與退款自動化/)).toBeVisible();
+    await expect(page.getByText(/目前平台不提供完整的線上付款與退款自動化/)).toBeVisible();
     await expect(page.getByText(/取消期限|取消費用|退款資格/)).toHaveCount(0);
   });
 
