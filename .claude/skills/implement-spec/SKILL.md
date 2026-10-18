@@ -13,7 +13,7 @@ You have been provided a spec. This spec should have tickets associated with it,
 - 開始前先列出 frontier（現在就能做的票）和每張票的 Workflow mode／Human Gate，給產品主人一次放行。HEAVY 或 Human Gate = yes 的票沒放行就不派給 subagent。
 - 碰 Prisma schema／migration 的票：在自己的 worktree 做，並用獨立的測試資料庫，不碰本機開發用的資料庫。
 - 每個 implementer subagent 跑 Playwright 時要用不同的埠（3100、3200、3300…），避免互相把伺服器關掉。
-- 第 7 步的 `code-review` 用 Claude Code 內建的 `/code-review`。
+- 第 7 步先跑 Claude Code 內建的 `/code-review`（抓 bug），再用 Skill tool 呼叫 `spec-review`（對照專案規則和 spec），兩邊的發現交給同一個 implementer subagent 修。
 - 第 8 步不開 PR：回報 integration branch 名稱，請產品主人決定要不要合併進 main。沒有明確要求就不 commit 到 main、不 push。
 
 The goal is the entire spec implemented on a single **integration branch**, with every ticket resolved the way the issue tracker closes work.

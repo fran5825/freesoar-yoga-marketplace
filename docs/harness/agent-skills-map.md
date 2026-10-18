@@ -140,9 +140,10 @@ For:
 | 想清楚 | `/grill-with-docs` | 一題一題問到決定都清楚，同時更新 `docs/context/glossary.md` 與 `docs/adr/` |
 | 寫 spec | `/to-spec` | `docs/specs/<feature-slug>-spec.md` |
 | 切票 | `/to-tickets <spec 路徑>` | `docs/superpowers/plans/<feature-slug>/tickets/*.md`，每張標好 Workflow mode／Human Gate |
-| 實作（一票一票） | `/implement <票路徑>` | 先寫測試再寫程式（`tdd`），最後跑 `/code-review` |
+| 實作（一票一票） | `/implement <票路徑>` | 先寫測試再寫程式（`tdd`），最後跑 `/code-review` 和 `spec-review` |
 | 實作（整份 spec 並行） | `/implement-spec <spec 路徑>` | 多個 subagent 在 integration branch 並行做票，只用在大功能 |
-| 審查 | `/code-review` | Claude Code 內建版本 |
+| 審查：抓 bug | `/code-review` | Claude Code 內建版本 |
+| 審查：照規則、照 spec | `/spec-review` | 改編自 Matt 的 code-review：對照 `docs/harness/*checklist*.md`、`AGENTS.md` 與 spec／票，列出漏做、做超過、違反規則的地方 |
 | 回顧 | `/retro` | 依嚴重度列出要改的規則、檢查或文件；產品主人挑選後才修改，下一輪就套用 |
 
 `pr` skill 先不收：目前還沒上線，直接進 main。正式上線、改成走 PR 之後再評估。
