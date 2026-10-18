@@ -146,4 +146,6 @@ For:
 | 審查：照規則、照 spec | `/spec-review` | 改編自 Matt 的 code-review：對照 `docs/harness/*checklist*.md`、`AGENTS.md` 與 spec／票，列出漏做、做超過、違反規則的地方 |
 | 回顧 | `/retro` | 依嚴重度列出要改的規則、檢查或文件；產品主人挑選後才修改，下一輪就套用 |
 
+**一次跑完整輪**：`/feature-loop <功能描述或 feature-slug>` 會照上表順序自動接下去，只在需要產品主人的關卡停下來：grill 的問題、spec 範圍、切票與 HEAVY 放行、commit、retro 建議。進度記在 `docs/superpowers/plans/<feature-slug>/loop-status.md`，中斷後用同一個指令就能接續。
+
 `pr` skill 先不收：目前還沒上線，直接進 main。正式上線、改成走 PR 之後再評估。
