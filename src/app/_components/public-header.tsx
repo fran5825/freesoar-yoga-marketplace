@@ -13,18 +13,40 @@ const publicLinks = [
 // 決策 1 起，登入後每一頁都改用專區導覽列（公開頁透過 SiteShell 切換外框，首頁與登入頁會把
 // 已登入的人導到上次身分的總覽），所以這裡不再需要顯示登入狀態、登出與「我的專區」。
 // 手機版連結與「登入」收進 ☰ 選單（member-usability 票 08）。
-export function PublicHeader() {
+// variant="home"：首頁剪紙團課改版（2026-10-20，構圖 comp-4e）用白底、深藏青粗體品牌字，
+// 品牌字貼近畫面左邊（產品主人核准的刻意差異，不和首頁主標對齊）。其他公開頁維持原樣。
+export function PublicHeader({ variant = "default" }: { variant?: "default" | "home" }) {
+  const isHome = variant === "home";
+
   return (
-    <header className="border-b border-ink/10">
-      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-5 py-4 sm:px-8">
-        <Link
-          className="flex min-h-11 flex-col justify-center leading-tight focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
-          href="/"
-        >
-          <span className="text-base font-semibold tracking-[0.04em] text-ink">飛索・瑜伽團課共創平台</span>
-          <span className="text-xs tracking-[0.08em] text-ink-soft">Free Soar Yoga</span>
-        </Link>
-        <PublicHeaderMenu>
+    <header className={isHome ? "border-b border-home-navy/10 bg-white" : "border-b border-ink/10"}>
+      <div
+        className={
+          isHome
+            ? "mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-3 pl-4 pr-9 sm:px-8 md:py-2"
+            : "mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-5 py-4 sm:px-8"
+        }
+      >
+        {isHome ? (
+          <Link
+            className="flex min-h-10 -translate-y-0.5 items-center leading-none text-home-ink focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-home-green"
+            href="/"
+          >
+            <span className="font-home-display text-[1.2rem] font-extrabold tracking-[0.02em]">飛索</span>
+            <span aria-hidden="true" className="mx-[7px] inline-block size-[3.4px] rounded-full bg-current" />
+            <span className="font-home-display text-[0.875rem] font-extrabold tracking-[0.03em]">瑜伽團課共創平台</span>
+            <span className="sr-only">Free Soar Yoga</span>
+          </Link>
+        ) : (
+          <Link
+            className="flex min-h-11 flex-col justify-center leading-tight focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
+            href="/"
+          >
+            <span className="text-base font-semibold tracking-[0.04em] text-ink">飛索・瑜伽團課共創平台</span>
+            <span className="text-xs tracking-[0.08em] text-ink-soft">Free Soar Yoga</span>
+          </Link>
+        )}
+        <PublicHeaderMenu tone={isHome ? "home" : "default"}>
           <nav
             aria-label="公開網站導覽"
             className="flex flex-col gap-1 text-sm text-ink-soft md:flex-row md:flex-wrap md:items-center md:gap-x-6 md:gap-y-2"

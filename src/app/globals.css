@@ -27,6 +27,14 @@
   --color-gold-deep: #5e4320;
   --color-gold-tint: #f4ecdc;
   --color-gold-glow: #c8a35a;
+
+  /* 首頁剪紙團課配色：2026-10-20 產品主人核准，先只用在首頁（.impeccable/surfaces/src-app-page-tsx.md）。 */
+  --color-home-navy: #153451;
+  --color-home-navy-deep: #0e2740;
+  --color-home-ink: #061b45;
+  --color-home-indigo: #0b1459;
+  --color-home-green: #07662f;
+  --color-home-band: #faf7f1;
 }
 
 @theme inline {
@@ -35,6 +43,9 @@
   /* 中文沒有指定字體時由系統補字，這裡明確指定（DESIGN.md 中文字體方案一）。 */
   --font-sans: var(--font-geist-sans), "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", Arial, Helvetica, sans-serif;
   --font-mono: var(--font-geist-mono);
+  /* 首頁主標用的 Noto Sans TC 800：next/font 依 unicode-range 切片，瀏覽器只下載頁面用到的字。
+     其他文字維持系統字（2026-10-20 產品主人決定）。 */
+  --font-home-display: var(--font-noto-sans-tc), "PingFang TC", "Microsoft JhengHei", sans-serif;
 }
 
 body {

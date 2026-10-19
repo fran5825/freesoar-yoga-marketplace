@@ -1,14 +1,22 @@
 // 手機選單按鈕的漢堡圖示（打開時變成 ✕）。公開 header 與專區導覽列共用，
 // 按鈕本身要用 aria-label 提供「選單／關閉選單」文字給螢幕閱讀器。
-export function MenuIcon({ isOpen }: { isOpen: boolean }) {
+export function MenuIcon({
+  isOpen,
+  strokeWidth = 1.75,
+  className = "h-6 w-6",
+}: {
+  isOpen: boolean;
+  strokeWidth?: number;
+  className?: string;
+}) {
   return (
     <svg
       aria-hidden="true"
-      className="h-6 w-6"
+      className={className}
       fill="none"
       stroke="currentColor"
       strokeLinecap="round"
-      strokeWidth={1.75}
+      strokeWidth={strokeWidth}
       viewBox="0 0 24 24"
     >
       {isOpen ? (

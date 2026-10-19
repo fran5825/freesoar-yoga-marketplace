@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 const publicRoutes = [
   {
     path: "/",
-    heading: "讓好的瑜伽老師，被需要的團體找到",
+    heading: "找到對的瑜伽老師，讓一群人一起練習",
     title: "飛索・瑜伽團課共創平台",
   },
   {
@@ -70,12 +70,14 @@ test.describe("public trust pages", () => {
     });
   }
 
-  test("home offers organizer, member and teacher as parallel primary entry points", async ({ page }) => {
+  // 2026-10-20 首頁主軸是團課：主按鈕「我要發起團課」、次按鈕「我要找一堂課」，老師入口是按鈕下方的小字連結。
+  test("home leads with organizing a group class, then finding a class, with a quieter teacher entry", async ({ page }) => {
     await page.goto("/");
 
     const main = page.getByRole("main");
-    await expect(main.getByRole("link", { name: "成為合作老師", exact: true })).toHaveAttribute("href", "/teachers/join");
-    await expect(main.getByRole("link", { name: "找一堂課", exact: true })).toHaveAttribute("href", "/classes");
+    await expect(main.getByRole("link", { name: "我要發起團課", exact: true })).toHaveAttribute("href", "/organizers/request");
+    await expect(main.getByRole("link", { name: "我要找一堂課", exact: true })).toHaveAttribute("href", "/classes");
+    await expect(main.getByRole("link", { name: "你是瑜伽老師？了解如何加入", exact: true })).toHaveAttribute("href", "/teachers/join");
     await expect(main.getByRole("link", { name: "提出團課需求" })).toHaveAttribute("href", "/organizers/request");
     await expect(main.getByRole("link", { name: "探索課程" })).toHaveAttribute("href", "/classes");
     await expect(main.getByRole("link", { name: "了解老師加入" })).toHaveAttribute("href", "/teachers/join");
