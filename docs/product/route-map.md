@@ -10,7 +10,7 @@ V1 route 必須服務瑜伽團課 marketplace 的核心流程，不納入 Wellne
 
 | Route | 目的 | 主要角色 |
 |---|---|---|
-| `/` | **已落地**：品牌首頁，說明 Free Soar Yoga 的定位、三種角色與主辦人／老師主要入口；不提供 public class discovery | Visitor |
+| `/` | **已落地**：品牌首頁，說明 Free Soar Yoga 的定位、三種角色與主辦人／老師主要入口；不提供 public class discovery。已登入的人開 `/` 會轉到上次身分的總覽，帶 `?view=home`（專區導覽列的品牌連結）時改為顯示首頁、上方用專區導覽列（2026-10-20） | Visitor |
 | `/about` | **已落地**：Free Soar Yoga 品牌與 marketplace 說明 | Visitor |
 | `/teachers/join` | 老師加入與申請入口。**已擴充**（`teacher-join-gated-application` 已確認）：依登入狀態分支——未登入顯示品牌定位、審核流程、資料預覽、FAQ 與帶 `callbackUrl` 的登入 CTA（唯讀導覽，不渲染可填表單）；已登入才顯示完整申請表單（draft 儲存、送審、四種既有狀態顯示），行為與擴充前一致 | Visitor, Teacher |
 | `/organizers/request` | 團主提出需求入口 | Visitor, Organizer |

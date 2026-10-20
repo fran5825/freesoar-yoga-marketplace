@@ -53,3 +53,92 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
+
+/* 首頁動態（2026-10-20 motion 關）：安靜、不擋閱讀。只用在首頁；系統設定「減少動態」時全部關閉。
+   - home-enter：首屏依序淡入上移 6px，用 --enter-delay 錯開，整體 0.6 秒內完成。
+   - home-reveal：捲動到畫面內時輕輕浮現（scroll-driven animation，不支援的瀏覽器直接顯示）。
+   - home-nudge：滑鼠移上連結或按鈕時，裡面的箭頭往右挪 3px。 */
+@keyframes home-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes home-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .home-enter {
+    animation: home-enter 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--enter-delay, 0ms);
+  }
+
+  @supports (animation-timeline: view()) {
+    .home-reveal {
+      animation: home-reveal linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 60%;
+    }
+  }
+
+  .home-nudge .home-nudge-arrow {
+    transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .home-nudge:hover .home-nudge-arrow,
+  .home-nudge:focus-visible .home-nudge-arrow {
+    transform: translateX(3px);
+  }
+
+  .home-press {
+    transition: transform 120ms ease-out, background-color 200ms ease-out;
+  }
+
+  .home-press:active {
+    transform: scale(0.985);
+  }
+}
+
+/* 首頁構圖範圍等比縮放（2026-10-20 responsive 關，/impeccable 要求桌機維持構圖首屏、尺寸與視窗成比例）：
+   430px 以下照手機版；430px 以上，.home-scale 裡的間距單位與字級都改成「430px 時的數值 × 視窗寬 ÷ 430」。
+   --hu 是「430px 寬時的 1px」。 */
+.home-scale {
+  --hu: 1px;
+}
+
+@media (min-width: 431px) {
+  .home-scale {
+    /* 放大倍率同時受螢幕高度限制（100svh / 530），讓 1280×800、1440×900 筆電在一個螢幕內看得到
+       導覽列、插圖、主標與兩顆按鈕；整頁是置中單欄（finish review 第 1 項，產品主人 2026-10-20 選 A）。
+       大螢幕兩側留白較多，桌機版面留待下一輪桌機構圖。 */
+    --hu: min(calc(100vw / 430), calc(100svh / 530));
+    --spacing: calc(var(--hu) * 4);
+    --text-xs: calc(var(--hu) * 12);
+    --text-sm: calc(var(--hu) * 14);
+    --text-base: calc(var(--hu) * 16);
+  }
+}
+
+/* 桌機（lg 以上）照桌機構圖 comp-desktop-a 排版（2026-10-20 產品主人選 A：寬幅橫圖＋下方文字）。
+   --du 是「構圖 1536px 寬時的 1px」，桌機元素的尺寸都寫成 構圖量到的數值 × --du。 */
+@media (min-width: 1024px) {
+  .home-scale {
+    --du: calc(100vw / 1536);
+    --hu: calc(var(--du) * 1.15);
+    --spacing: calc(var(--du) * 4);
+    --text-xs: calc(var(--du) * 15);
+    --text-sm: calc(var(--du) * 17);
+    --text-base: calc(var(--du) * 19);
+  }
+}
+
+/* 首頁反白選取文字用首頁配色（finish review：browser surfaces）。 */
+.home-scale ::selection {
+  background-color: var(--color-home-navy);
+  color: #fff;
+}

@@ -23,7 +23,7 @@ export function PublicHeader({ variant = "default" }: { variant?: "default" | "h
       <div
         className={
           isHome
-            ? "mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-3 pl-4 pr-9 sm:px-8 md:py-2"
+            ? "mx-auto flex w-full max-w-[calc(430*var(--hu))] flex-wrap items-center justify-between gap-x-6 gap-y-3 pl-4 pr-9 lg:h-[calc(66*var(--du))] lg:max-w-none lg:flex-nowrap lg:pl-[calc(98*var(--du))] lg:pr-[calc(94*var(--du))]"
             : "mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-5 py-4 sm:px-8"
         }
       >
@@ -32,9 +32,9 @@ export function PublicHeader({ variant = "default" }: { variant?: "default" | "h
             className="flex min-h-10 -translate-y-0.5 items-center leading-none text-home-ink focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-home-green"
             href="/"
           >
-            <span className="font-home-display text-[1.2rem] font-extrabold tracking-[0.02em]">飛索</span>
-            <span aria-hidden="true" className="mx-[7px] inline-block size-[3.4px] rounded-full bg-current" />
-            <span className="font-home-display text-[0.875rem] font-extrabold tracking-[0.03em]">瑜伽團課共創平台</span>
+            <span className="font-home-display text-[calc(19.2*var(--hu))] font-extrabold tracking-[0.02em] lg:text-[calc(40*var(--du))]">飛索</span>
+            <span aria-hidden="true" className="mx-[calc(7*var(--hu))] inline-block size-[calc(3.4*var(--hu))] lg:mx-[calc(12*var(--du))] lg:size-[calc(6*var(--du))] rounded-full bg-current" />
+            <span className="font-home-display text-[calc(14*var(--hu))] font-extrabold tracking-[0.03em] lg:text-[calc(27*var(--du))] lg:tracking-[0.13em]">瑜伽團課共創平台</span>
             <span className="sr-only">Free Soar Yoga</span>
           </Link>
         ) : (
@@ -49,11 +49,11 @@ export function PublicHeader({ variant = "default" }: { variant?: "default" | "h
         <PublicHeaderMenu tone={isHome ? "home" : "default"}>
           <nav
             aria-label="公開網站導覽"
-            className="flex flex-col gap-1 text-sm text-ink-soft md:flex-row md:flex-wrap md:items-center md:gap-x-6 md:gap-y-2"
+            className={`flex flex-col gap-1 text-sm md:flex-row md:flex-wrap md:items-center md:gap-x-6 md:gap-y-2 ${isHome ? "font-bold text-home-indigo" : "text-ink-soft"}`}
           >
             {publicLinks.map((link) => (
               <Link
-                className="inline-flex min-h-11 items-center rounded-xl px-1 transition hover:text-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+                className={`inline-flex min-h-11 items-center rounded-xl px-1 transition focus-visible:outline-2 focus-visible:outline-offset-2 ${isHome ? "hover:text-home-green focus-visible:outline-home-green" : "hover:text-gold focus-visible:outline-gold"}`}
                 href={link.href}
                 key={link.href}
               >
@@ -63,7 +63,7 @@ export function PublicHeader({ variant = "default" }: { variant?: "default" | "h
           </nav>
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <Link
-              className="inline-flex min-h-11 items-center rounded-full bg-pine px-5 font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+              className={`inline-flex min-h-11 items-center rounded-full px-5 text-white transition focus-visible:outline-2 focus-visible:outline-offset-2 ${isHome ? "bg-home-navy font-bold hover:bg-home-navy-deep focus-visible:outline-home-green" : "bg-pine font-medium hover:bg-pine-deep focus-visible:outline-gold"}`}
               href="/sign-in"
             >
               登入／註冊

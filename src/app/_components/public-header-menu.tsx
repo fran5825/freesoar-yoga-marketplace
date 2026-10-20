@@ -28,14 +28,14 @@ export function PublicHeaderMenu({
         aria-controls="public-header-menu"
         aria-expanded={isOpen}
         aria-label={isOpen ? "關閉選單" : "選單"}
-        className={`inline-flex ${tone === "home" ? "size-10" : "size-11"} items-center justify-center rounded-full transition focus-visible:outline-2 focus-visible:outline-offset-2 md:hidden ${tone === "home" ? "text-home-ink hover:bg-home-navy/5 focus-visible:outline-home-green" : "text-ink hover:bg-ink/5 focus-visible:outline-gold"}`}
+        className={`inline-flex ${tone === "home" ? "size-10 lg:size-[calc(60*var(--du))]" : "size-11"} items-center justify-center rounded-full transition focus-visible:outline-2 focus-visible:outline-offset-2 ${tone === "home" ? "" : "md:hidden"} ${tone === "home" ? "text-home-ink hover:bg-home-navy/5 focus-visible:outline-home-green" : "text-ink hover:bg-ink/5 focus-visible:outline-gold"}`}
         onClick={() => setOpenedAtPath(isOpen ? null : pathname)}
         type="button"
       >
-        <MenuIcon className={tone === "home" ? "size-7 -translate-y-0.5" : undefined} isOpen={isOpen} strokeWidth={tone === "home" ? 2.25 : undefined} />
+        <MenuIcon className={tone === "home" ? "size-7 -translate-y-0.5 lg:size-[calc(60*var(--du))] lg:translate-y-[calc(3*var(--du))]" : undefined} isOpen={isOpen} strokeWidth={tone === "home" ? 2.25 : undefined} />
       </button>
       <div
-        className={`${isOpen ? "flex" : "hidden"} w-full flex-col gap-4 md:contents`}
+        className={`${isOpen ? "flex" : "hidden"} w-full flex-col gap-4 ${tone === "home" ? "pb-4" : "md:contents"}`}
         id="public-header-menu"
       >
         {children}

@@ -45,12 +45,16 @@ async function expectArea(page: Page, areaLabel: string) {
   await expect(page.getByRole("navigation", { name: "公開網站導覽" })).toHaveCount(0);
 }
 
-// 手機版角色切換在 ☰ 選單裡，要先打開。
-async function expectCurrentRole(page: Page, roleLabel: string) {
+// 手機版的專區連結與角色切換在 ☰ 選單裡，要先打開；桌機沒有這個按鈕就不動作。
+async function openMobileMenu(page: Page) {
   const menuButton = page.getByRole("banner").getByRole("button", { name: "選單", exact: true });
   if (await menuButton.isVisible()) {
     await menuButton.click();
   }
+}
+
+async function expectCurrentRole(page: Page, roleLabel: string) {
+  await openMobileMenu(page);
   await expect(
     page.getByRole("button", { name: new RegExp(`目前身分：${roleLabel}`) }),
   ).toBeVisible();
@@ -83,6 +87,33 @@ test.describe("signed-in navigation", () => {
     await expect(page).toHaveURL(/\/teacher\/dashboard$/);
   });
 
+  // 2026-10-20 修訂：已登入的人點品牌名稱回得了首頁；直接打開 `/` 仍到上次身分總覽。
+  test("the brand link takes a signed-in user to the home page with their area nav, while opening / directly still goes to the last-used area", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const id = runId(testInfo, "brand-home");
+    const { sessionToken } = await seedTeacher(id, "submitted");
+    await addAuthSessionCookie(context, sessionToken);
+    const lastRole = async () =>
+      (await context.cookies()).find((cookie) => cookie.name === "fsy_last_role")?.value;
+
+    await page.goto("/teacher/dashboard");
+    await page.getByRole("banner").getByRole("link", { name: /飛索・瑜伽團課共創平台/ }).click();
+    await expect(page).toHaveURL(/\/\?view=home$/);
+    await expect(page.getByRole("heading", { level: 1, name: /找到對的瑜伽老師/ })).toBeVisible();
+    await expectArea(page, "老師專區");
+    await expect(page.getByRole("navigation", { name: "頁尾導覽" }).getByRole("link", { name: "登入" })).toHaveCount(0);
+
+    // 看首頁不算進入任何專區；重新整理也停在首頁。
+    expect(await lastRole()).toBe("teacher");
+    await page.reload();
+    await expect(page).toHaveURL(/\/\?view=home$/);
+
+    await page.goto("/");
+    await expect(page).toHaveURL(/\/teacher\/dashboard$/);
+  });
+
   // member-flow-redesign 票 01：/classes 套學員外框，導覽列的 /member/* 會被背景預先載入；
   // 預先載入不算進入學員專區，真的點進去才算。
   test("background prefetch of member links does not change the last-used area; actually entering the member area does", async ({
@@ -104,15 +135,18 @@ test.describe("signed-in navigation", () => {
         response.request().headers()["next-router-prefetch"] !== undefined,
     );
     await page.goto("/classes");
+    // 手機版專區連結收在 ☰ 選單裡，打開後才會出現、才會被預先載入。
+    await openMobileMenu(page);
     await memberPrefetch;
     expect(await lastRole()).toBe("teacher");
 
     await page.goto("/");
     await expect(page).toHaveURL(/\/teacher\/dashboard$/);
 
-    // 從 /classes 點 logo 真的進入學員總覽：上次身分改為學員。
+    // 從 /classes 點「總覽」真的進入學員總覽：上次身分改為學員。
     await page.goto("/classes");
-    await page.getByRole("banner").getByRole("link", { name: /飛索・瑜伽團課共創平台/ }).click();
+    await openMobileMenu(page);
+    await page.getByRole("banner").getByRole("link", { name: "總覽", exact: true }).click();
     await expect(page).toHaveURL(/\/member\/dashboard$/);
     await expect.poll(lastRole).toBe("member");
     await page.goto("/");
@@ -212,12 +246,12 @@ test.describe("signed-in navigation", () => {
     await expectArea(page, "老師專區");
     await expectCurrentRole(page, "老師");
 
-    // 搜尋課程：學員專區，「找課程」是目前頁，logo 連到學員總覽。
+    // 搜尋課程：學員專區，「找課程」是目前頁，品牌名稱連回首頁（2026-10-20 撤回決策 9）。
     await page.goto("/classes");
     await expectArea(page, "學員專區");
     await expect(
       page.getByRole("banner").getByRole("link", { name: /飛索・瑜伽團課共創平台/ }),
-    ).toHaveAttribute("href", "/member/dashboard");
+    ).toHaveAttribute("href", "/?view=home");
     await expectCurrentRole(page, "學員");
 
     await context.clearCookies();

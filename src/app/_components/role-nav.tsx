@@ -5,18 +5,20 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { HOME_VIEW_HREF } from "@/lib/navigation/home-view";
+
 import { MenuIcon } from "./menu-icon";
 
 export type RoleNavLink = { href: string; label: string };
 export type RoleSwitchLink = RoleNavLink & { isJoin?: boolean };
 
 // 2026-09-27 signed-in-navigation 票 03：登入後 /classes、/about、/teachers/join 這類頁面也會套
-// 專區外框，網址沒有專區前綴，所以「目前身分」與 logo 改依外框的 areaLabel 判斷。
-const areaRoles: Record<string, { roleLabel: string; home: string }> = {
-  學員專區: { roleLabel: "學員", home: "/member/dashboard" },
-  團主專區: { roleLabel: "團主", home: "/organizer/dashboard" },
-  老師專區: { roleLabel: "老師", home: "/teacher/dashboard" },
-  管理後台: { roleLabel: "管理後台", home: "/admin/dashboard" },
+// 專區外框，網址沒有專區前綴，所以「目前身分」改依外框的 areaLabel 判斷。
+const areaRoles: Record<string, { roleLabel: string }> = {
+  學員專區: { roleLabel: "學員" },
+  團主專區: { roleLabel: "團主" },
+  老師專區: { roleLabel: "老師" },
+  管理後台: { roleLabel: "管理後台" },
 };
 
 // 2026-09-25 organizer-usability：登入後各角色專區共用的導覽列（先用在團主、老師）。
@@ -68,7 +70,8 @@ export function RoleNav({
     };
   }, [isRoleOpen]);
 
-  // 目前所在的身分＝這個外框代表的身分；logo 連到該身分的總覽（避免點 logo 回首頁又被導走）。
+  // 目前所在的身分＝這個外框代表的身分。品牌名稱連回首頁（帶 view=home 才不會被轉回總覽，
+  // 2026-10-20 撤回決策 9）；回總覽用導覽列的「總覽」。
   const area = areaRoles[areaLabel];
   const currentRole = roleOptions.find(
     (option) => !option.isJoin && option.label === area?.roleLabel,
@@ -90,7 +93,7 @@ export function RoleNav({
       <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-5 py-3 sm:px-8">
         <Link
           className="flex flex-col leading-tight focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
-          href={area?.home ?? "/"}
+          href={HOME_VIEW_HREF}
         >
           <span className="text-base font-semibold tracking-[0.04em] text-ink">
             飛索・瑜伽團課共創平台

@@ -12,11 +12,14 @@ export async function RoleShell({
   areaLabel,
   links,
   primaryAction,
+  fullWidth = false,
   children,
 }: {
   areaLabel: string;
   links: RoleNavLink[];
   primaryAction?: RoleNavLink;
+  // 2026-10-20：已登入看首頁時只借用導覽列，首頁自己的版面（comp 4e）不放進 max-w-4xl 的框。
+  fullWidth?: boolean;
   children: ReactNode;
 }) {
   const session = await auth();
@@ -41,9 +44,13 @@ export async function RoleShell({
           signedInLabel={signedInLabel}
         />
       ) : null}
-      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-5 py-8 sm:px-8 sm:py-12">
-        {children}
-      </main>
+      {fullWidth ? (
+        children
+      ) : (
+        <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-5 py-8 sm:px-8 sm:py-12">
+          {children}
+        </main>
+      )}
     </div>
   );
 }

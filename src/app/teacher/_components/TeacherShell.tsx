@@ -31,7 +31,13 @@ const suspendedLinks = [
 
 // 老師專區外框。/teacher/* 由 layout.tsx 套用（含 /teacher/notifications）；直接開共用的 /notifications
 // 且不是團主時，由通知頁自己包這個。
-export async function TeacherShell({ children }: { children: ReactNode }) {
+export async function TeacherShell({
+  fullWidth,
+  children,
+}: {
+  fullWidth?: boolean;
+  children: ReactNode;
+}) {
   const teacherProfile = await getOwnTeacherProfileApplicationSnapshot();
   const links =
     teacherProfile?.status === "approved"
@@ -41,7 +47,7 @@ export async function TeacherShell({ children }: { children: ReactNode }) {
         : limitedLinks;
 
   return (
-    <RoleShell areaLabel="老師專區" links={links}>
+    <RoleShell areaLabel="老師專區" fullWidth={fullWidth} links={links}>
       {children}
     </RoleShell>
   );

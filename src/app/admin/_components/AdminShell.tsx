@@ -11,9 +11,15 @@ const links = [
 ];
 
 // 管理後台外框。/admin/* 由 layout.tsx 套用，導覽列與頁寬（max-w-4xl）在這裡統一，各頁不再自己設定。
-export function AdminShell({ children }: { children: ReactNode }) {
+export function AdminShell({
+  fullWidth,
+  children,
+}: {
+  fullWidth?: boolean;
+  children: ReactNode;
+}) {
   return (
-    <RoleShell areaLabel="管理後台" links={links}>
+    <RoleShell areaLabel="管理後台" links={links} fullWidth={fullWidth}>
       {children}
     </RoleShell>
   );

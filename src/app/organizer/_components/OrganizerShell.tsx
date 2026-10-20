@@ -13,10 +13,17 @@ const links = [
 
 // 團主專區外框。/organizer/* 由 layout.tsx 套用（含 /organizer/notifications）；直接開共用的
 // /notifications 時由通知頁自己包這個。
-export function OrganizerShell({ children }: { children: ReactNode }) {
+export function OrganizerShell({
+  fullWidth,
+  children,
+}: {
+  fullWidth?: boolean;
+  children: ReactNode;
+}) {
   return (
     <RoleShell
       areaLabel="團主專區"
+      fullWidth={fullWidth}
       links={links}
     >
       {children}
