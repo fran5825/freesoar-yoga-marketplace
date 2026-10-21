@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-18T08:29:50.281Z",
+  "generatedAt": "2026-10-20T22:19:23.006Z",
   "title": "Design System: Free Soar Yoga 飛索",
   "extensions": {
     "colorMeta": {
@@ -228,16 +228,106 @@
           "#f1e8d6",
           "#faf6ef"
         ]
+      },
+      "home-navy": {
+        "role": "primary",
+        "displayName": "深藏青 Home Navy（首頁）",
+        "canonical": "#153451",
+        "tonalRamp": [
+          "#081520",
+          "#0c1d2d",
+          "#0f2439",
+          "#122c45",
+          "#50677d",
+          "#8a9aa8",
+          "#c5ccd4",
+          "#eceff1"
+        ]
+      },
+      "home-navy-deep": {
+        "role": "primary",
+        "displayName": "更深藏青 Home Navy Deep（首頁）",
+        "canonical": "#0e2740",
+        "tonalRamp": [
+          "#06101a",
+          "#081523",
+          "#0a1b2d",
+          "#0c2136",
+          "#4a5d70",
+          "#8793a0",
+          "#c3c9cf",
+          "#eceef0"
+        ]
+      },
+      "home-ink": {
+        "role": "neutral",
+        "displayName": "深夜藍 Home Ink（首頁）",
+        "canonical": "#061b45",
+        "tonalRamp": [
+          "#020b1c",
+          "#030f26",
+          "#041330",
+          "#05173b",
+          "#445474",
+          "#838da2",
+          "#c1c6d1",
+          "#ebedf0"
+        ]
+      },
+      "home-indigo": {
+        "role": "neutral",
+        "displayName": "靛藍 Home Indigo（首頁）",
+        "canonical": "#0b1459",
+        "tonalRamp": [
+          "#040824",
+          "#060b31",
+          "#080e3e",
+          "#09114c",
+          "#484f83",
+          "#858aac",
+          "#c2c4d6",
+          "#ebecf2"
+        ]
+      },
+      "home-green": {
+        "role": "secondary",
+        "displayName": "葉綠 Home Green（首頁，focus／hover）",
+        "canonical": "#07662f",
+        "tonalRamp": [
+          "#032913",
+          "#04381a",
+          "#054721",
+          "#065728",
+          "#458c63",
+          "#83b397",
+          "#c1d9cb",
+          "#ebf3ee"
+        ]
+      },
+      "home-band": {
+        "role": "neutral",
+        "displayName": "暖白 Home Band（首頁）",
+        "canonical": "#faf7f1",
+        "tonalRamp": [
+          "#646360",
+          "#8a8885",
+          "#afada9",
+          "#d5d2cd",
+          "#fbf9f5",
+          "#fdfbf8",
+          "#fefdfc",
+          "#fffefe"
+        ]
       }
     },
     "typographyMeta": {
       "display": {
         "displayName": "Display",
-        "purpose": "只用在首頁主標。"
+        "purpose": "大型頁首主標，例如 /about、/faq 的 h1；首頁改用 home-display。"
       },
       "headline": {
         "displayName": "Headline",
-        "purpose": "各頁頁面主標與首頁段落大標。"
+        "purpose": "各頁頁面主標與段落大標。"
       },
       "title": {
         "displayName": "Title",
@@ -249,11 +339,31 @@
       },
       "body-lead": {
         "displayName": "Body Lead",
-        "purpose": "首頁主標下方引言。"
+        "purpose": "頁首主標下方引言，例如 /about、/faq、老師加入說明頁。"
       },
       "label": {
         "displayName": "Label",
         "purpose": "中文小標（eyebrow），晨光金、字距 0.2em。"
+      },
+      "home-display": {
+        "displayName": "Home Display（首頁）",
+        "purpose": "首頁主標 h1，Noto Sans TC 800；手機 33.3 × --hu、桌機 65 × --du。"
+      },
+      "home-headline": {
+        "displayName": "Home Headline（首頁）",
+        "purpose": "首頁段落標 h2；手機 22（步驟區 19）× --hu、桌機 40 × --du。"
+      },
+      "home-title": {
+        "displayName": "Home Title（首頁）",
+        "purpose": "首頁身分名稱與步驟名稱 h3；手機 17／12.8 × --hu、桌機 28／29 × --du。"
+      },
+      "home-cta": {
+        "displayName": "Home CTA（首頁）",
+        "purpose": "首頁按鈕字，Noto Sans TC 800、字距 0.04em；桌機 28 × --du。"
+      },
+      "home-body": {
+        "displayName": "Home Body（首頁）",
+        "purpose": "首頁引言與內文，系統字 600、靛藍；桌機引言 26 × --du、字重 500。"
       }
     },
     "shadows": [
@@ -268,6 +378,26 @@
         "name": "state-transition",
         "value": "150ms cubic-bezier(0.4, 0, 0.2, 1)",
         "purpose": "hover 與 focus 的顏色、框線過渡（Tailwind transition 預設）。"
+      },
+      {
+        "name": "home-enter",
+        "value": "420ms cubic-bezier(0.22, 1, 0.36, 1); from opacity 0, translateY(6px); --enter-delay 0/120/180/240/300ms",
+        "purpose": "首頁首屏依序淡入；prefers-reduced-motion 時關閉。"
+      },
+      {
+        "name": "home-reveal",
+        "value": "animation-timeline: view(); animation-range: entry 0% entry 60%; from opacity 0, translateY(12px)",
+        "purpose": "首頁步驟與身分項目捲動進入時浮現；不支援的瀏覽器直接顯示。"
+      },
+      {
+        "name": "home-nudge",
+        "value": "200ms cubic-bezier(0.22, 1, 0.36, 1); translateX(3px)",
+        "purpose": "首頁連結與按鈕 hover／focus 時箭頭右移。"
+      },
+      {
+        "name": "home-press",
+        "value": "120ms ease-out; scale(0.985)",
+        "purpose": "首頁按鈕按下回饋。"
       }
     ],
     "breakpoints": [
@@ -282,8 +412,29 @@
       {
         "name": "lg",
         "value": "1024px"
+      },
+      {
+        "name": "home-scale-tablet",
+        "value": "431px"
+      },
+      {
+        "name": "home-scale-desktop",
+        "value": "1024px"
       }
-    ]
+    ],
+    "homeScale": {
+      "scope": "只限首頁 / 的 .home-scale",
+      "phone": "≤430px：--hu = 1px",
+      "tablet": "431–1023px：--hu = min(100vw / 430, 100svh / 530)，置中單欄、最寬 430 × --hu",
+      "desktop": "≥1024px：--du = 100vw / 1536，--hu = --du × 1.15",
+      "rebinds": [
+        "--spacing",
+        "--text-xs",
+        "--text-sm",
+        "--text-base"
+      ],
+      "selection": "::selection 底色 home-navy、白字"
+    }
   },
   "components": [
     {
@@ -323,8 +474,8 @@
       "kind": "custom",
       "refersTo": "sky-band",
       "description": "晨空藍大面積安靜區塊，只用在大片留白處。",
-      "html": "<section class=\"ds-sky\"><p class=\"ds-sky-eyebrow\">在展翅之前</p><p class=\"ds-sky-text\">先安靜下來，找到適合你們的練習。</p></section>",
-      "css": ".ds-sky{background:#e4ecef;color:#2c4552;border-radius:24px;padding:32px}.ds-sky-eyebrow{margin:0;font-size:14px;letter-spacing:.2em;font-weight:500}.ds-sky-text{margin:12px 0 0;font-size:20px;font-weight:500;line-height:1.5}"
+      "html": "<section class=\"ds-sky\"><p class=\"ds-sky-text\">先安靜下來，找到適合你們的練習。</p></section>",
+      "css": ".ds-sky{background:#e4ecef;color:#2c4552;border-radius:24px;padding:32px}.ds-sky-text{margin:0;font-size:20px;font-weight:500;line-height:1.5}"
     },
     {
       "name": "Text Input",
@@ -349,16 +500,56 @@
       "description": "晨光淡金提醒框。",
       "html": "<p class=\"ds-notice-warm\">報名截止前都可以取消，不收任何費用。</p>",
       "css": ".ds-notice-warm{background:#f4ecdc;color:#5e4320;border:1px solid rgb(125 90 42 / .25);border-radius:12px;padding:12px 16px;font-size:14px;line-height:24px;margin:0}"
+    },
+    {
+      "name": "Home Primary Button（首頁）",
+      "kind": "button",
+      "refersTo": "home-button-primary",
+      "description": "首頁主行動：實心深藏青膠囊，文字置中、箭頭貼右；手機高 37（產品主人核准、低於 44 的首頁限定例外）。",
+      "html": "<a class=\"ds-home-btn-primary\" href=\"#\">我要發起團課<svg aria-hidden=\"true\" class=\"ds-home-arrow\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.25\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 12h15M13 6l6 6-6 6\"/></svg></a>",
+      "css": ".ds-home-btn-primary{position:relative;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;border-radius:9999px;padding:0 48px;font-family:var(--font-home-display, \"Noto Sans TC\", sans-serif);font-weight:800;font-size:16px;letter-spacing:.04em;text-decoration:none;transition:background-color 200ms ease-out, transform 120ms ease-out;height:37px;min-width:300px;background:#153451;color:#fff}.ds-home-btn-primary:hover{background:#0e2740}.ds-home-btn-primary:hover .ds-home-arrow,.ds-home-btn-primary:focus-visible .ds-home-arrow{transform:translateX(3px)}.ds-home-btn-primary:focus-visible{outline:2px solid #07662f;outline-offset:2px}.ds-home-btn-primary:active{transform:scale(.985)}.ds-home-arrow{position:absolute;right:20px;width:24px;height:24px;transition:transform 200ms cubic-bezier(.22,1,.36,1)}"
+    },
+    {
+      "name": "Home Secondary Button（首頁）",
+      "kind": "button",
+      "refersTo": "home-button-secondary",
+      "description": "首頁次行動：靛藍外框膠囊、暖白底，和主按鈕同寬、箭頭貼右；手機高 32（同上例外）。",
+      "html": "<a class=\"ds-home-btn-secondary\" href=\"#\">我要找一堂課<svg aria-hidden=\"true\" class=\"ds-home-arrow\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.25\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 12h15M13 6l6 6-6 6\"/></svg></a>",
+      "css": ".ds-home-btn-secondary{position:relative;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;border-radius:9999px;padding:0 48px;font-family:var(--font-home-display, \"Noto Sans TC\", sans-serif);font-weight:800;font-size:16px;letter-spacing:.04em;text-decoration:none;transition:background-color 200ms ease-out, transform 120ms ease-out;height:32px;min-width:300px;background:#faf7f1;color:#0b1459;border:1.5px solid #0b1459}.ds-home-btn-secondary:hover{background:#fff}.ds-home-btn-secondary:hover .ds-home-arrow,.ds-home-btn-secondary:focus-visible .ds-home-arrow{transform:translateX(3px)}.ds-home-btn-secondary:focus-visible{outline:2px solid #07662f;outline-offset:2px}.ds-home-btn-secondary:active{transform:scale(.985)}.ds-home-arrow{position:absolute;right:20px;width:24px;height:24px;transition:transform 200ms cubic-bezier(.22,1,.36,1)}"
+    },
+    {
+      "name": "Home Text Link（首頁）",
+      "kind": "custom",
+      "refersTo": "home-text-link",
+      "description": "首頁文字連結：靛藍粗體加底線，後接小箭頭，hover／focus 時箭頭右移。",
+      "html": "<a class=\"ds-home-link\" href=\"#\">提出團課需求<svg aria-hidden=\"true\" class=\"ds-home-link-arrow\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.25\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 12h15M13 6l6 6-6 6\"/></svg></a>",
+      "css": ".ds-home-link{display:inline-flex;align-items:center;gap:4px;min-height:44px;color:#0b1459;font-weight:700;font-size:13px;text-decoration:underline;text-underline-offset:4px}.ds-home-link-arrow{width:14px;height:14px;transition:transform 200ms cubic-bezier(.22,1,.36,1)}.ds-home-link:hover .ds-home-link-arrow,.ds-home-link:focus-visible .ds-home-link-arrow{transform:translateX(3px)}.ds-home-link:focus-visible{outline:2px solid #07662f;outline-offset:2px}"
+    },
+    {
+      "name": "Home Header（首頁）",
+      "kind": "nav",
+      "refersTo": "home-header",
+      "description": "首頁 header：白底細線、Noto Sans TC 800 品牌字貼近左邊，所有寬度只露出漢堡選單按鈕。",
+      "html": "<header class=\"ds-home-header\"><a class=\"ds-home-mark\" href=\"#\"><span class=\"ds-home-mark-a\">飛索</span><span class=\"ds-home-dot\" aria-hidden=\"true\"></span><span class=\"ds-home-mark-b\">瑜伽團課共創平台</span></a><button class=\"ds-home-menu\" aria-label=\"選單\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.25\" stroke-linecap=\"round\"><path d=\"M4 7h16M4 12h16M4 17h16\"/></svg></button></header>",
+      "css": ".ds-home-header{display:flex;align-items:center;justify-content:space-between;background:#fff;border-bottom:1px solid rgb(21 52 81 / .1);padding:4px 36px 4px 16px;color:#061b45}.ds-home-mark{display:flex;align-items:center;min-height:44px;color:#061b45;text-decoration:none;font-family:var(--font-home-display, \"Noto Sans TC\", sans-serif);font-weight:800}.ds-home-mark-a{font-size:19.2px;letter-spacing:.02em}.ds-home-mark-b{font-size:14px;letter-spacing:.03em}.ds-home-dot{display:inline-block;width:3.4px;height:3.4px;margin:0 7px;border-radius:9999px;background:currentColor}.ds-home-menu{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border:0;border-radius:9999px;background:transparent;color:#061b45;transition:background 150ms}.ds-home-menu svg{width:28px;height:28px}.ds-home-menu:hover{background:rgb(21 52 81 / .05)}.ds-home-menu:focus-visible,.ds-home-mark:focus-visible{outline:2px solid #07662f;outline-offset:2px}"
+    },
+    {
+      "name": "Home Step（首頁）",
+      "kind": "custom",
+      "refersTo": "home-band-section",
+      "description": "步驟區：暖白色帶上置中的剪紙插圖、粗體步驟名與靛藍說明，不用卡片。面板裡的插圖以紙色色塊示意，正式畫面用 public/home/step-*-art.png。",
+      "html": "<section class=\"ds-home-band\"><div class=\"ds-home-step\"><div class=\"ds-home-plate\" aria-hidden=\"true\"></div><h3>團主說明需求</h3><p>公司社團、社區或朋友團體，寫下人數、時段、地點與想要的練習。</p></div></section>",
+      "css": ".ds-home-band{background:#faf7f1;border-top:1px solid rgb(21 52 81 / .1);padding:16px 20px 32px;color:#061b45}.ds-home-step{max-width:140px;margin:0 auto;text-align:center}.ds-home-plate{aspect-ratio:296/183;background:#e8553b;clip-path:polygon(10% 100%,30% 30%,55% 60%,75% 10%,95% 100%)}.ds-home-step h3{margin:2px 0 0;font-family:var(--font-home-display, \"Noto Sans TC\", sans-serif);font-weight:800;font-size:12.8px;line-height:1.375}.ds-home-step p{margin:8px 0 0;font-size:12px;line-height:20px;color:#0b1459}"
     }
   ],
   "narrative": {
     "northStar": "展翅前的靜 The Stillness Before Flight",
-    "overview": "飛索的畫面是起飛前那一口安靜的呼吸：先安住，才有力氣展翅。大部分版面是安靜的，奶油色的底、充足的留白、柔和的圓角，讓老師、團主和學員一進來就放鬆，願意慢慢讀。安靜之中要有一點「往上」的感覺：晨空藍像清晨的天空，只在大面積留白處出現；晨光金像剛升起的光，只用在小小的重點上。\n\n「柔軟而篤定」是這個系統的手感：形狀柔軟（膠囊按鈕、大圓角卡片、有機形狀），但該做的下一步一定清楚、紮實，不讓人猶豫。溫柔不等於模糊。\n\n這是一個以文字和留白為主的系統。目前沒有任何真實照片或插畫素材（見 `PRODUCT.md`），畫面不可以用示意圖假裝成真實課程現場。",
+    "overview": "飛索的畫面是起飛前那一口安靜的呼吸：先安住，才有力氣展翅。大部分版面是安靜的，奶油色的底、充足的留白、柔和的圓角，讓老師、團主和學員一進來就放鬆，願意慢慢讀。安靜之中要有一點「往上」的感覺：晨空藍像清晨的天空，只在大面積留白處出現；晨光金像剛升起的光，只用在小小的重點上。\n\n「柔軟而篤定」是這個系統的手感：形狀柔軟（膠囊按鈕、大圓角卡片），但該做的下一步一定清楚、紮實，不讓人猶豫。溫柔不等於模糊。\n\n首頁以外的頁面是一個以文字和留白為主的系統，沒有任何真實照片或插畫素材（見 `PRODUCT.md`）。首頁從 2026-10-20 起使用剪紙示意插畫（見下方「首頁世界」）。不論哪一頁，畫面都不可以用示意圖假裝成真實課程現場。",
     "keyCharacteristics": [
-      "奶油色頁面底，白色卡片靠色差與細框浮起，幾乎沒有陰影。",
+      "（首頁以外）奶油色頁面底，白色卡片靠色差與細框浮起，幾乎沒有陰影。",
       "松綠是唯一的主行動色，每個畫面最多一個實心松綠按鈕。",
       "晨空藍只做大面積的安靜底色，晨光金只做小面積重點。",
-      "膠囊按鈕、16px 圓角卡片、有機形狀的品牌圖形。",
+      "膠囊按鈕、16px 圓角卡片。",
       "手機優先，觸控目標至少 44px。"
     ],
     "rules": [
@@ -379,7 +570,22 @@
       },
       {
         "name": "The No Hardcoded Color Rule",
-        "body": "顏色一律用色票 token。目前公開頁有 10 種寫死的色碼，分散在首頁、`/about`、`/faq`、footer 與老師申請表單（例如 `#5d6a61`、`#6d7d70`、`#cfdbd1`），要在階段 D 收回 token 或補上正式 token。",
+        "body": "顏色一律用色票 token。2026-10-21 檢查時，`src/app` 的 `.tsx` 已沒有寫死的六位色碼；新程式碼也不要再加。",
+        "section": "colors"
+      },
+      {
+        "name": "The Home Only Rule",
+        "body": "`home-*` 色票、`font-home-display`、`.home-scale` 只能出現在首頁 `/`（含 header／footer 的 `variant=\"home\"`）。其他頁面不得引用，直到產品主人決定擴大。",
+        "section": "colors"
+      },
+      {
+        "name": "The Paper Stays In The Plates Rule",
+        "body": "插畫的紙色（朱紅、珊瑚、萬壽菊黃等）只存在插畫檔裡，不抽成 token、不拿來當按鈕或文字顏色。介面元素只用藏青、靛藍、葉綠、暖白與白。",
+        "section": "colors"
+      },
+      {
+        "name": "The Green Is Focus Rule",
+        "body": "葉綠在首頁只負責「你現在在這裡」：focus 外框與連結 hover。它不是第二個行動色。",
         "section": "colors"
       },
       {
@@ -395,6 +601,16 @@
       {
         "name": "The Chinese First Rule",
         "body": "介面以繁體中文為主，字級、行高、斷行都要先以中文的可讀性來判斷。",
+        "section": "typography"
+      },
+      {
+        "name": "The One Heavy Face Rule",
+        "body": "Noto Sans TC 只用 800 一種字重，只給標題、按鈕字與品牌字；內文永遠用系統字。粗細對比就是首頁的層次，不要再加中間字重。",
+        "section": "typography"
+      },
+      {
+        "name": "The No Kicker Rule",
+        "body": "首頁的標題上方不放小標（eyebrow）。原本主標上方的「讓團體練習，自然發生」與身分區的小標，已在 2026-10-20 finish review 依 /impeccable craft-floor 禁令、經產品主人同意刪除；身分名稱改當 h3。",
         "section": "typography"
       },
       {
@@ -414,12 +630,15 @@
       }
     ],
     "dos": [
-      "**Do** 用奶油色（cream）當頁面底色，白色卡片加細框浮在上面。",
+      "**Do** 首頁以外的頁面用奶油色（cream）當頁面底色，白色卡片加細框浮在上面。",
       "**Do** 每個畫面只放一個實心松綠主要按鈕，其餘用外框按鈕或文字連結。",
       "**Do** 把晨空藍保留給大面積、安靜的區塊；晨空藍底上的字一律用晨空深藍。",
       "**Do** 小標用晨光金、字距 0.2em。",
-      "**Do** 所有可點的東西至少 44px 高，並保留清楚的 focus 外框。",
-      "**Do** 沒有真實素材時，用文字、留白與品牌圖形撐起畫面。"
+      "**Do** 所有可點的東西至少 44px 高，並保留清楚的 focus 外框（首頁手機按鈕是產品主人核准的例外）。",
+      "**Do** 沒有真實素材時，用文字與留白撐起畫面。",
+      "**Do**（首頁）只用 `home-*` 色票與 `font-home-display`，並維持白底＋暖白色帶＋藏青細線的扁平分段。",
+      "**Do**（首頁）兩顆行動按鈕同寬、文字置中、箭頭貼右，主次只用實心／外框區分。",
+      "**Do**（首頁）新的尺寸寫成「構圖數值 × `--hu`」或「× `--du`」，讓它跟著 `.home-scale` 縮放。"
     ],
     "donts": [
       "**Don't** 在標題裡用斜體強調某幾個字。",
@@ -430,7 +649,24 @@
       "**Don't** 寫死色碼，一律用色票 token。",
       "**Don't** 用漸層文字、發光陰影、炫技動畫；`bolder` 與 `overdrive` 的方向和飛索相反。",
       "**Don't** 用示意照片、假的推薦語、假的學員人數或評分，假裝成真實內容。",
-      "**Don't** 用倒數計時、限量、搶課這類製造焦慮的視覺元素。"
-    ]
+      "**Don't** 用倒數計時、限量、搶課這類製造焦慮的視覺元素。",
+      "**Don't** 在首頁以外的頁面使用 `home-*` 色票、Noto Sans TC 主標字或 `.home-scale`，除非產品主人決定擴大。",
+      "**Don't**（首頁）在標題上方放小標（eyebrow）。",
+      "**Don't**（首頁）把插畫的紙色抽出來當按鈕、文字或底色。",
+      "**Don't** 把首頁 37／32px 按鈕高度當成其他頁面的先例；全站下限仍是 44px。"
+    ],
+    "homeWorld": {
+      "scope": "只限首頁 /（2026-10-20 產品主人：新配色先只用在首頁）",
+      "northStar": "剪紙團課 The Paper-Cut Group Class",
+      "overview": "首頁是一堂正在進行的剪紙團課：一群看得出各自樣子的大人，在看得到新竹山景的明亮教室裡一起練習。畫面是乾淨的白底，上面放層疊平塗的剪紙插畫（每片紙分開剪、靠重疊產生深度，不用陰影與漸層），文字是極粗的深藏青黑體主標加深藏青內文。這是產品主人在第五輪後指定的方向，刻意拒絕瑜伽品類常見的「奶油底＋鼠尾草綠＋柔和圓形＋單人冥想照」。\n\n這個世界和全站系統分開管理：首頁用自己的 `home-*` 色票與 Noto Sans TC 800 主標字，header 與 footer 用 `variant=\"home\"` 換成同一套配色；其他頁面看不到這些設定。",
+      "keyCharacteristics": [
+        "白底為主，步驟區與 footer 用暖白（home-band）色帶；沒有卡片、沒有陰影。",
+        "主行動是實心深藏青膠囊，次行動是深藏青外框膠囊；兩顆按鈕同寬，箭頭都貼在按鈕右側。",
+        "主標、段落標、按鈕字、品牌字都用 Noto Sans TC 800；內文用全站系統字。",
+        "插畫顏色（朱紅、珊瑚、深靛藍、青綠、萬壽菊黃、葉綠）只活在插畫裡，介面元素只用藏青、靛藍、葉綠、暖白、白。",
+        "整頁依視窗寬度等比縮放（`.home-scale`），手機照 430px 構圖、桌機照 1536px 構圖。",
+        "動態安靜：首屏依序淡入、捲動時輕輕浮現、hover 時箭頭右移 3px；系統設定「減少動態」時全部關閉。"
+      ]
+    }
   }
 }

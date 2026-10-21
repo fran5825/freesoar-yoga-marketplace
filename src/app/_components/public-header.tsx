@@ -29,7 +29,7 @@ export function PublicHeader({ variant = "default" }: { variant?: "default" | "h
       >
         {isHome ? (
           <Link
-            className="flex min-h-10 -translate-y-0.5 items-center leading-none text-home-ink focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-home-green"
+            className="flex min-h-11 -translate-y-0.5 items-center leading-none text-home-ink focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-home-green"
             href="/"
           >
             <span className="font-home-display text-[calc(19.2*var(--hu))] font-extrabold tracking-[0.02em] lg:text-[calc(40*var(--du))]">飛索</span>

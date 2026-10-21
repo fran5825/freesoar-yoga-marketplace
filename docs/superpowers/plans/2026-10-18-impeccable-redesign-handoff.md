@@ -248,4 +248,8 @@
 
 - 2026-10-21（續）：審查角色評分 6 項全部 resolved、無新問題，**disposition: ship**（只涵蓋這 6 項）。responsive 重新通過（89% match），`build-phase finish --disposition ship` 已記錄，桌機回合所有關卡關閉。審查角色另列兩項非必修：「找到你的起點」以下的桌機版面沒有剪紙元素（建議）、DESIGN.md 尚未對照新首頁更新。下一步照 /impeccable 流程：documenter 依完成的首頁寫 DESIGN.md（只限首頁範圍），以及等產品主人決定 commit。尚未 commit。
 
+- 2026-10-21（續二）：產品主人要求把首頁改版與自己的「已登入看首頁」功能合併 commit：`e898065`（23 檔，未 push）。首頁 28 個測試通過；signed-in-navigation 18 個失敗，原因是本機資料庫 localhost:5432 沒開（測試建帳號失敗），未驗證。documenter（/impeccable）已依完成的首頁更新 DESIGN.md 與 `.impeccable/design.json`：全站系統不變，新增「首頁世界（只限 `/`）」各小節、6 個 home 色票、5 個字體角色、首頁按鈕、5 條首頁規則，並把已不正確的全站敘述改正（首頁不再是奶油底、松綠卡片等）。documenter 提出三點未處理：全站 token 仍規定小標（違反 craft-floor）、sky-mist／sky-ink 未使用、手機首頁選單與品牌字點擊高度 40px（低於 44px，不在產品主人核准的例外清單）。DESIGN.md 改動尚未 commit。
+
+- 2026-10-21（續三）：產品主人決定手機首頁選單按鈕與品牌字連結點擊高度改回 44px（不列入例外），DESIGN.md／design.json 同步。重新截圖確認 360、390 寬都是 44px；responsive 重新通過（89% match），`finish --disposition ship` 重新記錄。
+
 <!-- codex-peer-reviewed: 2026-10-18T06:53:13Z rounds=3 verdict=approved -->

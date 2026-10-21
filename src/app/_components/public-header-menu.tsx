@@ -28,7 +28,7 @@ export function PublicHeaderMenu({
         aria-controls="public-header-menu"
         aria-expanded={isOpen}
         aria-label={isOpen ? "關閉選單" : "選單"}
-        className={`inline-flex ${tone === "home" ? "size-10 lg:size-[calc(60*var(--du))]" : "size-11"} items-center justify-center rounded-full transition focus-visible:outline-2 focus-visible:outline-offset-2 ${tone === "home" ? "" : "md:hidden"} ${tone === "home" ? "text-home-ink hover:bg-home-navy/5 focus-visible:outline-home-green" : "text-ink hover:bg-ink/5 focus-visible:outline-gold"}`}
+        className={`inline-flex ${tone === "home" ? "size-11 lg:size-[calc(60*var(--du))]" : "size-11"} items-center justify-center rounded-full transition focus-visible:outline-2 focus-visible:outline-offset-2 ${tone === "home" ? "" : "md:hidden"} ${tone === "home" ? "text-home-ink hover:bg-home-navy/5 focus-visible:outline-home-green" : "text-ink hover:bg-ink/5 focus-visible:outline-gold"}`}
         onClick={() => setOpenedAtPath(isOpen ? null : pathname)}
         type="button"
       >
