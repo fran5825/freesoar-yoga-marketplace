@@ -1840,7 +1840,7 @@ function PublicListingField({ idPrefix = "", shared, updateShared }: FieldProps)
       />
       <ChoiceOption
         checked={shared.isPublic}
-        description="開放報名後會列在「瀏覽課程」頁；學員點你的連結不用先登入，就看得到時間、地點與費用。"
+        description="開放報名後會列在「瀏覽課程」頁；學員點你的連結不用先登入，就看得到課程內容。"
         id={`${idPrefix}isPublic-yes`}
         name="isPublic"
         onChange={() => updateShared("isPublic", true)}
