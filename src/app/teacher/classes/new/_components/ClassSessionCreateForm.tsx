@@ -93,6 +93,7 @@ type SharedFields = {
   requiresApproval: boolean;
   isPublic: boolean;
   openForEnrollment: boolean; // 系列：建立後直接開放報名（teacher-class-scheduling 票 01）
+  openSingleForEnrollment: boolean; // 單堂：建立後直接開放報名（teacher-first-run 票 02）
   termEnrollmentMode: TermEnrollmentModeValue; // 期班報名方式（票 07；每週期班與指定日期共用）
 };
 
@@ -125,6 +126,9 @@ const initialShared: SharedFields = {
   // teacher-first-run 票 01：沒有上一堂可沿用時，預設列在公開列表（學員點連結不用先登入就看得到內容）。
   isPublic: true,
   openForEnrollment: false,
+  // teacher-first-run 票 02：單堂預設建立後直接開放報名（系列維持先存成草稿）。
+  // Rollback：改回 false 就回到「先存草稿、再到課程頁開放報名」的舊行為。
+  openSingleForEnrollment: true,
   // 2026-10-06 產品主人決定 A：預設「整期和單堂都收」。
   termEnrollmentMode: "term_and_single",
 };
@@ -155,6 +159,7 @@ const sharedKeyToErrorField: Record<keyof SharedFields, CreateClassFormField | n
   requiresApproval: null,
   isPublic: null,
   openForEnrollment: null,
+  openSingleForEnrollment: null,
   termEnrollmentMode: null,
 };
 
@@ -854,6 +859,7 @@ export function ClassSessionCreateForm({
             <FormSection title="報名設定">
               <PublicListingField {...sharedFieldProps} />
               <RequiresApprovalField {...sharedFieldProps} />
+              <SingleOpenForEnrollmentField {...sharedFieldProps} />
             </FormSection>
           )}
           {edit ? (
@@ -889,7 +895,9 @@ export function ClassSessionCreateForm({
           <ClassCreateSummary
             notes={[
               "建立後，開課前都還可以在課程頁修改內容、時間、地點與名額。",
-              "建立後會先存成草稿，不會立即開放報名；到課程頁按「開放報名」學員才能報名。",
+              shared.openSingleForEnrollment
+                ? `建立後直接開放報名，學員拿到連結就能報名${shared.isPublic ? "，也會列在公開課程列表" : ""}。`
+                : "建立後會先存成草稿，不會立即開放報名；到課程頁按「開放報名」學員才能報名。",
             ]}
             rows={[
               titleSummaryRow,
@@ -907,6 +915,10 @@ export function ClassSessionCreateForm({
                 value: shared.isPublic ? "列在公開課程列表" : "僅透過連結招募",
               },
               approvalSummaryRow,
+              {
+                label: "建立後",
+                value: shared.openSingleForEnrollment ? "直接開放報名" : "先存成草稿",
+              },
             ]}
           />
           )}
@@ -1919,6 +1931,34 @@ function OpenForEnrollmentField({
         onChange={() => updateShared("openForEnrollment", true)}
         title="建立後全部開放報名"
         value="yes"
+      />
+    </fieldset>
+  );
+}
+
+// teacher-first-run 票 02：單堂建立後要不要直接開放報名。預設直接開放；開放失敗時課程留在草稿，
+// 詳情頁會說明原因。狀態轉換與權限沿用單堂課頁的「開放報名」。
+function SingleOpenForEnrollmentField({ shared, updateShared }: FieldProps) {
+  return (
+    <fieldset className="grid min-w-0 gap-2">
+      <legend className={labelClassName}>建立後</legend>
+      <ChoiceOption
+        checked={shared.openSingleForEnrollment}
+        description="建好就開放報名，接著把報名連結傳給學員。開課前仍可修改課程。"
+        id="single-openForEnrollment-yes"
+        name="openForEnrollment"
+        onChange={() => updateShared("openSingleForEnrollment", true)}
+        title="建立後直接開放報名"
+        value="yes"
+      />
+      <ChoiceOption
+        checked={!shared.openSingleForEnrollment}
+        description="想先檢查一次再開放：之後到課程頁按「開放報名」。"
+        id="single-openForEnrollment-no"
+        name="openForEnrollment"
+        onChange={() => updateShared("openSingleForEnrollment", false)}
+        title="先存成草稿"
+        value="no"
       />
     </fieldset>
   );

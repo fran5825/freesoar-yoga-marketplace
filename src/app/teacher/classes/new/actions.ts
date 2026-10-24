@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { createOwnClassSessionForTeacher } from "@/domain/class-session/service";
+import { createOwnClassSessionForTeacher, OPENED_FOR_ENROLLMENT_MESSAGE } from "@/domain/class-session/service";
 
 import { appendWarning, applyCoverFromForm } from "../_lib/apply-cover";
 import { buildCreateClassFieldErrors, type CreateClassFormState } from "./_lib/form-state";
@@ -32,6 +32,7 @@ export async function createOwnClassSessionAction(
     capacity: readFormNumber(formData, "capacity"),
     isPublic: formData.get("isPublic") === "yes",
     requiresApproval: formData.get("requiresApproval") === "yes",
+    openForEnrollment: formData.get("openForEnrollment") === "yes",
     });
   } catch {
     // 伺服器處理到一半出錯：不知道有沒有寫入，不能讓使用者直接重送。
@@ -60,10 +61,19 @@ export async function createOwnClassSessionAction(
 
   revalidatePath("/teacher/classes");
   revalidatePath("/teacher/dashboard");
-  // teacher-usability 第 07 票：建好直接進這堂課的詳情頁，下一步（開放報名）就在眼前。
+  // teacher-usability 第 07 票：建好直接進這堂課的詳情頁。
+  // teacher-first-run 票 02：課程只要寫入了就一律導到詳情頁，不回到表單——表單上的「還沒建立」與
+  // 重送按鈕只適用寫入前的錯誤。直接開放失敗時課程留在草稿，詳情頁說明原因，「開放報名」按鈕就在那裡可重試。
+  const feedback =
+    result.openOutcome === "opened"
+      ? { kind: "success", message: OPENED_FOR_ENROLLMENT_MESSAGE }
+      : result.openOutcome === "failed"
+        ? { kind: "error", message: result.openFailureMessage ?? "課程已建立，但還沒開放報名。" }
+        : { kind: "success", message: "課程已建立。下一步：確認內容後按「開放報名」。" };
+
   redirect(
-    `/teacher/classes/${result.classSessionId}?result=success&message=${encodeURIComponent(
-      appendWarning("課程已建立。下一步：確認內容後按「開放報名」。", coverWarning),
+    `/teacher/classes/${result.classSessionId}?result=${feedback.kind}&message=${encodeURIComponent(
+      appendWarning(feedback.message, coverWarning),
     )}`,
   );
 }

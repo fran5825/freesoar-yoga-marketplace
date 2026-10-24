@@ -74,9 +74,10 @@ export function getTeacherClassNextStep(input: {
             };
       }
 
+      // teacher-first-run 票 02：開放後（含 0 人報名）的下一步是把報名連結傳給學員。
       return {
         kind: "info",
-        message: "課程正在開放報名，報名狀況會即時顯示在這裡。",
+        message: "把報名連結傳給學員。有人報名後，報名狀況會即時顯示在這裡。",
         shortMessage: "開放報名中",
       };
     case "completed":

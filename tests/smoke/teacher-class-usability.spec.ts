@@ -17,7 +17,8 @@ import { selectFormTime } from "./_helpers/time-select";
 import { isResubmitBlocked } from "../../src/app/teacher/classes/new/_lib/form-state";
 
 // teacher-usability-redesign 票 01、02：開課的結果驗證——
-// 失敗留在原頁且保留輸入與摘要、摘要＝實際建立的值、成功只建立草稿、未建立就離頁會提醒。
+// 失敗留在原頁且保留輸入與摘要、摘要＝實際建立的值、未建立就離頁會提醒。
+// teacher-first-run 票 02：單堂成功後預設直接開放報名（先存草稿的路徑在 teacher-initiated-open-classes）。
 
 const testEmailDomain = "teacher-class-usability-smoke.local";
 const createdEmails: string[] = [];
@@ -81,7 +82,7 @@ test.describe("resubmit guard for uncertain create results (pure helper)", () =>
 });
 
 test.describe("teacher single-class creation usability (ticket 01)", () => {
-  test("a schedule conflict keeps every input and the summary on the page; fixing the date creates exactly one private draft and opens its detail page", async ({
+  test("a schedule conflict keeps every input and the summary on the page; fixing the date creates exactly one link-only class, opened right away, and shows its detail page", async ({
     context,
     page,
   }, testInfo) => {
@@ -149,13 +150,14 @@ test.describe("teacher single-class creation usability (ticket 01)", () => {
     await expect(page.locator("#single-time-error")).toHaveCount(0);
     await page.getByRole("button", { name: "建立課程" }).click();
 
-    await expect(page.getByText("課程已建立。下一步：確認內容後按「開放報名」。")).toBeVisible();
+    // teacher-first-run 票 02：單堂預設建立後直接開放報名。
+    await expect(page.getByText("已開放報名。下一步：把報名連結傳給學員。")).toBeVisible();
     const created = await prisma.classSession.findMany({
       where: { teacherProfileId: teacher.teacherProfileId, title },
       select: { id: true, status: true, isPublic: true },
     });
     expect(created).toHaveLength(1);
-    expect(created[0]).toMatchObject({ status: "draft", isPublic: false });
+    expect(created[0]).toMatchObject({ status: "open_for_enrollment", isPublic: false });
     await expect(page).toHaveURL(new RegExp(`/teacher/classes/${created[0].id}\\?`));
   });
 
@@ -193,7 +195,7 @@ test.describe("teacher single-class creation usability (ticket 01)", () => {
     await expect(summary(page)).toContainText("列在公開課程列表");
     await expect(summary(page)).toContainText("需要你確認才算報名成功");
     await expect(summary(page)).toContainText("建立後，開課前都還可以在課程頁修改內容、時間、地點與名額。");
-    await expect(summary(page)).toContainText("不會立即開放報名");
+    await expect(summary(page)).toContainText("建立後直接開放報名，學員拿到連結就能報名，也會列在公開課程列表。");
 
     // 成功建立的導向不該跳出離頁提醒。
     const dialogs: string[] = [];
@@ -202,7 +204,7 @@ test.describe("teacher single-class creation usability (ticket 01)", () => {
       await dialog.dismiss();
     });
     await page.getByRole("button", { name: "建立課程" }).click();
-    await expect(page.getByText("課程已建立。")).toBeVisible();
+    await expect(page.getByText("已開放報名。")).toBeVisible();
     expect(dialogs).toEqual([]);
 
     const created = await prisma.classSession.findFirstOrThrow({
@@ -218,7 +220,7 @@ test.describe("teacher single-class creation usability (ticket 01)", () => {
       },
     });
     expect(created).toMatchObject({
-      status: "draft",
+      status: "open_for_enrollment",
       isPublic: true,
       requiresApproval: true,
       location: "新北市板橋區摘要教室",

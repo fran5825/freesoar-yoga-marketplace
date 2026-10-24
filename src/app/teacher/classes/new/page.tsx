@@ -77,7 +77,7 @@ export default async function NewClassSessionPage({
           建立課程
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
-          不需要團主媒合，直接開一堂自己的課。建立後會直接帶你到這堂課的頁面，確認後按「開放報名」。
+          不需要團主媒合，直接開一堂自己的課。單堂課預設建立後就開放報名，建好會帶你到這堂課的頁面，接著把報名連結傳給學員。
         </p>
       </header>
 
