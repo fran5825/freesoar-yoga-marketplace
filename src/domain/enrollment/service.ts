@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
 import { createEnrollmentForUser } from "./__internal__/create-enrollment-core";
+import { teacherNoticeRecipient } from "./teacher-notice-recipient";
 import {
   type EnrollmentCreateInput,
   type EnrollmentValidationError,
@@ -200,12 +201,26 @@ export async function cancelOwnEnrollment(
     try {
       const classSession = await prisma.enrollment.findUnique({
         where: { id: enrollmentId },
-        select: { classSessionId: true, classSession: { select: { title: true } } },
+        select: {
+          classSessionId: true,
+          seriesEnrollmentId: true,
+          classSession: { select: { title: true, teacherProfile: { select: { userId: true } } } },
+        },
       });
 
       await notifyUsers(
         "enrollment_cancelled",
-        [{ userId, role: "self" }],
+        [
+          { userId, role: "self" },
+          // teacher-first-run 票 04：學員自己取消單堂報名，也通知授課老師（帶老師單堂 target）；學員那一則不變。
+          // 整期學員的單堂請假也走這裡，但不屬於「取消單堂報名」，不通知老師（spec 只涵蓋單堂與退出整期）。
+          ...(classSession && !classSession.seriesEnrollmentId
+            ? teacherNoticeRecipient(classSession.classSession.teacherProfile.userId, userId, {
+                type: "teacher_class_session",
+                id: classSession.classSessionId,
+              })
+            : []),
+        ],
         { classSessionTitle: classSession?.classSession.title },
         undefined,
         // teacher-series-rollup 票 07：帶場次 id，notifyUsers 查出所屬系列。

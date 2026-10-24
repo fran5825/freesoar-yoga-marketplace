@@ -66,8 +66,8 @@ V1 預設：
 | `class_session_created` | Teacher, Organizer | class session 建立 | 確認課程已形成 |
 | `class_session_changed` | Member, Teacher, Organizer | class session 重要資訊變更 | 通知時間、地點或狀態等重要變更 |
 | `class_session_cancelled` | Member, Teacher, Organizer | class session 取消 | 通知相關人員課程取消 |
-| `enrollment_confirmed` | Member | Member 報名成功 | 確認報名狀態 |
-| `enrollment_cancelled` | Member | Member 或 Admin 取消 enrollment | 確認報名已取消 |
+| `enrollment_confirmed` | Member；授課 Teacher（只站內，teacher-first-run 票 04、05） | Member 報名成功（報名即成立的單堂與整期） | 確認報名狀態；老師知道有人報名，單則連到老師單堂頁或系列頁，同系列同一天合併後連老師系列頁 |
+| `enrollment_cancelled` | Member；授課 Teacher（只在學員自己取消單堂或退出整期時，只站內，teacher-first-run 票 04、05） | Member 或 Admin 取消 enrollment | 確認報名已取消；老師或管理員自己取消時不通知老師，整期學員的單堂請假也不通知老師 |
 | `class_reminder_basic` | Member, Teacher | 課前提醒 | 提醒課程時間與地點 |
 
 Organizer 會收到 class created / changed / cancelled 類通知；V1 課前提醒先發給 Member 與 Teacher，不一定發給 Organizer。

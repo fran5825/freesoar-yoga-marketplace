@@ -6,7 +6,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** draft
+**Status:** in-progress（程式完成，smoke 待跑）
 
 **Workflow mode:** STANDARD
 
@@ -25,3 +25,4 @@
 
 ## 進度紀錄
 
+- 2026-10-24 程式與 smoke 測試（`tests/smoke/teacher-enrollment-notifications.spec.ts`）已寫好，tsc／lint 通過；本機 Postgres（Docker）沒有啟動，smoke 尚未執行。範圍差異：整期學員的單堂請假也走 `cancelOwnEnrollment`，依 teacher-class-scheduling 推導規則 10 不通知老師（待產品主人確認）。

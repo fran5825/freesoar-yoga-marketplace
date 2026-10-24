@@ -12,6 +12,7 @@ import type { NotificationPayload, NotificationRecipient } from "@/domain/notifi
 import { prisma } from "@/lib/prisma";
 import { applyReEnrollmentPaymentRule, buildEnrollmentPaymentSnapshot } from "../payment-snapshot";
 import { occupyingEnrollmentWhere } from "../seat-occupancy";
+import { teacherNoticeRecipient } from "../teacher-notice-recipient";
 
 // 供 D4 端到端失敗隔離測試注入：預設值就是「解析收件人 + 呼叫 notifyUsers」的真正邏輯
 // （見下方呼叫處），測試可傳入一個保證丟出例外的假函式，驗證 trigger 呼叫端外層的
@@ -293,9 +294,14 @@ export async function createEnrollmentForUser(
           { classSessionId },
         );
       } else {
+        // teacher-first-run 票 04：報名即成立時也通知授課老師，帶老師單堂 target；學員那一則（self）不變。
+        // 同系列同一天合併後，通知頁改連老師系列頁（ADR 0008）。
         await notifyOverride(
           "enrollment_confirmed",
-          [{ userId, role: "self" }],
+          [
+            { userId, role: "self" },
+            ...teacherNoticeRecipient(classSession?.teacherProfile.userId, userId, { type: "teacher_class_session", id: classSessionId }),
+          ],
           { classSessionTitle: classSession?.title },
           undefined,
           { classSessionId },
