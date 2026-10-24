@@ -118,7 +118,7 @@ test.describe("leave and withdraw (UI)", () => {
     await page.getByLabel("我確認要退出這一期。").check();
     await page.getByRole("button", { name: "確認退出整期" }).click();
     await expect(page.getByText("已退出整期，取消了之後的 3 堂。")).toBeVisible();
-    await expect(page.getByText("你已退出這一期")).toBeVisible();
+    await expect(page.getByText("你已退出這一期，這一期無法再報整期。")).toBeVisible();
     expect(await prisma.enrollment.count({ where: { userId: member.id, status: "cancelled" } })).toBe(3);
   });
 });

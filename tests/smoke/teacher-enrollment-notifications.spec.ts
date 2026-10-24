@@ -2,6 +2,7 @@ import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import type { NotificationType } from "@prisma/client";
 
 import { cancelEnrollmentForAdminCore } from "../../src/domain/enrollment/__internal__/cancel-enrollment-for-admin-core";
+import { formatTaipeiShortDatetime } from "../../src/domain/class-session/timezone";
 import { createEnrollmentForUser } from "../../src/domain/enrollment/__internal__/create-enrollment-core";
 import { createSeriesEnrollmentForUser } from "../../src/domain/enrollment/__internal__/create-series-enrollment-core";
 import { withdrawSeriesEnrollmentForUser } from "../../src/domain/enrollment/__internal__/withdraw-series-enrollment-core";
@@ -221,4 +222,32 @@ test("term that needs confirmation keeps only the existing pending notice for th
 
   const types = (await prisma.notification.findMany({ where: { userId: teacher.userId, channel: "in_app", type: { in: ENROLLMENT_TYPES } } })).map((n) => n.type);
   expect(types).toEqual(["enrollment_pending_review"]);
+});
+
+test("a term member taking leave for one class tells the teacher with its own copy and date, linking to that class; the member notice stays the same", async ({ context, page }, testInfo) => {
+  const id = runId(testInfo, "leave");
+  const teacher = await seedTeacher(id);
+  const member = await seedMember(id, "a");
+  const title = `請假通知 ${id}`;
+  const { series, sessions } = await seedTerm(teacher.teacherProfileId, { count: 2, title, isPublic: true });
+  const joined = await createSeriesEnrollmentForUser(member.id, series.id, { notes: null });
+  if (!joined.ok) throw new Error("fixture");
+
+  await openNotifications(context, page, member.sessionToken, `/classes/${sessions[0].id}`);
+  const highlights = page.getByRole("region", { name: "課程重點" });
+  await highlights.getByText("請假", { exact: true }).click();
+  await highlights.getByLabel("我確認這一堂要請假。").check();
+  await highlights.getByRole("button", { name: "確認請假" }).click();
+  await expect(page.getByText("已請假這一堂，整期的其他堂照常。")).toBeVisible();
+
+  await page.goto("/notifications");
+  await expect(card(page, title, "報名已取消")).toContainText(`「${title}」的報名已經取消。`);
+  await expect(page.getByRole("article").filter({ hasText: "有學員請假" })).toHaveCount(0);
+
+  await openNotifications(context, page, teacher.sessionToken, "/teacher/notifications");
+  const leaveCard = card(page, title, "有學員請假");
+  await expect(leaveCard).toHaveCount(1);
+  await expect(leaveCard).toContainText(`「${title}」${formatTaipeiShortDatetime(sessions[0].startAt)} 這一堂有一位學員請假`);
+  await expect(leaveCard.getByRole("link", { name: /查看這堂課/ })).toHaveAttribute("href", `/teacher/classes/${sessions[0].id}`);
+  expect(await prisma.notification.count({ where: { userId: teacher.userId, channel: "email", type: "enrollment_cancelled" } })).toBe(0);
 });

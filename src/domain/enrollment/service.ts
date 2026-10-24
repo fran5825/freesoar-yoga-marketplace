@@ -1,3 +1,4 @@
+import { formatTaipeiShortDatetime } from "@/domain/class-session/timezone";
 import { notifyUsers } from "@/domain/notification/create";
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
@@ -204,7 +205,7 @@ export async function cancelOwnEnrollment(
         select: {
           classSessionId: true,
           seriesEnrollmentId: true,
-          classSession: { select: { title: true, teacherProfile: { select: { userId: true } } } },
+          classSession: { select: { title: true, startAt: true, teacherProfile: { select: { userId: true } } } },
         },
       });
 
@@ -213,15 +214,20 @@ export async function cancelOwnEnrollment(
         [
           { userId, role: "self" },
           // teacher-first-run 票 04：學員自己取消單堂報名，也通知授課老師（帶老師單堂 target）；學員那一則不變。
-          // 整期學員的單堂請假也走這裡，但不屬於「取消單堂報名」，不通知老師（spec 只涵蓋單堂與退出整期）。
-          ...(classSession && !classSession.seriesEnrollmentId
+          // 票 05（產品主人 2026-10-24 決定）：整期學員的單堂請假也走這裡，同樣通知老師，但用「請假」文案（帶日期）。
+          ...(classSession
             ? teacherNoticeRecipient(classSession.classSession.teacherProfile.userId, userId, {
                 type: "teacher_class_session",
                 id: classSession.classSessionId,
               })
             : []),
         ],
-        { classSessionTitle: classSession?.classSession.title },
+        {
+          classSessionTitle: classSession?.classSession.title,
+          // 只有給老師的文案會用到（學員那一則的文案不看這個欄位）。
+          leaveDate:
+            classSession?.seriesEnrollmentId ? formatTaipeiShortDatetime(classSession.classSession.startAt) : undefined,
+        },
         undefined,
         // teacher-series-rollup 票 07：帶場次 id，notifyUsers 查出所屬系列。
         { classSessionId: classSession?.classSessionId },

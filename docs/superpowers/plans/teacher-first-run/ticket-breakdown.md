@@ -14,9 +14,9 @@
 | 01 | 老師開課預設公開，並沿用上一堂的公開設定 | STANDARD | no | – | draft |
 | 02 | 單堂課建立後直接開放報名 | HEAVY | yes | 01 | draft |
 | 03 | 開放報名前的收款資訊提醒 | STANDARD | no | 02 | draft |
-| 04 | 單堂報名與取消時通知老師 | STANDARD | no | – | draft |
-| 05 | 整期報名與退出整期時通知老師（新增系列 target） | HEAVY | yes | 04 | draft |
-| 06 | 新團體需求通知老師、名稱統一為「團體需求」 | HEAVY | yes | 05 | draft |
+| 04 | 單堂報名與取消時通知老師 | STANDARD | no | – | done |
+| 05 | 整期報名與退出整期時通知老師（新增系列 target） | HEAVY | yes | 04 | done |
+| 06 | 新團體需求通知老師、名稱統一為「團體需求」 | HEAVY | yes | 05 | done |
 | 07 | 老師公開頁開關搬到「個人資料」分頁 | LIGHT | no | – | draft |
 | 08 | 總覽「開始使用」與通過通知 | STANDARD | no | 07 | draft |
 | 09 | 審核中畫面的三件事、退回通知改成可修正語氣 | LIGHT | no | 08 | draft |

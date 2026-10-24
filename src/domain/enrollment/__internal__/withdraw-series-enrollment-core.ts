@@ -8,7 +8,7 @@
 //   3. 底下尚未開始、pending／confirmed 的逐場報名改 cancelled；已開始或已完成的紀錄不動。
 //   4. 整期報名改 withdrawn（終態，之後不能再報整期）。
 // commit 後通知學員本人一則；teacher-first-run 票 05 起另外通知授課老師一則（取代推導規則 10 對退出整期的部分，
-// 單堂請假仍不通知老師）。
+// 單堂請假另見 service.ts 的 cancelOwnEnrollment）。
 
 import { notifyUsers } from "@/domain/notification/create";
 import { prisma } from "@/lib/prisma";

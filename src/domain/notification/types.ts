@@ -56,4 +56,6 @@ export type NotificationPayload = {
   dateRange?: string;
   // teacher-first-run 票 05：給老師的 enrollment_cancelled 是「學員退出整期」，不是取消單堂。
   termWithdrawal?: boolean;
+  // teacher-first-run 票 05（2026-10-24 決定）：給老師的 enrollment_cancelled 是整期學員的單堂請假，值是那一堂的日期時間。
+  leaveDate?: string;
 };
