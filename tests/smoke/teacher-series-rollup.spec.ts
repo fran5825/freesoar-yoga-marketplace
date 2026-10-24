@@ -1,11 +1,13 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { notifyClassSessionsCreated } from "../../src/domain/class-session/__internal__/create-teacher-class-session-core";
 import { getClassActionSlots } from "../../src/domain/class-session/class-action-slots";
 import { seriesBadgeLabel } from "../../src/domain/class-session/series-badge";
 import { rollupClassList, type RollupSession } from "../../src/domain/class-session/teacher-class-list";
 import { createEnrollmentForUser } from "../../src/domain/enrollment/__internal__/create-enrollment-core";
 import { createSeriesEnrollmentForUser } from "../../src/domain/enrollment/__internal__/create-series-enrollment-core";
 import { formatDateRange } from "../../src/domain/notification/date-range";
+import { getNotificationLink } from "../../src/domain/notification/link";
 import { groupNotifications } from "../../src/domain/notification/grouping";
 import type { OwnNotification } from "../../src/domain/notification/read-service";
 import { addAuthSessionCookie, createUserSession, prisma } from "./_helpers/organizer-demand-fixtures";
@@ -194,6 +196,26 @@ test("admin: the class list rolls a series into one card that opens a read-only 
   await addAuthSessionCookie(context, teacher.sessionToken);
   const response = await page.goto(`/admin/classes/series/${series.id}`);
   expect(response?.status()).toBe(404);
+});
+
+test("notifications: a single own class 課程已建立 links to the teacher class page even when the teacher is also an organizer", async ({}, testInfo) => {
+  const id = runId(testInfo, "single-created");
+  const teacher = await seedTeacher(id);
+  const { sessions } = await seedContinuous(teacher.teacherProfileId, { count: 1, title: `單堂建立 ${id}` });
+  const session = sessions[0];
+
+  await notifyClassSessionsCreated([
+    { classSessionId: session.id, title: session.title, teacherUserId: teacher.userId, startAt: session.startAt, recurringClassSeriesId: null },
+  ]);
+
+  const created = await prisma.notification.findFirst({
+    where: { userId: teacher.userId, type: "class_session_created", channel: "in_app", body: { contains: `單堂建立 ${id}` }, targetType: { not: null } },
+  });
+  expect(created?.targetType).toBe("teacher_class_session");
+  expect(created?.targetId).toBe(session.id);
+  expect(
+    getNotificationLink("class_session_created", { isOrganizer: true, isTeacher: true, isAdmin: false }, { targetType: created!.targetType, targetId: created!.targetId }),
+  ).toEqual({ href: `/teacher/classes/${session.id}`, label: "查看這堂課" });
 });
 
 test("notifications: creating a series sends one 共 N 堂 notification linking to the series page; cancelling from a row folds member notices", async ({ context, page }, testInfo) => {

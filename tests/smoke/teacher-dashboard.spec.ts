@@ -273,12 +273,41 @@ test.describe("開始使用 on /teacher/dashboard", () => {
     await expect(steps.nth(1)).toContainText("開第一堂課");
     await expect(steps.nth(2)).toContainText("公開我的老師頁");
     await expect(steps.nth(2)).toContainText("可跳過");
-    await expect(card.getByRole("link", { name: "前往填寫收款與聯絡" })).toHaveAttribute("href", "/teacher/profile/payment");
+    await expect(card.getByRole("link", { name: "前往填寫收款與聯絡" })).toHaveAttribute("href", "/teacher/profile/payment?from=get-started");
     await expect(card.getByRole("link", { name: "開第一堂課" })).toHaveAttribute("href", "/teacher/classes/new");
     await expect(card.getByRole("link", { name: "前往設定老師公開頁" })).toHaveAttribute("href", "/teacher/profile/info#public-page");
     await expect(card.getByRole("link", { name: "看看團體需求" })).toHaveAttribute("href", "/teacher/demands");
     await expect(card.getByText("已完成")).toHaveCount(0);
     await expectNoHorizontalOverflow(page);
+  });
+
+  // 驗收發現：從開始使用卡進收款頁，儲存後回到總覽並說已儲存；直接進收款頁的照舊留在收款頁。
+  test("saving payment opened from 開始使用 returns to the dashboard with a saved notice; opened directly it stays", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(`${testInfo.project.name}-${testInfo.workerIndex}-get-started-return-${Date.now()}`);
+    const sessionToken = await createTeacherProfileSession({
+      email: `get-started-return-${testRunId}@${testEmailDomain}`,
+      displayName: `Return ${testRunId}`,
+      status: "approved",
+    });
+
+    await addAuthSessionCookie(context, sessionToken);
+    await page.goto(dashboardPath);
+    await page.getByRole("region", { name: "開始使用" }).getByRole("link", { name: "前往填寫收款與聯絡" }).click();
+    await page.getByLabel("收款帳號（選填）").fill("（012）1234-5678");
+    await page.getByRole("button", { name: "儲存" }).click();
+
+    await expect(page).toHaveURL(/\/teacher\/dashboard\?saved=payment$/);
+    await expect(page.getByText("收款與聯絡資料已儲存。")).toBeVisible();
+    await expect(page.getByRole("region", { name: "開始使用" }).getByRole("listitem").nth(0)).toContainText("已完成");
+
+    await page.goto("/teacher/profile/payment");
+    await page.getByLabel("聯絡方式（選填）").fill("Line ID return_test");
+    await page.getByRole("button", { name: "儲存" }).click();
+    await expect(page).toHaveURL(/\/teacher\/profile\/payment\?result=success/);
+    await expect(page.getByText("收款與聯絡資料已儲存。")).toBeVisible();
   });
 
   test("each step ticks itself from existing data, and the card folds away once payment and a first class exist", async ({

@@ -13,7 +13,7 @@ import { updatePaymentSettingsAction } from "./actions";
 import { PaymentRulesField } from "./_components/PaymentRulesField";
 
 type PaymentSettingsPageProps = {
-  searchParams?: Promise<{ result?: string; message?: string }>;
+  searchParams?: Promise<{ result?: string; message?: string; from?: string }>;
 };
 
 const controlClassName =
@@ -81,6 +81,7 @@ export default async function TeacherPaymentSettingsPage({ searchParams }: Payme
           action={updatePaymentSettingsAction}
           className="grid gap-6 rounded-2xl border border-ink/15 bg-white p-6"
         >
+          {resolvedSearchParams?.from === "get-started" ? <input name="from" type="hidden" value="get-started" /> : null}
           <PaymentRulesField defaultValue={view.settings.paymentRulesText} />
 
           <div>

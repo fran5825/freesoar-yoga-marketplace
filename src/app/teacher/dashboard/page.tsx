@@ -78,12 +78,19 @@ const badgeToneClasses: Record<DashboardStatusCopy["tone"], string> = {
   gray: "bg-sand text-ink-soft",
 };
 
-export default async function TeacherDashboardPage() {
+type TeacherDashboardPageProps = {
+  searchParams?: Promise<{ saved?: string }>;
+};
+
+export default async function TeacherDashboardPage({ searchParams }: TeacherDashboardPageProps) {
   try {
     await requireUser();
   } catch {
     redirect("/sign-in");
   }
+
+  // 驗收發現：從「開始使用」填完收款回來時，在總覽上方說一聲已儲存。
+  const savedPayment = (await searchParams)?.saved === "payment";
 
   const profile = await getOwnTeacherProfileApplicationSnapshot();
   const profileStatus = profile
@@ -127,6 +134,15 @@ export default async function TeacherDashboardPage() {
           </div>
         </div>
       </header>
+
+      {savedPayment ? (
+        <section
+          aria-live="polite"
+          className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900"
+        >
+          收款與聯絡資料已儲存。
+        </section>
+      ) : null}
 
       {getStarted ? <GetStartedCard getStarted={getStarted} /> : null}
 

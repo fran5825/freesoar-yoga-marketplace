@@ -13,12 +13,19 @@ export async function updatePaymentSettingsAction(formData: FormData): Promise<v
   });
 
   revalidatePath("/teacher/profile/payment");
+  // 驗收發現：從總覽「開始使用」進來的，儲存成功後回總覽；只認固定值，不接受任意網址。
+  const fromGetStarted = readFormString(formData, "from") === "get-started";
 
   if (!result.ok) {
-    redirectWithFeedback("error", result.message);
+    redirectWithFeedback("error", result.message, fromGetStarted);
   }
 
-  redirectWithFeedback("success", "收款與聯絡資料已儲存。");
+  if (fromGetStarted) {
+    revalidatePath("/teacher/dashboard");
+    redirect("/teacher/dashboard?saved=payment");
+  }
+
+  redirectWithFeedback("success", "收款與聯絡資料已儲存。", false);
 }
 
 function readFormString(formData: FormData, name: string): string {
@@ -27,6 +34,7 @@ function readFormString(formData: FormData, name: string): string {
   return typeof value === "string" ? value : "";
 }
 
-function redirectWithFeedback(result: "success" | "error", message: string): never {
-  redirect(`/teacher/profile/payment?result=${result}&message=${encodeURIComponent(message)}`);
+function redirectWithFeedback(result: "success" | "error", message: string, fromGetStarted: boolean): never {
+  const from = fromGetStarted ? "&from=get-started" : "";
+  redirect(`/teacher/profile/payment?result=${result}&message=${encodeURIComponent(message)}${from}`);
 }

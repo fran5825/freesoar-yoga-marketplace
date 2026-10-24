@@ -177,7 +177,12 @@ export async function notifyClassSessionsCreated(
     try {
       await notifyUsers(
         "class_session_created",
-        [{ userId: first.teacherUserId, role: "self" }],
+        // 驗收發現：單堂沒有 target 時，同時是團主的老師會被連到團主的課程頁；單堂直達老師端那堂課。
+        [
+          sorted.length > 1
+            ? { userId: first.teacherUserId, role: "self" }
+            : { userId: first.teacherUserId, role: "self", target: { type: "teacher_class_session", id: first.classSessionId } },
+        ],
         {
           classSessionTitle: first.title,
           ...(sorted.length > 1 ? { sessionCount: sorted.length, dateRange: formatDateRange(sorted[0].startAt, sorted.at(-1)!.startAt) } : {}),

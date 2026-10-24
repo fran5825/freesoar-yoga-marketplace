@@ -18,7 +18,8 @@ import {
 // 不論第 3 步；「先不用」只記在這個瀏覽器（由頁面元件處理）。
 
 const stepActions: Record<TeacherGetStartedStepKey, { href: string; actionLabel: string }> = {
-  payment: { href: "/teacher/profile/payment", actionLabel: "前往填寫收款與聯絡" },
+  // 驗收發現：從這裡進收款頁，儲存後回到總覽（收款頁依 from=get-started 判斷）。
+  payment: { href: "/teacher/profile/payment?from=get-started", actionLabel: "前往填寫收款與聯絡" },
   first_class: { href: "/teacher/classes/new", actionLabel: "開第一堂課" },
   public_page: { href: "/teacher/profile/info#public-page", actionLabel: "前往設定老師公開頁" },
 };
