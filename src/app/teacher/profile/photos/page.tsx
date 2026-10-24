@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 
 import { PHOTO_MAX_BYTES } from "@/domain/teacher-photo/process-image";
 import { listOwnTeacherPhotos, TEACHER_PHOTO_MAX_COUNT } from "@/domain/teacher-photo/service";
-import { getOwnPublicPageSetting } from "@/domain/teacher-profile/public-page-settings";
 import { getOwnTeacherProfileApplicationSnapshot } from "@/domain/teacher-profile/service";
 import { requireUser } from "@/lib/auth/session";
 
@@ -14,7 +13,6 @@ import {
   deletePhotoAction,
   movePhotoAction,
   setAvatarAction,
-  setPublicPageAction,
   uploadPhotoAction,
 } from "./actions";
 
@@ -34,10 +32,9 @@ export default async function TeacherPhotosPage({ searchParams }: TeacherPhotosP
     redirect("/sign-in");
   }
 
-  const [profile, list, publicPage, resolvedSearchParams] = await Promise.all([
+  const [profile, list, resolvedSearchParams] = await Promise.all([
     getOwnTeacherProfileApplicationSnapshot(),
     listOwnTeacherPhotos(),
-    getOwnPublicPageSetting(),
     searchParams,
   ]);
   const feedback =
@@ -95,41 +92,14 @@ export default async function TeacherPhotosPage({ searchParams }: TeacherPhotosP
             </section>
           ) : null}
 
-          {publicPage.state === "ok" ? (
-            <section aria-labelledby="public-page-title" className="grid gap-3 rounded-2xl border border-ink/15 bg-white p-6">
-              <h2 className="text-lg font-medium text-ink" id="public-page-title">
-                公開我的老師頁
-              </h2>
-              <p className="text-sm leading-6 text-ink-soft">
-                目前：<span className="font-medium text-ink">{publicPage.visible ? "已公開" : "未公開"}</span>
-                {publicPage.enabled && !publicPage.visible ? "（帳號暫停期間訪客看不到）" : ""}
-              </p>
-              <p className="text-xs leading-5 text-ink-faint">
-                公開後，任何人（不用登入）都能看到：頭像與照片、簡介、教學風格、證照、擅長類型、授課形式與服務地區，以及你目前公開的課程。
-                不會顯示：email、電話、收款帳號與聯絡方式。預設是關閉，你隨時可以關掉。
-              </p>
-              <div className="flex flex-wrap items-center gap-3">
-                {publicPage.canChange ? (
-                  <form action={setPublicPageAction}>
-                    <input name="enabled" type="hidden" value={publicPage.enabled ? "no" : "yes"} />
-                    <button
-                      className="inline-flex min-h-11 items-center rounded-full bg-pine px-6 py-3 text-sm font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
-                      type="submit"
-                    >
-                      {publicPage.enabled ? "關閉公開頁" : "公開我的老師頁"}
-                    </button>
-                  </form>
-                ) : (
-                  <p className="text-sm text-ink-soft">帳號暫停期間無法變更。</p>
-                )}
-                {publicPage.visible ? (
-                  <Link className="text-sm font-medium text-pine underline underline-offset-4" href={`/teachers/${publicPage.teacherProfileId}`}>
-                    查看我的公開頁
-                  </Link>
-                ) : null}
-              </div>
-            </section>
-          ) : null}
+          {/* teacher-first-run 票 07：公開老師頁的開關搬到「個人資料」分頁，這裡只留一行指路。 */}
+          <p className="text-sm leading-6 text-ink-soft">
+            照片會顯示在你的老師公開頁上。要公開或關閉老師頁，請
+            <Link className="font-medium text-pine underline underline-offset-4" href="/teacher/profile/info#public-page">
+              到個人資料分頁設定
+            </Link>
+            。
+          </p>
 
           <section aria-labelledby="photo-upload-title" className="grid gap-3 rounded-2xl border border-ink/15 bg-white p-6">
             <h2 className="text-lg font-medium text-ink" id="photo-upload-title">

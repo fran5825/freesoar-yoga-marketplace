@@ -19,10 +19,11 @@ import {
 } from "@/app/teachers/join/_lib/application-fields";
 import { formatTeacherRatingSummary } from "@/domain/review/rating-summary";
 import { getOwnTeacherRatingSummary } from "@/domain/review/read-service";
+import { getOwnPublicPageSetting } from "@/domain/teacher-profile/public-page-settings";
 import { getOwnTeacherProfileApplicationSnapshot } from "@/domain/teacher-profile/service";
 import { requireUser } from "@/lib/auth/session";
 
-import { updateTeacherProfileAction } from "./actions";
+import { setPublicPageAction, updateTeacherProfileAction } from "./actions";
 
 type TeacherProfilePageProps = {
   searchParams?: Promise<{ result?: string; message?: string }>;
@@ -183,7 +184,10 @@ export default async function TeacherProfilePage({
   }
 
   const isApproved = profile.status === "approved";
-  const ratingSummary = await getOwnTeacherRatingSummary();
+  const [ratingSummary, publicPage] = await Promise.all([
+    getOwnTeacherRatingSummary(),
+    getOwnPublicPageSetting(),
+  ]);
 
   return (
     <div className="flex flex-col gap-8">
@@ -216,6 +220,47 @@ export default async function TeacherProfilePage({
           {ratingSummary ? formatTeacherRatingSummary(ratingSummary) : "尚無評價"}
         </p>
       </section>
+
+      {/* teacher-first-run 票 07：「公開我的老師頁」開關從照片分頁搬來這裡（預設關閉、既有設定不變）。 */}
+      {publicPage.state === "ok" ? (
+        <section
+          aria-labelledby="public-page-title"
+          className="grid scroll-mt-24 gap-3 rounded-2xl border border-ink/15 bg-white p-6"
+          id="public-page"
+        >
+          <h2 className="text-lg font-medium text-ink" id="public-page-title">
+            公開我的老師頁
+          </h2>
+          <p className="text-sm leading-6 text-ink-soft">
+            目前：<span className="font-medium text-ink">{publicPage.visible ? "已公開" : "未公開"}</span>
+            {publicPage.enabled && !publicPage.visible ? "（帳號暫停期間訪客看不到）" : ""}
+          </p>
+          <p className="text-xs leading-5 text-ink-faint">
+            公開後，任何人（不用登入）都能看到：頭像與照片、簡介、教學風格、證照、擅長類型、授課形式與服務地區，以及你目前公開的課程。
+            不會顯示：email、電話、收款帳號與聯絡方式。預設是關閉，你隨時可以關掉。
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            {publicPage.canChange ? (
+              <form action={setPublicPageAction}>
+                <input name="enabled" type="hidden" value={publicPage.enabled ? "no" : "yes"} />
+                <button
+                  className="inline-flex min-h-11 items-center rounded-full bg-pine px-6 py-3 text-sm font-medium text-white transition hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+                  type="submit"
+                >
+                  {publicPage.enabled ? "關閉公開頁" : "公開我的老師頁"}
+                </button>
+              </form>
+            ) : (
+              <p className="text-sm text-ink-soft">帳號暫停期間無法變更。</p>
+            )}
+            {publicPage.visible ? (
+              <Link className="text-sm font-medium text-pine underline underline-offset-4" href={`/teachers/${publicPage.teacherProfileId}`}>
+                查看我的公開頁
+              </Link>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
 
       {!isApproved ? (
         <section

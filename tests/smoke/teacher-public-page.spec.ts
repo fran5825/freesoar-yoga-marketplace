@@ -195,11 +195,15 @@ test.describe("classes on the teacher page", () => {
 });
 
 test.describe("the teacher's switch", () => {
-  test("the teacher turns the page on and off from the photos tab; off means 404 right away", async ({ page, context, browser }, testInfo) => {
+  // teacher-first-run 票 07：開關從「照片」分頁搬到「個人資料」分頁；照片分頁只留一行連過去的說明。
+  test("the teacher turns the page on and off from the info tab; off means 404 right away", async ({ page, context, browser }, testInfo) => {
     const data = await seedFullTeacher("switch", testInfo, false);
     await addAuthSessionCookie(context, data.teacher.sessionToken);
 
     await page.goto("/teacher/profile/photos");
+    await expect(page.getByRole("button", { name: "公開我的老師頁" })).toHaveCount(0);
+    await page.getByRole("link", { name: "到個人資料分頁設定" }).click();
+    await expect(page).toHaveURL(/\/teacher\/profile\/info#public-page$/, slow);
     await expect(page.getByText("目前：未公開")).toBeVisible(slow);
     const turnOn = page.getByRole("button", { name: "公開我的老師頁" });
     await waitForHydrated(turnOn);
@@ -222,7 +226,7 @@ test.describe("the teacher's switch", () => {
     await prisma.teacherProfile.update({ where: { id: data.teacher.teacherProfileId }, data: { status: "suspended" } });
     await addAuthSessionCookie(context, data.teacher.sessionToken);
 
-    await page.goto("/teacher/profile/photos");
+    await page.goto("/teacher/profile/info");
     await expect(page.getByText("（帳號暫停期間訪客看不到）")).toBeVisible(slow);
     await expect(page.getByText("帳號暫停期間無法變更。")).toBeVisible();
     await expect(page.getByRole("button", { name: "關閉公開頁" })).toHaveCount(0);
@@ -234,8 +238,8 @@ test.describe("the teacher's switch", () => {
     const member = await seedMember(data.id, "stranger");
     await addAuthSessionCookie(context, member.sessionToken);
 
-    await page.goto("/teacher/profile/photos");
-    await expect(page.getByRole("heading", { name: "通過老師審核後就能上傳照片" })).toBeVisible(slow);
+    await page.goto("/teacher/profile/info");
+    await expect(page.getByRole("heading", { name: "尚未建立老師申請" })).toBeVisible(slow);
     await expect(page.getByRole("button", { name: "公開我的老師頁" })).toHaveCount(0);
     expect((await prisma.teacherProfile.findUniqueOrThrow({ where: { id: data.teacher.teacherProfileId } })).isPublicPageEnabled).toBe(false);
   });
