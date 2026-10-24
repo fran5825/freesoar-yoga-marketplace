@@ -54,4 +54,6 @@ export type NotificationPayload = {
   // teacher-series-rollup 票 07：批次動作（建立系列、生成更多、取消整個系列、從這場以後全部取消）一人一則時的堂數與日期範圍。
   sessionCount?: number;
   dateRange?: string;
+  // teacher-first-run 票 05：給老師的 enrollment_cancelled 是「學員退出整期」，不是取消單堂。
+  termWithdrawal?: boolean;
 };

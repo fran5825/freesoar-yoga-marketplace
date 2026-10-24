@@ -543,6 +543,8 @@ Fields:
 
 **已落地（teacher-series-rollup 票 07，ADR 0008，產品主人 2026-10-11 放行）**：`Notification` 新增可為空的 `recurringClassSeriesId`（外鍵到 `RecurringClassSeries`，系列刪除時設為 NULL，加索引；migration `20261011011121_notification_series_grouping`，純新增、不改寫既有資料）。課程相關通知（建立、異動、取消、完成、報名、評價）在該課屬於系列時寫入系列 id，站內與 email 兩筆記錄都寫；舊通知與不屬於系列的通知為 NULL。用途只有兩個：通知頁把同一位收件人、同類型、同系列、同一天（台北時間）的通知合成一則；合併後的一則與批次通知連到系列頁（連結由 `getSeriesNotificationLink` 依收件人是否為授課老師與系列種類推導，不存網址）。批次動作（建立系列、生成更多、取消整個系列、從這場以後全部取消）改為每位收件人只發一則，內文寫「共 N 堂（日期範圍）」。
 
+**已落地（teacher-first-run 票 05，產品主人 2026-10-24 放行）**：`NotificationTargetType` 新增 `teacher_class_series`（migration `20261024120000_notification_teacher_class_series_target`，只有 `ALTER TYPE ... ADD VALUE`，不改既有資料）。用在學員整期報名成立、退出整期時給授課老師（`counterpart`）的站內通知，`link.ts` 白名單對應老師系列管理頁 `/teacher/classes/series/<id>`，點進去照既有本人檢查。同一事件給學員的那一則不帶這個 target，照舊依 ADR 0008 連到期班頁或系列頁。
+
 ## AdminNote
 
 Internal admin note.

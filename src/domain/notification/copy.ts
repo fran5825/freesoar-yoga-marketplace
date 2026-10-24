@@ -177,16 +177,16 @@ const COPY_TABLE: CopyTable = {
       body: `「${classSessionTitle ?? ""}」有新的報名，需要你確認或拒絕。`,
     }),
   },
-  // teacher-first-run 票 04：學員自己取消時，授課老師（counterpart）也收到一則站內通知；學員（self）文案不變。
+  // teacher-first-run 票 04、05：學員自己取消單堂或退出整期時，授課老師（counterpart）也收到一則站內通知；學員（self）文案不變。
   enrollment_cancelled: {
     self: ({ classSessionTitle }) => ({
       title: "報名已取消",
       body: `「${classSessionTitle ?? ""}」的報名已經取消。`,
     }),
-    counterpart: ({ classSessionTitle }) => ({
-      title: "有學員取消報名",
-      body: `「${classSessionTitle ?? ""}」有一位學員取消了報名。`,
-    }),
+    counterpart: ({ classSessionTitle, termWithdrawal }) =>
+      termWithdrawal
+        ? { title: "有學員退出整期", body: `「${classSessionTitle ?? ""}」有一位學員退出整期，尚未上的場次已經取消。` }
+        : { title: "有學員取消報名", body: `「${classSessionTitle ?? ""}」有一位學員取消了報名。` },
   },
   // teacher-class-scheduling 票 04：老師改了時間或地點，通知該場已報名（含待確認）的學員；報名照樣保留。
   class_session_changed: {

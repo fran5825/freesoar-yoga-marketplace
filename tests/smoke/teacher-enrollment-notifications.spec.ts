@@ -2,13 +2,16 @@ import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
 import { cancelEnrollmentForAdminCore } from "../../src/domain/enrollment/__internal__/cancel-enrollment-for-admin-core";
 import { createEnrollmentForUser } from "../../src/domain/enrollment/__internal__/create-enrollment-core";
+import { createSeriesEnrollmentForUser } from "../../src/domain/enrollment/__internal__/create-series-enrollment-core";
+import { withdrawSeriesEnrollmentForUser } from "../../src/domain/enrollment/__internal__/withdraw-series-enrollment-core";
 import { addAuthSessionCookie, prisma } from "./_helpers/organizer-demand-fixtures";
 import { createTermFixtures } from "./_helpers/term-fixtures";
 
 // teacher-first-run 票 04：有人報名「報名送出即成立」的單堂課、學員自己取消時，老師收到站內通知。
 // 學員收到的通知與連結完全不變；同一系列同一天合併後（ADR 0008）老師的那則連到老師系列頁。
+// 票 05：整期報名、退出整期，老師各收到一則，直達老師系列頁（target teacher_class_series）。
 const fixtures = createTermFixtures("teacher-enrollment-notifications-smoke.local");
-const { runId, seedTeacher, seedMember, seedContinuous } = fixtures;
+const { runId, seedTeacher, seedMember, seedContinuous, seedTerm } = fixtures;
 
 test.afterAll(async () => {
   await fixtures.cleanup();
@@ -159,4 +162,59 @@ test("a teacher who also enrolls as a member keeps the member destinations", asy
     // 以學員身分報名，不會收到給老師的「有新的報名」。
     await expect(page.getByRole("article").filter({ hasText: "有新的報名" })).toHaveCount(0);
   }
+});
+
+test("term: one teacher notice per term enrollment and one when a member withdraws, both opening the teacher series page; member notices unchanged", async ({ context, page }, testInfo) => {
+  const id = runId(testInfo, "term");
+  const teacher = await seedTeacher(id);
+  const member = await seedMember(id, "a");
+  const title = `整期通知 ${id}`;
+  const { series } = await seedTerm(teacher.teacherProfileId, { count: 3, title, isPublic: true });
+
+  const joined = await createSeriesEnrollmentForUser(member.id, series.id, { notes: null });
+  if (!joined.ok) throw new Error("fixture");
+
+  const teacherConfirmed = await prisma.notification.findMany({ where: { userId: teacher.userId, channel: "in_app", type: "enrollment_confirmed" } });
+  expect(teacherConfirmed).toHaveLength(1);
+  expect(teacherConfirmed[0]).toMatchObject({ targetType: "teacher_class_series", targetId: series.id, recurringClassSeriesId: series.id });
+
+  expect((await withdrawSeriesEnrollmentForUser(member.id, joined.seriesEnrollmentId)).ok).toBe(true);
+
+  await openNotifications(context, page, teacher.sessionToken, "/teacher/notifications");
+  const joinedCard = card(page, title, "有新的報名");
+  await expect(joinedCard).toHaveCount(1);
+  await expect(joinedCard).toContainText(`「${title}（整期 3 堂）」有新的報名。`);
+  await expect(joinedCard.getByRole("link", { name: /前往系列頁/ })).toHaveAttribute("href", `/teacher/classes/series/${series.id}`);
+  const withdrawnCard = card(page, title, "有學員退出整期");
+  await expect(withdrawnCard).toHaveCount(1);
+  await expect(withdrawnCard.getByRole("link", { name: /前往系列頁/ })).toHaveAttribute("href", `/teacher/classes/series/${series.id}`);
+  await withdrawnCard.getByRole("link", { name: /前往系列頁/ }).click();
+  await expect(page).toHaveURL(new RegExp(`/teacher/classes/series/${series.id}$`));
+
+  // 學員本人的兩則照舊：期班文案、連到期班頁。
+  await openNotifications(context, page, member.sessionToken);
+  const memberJoined = card(page, title, "報名成功");
+  await expect(memberJoined).toContainText(`你已經成功報名「${title}（整期 3 堂）」。`);
+  await expect(memberJoined.getByRole("link", { name: /前往期班頁/ })).toHaveAttribute("href", `/classes/terms/${series.id}`);
+  const memberWithdrawn = card(page, title, "報名已取消");
+  await expect(memberWithdrawn).toContainText(`「${title}（整期 3 堂）」的報名已經取消。`);
+  await expect(memberWithdrawn.getByRole("link", { name: /前往期班頁/ })).toHaveAttribute("href", `/classes/terms/${series.id}`);
+  await expect(page.getByRole("article").filter({ hasText: "有學員退出整期" })).toHaveCount(0);
+
+  // 學員不能借老師的通知連結進到老師系列頁。
+  const response = await page.goto(`/teacher/classes/series/${series.id}`);
+  expect(response?.status()).toBe(404);
+});
+
+test("term that needs confirmation keeps only the existing pending notice for the teacher", async ({}, testInfo) => {
+  const id = runId(testInfo, "term-pending");
+  const teacher = await seedTeacher(id);
+  const member = await seedMember(id, "a");
+  const { series } = await seedTerm(teacher.teacherProfileId, { count: 2, requiresApproval: true, title: `整期待確認 ${id}` });
+
+  const joined = await createSeriesEnrollmentForUser(member.id, series.id, { notes: null });
+  if (!joined.ok || joined.status !== "pending") throw new Error("fixture");
+
+  const types = (await prisma.notification.findMany({ where: { userId: teacher.userId, channel: "in_app", type: { not: "class_session_created" } } })).map((n) => n.type);
+  expect(types).toEqual(["enrollment_pending_review"]);
 });

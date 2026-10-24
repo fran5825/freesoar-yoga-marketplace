@@ -22,6 +22,8 @@ const targetLinks: Record<NotificationTargetType, (id: string) => NotificationLi
   teacher_class_proposal: (id) => ({ href: `/teacher/class-proposals/${encodeURIComponent(id)}`, label: "查看這份合作邀請" }),
   organizer_class_session: (id) => ({ href: `/organizer/classes/${encodeURIComponent(id)}`, label: "查看這堂課" }),
   teacher_class_session: (id) => ({ href: `/teacher/classes/${encodeURIComponent(id)}`, label: "查看這堂課" }),
+  // teacher-first-run 票 05：整期報名、退出整期給老師的通知，直達老師系列管理頁（該頁照既有本人檢查）。
+  teacher_class_series: (id) => ({ href: `/teacher/classes/series/${encodeURIComponent(id)}`, label: "前往系列頁" }),
 };
 
 export function getNotificationLink(

@@ -6,7 +6,7 @@
 
 **Blocked by:** 04（共用報名通知的程式與測試）
 
-**Status:** draft
+**Status:** in-progress（程式完成，smoke 待跑）
 
 **Workflow mode:** HEAVY
 
@@ -25,3 +25,5 @@
 
 ## 進度紀錄
 
+- 2026-10-24 動工前計畫：schema 只在 `NotificationTargetType` 加 `teacher_class_series`（migration 只有一行 `ALTER TYPE "NotificationTargetType" ADD VALUE 'teacher_class_series'`）；`link.ts` 白名單對應 `/teacher/classes/series/<id>`（該頁照既有本人檢查，越權 not-found）；整期報名成立（confirmed）在既有那次通知加老師 counterpart 收件人；退出整期另發一則給老師（學員那次呼叫完全不動）。待確認的整期報名維持既有 `enrollment_pending_review`。只在 worktree 的 `freesoar_tfr_b` 跑。回滾：還沒上線，revert 這張票的 commit 即可；Postgres 不能刪 enum 值，若已套用到某個資料庫，留著不用的值不影響既有資料（或重建該測試資料庫）。
+- 2026-10-24 程式、migration `20261024120000_notification_teacher_class_series_target`（用 `prisma migrate diff` 產生，只有一行 ADD VALUE）與 smoke 測試已寫好，tsc／lint 通過；本機 Postgres 沒啟動，migration 尚未套用、smoke 尚未執行。退出整期給老師的那則另外呼叫一次 notifyUsers，學員那次呼叫不動。

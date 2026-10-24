@@ -660,6 +660,8 @@ enum NotificationTargetType {
   teacher_class_proposal
   organizer_class_session
   teacher_class_session
+  // teacher-first-run 票 05：整期報名、退出整期通知老師時，直達老師的系列管理頁。
+  teacher_class_series
 }
 
 enum NotificationChannel {
