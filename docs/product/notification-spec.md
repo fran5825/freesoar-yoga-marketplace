@@ -56,10 +56,10 @@ V1 預設：
 | Event | 收件者 | 觸發時機 | 目的 |
 |---|---|---|---|
 | `teacher_application_submitted` | Teacher, Admin | 老師送出申請 | 確認申請已收到，提醒 Admin 審核 |
-| `teacher_application_approved` | Teacher | Admin approve teacher | 通知老師可開始回應需求 |
-| `teacher_application_rejected` | Teacher | Admin reject teacher | 說明審核未通過與下一步 |
+| `teacher_application_approved` | Teacher | Admin approve teacher | 通知老師現在可以開自己的課，也可以回應團體需求；站內通知連到老師總覽（看「開始使用」），不再連到可授課時間頁（teacher-first-run 票 08） |
+| `teacher_application_rejected` | Teacher | Admin reject teacher | 用「可修正」的語氣說明需要補充的地方（附原因），並告知修改後可以重新送出審核（teacher-first-run 票 09） |
 | `demand_request_submitted` | Organizer, Admin | 團主送出 demand request | 確認需求已收到，提醒 Admin review |
-| `demand_request_published` | Organizer | Admin publish demand | 通知需求已進入 demand pool |
+| `demand_request_published` | Organizer | Admin publish demand | 通知團主需求已公開在「團體需求」（原本的 demand pool／需求池，teacher-first-run 票 06 統一改稱團體需求），老師可以開始回應 |
 | `demand_request_available` | 所有 approved Teacher（發起團主本人除外；只站內，teacher-first-run 票 06） | Admin 公開需求 | 老師知道有新的團體需求，連到「團體需求」頁 |
 | `demand_request_rejected` | Organizer | Admin reject demand | 說明需求未發布與可修正方向 |
 | `demand_response_submitted` | Organizer, Admin | Teacher 提交 response | 通知團主有新的老師回覆 |
@@ -69,6 +69,7 @@ V1 預設：
 | `class_session_cancelled` | Member, Teacher, Organizer | class session 取消 | 通知相關人員課程取消 |
 | `enrollment_confirmed` | Member；授課 Teacher（只站內，teacher-first-run 票 04、05） | Member 報名成功（報名即成立的單堂與整期） | 確認報名狀態；老師知道有人報名，單則連到老師單堂頁或系列頁，同系列同一天合併後連老師系列頁 |
 | `enrollment_cancelled` | Member；授課 Teacher（只在學員自己取消單堂、整期學員單堂請假或退出整期時，只站內，teacher-first-run 票 04、05） | Member 或 Admin 取消 enrollment | 確認報名已取消；老師分別收到「有學員取消報名」「有學員請假」（帶日期，連老師單堂頁）「有學員退出整期」（連老師系列頁）；老師或管理員自己取消時不通知老師 |
+| `enrollment_pending_review` | Member；授課 Teacher | Member 報名需要老師確認的課（單堂或整期） | 學員知道報名已送出、等老師確認；老師收到「有新的報名待確認」。這類課不再另外發 `enrollment_confirmed` 給老師（teacher-first-run 票 04） |
 | `class_reminder_basic` | Member, Teacher | 課前提醒 | 提醒課程時間與地點 |
 
 Organizer 會收到 class created / changed / cancelled 類通知；V1 課前提醒先發給 Member 與 Teacher，不一定發給 Organizer。

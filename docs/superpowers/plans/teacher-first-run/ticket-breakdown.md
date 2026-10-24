@@ -20,7 +20,7 @@
 | 07 | 老師公開頁開關搬到「個人資料」分頁 | LIGHT | no | – | done |
 | 08 | 總覽「開始使用」與通過通知 | STANDARD | no | 07 | done |
 | 09 | 審核中畫面的三件事、退回通知改成可修正語氣 | LIGHT | no | 08 | done |
-| 10 | 驗收與文件同步 | STANDARD | no | 01–09 | draft |
+| 10 | 驗收與文件同步 | STANDARD | no | 01–09 | done |
 
 ```text
 01 ──> 02 ──> 03 ─────────────┐
@@ -40,5 +40,6 @@
 （每張票完成時補一行）
 
 - 2026-10-24：01、02、03 完成（分支 teacher-first-run-a）；02 的獨立 review 待合併後進行。
+- 2026-10-24：10 完成（分支 teacher-first-run）：20 筆 smoke 失敗中 1 筆是回歸（email policy 測試漏列新類型，已修），其餘 19 筆在 main 上同樣失敗；review 修正與文件同步完成，細節見票 10。
 
 <!-- codex-peer-reviewed: 2026-10-24T08:10:27Z rounds=2 verdict=approved -->
