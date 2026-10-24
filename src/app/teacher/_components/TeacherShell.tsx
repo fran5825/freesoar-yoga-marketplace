@@ -5,7 +5,7 @@ import { getOwnTeacherProfileApplicationSnapshot } from "@/domain/teacher-profil
 
 const approvedLinks = [
   { href: "/teacher/dashboard", label: "總覽" },
-  { href: "/teacher/demands", label: "需求池" },
+  { href: "/teacher/demands", label: "團體需求" },
   { href: "/teacher/classes", label: "我的課程" },
   { href: "/teacher/profile", label: "老師資料" },
   { href: "/teacher/notifications", label: "通知" },
@@ -13,7 +13,7 @@ const approvedLinks = [
 
 // 2026-09-26：「可授課時間」併入「老師資料」的第一個分頁，導覽列不再單獨列出。
 // 還沒通過審核（沒有資料、草稿、審核中、被退回、停權）的老師不能使用媒合功能，
-// 所以導覽列也不放需求池、課程、可授課時間，只放總覽、老師資料、通知。
+// 所以導覽列也不放團體需求、課程、可授課時間，只放總覽、老師資料、通知。
 const limitedLinks = [
   { href: "/teacher/dashboard", label: "總覽" },
   { href: "/teacher/profile", label: "老師資料" },
@@ -21,7 +21,7 @@ const limitedLinks = [
 ];
 
 // teacher-usability-redesign 票 07：暫停中的老師原本就能查看自己既有的課程（D15），
-// 只是導覽列沒有入口；這裡補回「我的課程」。不加需求池、建課等暫停期間不能用的功能，權限不變。
+// 只是導覽列沒有入口；這裡補回「我的課程」。不加團體需求、建課等暫停期間不能用的功能，權限不變。
 const suspendedLinks = [
   { href: "/teacher/dashboard", label: "總覽" },
   { href: "/teacher/classes", label: "我的課程" },

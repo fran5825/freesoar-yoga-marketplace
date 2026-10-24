@@ -60,14 +60,15 @@ V1 預設：
 | `teacher_application_rejected` | Teacher | Admin reject teacher | 說明審核未通過與下一步 |
 | `demand_request_submitted` | Organizer, Admin | 團主送出 demand request | 確認需求已收到，提醒 Admin review |
 | `demand_request_published` | Organizer | Admin publish demand | 通知需求已進入 demand pool |
+| `demand_request_available` | 所有 approved Teacher（發起團主本人除外；只站內，teacher-first-run 票 06） | Admin 公開需求 | 老師知道有新的團體需求，連到「團體需求」頁 |
 | `demand_request_rejected` | Organizer | Admin reject demand | 說明需求未發布與可修正方向 |
 | `demand_response_submitted` | Organizer, Admin | Teacher 提交 response | 通知團主有新的老師回覆 |
 | `demand_response_selected` | Teacher, Organizer | response 被選中 | 通知雙方 matching 成立 |
 | `class_session_created` | Teacher, Organizer | class session 建立 | 確認課程已形成 |
 | `class_session_changed` | Member, Teacher, Organizer | class session 重要資訊變更 | 通知時間、地點或狀態等重要變更 |
 | `class_session_cancelled` | Member, Teacher, Organizer | class session 取消 | 通知相關人員課程取消 |
-| `enrollment_confirmed` | Member | Member 報名成功 | 確認報名狀態 |
-| `enrollment_cancelled` | Member | Member 或 Admin 取消 enrollment | 確認報名已取消 |
+| `enrollment_confirmed` | Member；授課 Teacher（只站內，teacher-first-run 票 04、05） | Member 報名成功（報名即成立的單堂與整期） | 確認報名狀態；老師知道有人報名，單則連到老師單堂頁或系列頁，同系列同一天合併後連老師系列頁 |
+| `enrollment_cancelled` | Member；授課 Teacher（只在學員自己取消單堂、整期學員單堂請假或退出整期時，只站內，teacher-first-run 票 04、05） | Member 或 Admin 取消 enrollment | 確認報名已取消；老師分別收到「有學員取消報名」「有學員請假」（帶日期，連老師單堂頁）「有學員退出整期」（連老師系列頁）；老師或管理員自己取消時不通知老師 |
 | `class_reminder_basic` | Member, Teacher | 課前提醒 | 提醒課程時間與地點 |
 
 Organizer 會收到 class created / changed / cancelled 類通知；V1 課前提醒先發給 Member 與 Teacher，不一定發給 Organizer。

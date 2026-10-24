@@ -25,6 +25,7 @@ import { prisma } from "@/lib/prisma";
 import { termNotificationTitle } from "../term-enrollment-copy";
 import { buildEnrollmentPaymentSnapshot } from "../payment-snapshot";
 import { occupyingEnrollmentWhere } from "../seat-occupancy";
+import { teacherNoticeRecipient } from "../teacher-notice-recipient";
 
 export type CreateSeriesEnrollmentErrorCode =
   | "series_not_found"
@@ -295,7 +296,17 @@ export async function createSeriesEnrollmentForUser(
         { recurringClassSeriesId },
       );
     } else {
-      await notifyOverride("enrollment_confirmed", [{ userId, role: "self" }], { classSessionTitle }, undefined, { recurringClassSeriesId });
+      // teacher-first-run 票 05：整期報名成立也通知授課老師一則，帶老師系列 target；學員那一則不變。
+      await notifyOverride(
+        "enrollment_confirmed",
+        [
+          { userId, role: "self" },
+          ...teacherNoticeRecipient(outcome.teacherUserId, userId, { type: "teacher_class_series", id: recurringClassSeriesId }),
+        ],
+        { classSessionTitle },
+        undefined,
+        { recurringClassSeriesId },
+      );
     }
   } catch (notifyError) {
     console.error("[notification] series enrollment trigger failed", notifyError);

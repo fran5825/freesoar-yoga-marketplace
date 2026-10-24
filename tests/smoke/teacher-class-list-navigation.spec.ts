@@ -25,7 +25,7 @@ import { futureDateTime } from "./_helpers/future-dates";
 
 // teacher-usability-redesign 票 04：我的課程分類、建立入口、詳情返回上下文（含惡意來源）。
 // 票 05：系列頁逐場人數、跨老師隔離、系列 → 單堂 → 返回、整系列取消先確認。
-// 票 07：暫停老師的導覽有「我的課程」，只能查看，不能建課或看需求池。
+// 票 07：暫停老師的導覽有「我的課程」，只能查看，不能建課或看團體需求。
 
 const testEmailDomain = "teacher-class-list-navigation-smoke.local";
 const createdEmails: string[] = [];
@@ -420,7 +420,7 @@ test.describe("suspended teacher navigation (ticket 07)", () => {
     await page.goto("/teacher/dashboard");
     let nav = await teacherNav(page);
     await expect(nav.getByRole("link", { name: "我的課程" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "需求池" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "團體需求" })).toBeVisible();
 
     // 先以審核通過的身分開課，再暫停（暫停後不能開新課）。
     const suspended = await seedTeacher(testRunId, "suspended-nav");
@@ -434,7 +434,7 @@ test.describe("suspended teacher navigation (ticket 07)", () => {
     await addAuthSessionCookie(context, suspended.sessionToken);
     await page.goto("/teacher/dashboard");
     nav = await teacherNav(page);
-    await expect(nav.getByRole("link", { name: "需求池" })).toHaveCount(0);
+    await expect(nav.getByRole("link", { name: "團體需求" })).toHaveCount(0);
     await nav.getByRole("link", { name: "我的課程" }).click();
     await expect(page).toHaveURL(/\/teacher\/classes$/);
     await expect(page.getByText("老師資格目前暫停中")).toBeVisible();

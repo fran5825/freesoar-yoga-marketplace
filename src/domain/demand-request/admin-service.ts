@@ -212,7 +212,7 @@ export async function publishSubmittedDemandRequest(
     try {
       const demand = await prisma.demandRequest.findUnique({
         where: { id: demandRequestId },
-        select: { organizerProfile: { select: { userId: true } } },
+        select: { title: true, organizerProfile: { select: { userId: true } } },
       });
 
       if (demand) {
@@ -221,8 +221,24 @@ export async function publishSubmittedDemandRequest(
           [{ userId: demand.organizerProfile.userId, role: "self" }],
           {},
         );
+
+        // teacher-first-run 票 06：同一個時點通知所有 approved 老師有新的團體需求（只發站內）。
+        // 發起的團主本人若也是老師，只收到上面團主那則，不再收到給老師的這則。
+        const teachers = await prisma.teacherProfile.findMany({
+          where: { status: "approved", userId: { not: demand.organizerProfile.userId } },
+          select: { userId: true },
+        });
+
+        if (teachers.length > 0) {
+          await notifyUsers(
+            "demand_request_available",
+            teachers.map((teacher) => ({ userId: teacher.userId, role: "counterpart" as const })),
+            { demandTitle: demand.title ?? undefined },
+          );
+        }
       }
     } catch (notifyError) {
+      // 通知失敗不影響需求公開（需求已經改成 published）。
       console.error("[notification] demand_request_published trigger failed", notifyError);
     }
 

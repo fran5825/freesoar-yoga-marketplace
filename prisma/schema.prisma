@@ -652,6 +652,8 @@ enum NotificationType {
   class_proposal_revised
   // teacher-showcase-photos 票 07：管理員下架老師的照片，通知老師本人（只發站內通知）。
   teacher_photo_removed
+  // teacher-first-run 票 06：需求經管理員核准公開時，通知所有已通過審核的老師（發起團主本人除外；只發站內通知）。
+  demand_request_available
 }
 
 // 通知可直達的單筆頁白名單（organizer-usability-redesign 票 12）。
@@ -660,6 +662,8 @@ enum NotificationTargetType {
   teacher_class_proposal
   organizer_class_session
   teacher_class_session
+  // teacher-first-run 票 05：整期報名、退出整期通知老師時，直達老師的系列管理頁。
+  teacher_class_series
 }
 
 enum NotificationChannel {
