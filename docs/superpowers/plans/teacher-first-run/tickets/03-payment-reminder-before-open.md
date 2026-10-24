@@ -6,7 +6,7 @@
 
 **Blocked by:** 02（單堂建立時直接開放是入口之一）
 
-**Status:** in-progress（程式與測試已完成；smoke 待資料庫啟動後執行）
+**Status:** done
 
 **Workflow mode:** STANDARD
 
@@ -33,3 +33,4 @@
   7. 期班「追加補課」在剩餘場次都已開放時：`addMakeupSessionAction` → `add-makeup-session-core`（規則抽成 `makeupOpensForEnrollment`，核心與頁面共用）
   不在本票範圍：團主端開放（`/organizer/classes/[id]` 的 `openForEnrollmentAction`、團主直接開團 `open-direct-class-core`），那是團主角色的操作，收款資訊也不是老師在那裡填。
 - 2026-10-24：判斷放在 `src/domain/teacher-profile/payment-reminder.ts`（`buildPaymentInfoReminder`），讀取用 `getOwnPaymentInfoReminder`；畫面共用 `PaymentInfoReminderNotice`。7 個入口都在按下之前顯示（5 與 4 同一區塊，位於場次清單之前；6 勾選後才顯示；7 只在補課會直接開放時顯示），不擋操作。tsc、lint 通過；smoke（新檔 teacher-payment-reminder）因本機 PostgreSQL（Docker）未啟動尚未執行。
+- 2026-10-24：smoke 通過——teacher-payment-reminder 12/12、teacher-series-open-all 18/18、term-class-creation 22/22。

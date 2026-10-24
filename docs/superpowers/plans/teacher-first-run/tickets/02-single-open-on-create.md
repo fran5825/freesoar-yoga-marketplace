@@ -6,7 +6,7 @@
 
 **Blocked by:** 01（同改建課表單，避免衝突）
 
-**Status:** in-progress（程式與測試已完成；smoke 與獨立 review 待做）
+**Status:** done
 
 **Workflow mode:** HEAVY
 
@@ -20,7 +20,7 @@
 - [x] 「建立成功、開放失敗」時：課程留在草稿，頁面導到這堂草稿的詳情頁並說明「課程已建立，但還沒開放報名：原因…」，老師可以在詳情頁直接重試開放；不能顯示成「尚未建立」，也不能讓老師重送表單建出第二堂（現有表單狀態與防重送邏輯假設錯誤都發生在寫入前，要一併調整）
 - [x] rollback 方式寫進進度紀錄（例如把預設改回先存草稿即可回到舊行為）
 - [x] 開放後（含 0 人報名）的下一步文字提示傳連結給學員
-- [ ] 相關 smoke 測試通過（teacher-initiated-open-classes、teacher-class-usability）
+- [x] 相關 smoke 測試通過（teacher-initiated-open-classes、teacher-class-usability）
 
 ## 進度紀錄
 
@@ -33,3 +33,4 @@
   5. 測試：teacher-initiated-open-classes、teacher-class-usability 加直接開放、先存草稿、開放失敗三條路徑，並更新受影響的既有文案。
 - Rollback 方式：把單堂表單 `openForEnrollmentSingle` 的預設值改回 `false`（先存成草稿）即回到舊行為；完全撤回則 revert 本票 commit。沒有 schema 或資料變更，不需要資料修復。
 - 2026-10-24：實作完成。`createOwnClassSessionForTeacher` 加 `openForEnrollment`，建立後用 `openNewlyCreatedClassSessionForTeacher`（沿用 `openClassSessionForEnrollmentForTeacher` 核心）開放；失敗或例外都回傳「課程已建立，但還沒開放報名：原因」並導到草稿詳情頁。tsc、lint 通過；smoke 因本機 PostgreSQL（Docker）未啟動尚未執行。
+- 2026-10-24：smoke 通過——teacher-initiated-open-classes 17/18、teacher-class-usability 15/16、teacher-class-detail-page 14/14、class-yoga-styles 14/14、class-member-info 16/16、class-cover-photo 16/16。兩個手機版失敗在改版前的 66363eb 也一樣失敗，與本票無關：teacher-class-usability「leaving with unsaved input」（手機版找不到可見的 /teacher/dashboard 連結）、teacher-initiated-open-classes「action buttons only appear…」（草稿的「取消課程」在手機收進「更多」）。公開選項說明原本含「地點」，會讓 getByLabel("地點") 撞到兩個欄位，已改成「看得到課程內容」。獨立 review 依協調者指示合併後再做。

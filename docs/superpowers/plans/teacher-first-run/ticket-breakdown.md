@@ -11,9 +11,9 @@
 
 | # | 票 | Mode | Human Gate | Blocked by | Status |
 |---|----|------|-----------|-----------|--------|
-| 01 | 老師開課預設公開，並沿用上一堂的公開設定 | STANDARD | no | – | draft |
-| 02 | 單堂課建立後直接開放報名 | HEAVY | yes | 01 | draft |
-| 03 | 開放報名前的收款資訊提醒 | STANDARD | no | 02 | draft |
+| 01 | 老師開課預設公開，並沿用上一堂的公開設定 | STANDARD | no | – | done |
+| 02 | 單堂課建立後直接開放報名 | HEAVY | yes | 01 | done |
+| 03 | 開放報名前的收款資訊提醒 | STANDARD | no | 02 | done |
 | 04 | 單堂報名與取消時通知老師 | STANDARD | no | – | draft |
 | 05 | 整期報名與退出整期時通知老師（新增系列 target） | HEAVY | yes | 04 | draft |
 | 06 | 新團體需求通知老師、名稱統一為「團體需求」 | HEAVY | yes | 05 | draft |
@@ -38,5 +38,7 @@
 ## 進度紀錄
 
 （每張票完成時補一行）
+
+- 2026-10-24：01、02、03 完成（分支 teacher-first-run-a）；02 的獨立 review 待合併後進行。
 
 <!-- codex-peer-reviewed: 2026-10-24T08:10:27Z rounds=2 verdict=approved -->

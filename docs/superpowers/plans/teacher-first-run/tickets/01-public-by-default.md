@@ -6,7 +6,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** in-progress（程式與測試已完成；smoke 待資料庫啟動後執行）
+**Status:** done
 
 **Workflow mode:** STANDARD
 
@@ -19,8 +19,9 @@
 - [x] 選項說明寫出「學員要先登入才看得到課程內容」
 - [x] 分享文案只在僅透過連結招募的課出現「需要先登入」
 - [x] 既有課程的 isPublic 不被任何程式改動
-- [ ] 相關 smoke 測試通過（建課、分享文案）
+- [x] 相關 smoke 測試通過（建課、分享文案）
 
 ## 進度紀錄
 
 - 2026-10-24：`getOwnLatestClassFormDefaultsForTeacher` 加讀 `isPublic`，表單沒有上一堂時預設公開、有上一堂就沿用（含 false）；選項改名「僅透過連結招募」並說明要先登入；分享文案的登入提醒只在僅透過連結招募時出現。tsc、lint 通過；smoke（teacher-class-usability、share-templates、series-member-info）因本機 PostgreSQL（Docker）未啟動尚未執行。
+- 2026-10-24：smoke 通過——teacher-class-usability 15/16（1 個手機版失敗是既有問題）、share-templates 14/14、series-member-info 16/16。兩個手機版失敗在改版前的 66363eb 也一樣失敗，與本票無關：teacher-class-usability「leaving with unsaved input」（手機版找不到可見的 /teacher/dashboard 連結）、teacher-initiated-open-classes「action buttons only appear…」（草稿的「取消課程」在手機收進「更多」）。
