@@ -12,9 +12,12 @@ import {
 import { listOwnSelectedResponsesAwaitingClass } from "@/domain/demand-response/service";
 import { listOwnReceivedProposalsForTeacher } from "@/domain/organizer-class-proposal/service";
 import { buildTeacherProposalTodoItems } from "@/domain/organizer-class-proposal/todo";
+import { getOwnTeacherGetStarted } from "@/domain/teacher-profile/get-started";
 import { getOwnTeacherProfileApplicationSnapshot } from "@/domain/teacher-profile/service";
 import type { TeacherProfileStatus } from "@/domain/teacher-profile/state";
 import { requireUser } from "@/lib/auth/session";
+
+import { GetStartedCard } from "./_components/GetStartedCard";
 
 type DashboardStatusCopy = {
   label: string;
@@ -103,6 +106,8 @@ export default async function TeacherDashboardPage() {
         }),
       ]
     : [];
+  // teacher-first-run 票 08：「開始使用」只給 approved 且還沒完成前兩步的老師，判斷在 domain 層。
+  const getStarted = profile?.status === "approved" ? await getOwnTeacherGetStarted() : null;
   const actionItems = todoItems.filter((item) => item.kind === "action");
   const waitingItems = todoItems.filter((item) => item.kind === "waiting");
 
@@ -122,6 +127,8 @@ export default async function TeacherDashboardPage() {
           </div>
         </div>
       </header>
+
+      {getStarted ? <GetStartedCard getStarted={getStarted} /> : null}
 
       {/* inline-member-actions 票 04：「待你處理」只放輪到老師處理的事項（action），沒有就整張不出現；
           等待對方的事項（waiting）放進緊接在後的「等待對方回覆」卡，同樣沒有就不出現。 */}

@@ -18,7 +18,7 @@
 | 05 | 整期報名與退出整期時通知老師（新增系列 target） | HEAVY | yes | 04 | draft |
 | 06 | 新團體需求通知老師、名稱統一為「團體需求」 | HEAVY | yes | 05 | draft |
 | 07 | 老師公開頁開關搬到「個人資料」分頁 | LIGHT | no | – | done |
-| 08 | 總覽「開始使用」與通過通知 | STANDARD | no | 07 | draft |
+| 08 | 總覽「開始使用」與通過通知 | STANDARD | no | 07 | done |
 | 09 | 審核中畫面的三件事、退回通知改成可修正語氣 | LIGHT | no | 08 | draft |
 | 10 | 驗收與文件同步 | STANDARD | no | 01–09 | draft |
 

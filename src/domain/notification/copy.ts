@@ -24,7 +24,8 @@ const COPY_TABLE: CopyTable = {
   teacher_application_approved: {
     self: () => ({
       title: "老師申請已通過",
-      body: "你的老師申請已經通過審核，現在可以開始回應需求了。",
+      // teacher-first-run 票 08：同時提到開自己的課與回應團體需求；連結到老師總覽的「開始使用」。
+      body: "你的老師申請已經通過審核。現在可以開自己的課，也可以回應團體需求。到老師總覽照「開始使用」的步驟，就能開始收報名。",
     }),
   },
   teacher_application_rejected: {
