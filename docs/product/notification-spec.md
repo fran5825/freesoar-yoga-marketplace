@@ -60,6 +60,7 @@ V1 預設：
 | `teacher_application_rejected` | Teacher | Admin reject teacher | 說明審核未通過與下一步 |
 | `demand_request_submitted` | Organizer, Admin | 團主送出 demand request | 確認需求已收到，提醒 Admin review |
 | `demand_request_published` | Organizer | Admin publish demand | 通知需求已進入 demand pool |
+| `demand_request_available` | 所有 approved Teacher（發起團主本人除外；只站內，teacher-first-run 票 06） | Admin 公開需求 | 老師知道有新的團體需求，連到「團體需求」頁 |
 | `demand_request_rejected` | Organizer | Admin reject demand | 說明需求未發布與可修正方向 |
 | `demand_response_submitted` | Organizer, Admin | Teacher 提交 response | 通知團主有新的老師回覆 |
 | `demand_response_selected` | Teacher, Organizer | response 被選中 | 通知雙方 matching 成立 |

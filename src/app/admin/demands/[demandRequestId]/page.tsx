@@ -218,7 +218,7 @@ export default async function AdminDemandDetailPage({
               審核這筆需求
             </h2>
             <p className="mt-2 text-sm leading-6 text-ink-soft">
-              公開後，合適的老師會在「需求池」看到；退回時，原因會顯示給團主，團主需要另建一筆需求才能再送審。
+              公開後，合適的老師會在「團體需求」看到；退回時，原因會顯示給團主，團主需要另建一筆需求才能再送審。
             </p>
           </div>
           <AdminReviewPanel

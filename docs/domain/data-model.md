@@ -545,6 +545,8 @@ Fields:
 
 **已落地（teacher-first-run 票 05，產品主人 2026-10-24 放行）**：`NotificationTargetType` 新增 `teacher_class_series`（migration `20261024120000_notification_teacher_class_series_target`，只有 `ALTER TYPE ... ADD VALUE`，不改既有資料）。用在學員整期報名成立、退出整期時給授課老師（`counterpart`）的站內通知，`link.ts` 白名單對應老師系列管理頁 `/teacher/classes/series/<id>`，點進去照既有本人檢查。同一事件給學員的那一則不帶這個 target，照舊依 ADR 0008 連到期班頁或系列頁。
 
+**已落地（teacher-first-run 票 06，產品主人 2026-10-24 放行）**：`NotificationType` 新增 `demand_request_available`（migration `20261024120100_notification_demand_request_available`，只有 `ALTER TYPE ... ADD VALUE`，不改既有資料）。需求經管理員核准公開（`submitted → published`）的同一個時點，發給所有 `approved` 的老師（角色 `counterpart`，排除發起這筆需求的團主本人），不帶 target，`link.ts` 依類型連到老師的「團體需求」頁 `/teacher/demands`；`EMAIL_POLICY` 為空陣列（只發站內通知）。通知失敗只記 log，不影響需求公開。
+
 ## AdminNote
 
 Internal admin note.

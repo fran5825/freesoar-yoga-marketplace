@@ -66,7 +66,14 @@ const COPY_TABLE: CopyTable = {
   demand_request_published: {
     self: () => ({
       title: "需求已發布",
-      body: "你的需求已經進入需求池，老師可以開始回應了。",
+      body: "你的需求已經公開在「團體需求」，老師可以開始回應了。",
+    }),
+  },
+  // teacher-first-run 票 06：需求公開時給所有已通過的老師（發起團主本人除外）。
+  demand_request_available: {
+    counterpart: ({ demandTitle }) => ({
+      title: "有新的團體需求",
+      body: `「${demandTitle ?? "團體需求"}」已經公開，可以到「團體需求」查看內容並回應。`,
     }),
   },
   demand_request_rejected: {

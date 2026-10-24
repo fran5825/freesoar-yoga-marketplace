@@ -1,4 +1,5 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import type { NotificationType } from "@prisma/client";
 
 import { cancelEnrollmentForAdminCore } from "../../src/domain/enrollment/__internal__/cancel-enrollment-for-admin-core";
 import { createEnrollmentForUser } from "../../src/domain/enrollment/__internal__/create-enrollment-core";
@@ -12,6 +13,8 @@ import { createTermFixtures } from "./_helpers/term-fixtures";
 // 票 05：整期報名、退出整期，老師各收到一則，直達老師系列頁（target teacher_class_series）。
 const fixtures = createTermFixtures("teacher-enrollment-notifications-smoke.local");
 const { runId, seedTeacher, seedMember, seedContinuous, seedTerm } = fixtures;
+
+const ENROLLMENT_TYPES: NotificationType[] = ["enrollment_confirmed", "enrollment_pending_review", "enrollment_cancelled"];
 
 test.afterAll(async () => {
   await fixtures.cleanup();
@@ -104,7 +107,8 @@ test("the teacher gets no extra notice for classes that need confirmation, or wh
   if (!pending.ok || !confirmed.ok) throw new Error("fixture");
   expect((await cancelEnrollmentForAdminCore(confirmed.enrollmentId)).ok).toBe(true);
 
-  const teacherNotices = await prisma.notification.findMany({ where: { userId: teacher.userId, channel: "in_app", type: { not: "class_session_created" } } });
+  // 只看報名相關類型：平行測試公開需求時，所有已通過的老師都會收到 demand_request_available（票 06）。
+  const teacherNotices = await prisma.notification.findMany({ where: { userId: teacher.userId, channel: "in_app", type: { in: ENROLLMENT_TYPES } } });
   // 需確認的課只有既有的「有新的報名待確認」；管理員取消不通知老師；報名即成立的那一堂有一則「有新的報名」。
   expect(teacherNotices.map((n) => n.type).sort()).toEqual(["enrollment_confirmed", "enrollment_pending_review"]);
   expect(teacherNotices.find((n) => n.type === "enrollment_confirmed")?.targetId).toBe(direct.id);
@@ -215,6 +219,6 @@ test("term that needs confirmation keeps only the existing pending notice for th
   const joined = await createSeriesEnrollmentForUser(member.id, series.id, { notes: null });
   if (!joined.ok || joined.status !== "pending") throw new Error("fixture");
 
-  const types = (await prisma.notification.findMany({ where: { userId: teacher.userId, channel: "in_app", type: { not: "class_session_created" } } })).map((n) => n.type);
+  const types = (await prisma.notification.findMany({ where: { userId: teacher.userId, channel: "in_app", type: { in: ENROLLMENT_TYPES } } })).map((n) => n.type);
   expect(types).toEqual(["enrollment_pending_review"]);
 });
