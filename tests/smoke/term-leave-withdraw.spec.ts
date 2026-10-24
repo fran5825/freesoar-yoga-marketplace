@@ -52,7 +52,7 @@ test.describe("withdraw from a term (domain)", () => {
     });
   });
 
-  test("only the member can withdraw, and the notice goes to the member alone", async ({}, testInfo) => {
+  test("only the member can withdraw; the member gets one notice and the teacher one (teacher-first-run 05)", async ({}, testInfo) => {
     const id = runId(testInfo, "own");
     const teacher = await seedTeacher(id);
     const member = await seedMember(id, "a");
@@ -69,10 +69,12 @@ test.describe("withdraw from a term (domain)", () => {
     const memberNotices = await prisma.notification.findMany({ where: { userId: member.id } });
     expect(memberNotices).toHaveLength(1);
     expect(memberNotices[0]).toMatchObject({ type: "enrollment_cancelled" });
-    // 老師只會有建立場次時的「課程已建立」，退出整期不另外通知老師（推導規則 10）。
-    expect(
-      await prisma.notification.count({ where: { userId: teacher.userId, type: { not: "class_session_created" } } }),
-    ).toBe(0);
+    // teacher-first-run 票 05：退出整期另外通知老師一則，帶老師系列 target（取代推導規則 10 的退出整期部分）。
+    const teacherNotices = await prisma.notification.findMany({
+      where: { userId: teacher.userId, type: { in: ["enrollment_confirmed", "enrollment_cancelled"] } },
+    });
+    expect(teacherNotices).toHaveLength(1);
+    expect(teacherNotices[0]).toMatchObject({ type: "enrollment_cancelled", targetType: "teacher_class_series", targetId: series.id });
   });
 });
 
