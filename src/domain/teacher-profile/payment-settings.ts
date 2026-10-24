@@ -13,6 +13,7 @@ import {
   PAYMENT_ACCOUNT_INFO_MAX_LENGTH,
   PAYMENT_RULES_TEXT_MAX_LENGTH,
 } from "./payment-settings-limits";
+import { buildPaymentInfoReminder, type PaymentInfoReminder } from "./payment-reminder";
 
 
 export type OwnPaymentSettings = {
@@ -45,6 +46,18 @@ export async function getOwnPaymentSettings(): Promise<OwnPaymentSettingsView> {
       contactInfo: profile.contactInfo ?? "",
     },
   };
+}
+
+// teacher-first-run 票 03：老師本人開放報名前要不要提醒收款資訊。只讀自己的兩個欄位（userId 寫在 WHERE），
+// 沒有老師資料時回傳 null（不提醒；那種情況本來也不能開放報名）。
+export async function getOwnPaymentInfoReminder(): Promise<PaymentInfoReminder | null> {
+  const currentUser = await requireUser();
+  const profile = await prisma.teacherProfile.findUnique({
+    where: { userId: currentUser.id },
+    select: { paymentAccountInfo: true, paymentRulesText: true },
+  });
+
+  return profile ? buildPaymentInfoReminder(profile) : null;
 }
 
 export type UpdateOwnPaymentSettingsInput = {

@@ -1,6 +1,8 @@
 // 建課表單送出後的結果（teacher-usability-redesign 票 01 單堂、票 02 系列）。
 // 失敗時 Server Action 回傳這個物件，不再導回空白表單；表單內容存在 client state，所以原輸入會保留。
 // 成功時 Server Action 直接 redirect 到課程詳情頁，不會回到這裡。
+// teacher-first-run 票 02：單堂「建立成功、直接開放失敗」也算成功寫入，一樣 redirect 到那堂草稿的詳情頁說明原因，
+// 不會回到這裡；所以這裡的單堂錯誤（result_unknown 以外）都還是寫入前的錯誤，可以安心重送。
 
 export type CreateClassFormField =
   | "title"

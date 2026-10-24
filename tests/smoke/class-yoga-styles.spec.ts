@@ -159,7 +159,7 @@ test.describe("yoga styles in the teacher class form and public pages", () => {
     await page.locator("#yoga-styles-other").fill("自訂風格");
     await expect(page.getByText("請至少選擇一種瑜伽類型，或在「其他」填寫。")).toBeHidden();
     await page.getByRole("button", { name: "建立課程" }).click();
-    await expect(page.getByText("課程已建立。")).toBeVisible();
+    await expect(page.getByText("已開放報名。")).toBeVisible(); // teacher-first-run 票 02：預設建立後直接開放
 
     const created = await prisma.classSession.findFirstOrThrow({
       where: { teacherProfileId: teacher.teacherProfileId },
@@ -202,7 +202,7 @@ test.describe("yoga styles in the teacher class form and public pages", () => {
     await page.locator("#capacity").fill("10");
     await page.getByText("流瑜伽", { exact: true }).click();
     await page.getByRole("button", { name: "建立課程" }).click();
-    await expect(page.getByText("課程已建立。")).toBeVisible();
+    await expect(page.getByText("已開放報名。")).toBeVisible(); // teacher-first-run 票 02：預設建立後直接開放
     await expect(page.getByText("流汗活力、核心與體態、冥想與呼吸")).toBeVisible();
 
     const created = await prisma.classSession.findFirstOrThrow({

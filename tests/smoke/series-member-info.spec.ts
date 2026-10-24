@@ -167,7 +167,7 @@ test.describe("series member info", () => {
     const sessions = await memberInfoOf({ recurringClassSeriesId: series.id });
     expect(sessions).toHaveLength(2);
     for (const session of sessions) {
-      expect(session).toMatchObject({ suitableFor: "每週都適合初學者", preparationNotes: "每週請帶瑜伽墊", isPublic: false });
+      expect(session).toMatchObject({ suitableFor: "每週都適合初學者", preparationNotes: "每週請帶瑜伽墊", isPublic: true }); // teacher-first-run 票 01：沒有上一堂時預設公開
     }
     await expect(page.getByText("每週請帶瑜伽墊")).toBeVisible();
 

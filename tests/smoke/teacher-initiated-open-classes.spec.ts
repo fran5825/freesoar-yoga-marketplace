@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import { createClassSessionForOrganizer } from "../../src/domain/class-session/__internal__/create-class-session-core";
 import { createClassSessionForTeacher } from "../../src/domain/class-session/__internal__/create-teacher-class-session-core";
 import { completeClassSessionForTeacher } from "../../src/domain/class-session/__internal__/complete-class-session-core-for-teacher";
+import { openNewlyCreatedClassSessionForTeacher } from "../../src/domain/class-session/__internal__/open-class-session-core-for-teacher";
 import { validateClassSessionCreate } from "../../src/domain/class-session/validation";
 import {
   addAuthSessionCookie,
@@ -92,7 +93,7 @@ async function seedMatchedOrganizerContext(testRunId: string) {
 }
 
 test.describe("teacher-initiated open classes smoke", () => {
-  test("lets an approved teacher create a single public class through the UI, view it with an origin badge, and cancel it", async ({
+  test("lets an approved teacher create a single public class through the UI that opens right away, view it with an origin badge, and cancel it", async ({
     context,
     page,
   }, testInfo) => {
@@ -117,9 +118,14 @@ test.describe("teacher-initiated open classes smoke", () => {
     // 瑜伽類型必填：勾選一個標籤，再用「其他」補兩個自訂項目（頓號分隔）。
     await page.getByText("陰瑜伽", { exact: true }).click();
     await page.locator("#yoga-styles-other").fill("亞歷山大技巧、脈輪流動");
+    // teacher-first-run 票 02：單堂預設「建立後直接開放報名」。
+    await expect(page.locator("#single-openForEnrollment-yes")).toBeChecked();
+    await expect(page.getByRole("region", { name: "建立前核對" })).toContainText("建立後直接開放報名");
     await page.getByRole("button", { name: "建立課程" }).click();
 
-    await expect(page.getByText("課程已建立。")).toBeVisible();
+    await expect(page.getByText("已開放報名。下一步：把報名連結傳給學員。")).toBeVisible();
+    await expect(page.getByRole("button", { name: "複製報名連結" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "下一步" })).toContainText("把報名連結傳給學員");
     await expect(page.getByText("陰瑜伽、亞歷山大技巧、脈輪流動")).toBeVisible();
     await expect(page.getByRole("heading", { level: 1, name: baseInput.title })).toBeVisible();
     await expect(page.getByText("自己開的課", { exact: true })).toBeVisible();
@@ -134,8 +140,10 @@ test.describe("teacher-initiated open classes smoke", () => {
         organizerProfileId: true,
         organizationId: true,
         yogaStyles: true,
+        status: true,
       },
     });
+    expect(created.status).toBe("open_for_enrollment");
     expect(created.yogaStyles).toEqual(["陰瑜伽", "亞歷山大技巧", "脈輪流動"]);
     expect(created.origin).toBe("teacher_initiated");
     expect(created.organizerProfileId).toBeNull();
@@ -151,6 +159,84 @@ test.describe("teacher-initiated open classes smoke", () => {
       select: { status: true },
     });
     expect(afterCancel.status).toBe("cancelled");
+  });
+
+  test("choosing 'save as draft' keeps the old two-step flow: the class stays a draft until the teacher opens it from its page", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(`${testInfo.project.name}-${testInfo.workerIndex}-ui-draft-${Date.now()}`);
+    const teacher = await seedApprovedTeacher(testRunId);
+    const title = `先存草稿 ${testRunId}`;
+
+    await addAuthSessionCookie(context, teacher.sessionToken);
+    await page.goto("/teacher/classes/new");
+    await page.getByLabel("課程名稱").fill(title);
+    await pickServiceType(page, baseInput.serviceType);
+    await page.locator("#single-date").fill(futureDateString(31));
+    await selectFormTime(page, "single-", "start", "14:00");
+    await selectFormTime(page, "single-", "end", "15:00");
+    await page.getByLabel("地點").fill(baseInput.location);
+    await page.getByLabel("名額上限").fill("10");
+    await page.getByText("陰瑜伽", { exact: true }).click();
+    await page.locator("#single-openForEnrollment-no").check();
+    await expect(page.getByRole("region", { name: "建立前核對" })).toContainText("不會立即開放報名");
+    await page.getByRole("button", { name: "建立課程" }).click();
+
+    await expect(page.getByText("課程已建立。下一步：確認內容後按「開放報名」。")).toBeVisible();
+    const created = await prisma.classSession.findFirstOrThrow({
+      where: { teacherProfileId: teacher.teacherProfileId, title },
+      select: { id: true, status: true },
+    });
+    expect(created.status).toBe("draft");
+
+    await page.getByRole("button", { name: "開放報名", exact: true }).click();
+    await expect(page.getByText("已開放報名。下一步：把報名連結傳給學員。")).toBeVisible();
+    expect((await prisma.classSession.findUniqueOrThrow({ where: { id: created.id }, select: { status: true } })).status).toBe(
+      "open_for_enrollment",
+    );
+  });
+
+  test("when the class is created but opening fails, it stays a single draft with the reason, and the teacher can retry from its page", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(`${testInfo.project.name}-${testInfo.workerIndex}-open-fail-${Date.now()}`);
+    const teacher = await seedApprovedTeacher(testRunId);
+    const created = await createClassSessionForTeacher(
+      teacher.teacherProfileId,
+      normalizedInput(futureDateTime(32, "10:00"), futureDateTime(32, "11:00")),
+    );
+    if (!created.ok) throw new Error("unexpected seed failure");
+
+    // 建立與開放之間老師資格被暫停：開放失敗，但課程已經建立。
+    const outcome = await openNewlyCreatedClassSessionForTeacher(teacher.teacherProfileId, created.classSessionId, {
+      beforeOpen: async () => {
+        await prisma.teacherProfile.update({ where: { id: teacher.teacherProfileId }, data: { status: "suspended" } });
+      },
+    });
+    expect(outcome).toEqual({ opened: false, message: "課程已建立，但還沒開放報名：老師資格暫停期間不能開放報名。" });
+    expect(await prisma.classSession.count({ where: { teacherProfileId: teacher.teacherProfileId } })).toBe(1);
+    expect((await prisma.classSession.findUniqueOrThrow({ where: { id: created.classSessionId } })).status).toBe("draft");
+
+    // 例外也不往外丟：一樣回報「已建立、還沒開放」。
+    const thrown = await openNewlyCreatedClassSessionForTeacher(teacher.teacherProfileId, created.classSessionId, {
+      beforeOpen: async () => {
+        throw new Error("simulated failure");
+      },
+    });
+    expect(thrown.opened).toBe(false);
+    expect(!thrown.opened && thrown.message).toMatch(/^課程已建立，但還沒開放報名：/);
+
+    // 恢復資格後，老師在詳情頁直接重試開放。
+    await prisma.teacherProfile.update({ where: { id: teacher.teacherProfileId }, data: { status: "approved" } });
+    await addAuthSessionCookie(context, teacher.sessionToken);
+    await page.goto(`/teacher/classes/${created.classSessionId}`);
+    await page.getByRole("button", { name: "開放報名", exact: true }).click();
+    await expect(page.getByText("已開放報名。下一步：把報名連結傳給學員。")).toBeVisible();
+    expect((await prisma.classSession.findUniqueOrThrow({ where: { id: created.classSessionId } })).status).toBe(
+      "open_for_enrollment",
+    );
   });
 
   test("gates /teacher/classes/new on teacher approval status: non-approved shows generic guidance, suspended shows a distinct message, neither shows the form", async ({

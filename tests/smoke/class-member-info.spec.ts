@@ -164,7 +164,8 @@ test.describe("single class member info", () => {
     const created = await prisma.classSession.findFirstOrThrow({ where: { title } });
     expect(created.suitableFor).toBe("第一次接觸瑜伽也可以參加。\n有腰傷請先告知老師。");
     expect(created.preparationNotes).toBe("請自備瑜伽墊與水壺。");
-    await expect(page.getByText("請自備瑜伽墊與水壺。")).toBeVisible();
+    // teacher-first-run 票 02：建立後直接開放，分享文案裡也有這句，所以只找課程內容那一段。
+    await expect(page.getByText("請自備瑜伽墊與水壺。", { exact: true })).toBeVisible();
 
     // 讓學員看得到：開放報名並公開。
     await prisma.classSession.update({ where: { id: created.id }, data: { status: "open_for_enrollment", isPublic: true } });

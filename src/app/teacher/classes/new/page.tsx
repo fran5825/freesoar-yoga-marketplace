@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { getOwnLatestClassFormDefaultsForTeacher } from "@/domain/class-session/read-service";
 import { listCoverChoicesForOwnTeacher } from "@/domain/teacher-photo/service";
+import { getOwnPaymentInfoReminder } from "@/domain/teacher-profile/payment-settings";
 import { getOwnTeacherProfileApplicationSnapshot } from "@/domain/teacher-profile/service";
 import { requireUser } from "@/lib/auth/session";
 
@@ -21,10 +22,11 @@ export default async function NewClassSessionPage({
     redirect("/sign-in");
   }
 
-  const [profile, resolvedSearchParams, formDefaults] = await Promise.all([
+  const [profile, resolvedSearchParams, formDefaults, paymentReminder] = await Promise.all([
     getOwnTeacherProfileApplicationSnapshot(),
     searchParams,
     getOwnLatestClassFormDefaultsForTeacher(),
+    getOwnPaymentInfoReminder(),
   ]);
 
   const feedback =
@@ -77,7 +79,7 @@ export default async function NewClassSessionPage({
           建立課程
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
-          不需要團主媒合，直接開一堂自己的課。建立後會直接帶你到這堂課的頁面，確認後按「開放報名」。
+          不需要團主媒合，直接開一堂自己的課。單堂課預設建立後就開放報名，建好會帶你到這堂課的頁面，接著把報名連結傳給學員。
         </p>
       </header>
 
@@ -95,7 +97,11 @@ export default async function NewClassSessionPage({
       ) : null}
 
       <section className="grid gap-4 rounded-2xl border border-ink/15 bg-white p-4 sm:p-6">
-        <ClassSessionCreateForm coverChoices={await listCoverChoicesForOwnTeacher()} defaults={formDefaults} />
+        <ClassSessionCreateForm
+          coverChoices={await listCoverChoicesForOwnTeacher()}
+          defaults={formDefaults}
+          paymentReminder={paymentReminder}
+        />
       </section>
     </div>
   );

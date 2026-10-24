@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import {
   cancelOwnClassSessionForTeacher,
   completeOwnClassSessionForTeacher,
+  OPENED_FOR_ENROLLMENT_MESSAGE,
   openOwnClassSessionForEnrollmentForTeacher,
 } from "@/domain/class-session/service";
 import {
@@ -38,7 +39,7 @@ export async function openOwnClassSessionForEnrollmentAction(formData: FormData)
     redirectWithFeedback(formData, "error", result.message);
   }
 
-  redirectWithFeedback(formData, "success", "已開放報名。");
+  redirectWithFeedback(formData, "success", OPENED_FOR_ENROLLMENT_MESSAGE);
 }
 
 export async function cancelOwnClassSessionAction(formData: FormData): Promise<void> {
