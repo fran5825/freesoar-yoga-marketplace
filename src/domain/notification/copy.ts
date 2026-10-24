@@ -31,9 +31,10 @@ const COPY_TABLE: CopyTable = {
   teacher_application_rejected: {
     self: ({ reason }) => ({
       title: "老師申請審核結果",
+      // teacher-first-run 票 09：退回是「可修正」，不是結案；原因照舊附上。
       body: reason
-        ? `很抱歉，你的老師申請這次未通過審核。原因：${reason}`
-        : "很抱歉，你的老師申請這次未通過審核。",
+        ? `你的老師申請還有需要補充的地方：${reason} 修改後可以重新送出審核。`
+        : "你的老師申請還有需要補充的地方，修改後可以重新送出審核。",
     }),
   },
   teacher_profile_suspended: {

@@ -188,6 +188,11 @@ test.describe("notification smoke", () => {
     });
     expect(rejectedNotif?.title).toBe("老師申請審核結果");
     expect(rejectedNotif?.body).toContain("資料尚不完整，請補充教學經歷細節。");
+    // teacher-first-run 票 09：退回改成「需要補充、修改後可以重新送出」的語氣，不像結案。
+    expect(rejectedNotif?.title).toBe("老師申請審核結果");
+    expect(rejectedNotif?.body).toContain("需要補充");
+    expect(rejectedNotif?.body).toContain("修改後可以重新送出");
+    expect(rejectedNotif?.body).not.toContain("很抱歉");
   });
 
   // D1: demand_request_submitted (self + admin), demand_request_published (self).
