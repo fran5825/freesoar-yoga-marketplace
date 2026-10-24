@@ -14,6 +14,9 @@ import {
 import { TagCheckbox } from "@/app/_components/tag-checkbox";
 import { SPECIALTY_GROUPS } from "@/app/teachers/join/_lib/application-fields";
 import { MEMBER_INFO_MAX_LENGTH, PRICE_NOTE_MAX_LENGTH } from "@/domain/class-session/validation";
+import type { PaymentInfoReminder } from "@/domain/teacher-profile/payment-reminder";
+
+import { PaymentInfoReminderNotice } from "../../_components/PaymentInfoReminderNotice";
 
 import { CoverPhotoField, type CoverChoices } from "./CoverPhotoField";
 import {
@@ -309,6 +312,7 @@ export function ClassSessionCreateForm({
   defaults,
   edit,
   coverChoices = null,
+  paymentReminder = null,
 }: {
   // 老師最近一次自己建立的課的地點、名額、是否需確認報名與公開設定；沒建過課時是 null。
   defaults: { location: string; capacity: number; requiresApproval: boolean; isPublic: boolean } | null;
@@ -316,6 +320,8 @@ export function ClassSessionCreateForm({
   edit?: EditClassInitial;
   // teacher-showcase-photos 票 04：封面可選的照片；沒有（或照片功能沒開通）就不顯示封面欄位。
   coverChoices?: CoverChoices | null;
+  // teacher-first-run 票 03：缺收款資訊時的提醒；選了建立後直接開放才顯示在建立按鈕之前。
+  paymentReminder?: PaymentInfoReminder | null;
 }) {
   const isEdit = edit !== undefined;
   const [mode, setMode] = useState<Mode>("single");
@@ -922,6 +928,9 @@ export function ClassSessionCreateForm({
             ]}
           />
           )}
+          {!isEdit && shared.openSingleForEnrollment ? (
+            <PaymentInfoReminderNotice openInNewTab reminder={paymentReminder} />
+          ) : null}
           {submitArea(isEdit ? "儲存修改" : "建立課程")}
           {edit ? (
             <dialog
@@ -1123,6 +1132,7 @@ export function ClassSessionCreateForm({
               ],
             )}
           />
+          {shared.openForEnrollment ? <PaymentInfoReminderNotice openInNewTab reminder={paymentReminder} /> : null}
           {submitArea("建立課程系列")}
         </form>
       ) : null}
@@ -1209,6 +1219,7 @@ export function ClassSessionCreateForm({
               termEnrollmentModeSummaryRow,
             ])}
           />
+          {shared.openForEnrollment ? <PaymentInfoReminderNotice openInNewTab reminder={paymentReminder} /> : null}
           {submitArea("建立課程系列")}
         </form>
       ) : null}

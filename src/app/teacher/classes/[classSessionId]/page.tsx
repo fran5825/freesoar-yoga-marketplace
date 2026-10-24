@@ -14,6 +14,7 @@ import { getClassServiceTypes } from "@/domain/class-session/service-types-displ
 import { buildShareTemplates } from "@/domain/class-session/share-templates";
 import { getTeacherClassNextStep } from "@/domain/class-session/teacher-next-step";
 import { effectiveCoverUrl } from "@/domain/teacher-photo/display";
+import { getOwnPaymentInfoReminder } from "@/domain/teacher-profile/payment-settings";
 import { getOwnTeacherProfileApplicationSnapshot } from "@/domain/teacher-profile/service";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { classActionPhase, getClassActionSlots, type ClassActionKey } from "@/domain/class-session/class-action-slots";
@@ -34,6 +35,7 @@ import {
   RosterRow,
   SingleEnrollmentTag,
 } from "../_components/EnrollmentPaymentControls";
+import { PaymentInfoReminderNotice } from "../_components/PaymentInfoReminderNotice";
 import { PendingSubmitButton } from "../_components/PendingSubmitButton";
 import { ShareTemplates } from "../_components/ShareTemplates";
 import {
@@ -100,9 +102,10 @@ export default async function TeacherClassSessionDetailPage({
     redirect(`/sign-in?callbackUrl=${encodeURIComponent(`/teacher/classes/${classSessionId}`)}`);
   }
 
-  const [classSession, teacherProfile] = await Promise.all([
+  const [classSession, teacherProfile, paymentReminder] = await Promise.all([
     getOwnClassSessionDetailForTeacher(classSessionId),
     getOwnTeacherProfileApplicationSnapshot(),
+    getOwnPaymentInfoReminder(),
   ]);
 
   if (!classSession) {
@@ -566,6 +569,12 @@ export default async function TeacherClassSessionDetailPage({
           rest={slots.rest.map((key) => ({ key, node: actionNode(key, "rest") }))}
           secondary={slots.secondary ? actionNode(slots.secondary, "secondary") : null}
         />
+        {/* teacher-first-run 票 03：能按「開放報名」時，在按下之前提醒缺少的收款資訊。 */}
+        {canOpen ? (
+          <div className="mt-4">
+            <PaymentInfoReminderNotice reminder={paymentReminder} />
+          </div>
+        ) : null}
       </header>
 
       {feedback ? (

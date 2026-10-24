@@ -23,6 +23,7 @@ import {
   notifyClassSessionsCreated,
   type CreatedClassSessionNotice,
 } from "./create-teacher-class-session-core";
+import { makeupOpensForEnrollment } from "../makeup-open-rule";
 
 export type AddMakeupSessionErrorCode =
   | "series_not_found"
@@ -140,7 +141,7 @@ export async function addMakeupSessionForTeacher(
           throw new Rejected({ ok: false, code: "teacher_schedule_conflict", conflictTitle: conflict.title });
         }
 
-        const openedForEnrollment = remaining.every((session) => session.status === "open_for_enrollment");
+        const openedForEnrollment = makeupOpensForEnrollment(remaining);
         const result = await createClassSessionForTeacherInTransaction(tx, teacherProfileId, {
           title: series.title,
           description: series.description,

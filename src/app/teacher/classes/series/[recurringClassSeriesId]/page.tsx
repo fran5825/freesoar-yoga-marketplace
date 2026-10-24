@@ -12,6 +12,8 @@ import {
   type RecurringClassSeriesOccurrence,
 } from "@/domain/class-session/read-service";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
+import { makeupOpensForEnrollmentFromOccurrences } from "@/domain/class-session/makeup-open-rule";
+import { getOwnPaymentInfoReminder } from "@/domain/teacher-profile/payment-settings";
 import {
   listOwnTermEnrollmentsForTeacher,
   type TeacherTermEnrollmentView,
@@ -21,6 +23,7 @@ import { requireUser } from "@/lib/auth/session";
 
 import { ConfirmActionDialog } from "../../_components/ConfirmActionDialog";
 import { PaymentStatusBadge, RosterRow } from "../../_components/EnrollmentPaymentControls";
+import { PaymentInfoReminderNotice } from "../../_components/PaymentInfoReminderNotice";
 import { PendingSubmitButton } from "../../_components/PendingSubmitButton";
 import { ScrollToTarget } from "../../../../_components/ScrollToTarget";
 import { CopyEnrollLinkButton } from "../../_components/CopyEnrollLinkButton";
@@ -108,6 +111,10 @@ export default async function RecurringClassSeriesPage({
   const canGenerateMore = series.kind === "continuous" && series.dayOfWeek !== null;
   // 票 10：期班的整期學員名單（own-scoped）。
   const termEnrollments = isTerm ? await listOwnTermEnrollmentsForTeacher(series.id) : null;
+  // teacher-first-run 票 03：開放報名前的收款資訊提醒（全部開放、單場快速開放、生成更多時直接開放、
+  // 期班補課直接開放都在按下之前顯示）。
+  const paymentReminder = await getOwnPaymentInfoReminder();
+  const makeupOpensRightAway = isTerm && makeupOpensForEnrollmentFromOccurrences(series.occurrences, now);
 
   return (
     <div className="flex flex-col gap-6 sm:gap-8">
@@ -193,8 +200,9 @@ export default async function RecurringClassSeriesPage({
             還有 {openableDrafts.length} 場草稿沒開放報名
           </h2>
           <p className="text-sm leading-6 text-ink-soft">
-            確認內容沒問題後，可以一次把這些草稿全部開放報名；已開始或已取消的場次不受影響。
+            確認內容沒問題後，可以一次把這些草稿全部開放報名，也可以在下方場次清單一場一場開放；已開始或已取消的場次不受影響。
           </p>
+          <PaymentInfoReminderNotice reminder={paymentReminder} />
           <div>
             <ConfirmActionDialog
               action={openAllDraftOccurrencesAction}
@@ -242,6 +250,7 @@ export default async function RecurringClassSeriesPage({
             補課沿用這一期目前的時間（{series.startTime}–{series.endTime}）、地點與名額。整期學員會自動報上並收到通知；不能來的人可以自行請假。
             這一期已全部開放報名時，補課也直接開放。尚未開始的場次合計最多 26 堂。
           </p>
+          {makeupOpensRightAway ? <PaymentInfoReminderNotice reminder={paymentReminder} /> : null}
           <form action={addMakeupSessionAction} className="flex flex-wrap items-end gap-3">
             <input name="recurringClassSeriesId" type="hidden" value={series.id} />
             <div>
@@ -383,6 +392,7 @@ export default async function RecurringClassSeriesPage({
           <GenerateMoreForm
             action={generateMoreOccurrencesAction}
             dayLabel={dayOfWeekLabels[series.dayOfWeek]}
+            paymentReminder={paymentReminder}
             recurringClassSeriesId={series.id}
           />
         </section>
