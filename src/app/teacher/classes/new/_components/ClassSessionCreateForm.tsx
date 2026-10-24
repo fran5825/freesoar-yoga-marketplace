@@ -122,7 +122,8 @@ const initialShared: SharedFields = {
   preparationNotes: "",
   priceNote: "",
   requiresApproval: false,
-  isPublic: false,
+  // teacher-first-run 票 01：沒有上一堂可沿用時，預設列在公開列表（學員點連結不用先登入就看得到內容）。
+  isPublic: true,
   openForEnrollment: false,
   // 2026-10-06 產品主人決定 A：預設「整期和單堂都收」。
   termEnrollmentMode: "term_and_single",
@@ -304,8 +305,8 @@ export function ClassSessionCreateForm({
   edit,
   coverChoices = null,
 }: {
-  // 老師最近一次自己建立的課的地點、名額、是否需確認報名；沒建過課時是 null。
-  defaults: { location: string; capacity: number; requiresApproval: boolean } | null;
+  // 老師最近一次自己建立的課的地點、名額、是否需確認報名與公開設定；沒建過課時是 null。
+  defaults: { location: string; capacity: number; requiresApproval: boolean; isPublic: boolean } | null;
   // teacher-class-scheduling 票 04：有值時是改課模式——只有單堂欄位，送出改課 action。
   edit?: EditClassInitial;
   // teacher-showcase-photos 票 04：封面可選的照片；沒有（或照片功能沒開通）就不顯示封面欄位。
@@ -322,6 +323,7 @@ export function ClassSessionCreateForm({
             location: defaults.location,
             capacity: String(defaults.capacity),
             requiresApproval: defaults.requiresApproval,
+            isPublic: defaults.isPublic,
           }
         : initialShared,
   );
@@ -717,7 +719,7 @@ export function ClassSessionCreateForm({
       </div>
       <p className="-mt-3 text-xs leading-5 text-ink-faint">
         切換排程方式時，已填的課程名稱、時間、地點等內容會保留。
-        {defaults ? "地點、名額與報名確認方式已帶入你上一次開課的設定，可以直接修改。" : null}
+        {defaults ? "地點、名額、報名確認方式與公開列表已帶入你上一次開課的設定，可以直接修改。" : null}
       </p>
         </>
       )}
@@ -902,7 +904,7 @@ export function ClassSessionCreateForm({
               memberInfoSummaryRow("價格說明", shared.priceNote),
               {
                 label: "公開列表",
-                value: shared.isPublic ? "列在公開課程列表" : "不列在公開課程列表",
+                value: shared.isPublic ? "列在公開課程列表" : "僅透過連結招募",
               },
               approvalSummaryRow,
             ]}
@@ -1797,24 +1799,25 @@ function ChoiceOption({
   );
 }
 
-// 單堂：是否列在公開課程列表。這跟課程狀態是兩件事——建立後仍是草稿，要另外按「開放報名」。
-// 不列在公開列表 ≠ 私密：訪客瀏覽頁看不到，但拿到課程連結的學員登入後仍可查看與報名。
+// 是否列在公開課程列表。這跟課程狀態（草稿或開放報名）是兩件事。
+// 僅透過連結招募 ≠ 私密：訪客瀏覽頁看不到，拿到課程連結的學員登入後仍可查看與報名。
+// teacher-first-run 票 01：說明寫出「要先登入才看得到課程內容」，老師才知道選這個對學員的影響。
 function PublicListingField({ idPrefix = "", shared, updateShared }: FieldProps) {
   return (
     <fieldset className="grid min-w-0 gap-2">
       <legend className={labelClassName}>是否列在公開課程列表</legend>
       <ChoiceOption
         checked={!shared.isPublic}
-        description="訪客瀏覽頁不會列出；拿到課程連結的學員登入後仍可查看與報名。"
+        description="不會出現在「瀏覽課程」頁。學員要先登入，才看得到課程內容並報名。"
         id={`${idPrefix}isPublic-no`}
         name="isPublic"
         onChange={() => updateShared("isPublic", false)}
-        title="不列在公開列表"
+        title="僅透過連結招募"
         value="no"
       />
       <ChoiceOption
         checked={shared.isPublic}
-        description="開放報名後，任何人都能在「瀏覽課程」頁看到並報名。"
+        description="開放報名後會列在「瀏覽課程」頁；學員點你的連結不用先登入，就看得到時間、地點與費用。"
         id={`${idPrefix}isPublic-yes`}
         name="isPublic"
         onChange={() => updateShared("isPublic", true)}

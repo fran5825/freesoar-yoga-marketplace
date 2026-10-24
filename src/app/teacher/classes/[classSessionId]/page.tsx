@@ -150,6 +150,7 @@ export default async function TeacherClassSessionDetailPage({
     suitableFor: classSession.suitableFor,
     preparationNotes: classSession.preparationNotes,
     requiresApproval: classSession.requiresApproval,
+    isPublic: classSession.isPublic,
     teacherName: teacherProfile?.displayName ?? null,
     isSeries: classSession.recurringClassSeriesId !== null,
   });
@@ -239,8 +240,7 @@ export default async function TeacherClassSessionDetailPage({
             <InfoTip label="報名連結的說明">
               {classSession.isPublic
                 ? "這堂課也列在公開課程列表；想直接邀請學員，可以把報名連結傳給他們。"
-                : "這堂課不在公開課程列表，請把報名連結傳給學員。"}
-              學員需要先登入飛索帳號，才能打開連結並報名。
+                : "這堂課不在公開課程列表，請把報名連結傳給學員。學員需要先登入飛索帳號，才能打開連結並報名。"}
             </InfoTip>
           </span>
         );

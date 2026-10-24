@@ -275,7 +275,7 @@ test.describe("teacher single-class creation usability (ticket 01)", () => {
     expect(dialogs).toHaveLength(1);
   });
 
-  test("weekly series: a rejected start date keeps every input; the summary lists the exact dates that then get created as non-public drafts", async ({
+  test("weekly series: a rejected start date keeps every input; the summary lists the exact dates that then get created as public drafts", async ({
     context,
     page,
   }, testInfo) => {
@@ -288,7 +288,8 @@ test.describe("teacher single-class creation usability (ticket 01)", () => {
     await page.goto("/teacher/classes/new");
     await page.getByRole("button", { name: "每週固定" }).click();
     await expect(page.locator("#weekly-confirmCreate")).toHaveCount(0);
-    await expect(summary(page)).toContainText("僅透過連結招募");
+    // teacher-first-run 票 01：沒有上一堂可沿用時，系列也預設列在公開列表。
+    await expect(summary(page)).toContainText("開放報名後列在公開課程列表");
 
     const title = `每週系列 ${testRunId}`;
     await page.locator("#weekly-title").fill(title);
@@ -332,7 +333,7 @@ test.describe("teacher single-class creation usability (ticket 01)", () => {
       select: { startAt: true, status: true, isPublic: true },
     });
     expect(sessions.map((session) => taipeiDate(session.startAt))).toEqual(listedDates);
-    expect(sessions.every((session) => session.status === "draft" && !session.isPublic)).toBe(true);
+    expect(sessions.every((session) => session.status === "draft" && session.isPublic)).toBe(true);
   });
 
   test("fixed-dates series: a rejected time keeps the picked dates; the summary lists exactly the dates that get created", async ({
@@ -385,7 +386,78 @@ test.describe("teacher single-class creation usability (ticket 01)", () => {
       select: { startAt: true, status: true, isPublic: true },
     });
     expect(sessions.map((session) => taipeiDate(session.startAt))).toEqual(dates);
-    expect(sessions.every((session) => session.status === "draft" && !session.isPublic)).toBe(true);
+    expect(sessions.every((session) => session.status === "draft" && session.isPublic)).toBe(true);
+  });
+});
+
+// teacher-first-run 票 01：公開列表的預設值——沒有課時預設公開，有課時沿用上一堂（含僅透過連結招募）。
+test.describe("public-listing default follows the previous class (teacher-first-run ticket 01)", () => {
+  async function seedPreviousClass(teacherProfileId: string, testRunId: string, isPublic: boolean) {
+    const previous = validateClassSessionCreate({
+      title: `上一堂 ${testRunId}`,
+      serviceType: "放鬆紓壓",
+      startAt: futureDateTime(60, "09:00"),
+      endAt: futureDateTime(60, "10:00"),
+      location: "新竹市上一堂教室",
+      capacity: 7,
+      isPublic,
+    });
+    if (!previous.valid) throw new Error("unexpected invalid fixture");
+    const created = await createClassSessionForTeacher(teacherProfileId, previous.normalized);
+    if (!created.ok) throw new Error("unexpected seed failure");
+
+    return created.classSessionId;
+  }
+
+  async function expectDefaultInEveryMode(page: Page, expected: "yes" | "no") {
+    const other = expected === "yes" ? "no" : "yes";
+
+    await expect(page.locator(`#isPublic-${expected}`)).toBeChecked();
+    await expect(page.locator(`#isPublic-${other}`)).not.toBeChecked();
+    await page.getByRole("button", { name: "每週固定" }).click();
+    await expect(page.locator(`#weekly-isPublic-${expected}`)).toBeChecked();
+    await page.getByRole("button", { name: "指定日期" }).click();
+    await expect(page.locator(`#fixed-isPublic-${expected}`)).toBeChecked();
+  }
+
+  test("a teacher with no classes gets public by default, with a plain explanation of link-only", async ({ context, page }, testInfo) => {
+    const testRunId = normalizeForEmail(`${testInfo.project.name}-${testInfo.workerIndex}-first-${Date.now()}`);
+    const teacher = await seedApprovedTeacher(testRunId);
+
+    await addAuthSessionCookie(context, teacher.sessionToken);
+    await page.goto("/teacher/classes/new");
+
+    await expect(page.locator("label[for='isPublic-no']")).toContainText("僅透過連結招募");
+    await expect(page.locator("label[for='isPublic-no']")).toContainText("學員要先登入，才看得到課程內容");
+    await expectDefaultInEveryMode(page, "yes");
+  });
+
+  test("a teacher whose previous class was public keeps public; one who chose link-only keeps link-only, and existing classes stay as they were", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const publicRunId = normalizeForEmail(`${testInfo.project.name}-${testInfo.workerIndex}-prevpub-${Date.now()}`);
+    const publicTeacher = await seedApprovedTeacher(publicRunId);
+    await seedPreviousClass(publicTeacher.teacherProfileId, publicRunId, true);
+
+    await addAuthSessionCookie(context, publicTeacher.sessionToken);
+    await page.goto("/teacher/classes/new");
+    await expectDefaultInEveryMode(page, "yes");
+
+    const linkRunId = normalizeForEmail(`${testInfo.project.name}-${testInfo.workerIndex}-prevlink-${Date.now()}`);
+    const linkTeacher = await seedApprovedTeacher(linkRunId);
+    const linkOnlyId = await seedPreviousClass(linkTeacher.teacherProfileId, linkRunId, false);
+
+    await context.clearCookies();
+    await addAuthSessionCookie(context, linkTeacher.sessionToken);
+    await page.goto("/teacher/classes/new");
+    await expect(page.getByText("地點、名額、報名確認方式與公開列表已帶入你上一次開課的設定")).toBeVisible();
+    await expectDefaultInEveryMode(page, "no");
+
+    // 改版不碰既有課程：上一堂仍是僅透過連結招募。
+    expect(
+      (await prisma.classSession.findUniqueOrThrow({ where: { id: linkOnlyId }, select: { isPublic: true } })).isPublic,
+    ).toBe(false);
   });
 });
 

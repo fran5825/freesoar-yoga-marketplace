@@ -237,10 +237,12 @@ export async function getOwnClassSessionDetailForTeacher(
 // teacher-usability 第 07 票：建課表單的預設值，帶入老師「最近一次自己建立的課」的
 // 地點、名額與是否需要確認報名。只讀自己的資料（teacherProfileId 寫在 WHERE），
 // 沒有建過課就回傳 null，不新增任何資料欄位。
+// teacher-first-run 票 01：也帶上一堂的公開設定（含明確選了僅透過連結招募的 false），單堂與系列都沿用。
 export type TeacherClassFormDefaults = {
   location: string;
   capacity: number;
   requiresApproval: boolean;
+  isPublic: boolean;
 };
 
 export async function getOwnLatestClassFormDefaultsForTeacher(): Promise<TeacherClassFormDefaults | null> {
@@ -258,7 +260,7 @@ export async function getOwnLatestClassFormDefaultsForTeacher(): Promise<Teacher
   return prisma.classSession.findFirst({
     where: { teacherProfileId: teacherProfile.id, origin: "teacher_initiated" },
     orderBy: { createdAt: "desc" },
-    select: { location: true, capacity: true, requiresApproval: true },
+    select: { location: true, capacity: true, requiresApproval: true, isPublic: true },
   });
 }
 

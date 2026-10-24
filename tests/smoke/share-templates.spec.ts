@@ -25,6 +25,7 @@ const base: ShareTemplateInput = {
   suitableFor: "第一次接觸瑜伽也可以參加。",
   preparationNotes: "請自備瑜伽墊與水壺。",
   requiresApproval: false,
+  isPublic: true,
   teacherName: "林安瑜",
   isSeries: false,
 };
@@ -37,6 +38,12 @@ test.describe("template content (pure)", () => {
       expect(announcement.text).toContain(expected);
     }
     expect(announcement.text).not.toContain("報名後會由老師確認");
+  });
+
+  // teacher-first-run 票 01：公開的課學員不用登入就看得到內容，只有僅透過連結招募的課才提醒先登入。
+  test("only a link-only class tells students to sign in first", () => {
+    expect(buildShareTemplates(base).announcement.text).not.toContain("需要先登入");
+    expect(buildShareTemplates({ ...base, isPublic: false }).announcement.text).toContain("（需要先登入飛索帳號才能報名）");
   });
 
   test("empty fields leave out their whole line instead of showing a placeholder", () => {
