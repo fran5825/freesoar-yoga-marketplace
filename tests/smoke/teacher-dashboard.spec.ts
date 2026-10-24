@@ -61,6 +61,9 @@ test.afterAll(async () => {
       },
     },
   });
+  await prisma.classSession.deleteMany({
+    where: { teacherProfile: { user: { email: { in: createdEmails } } } },
+  });
   await prisma.teacherProfile.deleteMany({
     where: {
       user: {
@@ -134,7 +137,14 @@ test.describe("/teacher/dashboard smoke", () => {
       await expect(
         page.getByRole("link", { name: statusCase.actionLabel }),
       ).toHaveAttribute("href", statusCase.actionHref);
-      await expect(page.getByRole("main").locator('a[href="/teacher/demands"]')).toHaveCount(0);
+      // teacher-first-run 票 08：只有 approved 的老師會看到「開始使用」（含「看看團體需求」連結）。
+      if (statusCase.status === "approved") {
+        await expect(page.getByRole("heading", { name: "開始使用" })).toBeVisible();
+        await expect(page.getByRole("link", { name: "看看團體需求" })).toHaveAttribute("href", "/teacher/demands");
+      } else {
+        await expect(page.getByRole("heading", { name: "開始使用" })).toHaveCount(0);
+        await expect(page.getByRole("main").locator('a[href="/teacher/demands"]')).toHaveCount(0);
+      }
       if (
         statusCase.status !== "approved" &&
         statusCase.status !== "suspended"
@@ -234,6 +244,109 @@ test.describe("/teacher/dashboard smoke", () => {
     await expect(page.getByText("平台的退回說明")).toBeVisible();
     await expect(page.getByText(longReason).first()).toBeVisible();
     await expectNoHorizontalOverflow(page);
+  });
+});
+
+// teacher-first-run 票 08（spec「開始使用」）：剛通過審核的老師在總覽最上方看到三步，
+// 每步依既有資料自動打勾；1、2 兩步完成就收起，「先不用」記在這個瀏覽器。
+test.describe("開始使用 on /teacher/dashboard", () => {
+  test("a newly approved teacher sees the three steps in order with their links, above 待你處理, within a phone width", async ({
+    context,
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    const testRunId = normalizeForEmail(`${testInfo.project.name}-${testInfo.workerIndex}-get-started-${Date.now()}`);
+    const sessionToken = await createTeacherProfileSession({
+      email: `get-started-${testRunId}@${testEmailDomain}`,
+      displayName: `Get Started ${testRunId}`,
+      status: "approved",
+    });
+
+    await addAuthSessionCookie(context, sessionToken);
+    await page.goto(dashboardPath);
+
+    const card = page.getByRole("region", { name: "開始使用" });
+    await expect(card).toBeVisible();
+    const steps = card.getByRole("listitem");
+    await expect(steps).toHaveCount(3);
+    await expect(steps.nth(0)).toContainText("填收款與聯絡");
+    await expect(steps.nth(1)).toContainText("開第一堂課");
+    await expect(steps.nth(2)).toContainText("公開我的老師頁");
+    await expect(steps.nth(2)).toContainText("可跳過");
+    await expect(card.getByRole("link", { name: "前往填寫收款與聯絡" })).toHaveAttribute("href", "/teacher/profile/payment");
+    await expect(card.getByRole("link", { name: "開第一堂課" })).toHaveAttribute("href", "/teacher/classes/new");
+    await expect(card.getByRole("link", { name: "前往設定老師公開頁" })).toHaveAttribute("href", "/teacher/profile/info#public-page");
+    await expect(card.getByRole("link", { name: "看看團體需求" })).toHaveAttribute("href", "/teacher/demands");
+    await expect(card.getByText("已完成")).toHaveCount(0);
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test("each step ticks itself from existing data, and the card folds away once payment and a first class exist", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(`${testInfo.project.name}-${testInfo.workerIndex}-get-started-ticks-${Date.now()}`);
+    const email = `get-started-ticks-${testRunId}@${testEmailDomain}`;
+    const sessionToken = await createTeacherProfileSession({ email, displayName: `Ticks ${testRunId}`, status: "approved" });
+    const profile = await prisma.teacherProfile.findFirstOrThrow({ where: { user: { email } }, select: { id: true } });
+
+    await addAuthSessionCookie(context, sessionToken);
+
+    // 只有空白的收款帳號不算完成；公開頁開了，第 3 步打勾。
+    await prisma.teacherProfile.update({ where: { id: profile.id }, data: { paymentAccountInfo: "   ", isPublicPageEnabled: true } });
+    await page.goto(dashboardPath);
+    const card = page.getByRole("region", { name: "開始使用" });
+    await expect(card.getByRole("listitem").nth(0)).not.toContainText("已完成");
+    await expect(card.getByRole("listitem").nth(2)).toContainText("已完成");
+    await expect(card.getByRole("link", { name: "前往設定老師公開頁" })).toHaveCount(0);
+
+    await prisma.teacherProfile.update({ where: { id: profile.id }, data: { paymentAccountInfo: "（012）1234-5678" } });
+    await page.goto(dashboardPath);
+    await expect(card.getByRole("listitem").nth(0)).toContainText("已完成");
+    await expect(card.getByRole("link", { name: "前往填寫收款與聯絡" })).toHaveCount(0);
+
+    // 有任何一堂自己的課（草稿也算）→ 1、2 兩步都完成，整張收起（不論第 3 步）。
+    await prisma.teacherProfile.update({ where: { id: profile.id }, data: { isPublicPageEnabled: false } });
+    await prisma.classSession.create({
+      data: {
+        teacherProfileId: profile.id,
+        origin: "teacher_initiated",
+        title: `第一堂 ${testRunId}`,
+        startAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        endAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000),
+        location: "新竹市",
+        capacity: 10,
+        status: "draft",
+      },
+    });
+    await page.goto(dashboardPath);
+    await expect(page.getByRole("heading", { name: "老師總覽" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "開始使用" })).toHaveCount(0);
+  });
+
+  test("先不用 folds the card away and it stays folded after a reload in the same browser", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const testRunId = normalizeForEmail(`${testInfo.project.name}-${testInfo.workerIndex}-get-started-dismiss-${Date.now()}`);
+    const sessionToken = await createTeacherProfileSession({
+      email: `get-started-dismiss-${testRunId}@${testEmailDomain}`,
+      displayName: `Dismiss ${testRunId}`,
+      status: "approved",
+    });
+
+    await addAuthSessionCookie(context, sessionToken);
+    await page.goto(dashboardPath);
+    const dismiss = page.getByRole("button", { name: "先不用" });
+    await expect(dismiss).toBeVisible();
+    await expect(async () => {
+      await dismiss.click();
+      await expect(page.getByRole("heading", { name: "開始使用" })).toHaveCount(0, { timeout: 1_000 });
+    }).toPass();
+
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "老師總覽" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "開始使用" })).toHaveCount(0);
   });
 });
 

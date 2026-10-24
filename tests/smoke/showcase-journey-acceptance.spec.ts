@@ -54,6 +54,7 @@ test("a teacher shows herself and her class with photos, a visitor and a member 
   }
   await page.getByRole("button", { name: "設為頭像" }).first().click();
   await expect(page.getByText("已設為頭像。")).toBeVisible(slow);
+  await page.goto("/teacher/profile/info");
   await page.getByRole("button", { name: "公開我的老師頁" }).click();
   await expect(page.getByText("已公開你的老師頁。")).toBeVisible(slow);
 

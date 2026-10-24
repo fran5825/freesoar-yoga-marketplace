@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { buildCheckboxGroupValue } from "@/app/teachers/join/_lib/application-fields";
 import { normalizeTeacherProfileDraftInput } from "@/domain/teacher-profile/input";
+import { setOwnPublicPageEnabled } from "@/domain/teacher-profile/public-page-settings";
 import { updateOwnTeacherProfile } from "@/domain/teacher-profile/service";
 
 export async function updateTeacherProfileAction(formData: FormData): Promise<void> {
@@ -49,6 +50,21 @@ export async function updateTeacherProfileAction(formData: FormData): Promise<vo
   }
 
   redirectWithFeedback("success", "老師資料已儲存。");
+}
+
+// teacher-showcase-photos 票 06：老師自己決定要不要公開老師頁（預設關閉，隨時可以關）。
+// teacher-first-run 票 07：開關從「照片」分頁搬到這裡，操作本身不變。
+export async function setPublicPageAction(formData: FormData): Promise<void> {
+  const enabled = readFormString(formData, "enabled") === "yes";
+  const result = await setOwnPublicPageEnabled(enabled);
+
+  revalidatePath("/teacher/profile/info");
+
+  if (!result.ok) {
+    redirectWithFeedback("error", result.message);
+  }
+
+  redirectWithFeedback("success", enabled ? "已公開你的老師頁。" : "已關閉老師頁，訪客不會再看到。");
 }
 
 function readFormString(formData: FormData, name: string): string {

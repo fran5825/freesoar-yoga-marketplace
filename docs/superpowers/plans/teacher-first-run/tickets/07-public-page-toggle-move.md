@@ -6,7 +6,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** draft
+**Status:** done
 
 **Workflow mode:** LIGHT
 
@@ -14,10 +14,11 @@
 
 **Risk flags:** 無
 
-- [ ] 個人資料分頁有公開頁開關，可正常開關
-- [ ] 照片分頁不再有開關，只有一行連到個人資料分頁的說明
-- [ ] 既有老師的公開設定不變
-- [ ] 相關 smoke 測試通過（teacher-photo-management、teacher-profile-tabs）
+- [x] 個人資料分頁有公開頁開關，可正常開關
+- [x] 照片分頁不再有開關，只有一行連到個人資料分頁的說明
+- [x] 既有老師的公開設定不變
+- [x] 相關 smoke 測試通過（teacher-photo-management、teacher-profile-tabs）
 
 ## 進度紀錄
 
+- 2026-10-24：開關搬到個人資料分頁（`#public-page`），照片分頁留一行連結；smoke teacher-photo-management 14、teacher-profile-tabs 2、teacher-public-page 20、showcase-journey-acceptance 2 全數通過。

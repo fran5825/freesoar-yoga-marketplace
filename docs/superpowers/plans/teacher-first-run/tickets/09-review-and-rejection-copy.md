@@ -6,7 +6,7 @@
 
 **Blocked by:** 08（三件事的內容要和開始使用一致；同改通知文案）
 
-**Status:** draft
+**Status:** done
 
 **Workflow mode:** LIGHT
 
@@ -14,10 +14,11 @@
 
 **Risk flags:** 無
 
-- [ ] 審核中畫面列出三件事，內容與開始使用一致
-- [ ] 審核中仍不能編輯老師資料各分頁
-- [ ] 退回通知新文案含原因與可重新送出
-- [ ] 相關 smoke 測試通過（teacher-join、notification）
+- [x] 審核中畫面列出三件事，內容與開始使用一致
+- [x] 審核中仍不能編輯老師資料各分頁
+- [x] 退回通知新文案含原因與可重新送出
+- [x] 相關 smoke 測試通過（teacher-join、notification）
 
 ## 進度紀錄
 
+- 2026-10-24：審核中摘要加「通過後你會先做的三件事」（與開始使用共用 `get-started-steps.ts`），退回通知改成需要補充、修改後可重新送出；smoke teacher-join 26、notification 22 全數通過。

@@ -42,6 +42,8 @@ export function getNotificationLink(
       if (isAdmin) return { href: "/admin/teachers", label: "前往老師審核" };
       return null;
     case "teacher_application_approved":
+      // teacher-first-run 票 08：通過後先到老師總覽看「開始使用」，不再帶到可授課時間頁。
+      return isTeacher ? { href: "/teacher/dashboard", label: "前往老師總覽" } : null;
     case "teacher_application_rejected":
     case "teacher_profile_suspended":
     case "teacher_profile_restored":

@@ -130,6 +130,14 @@ test.describe("notification smoke", () => {
     });
     expect(approvedNotif?.title).toBe("老師申請已通過");
     expect(approvedNotif?.status).toBe("sent");
+    // teacher-first-run 票 08：通過通知同時提到開自己的課與回應團體需求，點了到老師總覽。
+    expect(approvedNotif?.body).toContain("開自己的課");
+    expect(approvedNotif?.body).toContain("回應團體需求");
+
+    await context.clearCookies();
+    await addAuthSessionCookie(context, teacherSession);
+    await page.goto("/notifications");
+    await expect(page.getByRole("link", { name: "前往老師總覽" }).first()).toHaveAttribute("href", "/teacher/dashboard");
   });
 
   // D1: teacher_application_rejected (self, with reason in body).
@@ -180,6 +188,11 @@ test.describe("notification smoke", () => {
     });
     expect(rejectedNotif?.title).toBe("老師申請審核結果");
     expect(rejectedNotif?.body).toContain("資料尚不完整，請補充教學經歷細節。");
+    // teacher-first-run 票 09：退回改成「需要補充、修改後可以重新送出」的語氣，不像結案。
+    expect(rejectedNotif?.title).toBe("老師申請審核結果");
+    expect(rejectedNotif?.body).toContain("需要補充");
+    expect(rejectedNotif?.body).toContain("修改後可以重新送出");
+    expect(rejectedNotif?.body).not.toContain("很抱歉");
   });
 
   // D1: demand_request_submitted (self + admin), demand_request_published (self).

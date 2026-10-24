@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { TagCheckbox } from "@/app/_components/tag-checkbox";
 import { useUnsavedChangesWarning } from "@/app/teacher/classes/new/_lib/use-unsaved-changes";
+import { TEACHER_GET_STARTED_STEPS } from "@/domain/teacher-profile/get-started-steps";
 
 import {
   applicationSections,
@@ -372,6 +373,35 @@ function SubmittedApplicationSummary({
           </a>
         </div>
       </div>
+
+      {/* teacher-first-run 票 09：審核中先說明通過後要做的三件事，內容與老師總覽的「開始使用」一致；
+          這裡只是說明、不能操作（審核中的權限不變）。 */}
+      <section
+        aria-labelledby="after-approval-title"
+        className="grid gap-3 rounded-2xl border border-pine/15 bg-white p-5"
+      >
+        <h3 className="text-lg font-medium text-ink" id="after-approval-title">
+          通過後你會先做的三件事
+        </h3>
+        <ul className="grid gap-3">
+          {TEACHER_GET_STARTED_STEPS.map((step) => (
+            <li className="flex min-w-0 items-start gap-3" key={step.key}>
+              <span
+                aria-hidden="true"
+                className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-gold"
+              />
+              <span className="min-w-0 text-sm leading-6 text-ink-soft">
+                <span className="font-medium text-ink">{step.label}</span>
+                {step.optional ? <span className="ml-2 text-xs text-ink-faint">可跳過</span> : null}
+                <span className="block">{step.message}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+        <p className="text-sm leading-6 text-ink-soft">
+          通過後，老師總覽最上方會出現「開始使用」，帶你一步一步完成。
+        </p>
+      </section>
 
       {applicationSections.map((section) => (
         <section
