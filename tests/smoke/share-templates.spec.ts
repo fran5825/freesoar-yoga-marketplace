@@ -25,6 +25,7 @@ const base: ShareTemplateInput = {
   suitableFor: "第一次接觸瑜伽也可以參加。",
   preparationNotes: "請自備瑜伽墊與水壺。",
   requiresApproval: false,
+  isPublic: true,
   teacherName: "林安瑜",
   isSeries: false,
 };
@@ -37,6 +38,16 @@ test.describe("template content (pure)", () => {
       expect(announcement.text).toContain(expected);
     }
     expect(announcement.text).not.toContain("報名後會由老師確認");
+  });
+
+  // teacher-first-run 票 01：公開的課學員不用登入就看得到內容，但報名仍要登入；僅透過連結招募的課維持「先登入」那句。
+  test("a public class says viewing needs no sign-in but enrolling does; a link-only class keeps the sign-in-first line", () => {
+    const publicText = buildShareTemplates(base).announcement.text;
+    expect(publicText).not.toContain("需要先登入");
+    expect(publicText).toContain("（看課程內容不用登入；報名時用 Google 登入飛索帳號）");
+    const linkOnlyText = buildShareTemplates({ ...base, isPublic: false }).announcement.text;
+    expect(linkOnlyText).toContain("（需要先登入飛索帳號才能報名）");
+    expect(linkOnlyText).not.toContain("看課程內容不用登入");
   });
 
   test("empty fields leave out their whole line instead of showing a placeholder", () => {

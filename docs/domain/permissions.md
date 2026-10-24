@@ -39,7 +39,7 @@ Can:
 - Cancel own enrollment if policy allows
 - **已落地（`lightweight-payment-v0`，2026-10-10）：Write own transfer note**：已報名且尚未付款的學員可填寫自己報名的「轉帳後五碼或備註」（單行、最多 100 字、純文字；原子條件更新，老師標記已收款後不能再改）；只能寫自己的報名，也只能看到自己報名的付款狀態與報名當下快照，看不到老師的內部收款備註
 - **已落地（`teacher-class-scheduling` 票 08，2026-10-09）：Enroll in a whole term（報名整期）**：學員本人（userId 由 session 解析，不接受表單傳入）可以報名期班整期。期班頁可見性比照單堂：訪客只看得到公開、老師已通過審核且有已開放場次的期班；已登入學員拿到連結就能看（至少一場已開放或已完成），或自己已有整期報名。期班頁只逐場列出已開放、已完成的場次，草稿只計入堂數。報名規則與鎖都在 server 端（見 `data-model.md` 的 `SeriesEnrollment`）；「只收整期」的期班，單場報名 server 端拒絕。
-- **已落地（`teacher-class-scheduling` 票 09，2026-10-09）：Take leave / withdraw from own term**：整期學員取消其中一堂（請假）沿用既有本人取消規則；退出整期只能由本人操作（整期報名的 userId 寫在鎖查詢 WHERE），取消尚未開始的場次，已開始或完成的紀錄保留；不另外通知老師。
+- **已落地（`teacher-class-scheduling` 票 09，2026-10-09）：Take leave / withdraw from own term**：整期學員取消其中一堂（請假）沿用既有本人取消規則；退出整期只能由本人操作（整期報名的 userId 寫在鎖查詢 WHERE），取消尚未開始的場次，已開始或完成的紀錄保留。teacher-first-run 票 05（2026-10-24）起，請假與退出整期都會發一則站內通知給授課老師（只通知，不改權限）。
 
 Cannot:
 

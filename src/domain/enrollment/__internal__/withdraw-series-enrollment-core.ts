@@ -7,11 +7,13 @@
 //   2. 鎖整期報名列，確認狀態是 pending／confirmed。
 //   3. 底下尚未開始、pending／confirmed 的逐場報名改 cancelled；已開始或已完成的紀錄不動。
 //   4. 整期報名改 withdrawn（終態，之後不能再報整期）。
-// commit 後只通知學員本人一則（推導規則 10：不另外通知老師）。
+// commit 後通知學員本人一則；teacher-first-run 票 05 起另外通知授課老師一則（取代推導規則 10 對退出整期的部分，
+// 單堂請假另見 service.ts 的 cancelOwnEnrollment）。
 
 import { notifyUsers } from "@/domain/notification/create";
 import { prisma } from "@/lib/prisma";
 
+import { teacherNoticeRecipient } from "../teacher-notice-recipient";
 import { termNotificationTitle } from "../term-enrollment-copy";
 import type { NotifyFn } from "./create-series-enrollment-core";
 
@@ -111,6 +113,30 @@ export async function withdrawSeriesEnrollmentForUser(
     );
   } catch (notifyError) {
     console.error("[notification] series enrollment withdrawn trigger failed", notifyError);
+  }
+
+  // teacher-first-run 票 05：老師那一則另外發（學員那一則的呼叫與文案完全不動），帶老師系列 target；失敗只記 log。
+  try {
+    const series = await prisma.recurringClassSeries.findUnique({
+      where: { id: target.recurringClassSeriesId },
+      select: { teacherProfile: { select: { userId: true } } },
+    });
+    const recipients = teacherNoticeRecipient(series?.teacherProfile.userId, userId, {
+      type: "teacher_class_series",
+      id: target.recurringClassSeriesId,
+    });
+
+    if (recipients.length > 0) {
+      await notifyOverride(
+        "enrollment_cancelled",
+        recipients,
+        { classSessionTitle: outcome.title, termWithdrawal: true },
+        undefined,
+        { recurringClassSeriesId: target.recurringClassSeriesId },
+      );
+    }
+  } catch (notifyError) {
+    console.error("[notification] series enrollment withdrawn teacher trigger failed", notifyError);
   }
 
   return { ok: true, cancelledCount: outcome.cancelledCount };

@@ -22,6 +22,8 @@ const targetLinks: Record<NotificationTargetType, (id: string) => NotificationLi
   teacher_class_proposal: (id) => ({ href: `/teacher/class-proposals/${encodeURIComponent(id)}`, label: "查看這份合作邀請" }),
   organizer_class_session: (id) => ({ href: `/organizer/classes/${encodeURIComponent(id)}`, label: "查看這堂課" }),
   teacher_class_session: (id) => ({ href: `/teacher/classes/${encodeURIComponent(id)}`, label: "查看這堂課" }),
+  // teacher-first-run 票 05：整期報名、退出整期給老師的通知，直達老師系列管理頁（該頁照既有本人檢查）。
+  teacher_class_series: (id) => ({ href: `/teacher/classes/series/${encodeURIComponent(id)}`, label: "前往系列頁" }),
 };
 
 export function getNotificationLink(
@@ -42,6 +44,8 @@ export function getNotificationLink(
       if (isAdmin) return { href: "/admin/teachers", label: "前往老師審核" };
       return null;
     case "teacher_application_approved":
+      // teacher-first-run 票 08：通過後先到老師總覽看「開始使用」，不再帶到可授課時間頁。
+      return isTeacher ? { href: "/teacher/dashboard", label: "前往老師總覽" } : null;
     case "teacher_application_rejected":
     case "teacher_profile_suspended":
     case "teacher_profile_restored":
@@ -60,16 +64,19 @@ export function getNotificationLink(
         ? { href: "/organizer/demands", label: "前往我的需求" }
         : null;
     case "demand_request_cancelled":
-      // 團主本人取消 → 我的需求；因連帶取消而受影響的老師 → 需求池。
+      // 團主本人取消 → 我的需求；因連帶取消而受影響的老師 → 團體需求。
       if (isOrganizer) return { href: "/organizer/demands", label: "前往我的需求" };
-      if (isTeacher) return { href: "/teacher/demands", label: "前往需求列表" };
+      if (isTeacher) return { href: "/teacher/demands", label: "前往團體需求" };
       return null;
+    case "demand_request_available":
+      // teacher-first-run 票 06：新需求公開，一律連到老師的「團體需求」頁（不帶 target）。
+      return isTeacher ? { href: "/teacher/demands", label: "前往團體需求" } : null;
     case "demand_response_submitted":
       if (isOrganizer) return { href: "/organizer/demands", label: "前往我的需求" };
       if (isAdmin) return { href: "/admin/demands", label: "前往需求審核" };
       return null;
     case "demand_response_selected":
-      if (isTeacher) return { href: "/teacher/demands", label: "前往需求列表" };
+      if (isTeacher) return { href: "/teacher/demands", label: "前往團體需求" };
       if (isOrganizer) return { href: "/organizer/demands", label: "前往我的需求" };
       return null;
     case "class_session_created":

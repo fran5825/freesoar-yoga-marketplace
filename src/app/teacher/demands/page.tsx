@@ -113,11 +113,12 @@ export default async function TeacherDemandsPage({
 
       {pool.items.length === 0 ? (
         <section className="rounded-2xl border border-ink/15 bg-white p-6">
+          {/* teacher-first-run 票 06：說明為什麼是空的，以及有新需求時會收到通知。 */}
           <h2 className="text-lg font-medium text-ink">
-            目前沒有符合條件的需求
+            目前沒有公開中的團體需求
           </h2>
           <p className="mt-2 text-sm leading-6 text-ink-soft">
-            之後有新的需求會顯示在這裡，可以稍後再回來看看。
+            團主提出的需求要經過平台審核才會公開，目前大新竹地區的需求還不多。有新的需求公開時，你會在「通知」收到消息。
           </p>
         </section>
       ) : (

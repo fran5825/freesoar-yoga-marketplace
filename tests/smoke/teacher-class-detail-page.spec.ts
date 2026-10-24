@@ -262,7 +262,7 @@ test.describe("teacher class detail page", () => {
     await selectFormTime(page, "single-", "end", "20:00");
     await page.getByRole("button", { name: "建立課程" }).click();
 
-    await expect(page.getByText("課程已建立。下一步：確認內容後按「開放報名」。")).toBeVisible();
+    await expect(page.getByText("已開放報名。下一步：把報名連結傳給學員。")).toBeVisible(); // teacher-first-run 票 02：預設建立後直接開放
     await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
     const created = await prisma.classSession.findFirstOrThrow({
       where: { teacherProfileId: teacher.teacherProfileId, title },

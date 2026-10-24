@@ -62,6 +62,8 @@ test.describe("email policy", () => {
       teacher_profile_restored: ["self"],
       demand_request_submitted: ["self", "admin"],
       demand_request_published: ["self"],
+      // teacher-first-run 票 06：新團體需求通知老師只發站內，不寄信。
+      demand_request_available: [],
       demand_request_rejected: ["self"],
       demand_request_cancelled: ["self", "affected_responder"],
       demand_response_submitted: ["counterpart", "admin"],
@@ -80,6 +82,8 @@ test.describe("email policy", () => {
       class_proposal_declined: ["counterpart"],
       class_proposal_withdrawn: ["counterpart"],
       class_proposal_revised: ["counterpart"],
+      // teacher-showcase-photos：照片被下架只發站內（main 上就已存在，這個測試原本漏列）。
+      teacher_photo_removed: [],
     });
     for (const [type, roles] of Object.entries(EMAIL_POLICY)) {
       for (const role of roles) {

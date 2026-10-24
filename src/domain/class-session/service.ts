@@ -11,8 +11,11 @@ import {
 } from "./__internal__/cancel-class-session-core-for-teacher";
 import {
   openClassSessionForEnrollmentForTeacher,
-  type OpenClassSessionForTeacherErrorCode,
+  openClassSessionForTeacherErrorMessages,
+  openNewlyCreatedClassSessionForTeacher,
 } from "./__internal__/open-class-session-core-for-teacher";
+
+export { OPENED_FOR_ENROLLMENT_MESSAGE } from "./__internal__/open-class-session-core-for-teacher";
 import { completeClassSessionForTeacher } from "./__internal__/complete-class-session-core-for-teacher";
 import { createClassSessionForOrganizer } from "./__internal__/create-class-session-core";
 import {
@@ -537,8 +540,11 @@ export type CreateOwnClassSessionForTeacherErrorCode =
   | "teacher_schedule_conflict"
   | "class_session_create_failed";
 
+// teacher-first-run 票 02：建立成功後的開放結果。not_requested＝老師選先存成草稿；
+// failed＝課程已建立、仍是草稿，openFailureMessage 說明原因（不是建立失敗）。
 export type CreateOwnClassSessionForTeacherResult =
-  | { ok: true; classSessionId: string }
+  | { ok: true; classSessionId: string; openOutcome: "not_requested" | "opened" }
+  | { ok: true; classSessionId: string; openOutcome: "failed"; openFailureMessage: string }
   | {
       ok: false;
       code: CreateOwnClassSessionForTeacherErrorCode;
@@ -550,6 +556,8 @@ export async function createOwnClassSessionForTeacher(
   input: ClassSessionCreateInput & {
     recurringClassSeriesId?: string;
     requiresApproval?: boolean;
+    // teacher-first-run 票 02：建立後直接開放報名（單堂表單預設 true）。
+    openForEnrollment?: boolean;
   },
 ): Promise<CreateOwnClassSessionForTeacherResult> {
   // 老師自己建課一律要說明瑜伽風格（團主媒合建課不需要）。
@@ -604,7 +612,21 @@ export async function createOwnClassSessionForTeacher(
   const result = await createClassSessionForTeacher(teacherProfileId, teacherInput);
 
   if (result.ok) {
-    return { ok: true, classSessionId: result.classSessionId };
+    if (input.openForEnrollment !== true) {
+      return { ok: true, classSessionId: result.classSessionId, openOutcome: "not_requested" };
+    }
+
+    // 狀態轉換仍是 draft → open_for_enrollment，用跟單堂課頁「開放報名」同一個核心判斷與寫入。
+    const opened = await openNewlyCreatedClassSessionForTeacher(teacherProfileId, result.classSessionId);
+
+    return opened.opened
+      ? { ok: true, classSessionId: result.classSessionId, openOutcome: "opened" }
+      : {
+          ok: true,
+          classSessionId: result.classSessionId,
+          openOutcome: "failed",
+          openFailureMessage: opened.message,
+        };
   }
 
   if (result.code === "teacher_not_approved") {
@@ -653,13 +675,6 @@ export type OpenOwnClassSessionForEnrollmentForTeacherResult =
       code: OpenOwnClassSessionForEnrollmentForTeacherErrorCode;
       message: string;
     };
-
-const openClassSessionForTeacherErrorMessages: Record<OpenClassSessionForTeacherErrorCode, string> = {
-  class_session_not_found: "找不到這堂課程，或你沒有權限操作。",
-  teacher_not_approved: "老師資格暫停期間不能開放報名。",
-  class_session_already_started: "這堂課程已經開始，無法開放報名。",
-  class_session_not_draft: "這堂課程目前狀態不允許開放報名。",
-};
 
 // 比照既有 openOwnClassSessionForEnrollment：own-scope 判斷改成 teacherProfileId 的單一
 // updateMany + 分類錯誤。organizer-usability-redesign 票 09：判斷與寫入抽到 __internal__ 核心

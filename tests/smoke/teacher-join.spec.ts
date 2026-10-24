@@ -260,6 +260,26 @@ test.describe("/teachers/join smoke", () => {
       "href",
       "/teacher/dashboard",
     );
+
+    // teacher-first-run 票 09：說明通過後先做的三件事（與「開始使用」一致），只是說明、沒有操作按鈕。
+    const afterApproval = page.getByRole("region", { name: "通過後你會先做的三件事" });
+    await expect(afterApproval).toBeVisible();
+    const items = afterApproval.getByRole("listitem");
+    await expect(items).toHaveCount(3);
+    await expect(items.nth(0)).toContainText("填收款與聯絡");
+    await expect(items.nth(1)).toContainText("開第一堂課");
+    await expect(items.nth(2)).toContainText("公開我的老師頁");
+    await expect(items.nth(2)).toContainText("可跳過");
+    await expect(afterApproval.getByRole("link")).toHaveCount(0);
+    await expect(afterApproval.getByRole("button")).toHaveCount(0);
+
+    // 審核中仍不能編輯老師資料各分頁（權限不變）。
+    await page.goto("/teacher/profile/info");
+    await expect(page.getByRole("heading", { name: "老師申請審核中" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "儲存變更" })).toHaveCount(0);
+    await page.goto("/teacher/profile/payment");
+    await expect(page.getByRole("heading", { name: "通過老師審核後就能設定" })).toBeVisible();
+    await expect(page.getByRole("textbox")).toHaveCount(0);
   });
 
   test("puts the rejection reason at the top and jumps to the first missing required field", async ({

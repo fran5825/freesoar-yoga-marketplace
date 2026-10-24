@@ -24,15 +24,17 @@ const COPY_TABLE: CopyTable = {
   teacher_application_approved: {
     self: () => ({
       title: "老師申請已通過",
-      body: "你的老師申請已經通過審核，現在可以開始回應需求了。",
+      // teacher-first-run 票 08：同時提到開自己的課與回應團體需求；連結到老師總覽的「開始使用」。
+      body: "你的老師申請已經通過審核。現在可以開自己的課，也可以回應團體需求。到老師總覽照「開始使用」的步驟，就能開始收報名。",
     }),
   },
   teacher_application_rejected: {
     self: ({ reason }) => ({
       title: "老師申請審核結果",
+      // teacher-first-run 票 09：退回是「可修正」，不是結案；原因照舊附上。
       body: reason
-        ? `很抱歉，你的老師申請這次未通過審核。原因：${reason}`
-        : "很抱歉，你的老師申請這次未通過審核。",
+        ? `你的老師申請還有需要補充的地方：${reason} 修改後可以重新送出審核。`
+        : "你的老師申請還有需要補充的地方，修改後可以重新送出審核。",
     }),
   },
   teacher_profile_suspended: {
@@ -66,7 +68,14 @@ const COPY_TABLE: CopyTable = {
   demand_request_published: {
     self: () => ({
       title: "需求已發布",
-      body: "你的需求已經進入需求池，老師可以開始回應了。",
+      body: "你的需求已經公開在「團體需求」，老師可以開始回應了。",
+    }),
+  },
+  // teacher-first-run 票 06：需求公開時給所有已通過的老師（發起團主本人除外）。
+  demand_request_available: {
+    counterpart: ({ demandTitle }) => ({
+      title: "有新的團體需求",
+      body: `「${demandTitle ?? "團體需求"}」已經公開，可以到「團體需求」查看內容並回應。`,
     }),
   },
   demand_request_rejected: {
@@ -153,10 +162,15 @@ const COPY_TABLE: CopyTable = {
       body: `${actorLabel ?? "老師"}婉拒了「${classSessionTitle ?? "團課"}」。${reason ? `原因：${reason}。` : ""}你可以修改內容後重新邀請，或改邀其他老師。`,
     }),
   },
+  // teacher-first-run 票 04：報名即成立時，授課老師（counterpart）也收到一則站內通知；學員（self）文案不變。
   enrollment_confirmed: {
     self: ({ classSessionTitle }) => ({
       title: "報名成功",
       body: `你已經成功報名「${classSessionTitle ?? ""}」。`,
+    }),
+    counterpart: ({ classSessionTitle }) => ({
+      title: "有新的報名",
+      body: `「${classSessionTitle ?? ""}」有新的報名。`,
     }),
   },
   // teacher-initiated-open-classes 第 8 節（Gate G2/G3）：requiresApproval = true 的課程，
@@ -172,11 +186,21 @@ const COPY_TABLE: CopyTable = {
       body: `「${classSessionTitle ?? ""}」有新的報名，需要你確認或拒絕。`,
     }),
   },
+  // teacher-first-run 票 04、05：學員自己取消單堂、整期學員單堂請假或退出整期時，授課老師（counterpart）也收到一則站內通知；學員（self）文案不變。
   enrollment_cancelled: {
     self: ({ classSessionTitle }) => ({
       title: "報名已取消",
       body: `「${classSessionTitle ?? ""}」的報名已經取消。`,
     }),
+    counterpart: ({ classSessionTitle, termWithdrawal, leaveDate }) => {
+      if (termWithdrawal) {
+        return { title: "有學員退出整期", body: `「${classSessionTitle ?? ""}」有一位學員退出整期，尚未上的場次已經取消。` };
+      }
+      if (leaveDate) {
+        return { title: "有學員請假", body: `「${classSessionTitle ?? ""}」${leaveDate} 這一堂有一位學員請假，整期的其他堂照常。` };
+      }
+      return { title: "有學員取消報名", body: `「${classSessionTitle ?? ""}」有一位學員取消了報名。` };
+    },
   },
   // teacher-class-scheduling 票 04：老師改了時間或地點，通知該場已報名（含待確認）的學員；報名照樣保留。
   class_session_changed: {

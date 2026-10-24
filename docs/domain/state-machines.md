@@ -154,6 +154,8 @@ Rules:
 
 **已落地（票 09）：團主直接開團（`organizer_direct`，organizer-usability-redesign）**：新增 `(none) → open_for_enrollment` 這條建立路徑。團主對已確認的 `OrganizerClassProposal` 按「開放報名」時，在同一個 transaction 建立課程並直接開放，不先建 `draft`。建立之後沿用同一套狀態機（`open_for_enrollment → completed`、`open_for_enrollment → cancelled`），由團主 own-scoped 操作；老師端的開放、取消、完成在 server 端限定 `origin = teacher_initiated`（票 09 已補上）。細節見 `docs/specs/organizer-usability-redesign-spec.md` 第 13.5–13.6 節。
 
+**單堂建立後直接開放（`teacher-first-run` 票 02，已落地 2026-10-24）**：沒有新增狀態或轉換。老師單堂建課表單選「建立後直接開放報名」（預設）時，在同一個建立操作裡接著觸發既有的 `draft → open_for_enrollment`：先照原本路徑建立 `draft`，再呼叫與課程頁「開放報名」相同的老師端開放核心（own-scope、`approved`、仍是草稿、尚未開始）。這是**兩個步驟，不是同一個 transaction**：開放那一步失敗（例如剛好被暫停資格）時，課程留在 `draft`，老師被導到這堂草稿的詳情頁看到原因，可以再按「開放報名」。選「先存成草稿」則與改版前相同。
+
 ## OrganizerClassProposal Status
 
 **已核准・未實作**（organizer-usability-redesign，Q18：A；票 05–09）。

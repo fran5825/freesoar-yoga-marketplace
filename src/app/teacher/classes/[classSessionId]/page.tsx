@@ -14,6 +14,7 @@ import { getClassServiceTypes } from "@/domain/class-session/service-types-displ
 import { buildShareTemplates } from "@/domain/class-session/share-templates";
 import { getTeacherClassNextStep } from "@/domain/class-session/teacher-next-step";
 import { effectiveCoverUrl } from "@/domain/teacher-photo/display";
+import { getOwnPaymentInfoReminder } from "@/domain/teacher-profile/payment-settings";
 import { getOwnTeacherProfileApplicationSnapshot } from "@/domain/teacher-profile/service";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { classActionPhase, getClassActionSlots, type ClassActionKey } from "@/domain/class-session/class-action-slots";
@@ -34,6 +35,7 @@ import {
   RosterRow,
   SingleEnrollmentTag,
 } from "../_components/EnrollmentPaymentControls";
+import { PaymentInfoReminderNotice } from "../_components/PaymentInfoReminderNotice";
 import { PendingSubmitButton } from "../_components/PendingSubmitButton";
 import { ShareTemplates } from "../_components/ShareTemplates";
 import {
@@ -100,9 +102,10 @@ export default async function TeacherClassSessionDetailPage({
     redirect(`/sign-in?callbackUrl=${encodeURIComponent(`/teacher/classes/${classSessionId}`)}`);
   }
 
-  const [classSession, teacherProfile] = await Promise.all([
+  const [classSession, teacherProfile, paymentReminder] = await Promise.all([
     getOwnClassSessionDetailForTeacher(classSessionId),
     getOwnTeacherProfileApplicationSnapshot(),
+    getOwnPaymentInfoReminder(),
   ]);
 
   if (!classSession) {
@@ -150,6 +153,7 @@ export default async function TeacherClassSessionDetailPage({
     suitableFor: classSession.suitableFor,
     preparationNotes: classSession.preparationNotes,
     requiresApproval: classSession.requiresApproval,
+    isPublic: classSession.isPublic,
     teacherName: teacherProfile?.displayName ?? null,
     isSeries: classSession.recurringClassSeriesId !== null,
   });
@@ -239,8 +243,7 @@ export default async function TeacherClassSessionDetailPage({
             <InfoTip label="報名連結的說明">
               {classSession.isPublic
                 ? "這堂課也列在公開課程列表；想直接邀請學員，可以把報名連結傳給他們。"
-                : "這堂課不在公開課程列表，請把報名連結傳給學員。"}
-              學員需要先登入飛索帳號，才能打開連結並報名。
+                : "這堂課不在公開課程列表，請把報名連結傳給學員。學員需要先登入飛索帳號，才能打開連結並報名。"}
             </InfoTip>
           </span>
         );
@@ -315,7 +318,7 @@ export default async function TeacherClassSessionDetailPage({
         <DetailItem label="名額上限" value={`${classSession.capacity} 人`} />
         <DetailItem
           label="公開列表"
-          value={classSession.isPublic ? "列在公開課程列表" : "不列在公開課程列表"}
+          value={classSession.isPublic ? "列在公開課程列表" : "僅透過連結招募"}
         />
         <DetailItem
           label="報名方式"
@@ -560,6 +563,8 @@ export default async function TeacherClassSessionDetailPage({
             {originLabels[classSession.origin] ?? classSession.origin}
           </span>
         </div>
+        {/* teacher-first-run 票 03：能按「開放報名」時，在按鈕那一排之前（按下之前）提醒缺少的收款資訊。 */}
+        {canOpen ? <PaymentInfoReminderNotice reminder={paymentReminder} /> : null}
         {/* teacher-series-rollup 票 02（spec 2.2）：按鈕集中在這一排，說明放進確認視窗或「ⓘ」。 */}
         <ActionBar
           primary={slots.primary ? actionNode(slots.primary, "primary") : null}
