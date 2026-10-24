@@ -234,6 +234,9 @@ export async function publishSubmittedDemandRequest(
             "demand_request_available",
             teachers.map((teacher) => ({ userId: teacher.userId, role: "counterpart" as const })),
             { demandTitle: demand.title ?? undefined },
+            undefined,
+            // 同一筆需求只會公開一次；重試時 eventKey 的 unique 限制擋下重複的那則。
+            { eventKeyBase: `demand-published:${demandRequestId}` },
           );
         }
       }

@@ -251,3 +251,40 @@ test("a term member taking leave for one class tells the teacher with its own co
   await expect(leaveCard.getByRole("link", { name: /查看這堂課/ })).toHaveAttribute("href", `/teacher/classes/${sessions[0].id}`);
   expect(await prisma.notification.count({ where: { userId: teacher.userId, channel: "email", type: "enrollment_cancelled" } })).toBe(0);
 });
+
+// 票 10 review：老師收到的 enrollment_cancelled 有三種說法（退出整期、請假、取消報名）。同一系列同一天，
+// 標題不同的通知不合併；只有標題相同的（兩則退出整期）才合成一則。
+test("same series, same day: two term withdrawals fold together but a leave stays its own item", async ({ context, page }, testInfo) => {
+  const id = runId(testInfo, "mixed");
+  const teacher = await seedTeacher(id);
+  const memberA = await seedMember(id, "a");
+  const memberB = await seedMember(id, "b");
+  const memberC = await seedMember(id, "c");
+  const title = `混合通知 ${id}`;
+  const { series, sessions } = await seedTerm(teacher.teacherProfileId, { count: 2, title, isPublic: true, capacity: 5 });
+
+  const joinedA = await createSeriesEnrollmentForUser(memberA.id, series.id, { notes: null });
+  const joinedB = await createSeriesEnrollmentForUser(memberB.id, series.id, { notes: null });
+  const joinedC = await createSeriesEnrollmentForUser(memberC.id, series.id, { notes: null });
+  if (!joinedA.ok || !joinedB.ok || !joinedC.ok) throw new Error("fixture");
+
+  expect((await withdrawSeriesEnrollmentForUser(memberA.id, joinedA.seriesEnrollmentId)).ok).toBe(true);
+  expect((await withdrawSeriesEnrollmentForUser(memberB.id, joinedB.seriesEnrollmentId)).ok).toBe(true);
+
+  // 最新的一則是請假：改版前會把三則合成一則「有學員請假」。
+  await openNotifications(context, page, memberC.sessionToken, `/classes/${sessions[0].id}`);
+  const highlights = page.getByRole("region", { name: "課程重點" });
+  await highlights.getByText("請假", { exact: true }).click();
+  await highlights.getByLabel("我確認這一堂要請假。").check();
+  await highlights.getByRole("button", { name: "確認請假" }).click();
+  await expect(page.getByText("已請假這一堂，整期的其他堂照常。")).toBeVisible();
+
+  await openNotifications(context, page, teacher.sessionToken, "/teacher/notifications");
+  const withdrawnCard = card(page, title, "有學員退出整期");
+  await expect(withdrawnCard).toHaveCount(1);
+  await expect(withdrawnCard).toContainText("同一系列共 2 則");
+  const leaveCard = card(page, title, "有學員請假");
+  await expect(leaveCard).toHaveCount(1);
+  await expect(leaveCard).not.toContainText("同一系列共");
+  await expect(leaveCard.getByRole("link", { name: /查看這堂課/ })).toHaveAttribute("href", `/teacher/classes/${sessions[0].id}`);
+});

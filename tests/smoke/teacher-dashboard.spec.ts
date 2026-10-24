@@ -305,7 +305,38 @@ test.describe("開始使用 on /teacher/dashboard", () => {
     await expect(card.getByRole("listitem").nth(0)).toContainText("已完成");
     await expect(card.getByRole("link", { name: "前往填寫收款與聯絡" })).toHaveCount(0);
 
-    // 有任何一堂自己的課（草稿也算）→ 1、2 兩步都完成，整張收起（不論第 3 步）。
+    // 團主找來的課（不是老師自己開的）不算「開第一堂課」：卡片還在、第 2 步沒打勾。
+    const user = await prisma.user.findUniqueOrThrow({ where: { email }, select: { id: true } });
+    const organizer = await prisma.organizerProfile.create({ data: { userId: user.id, displayName: `團主 ${testRunId}` } });
+    const organization = await prisma.organization.create({
+      data: { name: `團體 ${testRunId}`, type: "community", ownerOrganizerProfileId: organizer.id },
+    });
+    try {
+      await prisma.classSession.create({
+        data: {
+          teacherProfileId: profile.id,
+          origin: "organizer_direct",
+          organizerProfileId: organizer.id,
+          organizationId: organization.id,
+          title: `團主的課 ${testRunId}`,
+          startAt: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000),
+          endAt: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000),
+          location: "新竹市",
+          capacity: 10,
+          status: "open_for_enrollment",
+        },
+      });
+      await page.goto(dashboardPath);
+      await expect(card).toBeVisible();
+      await expect(card.getByRole("listitem").nth(1)).not.toContainText("已完成");
+      await expect(card.getByRole("link", { name: "開第一堂課" })).toBeVisible();
+    } finally {
+      await prisma.classSession.deleteMany({ where: { organizationId: organization.id } });
+      await prisma.organization.delete({ where: { id: organization.id } });
+      await prisma.organizerProfile.delete({ where: { id: organizer.id } });
+    }
+
+    // 有任何一堂自己開的課（草稿也算）→ 1、2 兩步都完成，整張收起（不論第 3 步）。
     await prisma.teacherProfile.update({ where: { id: profile.id }, data: { isPublicPageEnabled: false } });
     await prisma.classSession.create({
       data: {

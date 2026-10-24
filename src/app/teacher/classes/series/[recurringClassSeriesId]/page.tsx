@@ -285,6 +285,10 @@ export default async function RecurringClassSeriesPage({
         {series.occurrences.length === 0 ? (
           <p className="text-sm leading-6 text-ink-soft">目前還沒有生成任何場次。</p>
         ) : (
+          <>
+          {/* teacher-first-run 票 10 review：有場次能用快速「開放報名」時，在場次清單之前（按下之前）也提醒收款資訊。
+              快速按鈕的條件與 openableDrafts 相同（尚未開始的草稿）。 */}
+          {openableDrafts.length > 0 ? <PaymentInfoReminderNotice reminder={paymentReminder} /> : null}
           <ul className="grid gap-2">
             {/* 票 04／05：每場可點進單堂詳情，詳情頁的「返回」會回到這個系列的同一場位置。 */}
             {series.occurrences.map((occurrence) => {
@@ -329,6 +333,7 @@ export default async function RecurringClassSeriesPage({
               );
             })}
           </ul>
+          </>
         )}
       </section>
 

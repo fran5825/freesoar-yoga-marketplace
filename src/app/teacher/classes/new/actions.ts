@@ -68,7 +68,7 @@ export async function createOwnClassSessionAction(
     result.openOutcome === "opened"
       ? { kind: "success", message: OPENED_FOR_ENROLLMENT_MESSAGE }
       : result.openOutcome === "failed"
-        ? { kind: "error", message: result.openFailureMessage ?? "課程已建立，但還沒開放報名。" }
+        ? { kind: "error", message: result.openFailureMessage }
         : { kind: "success", message: "課程已建立。下一步：確認內容後按「開放報名」。" };
 
   redirect(

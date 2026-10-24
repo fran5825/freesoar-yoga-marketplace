@@ -19,7 +19,7 @@ export type ShareTemplateInput = {
   suitableFor: string | null;
   preparationNotes: string | null;
   requiresApproval: boolean;
-  // teacher-first-run 票 01：僅透過連結招募（false）時，學員要先登入才看得到課程內容，文案才提醒登入。
+  // teacher-first-run 票 01：僅透過連結招募（false）時，學員要先登入才看得到課程內容；公開（true）的課改說看內容不用登入、報名要登入。
   isPublic: boolean;
   teacherName: string | null;
   // 屬於期班或持續開課時，連結帶學員到系列或期班頁，文案也改說「這個系列」。
@@ -67,7 +67,8 @@ export function buildShareTemplates(input: ShareTemplateInput): ShareTemplates {
     input.requiresApproval ? "報名後會由老師確認，確認結果會通知你。" : null,
     "",
     `報名連結：${ENROLL_URL_PLACEHOLDER}`,
-    input.isPublic ? null : "（需要先登入飛索帳號才能報名）",
+    // 公開的課看內容不用登入，但報名仍要登入；僅透過連結招募的課連內容都要先登入，維持原本那句。
+    input.isPublic ? "（看課程內容不用登入；報名時用 Google 登入飛索帳號）" : "（需要先登入飛索帳號才能報名）",
     "",
     "期待在課堂上與你相見。",
     signature,

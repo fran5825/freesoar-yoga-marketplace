@@ -318,7 +318,7 @@ export default async function TeacherClassSessionDetailPage({
         <DetailItem label="名額上限" value={`${classSession.capacity} 人`} />
         <DetailItem
           label="公開列表"
-          value={classSession.isPublic ? "列在公開課程列表" : "不列在公開課程列表"}
+          value={classSession.isPublic ? "列在公開課程列表" : "僅透過連結招募"}
         />
         <DetailItem
           label="報名方式"
@@ -563,18 +563,14 @@ export default async function TeacherClassSessionDetailPage({
             {originLabels[classSession.origin] ?? classSession.origin}
           </span>
         </div>
+        {/* teacher-first-run 票 03：能按「開放報名」時，在按鈕那一排之前（按下之前）提醒缺少的收款資訊。 */}
+        {canOpen ? <PaymentInfoReminderNotice reminder={paymentReminder} /> : null}
         {/* teacher-series-rollup 票 02（spec 2.2）：按鈕集中在這一排，說明放進確認視窗或「ⓘ」。 */}
         <ActionBar
           primary={slots.primary ? actionNode(slots.primary, "primary") : null}
           rest={slots.rest.map((key) => ({ key, node: actionNode(key, "rest") }))}
           secondary={slots.secondary ? actionNode(slots.secondary, "secondary") : null}
         />
-        {/* teacher-first-run 票 03：能按「開放報名」時，在按下之前提醒缺少的收款資訊。 */}
-        {canOpen ? (
-          <div className="mt-4">
-            <PaymentInfoReminderNotice reminder={paymentReminder} />
-          </div>
-        ) : null}
       </header>
 
       {feedback ? (

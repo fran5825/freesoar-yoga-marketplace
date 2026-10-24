@@ -65,9 +65,6 @@ export function GenerateMoreForm({
           required
           type="number"
         />
-        <PendingSubmitButton className="min-h-11 rounded-full border border-ink/25 px-5 py-2 text-sm font-medium text-ink transition hover:border-pine/40 hover:bg-pine-tint">
-          生成
-        </PendingSubmitButton>
       </div>
       <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm leading-6 text-ink">
         <input
@@ -84,7 +81,13 @@ export function GenerateMoreForm({
       <p className="text-xs leading-5 text-ink-faint">
         從目前最後一場之後，依每{dayLabel}繼續生成。沒有勾選時，新場次會先存成草稿，之後可以按「全部開放報名」。
       </p>
+      {/* 提醒放在「生成」按鈕之前，老師按下之前就看得到。 */}
       {opensRightAway ? <PaymentInfoReminderNotice reminder={paymentReminder} /> : null}
+      <div>
+        <PendingSubmitButton className="min-h-11 rounded-full border border-ink/25 px-5 py-2 text-sm font-medium text-ink transition hover:border-pine/40 hover:bg-pine-tint">
+          生成
+        </PendingSubmitButton>
+      </div>
     </form>
   );
 }

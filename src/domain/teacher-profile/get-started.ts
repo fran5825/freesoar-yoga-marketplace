@@ -12,7 +12,7 @@ import {
 // teacher-first-run 票 08（spec「開始使用」）：剛通過審核的老師在總覽最上方看到的上手步驟。
 // 三步的完成與否都從既有資料判斷，不新增欄位：
 //   1. 填收款與聯絡：收款帳號（paymentAccountInfo）trim 後有內容。
-//   2. 開第一堂課：老師有任何一堂自己的課（任何狀態都算）。
+//   2. 開第一堂課：老師有任何一堂自己開的課（origin = teacher_initiated，任何狀態都算；團主媒合的課不算）。
 //   3. 公開我的老師頁（可跳過）：isPublicPageEnabled 為 true。
 // 收起規則（切票時查證沒有可存介面偏好的既有欄位，採 spec 替代規則）：1、2 兩步完成就自動收起，
 // 不論第 3 步；「先不用」只記在這個瀏覽器（由頁面元件處理）。
@@ -83,7 +83,7 @@ export async function getOwnTeacherGetStarted(): Promise<TeacherGetStarted | nul
   }
 
   const ownClass = await prisma.classSession.findFirst({
-    where: { teacherProfileId: profile.id },
+    where: { teacherProfileId: profile.id, origin: "teacher_initiated" },
     select: { id: true },
   });
 

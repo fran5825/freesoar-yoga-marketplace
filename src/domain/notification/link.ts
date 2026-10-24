@@ -66,7 +66,7 @@ export function getNotificationLink(
     case "demand_request_cancelled":
       // 團主本人取消 → 我的需求；因連帶取消而受影響的老師 → 團體需求。
       if (isOrganizer) return { href: "/organizer/demands", label: "前往我的需求" };
-      if (isTeacher) return { href: "/teacher/demands", label: "前往需求列表" };
+      if (isTeacher) return { href: "/teacher/demands", label: "前往團體需求" };
       return null;
     case "demand_request_available":
       // teacher-first-run 票 06：新需求公開，一律連到老師的「團體需求」頁（不帶 target）。
@@ -76,7 +76,7 @@ export function getNotificationLink(
       if (isAdmin) return { href: "/admin/demands", label: "前往需求審核" };
       return null;
     case "demand_response_selected":
-      if (isTeacher) return { href: "/teacher/demands", label: "前往需求列表" };
+      if (isTeacher) return { href: "/teacher/demands", label: "前往團體需求" };
       if (isOrganizer) return { href: "/organizer/demands", label: "前往我的需求" };
       return null;
     case "class_session_created":

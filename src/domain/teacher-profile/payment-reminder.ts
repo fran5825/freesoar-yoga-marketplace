@@ -8,8 +8,6 @@
 export const PAYMENT_SETTINGS_HREF = "/teacher/profile/payment";
 
 export type PaymentInfoReminder = {
-  missingAccount: boolean;
-  missingRules: boolean;
   // 缺哪個列哪個，順序固定：帳號在前。
   missingItems: string[];
 };
@@ -26,8 +24,6 @@ export function buildPaymentInfoReminder(settings: {
   }
 
   return {
-    missingAccount,
-    missingRules,
     missingItems: [
       ...(missingAccount ? ["還沒填收款帳號"] : []),
       ...(missingRules ? ["還沒填繳費與取消規則"] : []),

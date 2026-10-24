@@ -543,12 +543,8 @@ export type CreateOwnClassSessionForTeacherErrorCode =
 // teacher-first-run 票 02：建立成功後的開放結果。not_requested＝老師選先存成草稿；
 // failed＝課程已建立、仍是草稿，openFailureMessage 說明原因（不是建立失敗）。
 export type CreateOwnClassSessionForTeacherResult =
-  | {
-      ok: true;
-      classSessionId: string;
-      openOutcome: "not_requested" | "opened" | "failed";
-      openFailureMessage?: string;
-    }
+  | { ok: true; classSessionId: string; openOutcome: "not_requested" | "opened" }
+  | { ok: true; classSessionId: string; openOutcome: "failed"; openFailureMessage: string }
   | {
       ok: false;
       code: CreateOwnClassSessionForTeacherErrorCode;

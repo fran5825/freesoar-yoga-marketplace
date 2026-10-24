@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { buildPaymentInfoReminder } from "../../src/domain/teacher-profile/payment-reminder";
 import { addAuthSessionCookie, prisma } from "./_helpers/organizer-demand-fixtures";
@@ -22,6 +22,18 @@ const SNAPSHOT_NOTE = "學員報名時會看到你當下填的收款資訊，之
 
 function reminder(page: Page) {
   return page.getByRole("note", { name: "收款資訊提醒" });
+}
+
+// 提醒要在按鈕「之前」（文件順序在前），老師按下之前就讀得到。
+async function expectBefore(first: Locator, second: Locator) {
+  const firstHandle = await first.elementHandle();
+  const secondHandle = await second.elementHandle();
+  expect(
+    await firstHandle!.evaluate(
+      (node, other) => Boolean(node.compareDocumentPosition(other as Node) & Node.DOCUMENT_POSITION_FOLLOWING),
+      secondHandle,
+    ),
+  ).toBe(true);
 }
 
 async function setPaymentInfo(teacherProfileId: string, data: { paymentAccountInfo: string | null; paymentRulesText: string | null }) {
@@ -69,6 +81,7 @@ test.describe("single class", () => {
     await expect(reminder(page)).not.toContainText("還沒填繳費與取消規則");
     await expect(reminder(page)).toContainText(SNAPSHOT_NOTE);
     await expect(reminder(page).getByRole("link", { name: /到「收款與聯絡」填寫/ })).toHaveAttribute("href", "/teacher/profile/payment");
+    await expectBefore(reminder(page), page.getByRole("button", { name: "開放報名", exact: true }));
 
     // 不擋操作：不填也能開放。
     await page.getByRole("button", { name: "開放報名", exact: true }).click();
@@ -150,6 +163,10 @@ test.describe("series", () => {
     await page.goto(`/teacher/classes/series/${drafts.series.id}`);
     const openAll = page.getByRole("region", { name: /場草稿沒開放報名/ });
     await expect(openAll.getByRole("note", { name: "收款資訊提醒" })).toContainText("還沒填收款帳號");
+    // 場次清單裡有快速「開放報名」時，清單上方也提醒一次。
+    const occurrences = page.getByRole("region", { name: /已生成場次/ });
+    await expect(occurrences.getByRole("note", { name: "收款資訊提醒" })).toContainText("還沒填收款帳號");
+    await expectBefore(occurrences.getByRole("note", { name: "收款資訊提醒" }), page.getByRole("button", { name: /^開放 .* 這一場的報名$/ }).first());
     // 草稿期班的補課不會直接開放，補課區不提醒。
     await expect(page.getByRole("region", { name: "追加補課日期" }).getByRole("note")).toHaveCount(0);
     // 不擋操作：單場快速開放照樣成功。
@@ -158,6 +175,8 @@ test.describe("series", () => {
 
     // 期班已全部開放：追加補課會直接開放，所以補課區提醒。
     await page.goto(`/teacher/classes/series/${openTerm.series.id}`);
+    // 已全部開放、沒有草稿：場次清單上方不提醒。
+    await expect(page.getByRole("region", { name: /已生成場次/ }).getByRole("note")).toHaveCount(0);
     await expect(page.getByRole("region", { name: "追加補課日期" }).getByRole("note", { name: "收款資訊提醒" })).toBeVisible();
 
     // 生成更多：勾了「建立後全部開放報名」才提醒。
@@ -166,5 +185,6 @@ test.describe("series", () => {
     await expect(generateMore.getByRole("note")).toHaveCount(0);
     await generateMore.getByLabel("建立後全部開放報名").check();
     await expect(generateMore.getByRole("note", { name: "收款資訊提醒" })).toContainText("還沒填繳費與取消規則");
+    await expectBefore(generateMore.getByRole("note", { name: "收款資訊提醒" }), generateMore.getByRole("button", { name: "生成" }));
   });
 });
