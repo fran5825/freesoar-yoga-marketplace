@@ -9,7 +9,7 @@
 | 1 想清楚（grill-with-docs） | 完成 | 2026-10-25 | 「全部照建議」（Q1 丙、Q2 不回填、Q3–Q6 照建議） |
 | 2 寫 spec | 完成，範圍已確認 | 2026-10-25 | 「請切票」 |
 | 3 切票 | 完成；Codex 審 2 輪通過 | 2026-10-25 | 「票切得對，全部放行（含 HEAVY 01），開始實作」 |
-| 4 實作 | 進行中 | 2026-10-25 | |
+| 4 實作 | 完成：01–04 done；code-review＋spec-review 修正已套用；完整 smoke 1591 過、33 skip、2 個過時斷言已修 | 2026-10-25 | |
 | 5 收尾（commit 關卡） | 未開始 | | |
 | 6 畫面驗收 | 未開始 | | |
 | 7 回顧（retro） | 未開始 | | |
@@ -18,11 +18,11 @@
 
 | 票 | Workflow mode | Human Gate | Blocked by | Status |
 | --- | --- | --- | --- | --- |
-| 01 新增 5 種 target，課程與報名類通知直達 | HEAVY | yes | – | in-progress |
-| 02 需求類與管理員類通知直達 | STANDARD | no | 01 | draft |
-| 03 申請頁老師專區導覽列（F12） | LIGHT | no | – | in-progress |
-| 04 三個重複提示 | LIGHT | no | – | in-progress |
-| 05 整合驗證、文件與畫面驗收 | STANDARD | no | 01–04 | draft |
+| 01 新增 5 種 target，課程與報名類通知直達 | HEAVY | yes | – | done |
+| 02 需求類與管理員類通知直達 | STANDARD | no | 01 | done |
+| 03 申請頁老師專區導覽列（F12） | LIGHT | no | – | done |
+| 04 三個重複提示 | LIGHT | no | – | done |
+| 05 整合驗證、文件與畫面驗收 | STANDARD | no | 01–04 | 驗證與文件完成，等畫面驗收 |
 
 ## 已放行的票
 
@@ -30,7 +30,7 @@
 
 ## 下一步
 
-01→02 在整合 worktree 做；03＋04 由 subagent 在另一個 worktree 同時做，做完合併回整合 branch，再跑 code-review、spec-review。
+收尾關卡：問產品主人要不要把 `wrong-route-fixes` 合併進 main、要不要對開發資料庫跑 migration（只新增 enum 值）。合併後才能做畫面驗收（清單在票 05）。
 
 ## 施工環境（2026-10-25 建立）
 

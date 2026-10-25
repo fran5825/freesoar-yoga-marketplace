@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 
 // organizer-usability 票 11（方案 B）：通知沒有記錄「是哪一筆需求／課程」，也沒有記錄收件人是
 // 哪個角色，所以這裡只依「通知類型＋收件人目前擁有的身分」決定要連到哪一個列表頁，
-// 不連到單筆詳情。同一種通知可能給不同角色（例如 enrollment_pending_review 給學員與老師），
+// 不連到單筆詳情（有 target 的通知見下方 targetLinks）。同一種通知可能給不同角色（例如 enrollment_pending_review 給學員與老師），
 // 優先順序在各 case 內註明；找不到合適身分就不顯示連結。
 // wrong-route-fixes：多重身分帳號會被這套猜法連錯頁，所以會送給多種身分的通知，發送時都帶 target；
 // 下面的 switch 只剩舊通知（沒有 target）與只給單一身分的通知會用到。

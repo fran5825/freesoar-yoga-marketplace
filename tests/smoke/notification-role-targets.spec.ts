@@ -164,6 +164,11 @@ test.describe("notification links for multi-role accounts", () => {
     await expect(notificationLink(page, `異動課 ${id}`)).toHaveAttribute("href", `/classes/${changed.id}`);
     await expect(notificationLink(page, `取消課 ${id}`)).toHaveAttribute("href", "/member/enrollments");
     await expect(notificationLink(page, `審核課 ${id}`)).toHaveAttribute("href", `/classes/${review.id}`);
+
+    // 點進去：多重身分帳號看得到學員課程頁（不是 not-found）。
+    await notificationLink(page, `異動課 ${id}`).click();
+    await expect(page).toHaveURL(new RegExp(`/classes/${changed.id}$`));
+    await expect(page.getByRole("heading", { name: `異動課 ${id}` }).first()).toBeVisible();
   });
 
   test("teacher side: organizer-created and cancelled classes link to the teacher's class page", async ({ page }, testInfo) => {
@@ -231,6 +236,22 @@ test.describe("notification links for multi-role accounts", () => {
     if (!submitted.ok) throw new Error(`fixture: ${submitted.code}`);
     const responseRow = await prisma.demandResponse.findFirstOrThrow({ where: { demandRequestId: ownDemand.id }, select: { id: true } });
     expect(await selectDemandResponseForOrganizer(multi.organizerProfileId, responseRow.id)).toMatchObject({ ok: true });
+    // 被選定的老師那一則連「團體需求」列表。
+    expect(
+      await prisma.notification.findFirst({
+        where: { userId: teacher.userId, type: "demand_response_selected", channel: "in_app" },
+        select: { targetType: true, targetId: true },
+      }),
+    ).toEqual({ targetType: "teacher_demand_request", targetId: ownDemand.id });
+
+    // 多重身分帳號自己取消另一筆需求 → 團主自己的需求詳情。
+    const cancelledOwn = await createDemandRequest({
+      organizerProfileId: multi.organizerProfileId,
+      organizationId: multi.organizationId,
+      status: "published",
+      data: completeDemandRequestData({ title: `取消的需求 ${id}` }),
+    });
+    expect(await cancelDemandRequestForOrganizer(multi.organizerProfileId, cancelledOwn.id)).toMatchObject({ ok: true });
 
     // 多重身分帳號當回應的老師：別人的需求被取消 → 老師的團體需求頁。
     const otherDemand = await createDemandRequest({
@@ -247,13 +268,17 @@ test.describe("notification links for multi-role accounts", () => {
     await expect(notificationLink(page, "有老師回應了你的需求")).toHaveAttribute("href", `/organizer/demands/${ownDemand.id}`);
     await expect(notificationLink(page, "已選定老師")).toHaveAttribute("href", `/organizer/demands/${ownDemand.id}`);
     await expect(notificationLink(page, `別人的需求 ${id}`)).toHaveAttribute("href", "/teacher/demands");
+    await expect(notificationLink(page, `取消的需求 ${id}`)).toHaveAttribute("href", `/organizer/demands/${cancelledOwn.id}`);
 
     await page.context().clearCookies();
     await openNotifications(page, admin.sessionToken);
     // 管理員的文案不含需求名稱，而且所有管理員都會收到（含平行測試建立的），所以找連到這筆需求的那一則。
-    await expect(
-      page.locator("article").filter({ hasText: "有新的需求回應" }).locator(`a[href="/admin/demands/${ownDemand.id}"]`),
-    ).toHaveCount(1);
+    const adminLink = page.locator("article").filter({ hasText: "有新的需求回應" }).locator(`a[href="/admin/demands/${ownDemand.id}"]`);
+    await expect(adminLink).toHaveCount(1);
+    // 點進去：兼團主＋老師的管理員看得到後台那筆需求。
+    await adminLink.click();
+    await expect(page).toHaveURL(new RegExp(`/admin/demands/${ownDemand.id}$`));
+    await expect(page.getByText(`自己的需求 ${id}`).first()).toBeVisible();
   });
 
   test("term enrollment pending review: in-app and email both link to the term page", async ({ page }, testInfo) => {
