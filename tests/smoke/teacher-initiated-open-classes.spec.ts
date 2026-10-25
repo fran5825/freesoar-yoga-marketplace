@@ -123,9 +123,11 @@ test.describe("teacher-initiated open classes smoke", () => {
     await expect(page.getByRole("region", { name: "建立前核對" })).toContainText("建立後直接開放報名");
     await page.getByRole("button", { name: "建立課程" }).click();
 
-    await expect(page.getByText("已開放報名。下一步：把報名連結傳給學員。")).toBeVisible();
+    await expect(page.getByText("已開放報名。", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "複製報名連結" })).toBeVisible();
     await expect(page.getByRole("region", { name: "下一步" })).toContainText("把報名連結傳給學員");
+    // wrong-route-fixes 票 04：成功訊息只寫「已開放報名。」，「把報名連結傳給學員」只剩下一步提示這一處。
+    await expect(page.getByText(/把報名連結傳給學員/).filter({ visible: true })).toHaveCount(1);
     await expect(page.getByText("陰瑜伽、亞歷山大技巧、脈輪流動")).toBeVisible();
     await expect(page.getByRole("heading", { level: 1, name: baseInput.title })).toBeVisible();
     await expect(page.getByText("自己開的課", { exact: true })).toBeVisible();
@@ -191,7 +193,7 @@ test.describe("teacher-initiated open classes smoke", () => {
     expect(created.status).toBe("draft");
 
     await page.getByRole("button", { name: "開放報名", exact: true }).click();
-    await expect(page.getByText("已開放報名。下一步：把報名連結傳給學員。")).toBeVisible();
+    await expect(page.getByText("已開放報名。", { exact: true })).toBeVisible();
     expect((await prisma.classSession.findUniqueOrThrow({ where: { id: created.id }, select: { status: true } })).status).toBe(
       "open_for_enrollment",
     );
@@ -233,7 +235,7 @@ test.describe("teacher-initiated open classes smoke", () => {
     await addAuthSessionCookie(context, teacher.sessionToken);
     await page.goto(`/teacher/classes/${created.classSessionId}`);
     await page.getByRole("button", { name: "開放報名", exact: true }).click();
-    await expect(page.getByText("已開放報名。下一步：把報名連結傳給學員。")).toBeVisible();
+    await expect(page.getByText("已開放報名。", { exact: true })).toBeVisible();
     expect((await prisma.classSession.findUniqueOrThrow({ where: { id: created.classSessionId } })).status).toBe(
       "open_for_enrollment",
     );

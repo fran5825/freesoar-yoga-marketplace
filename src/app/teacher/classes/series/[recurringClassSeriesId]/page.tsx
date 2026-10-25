@@ -286,9 +286,8 @@ export default async function RecurringClassSeriesPage({
           <p className="text-sm leading-6 text-ink-soft">目前還沒有生成任何場次。</p>
         ) : (
           <>
-          {/* teacher-first-run 票 10 review：有場次能用快速「開放報名」時，在場次清單之前（按下之前）也提醒收款資訊。
-              快速按鈕的條件與 openableDrafts 相同（尚未開始的草稿）。 */}
-          {openableDrafts.length > 0 ? <PaymentInfoReminderNotice reminder={paymentReminder} /> : null}
+          {/* wrong-route-fixes 票 04：這裡原本還有一塊收款提醒，條件和上方「還有 N 場草稿沒開放報名」區塊相同
+              （openableDrafts.length > 0），那塊本來就在場次清單之前，所以只留那一塊。 */}
           <ul className="grid gap-2">
             {/* 票 04／05：每場可點進單堂詳情，詳情頁的「返回」會回到這個系列的同一場位置。 */}
             {series.occurrences.map((occurrence) => {

@@ -151,7 +151,7 @@ test.describe("teacher single-class creation usability (ticket 01)", () => {
     await page.getByRole("button", { name: "建立課程" }).click();
 
     // teacher-first-run 票 02：單堂預設建立後直接開放報名。
-    await expect(page.getByText("已開放報名。下一步：把報名連結傳給學員。")).toBeVisible();
+    await expect(page.getByText("已開放報名。", { exact: true })).toBeVisible();
     const created = await prisma.classSession.findMany({
       where: { teacherProfileId: teacher.teacherProfileId, title },
       select: { id: true, status: true, isPublic: true },

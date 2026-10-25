@@ -127,7 +127,7 @@ test.describe("single class", () => {
     await page.locator("#location").fill("新竹提醒教室");
     await page.locator("#capacity").fill("6");
     await page.getByRole("button", { name: "建立課程" }).click();
-    await expect(page.getByText("已開放報名。下一步：把報名連結傳給學員。")).toBeVisible();
+    await expect(page.getByText("已開放報名。", { exact: true })).toBeVisible();
     expect((await prisma.classSession.findFirstOrThrow({ where: { title } })).status).toBe("open_for_enrollment");
   });
 });
@@ -146,7 +146,7 @@ test.describe("series", () => {
     await expect(reminder(page)).toContainText("還沒填收款帳號");
   });
 
-  test("the series page warns in 'open all' (which also covers each draft's quick open), in 'generate more' when opening, and before a make-up class that opens right away", async ({
+  test("the series page warns once in 'open all' (which also covers each draft's quick open), in 'generate more' when opening, and before a make-up class that opens right away", async ({
     context,
     page,
   }, testInfo) => {
@@ -163,10 +163,12 @@ test.describe("series", () => {
     await page.goto(`/teacher/classes/series/${drafts.series.id}`);
     const openAll = page.getByRole("region", { name: /場草稿沒開放報名/ });
     await expect(openAll.getByRole("note", { name: "收款資訊提醒" })).toContainText("還沒填收款帳號");
-    // 場次清單裡有快速「開放報名」時，清單上方也提醒一次。
+    // wrong-route-fixes 票 04：場次清單上方不再重複提醒，整頁只有「還有幾場草稿」區塊這一塊，
+    // 而且在單場快速「開放報名」按鈕之前。
     const occurrences = page.getByRole("region", { name: /已生成場次/ });
-    await expect(occurrences.getByRole("note", { name: "收款資訊提醒" })).toContainText("還沒填收款帳號");
-    await expectBefore(occurrences.getByRole("note", { name: "收款資訊提醒" }), page.getByRole("button", { name: /^開放 .* 這一場的報名$/ }).first());
+    await expect(occurrences.getByRole("note", { name: "收款資訊提醒" })).toHaveCount(0);
+    await expect(reminder(page)).toHaveCount(1);
+    await expectBefore(openAll.getByRole("note", { name: "收款資訊提醒" }), page.getByRole("button", { name: /^開放 .* 這一場的報名$/ }).first());
     // 草稿期班的補課不會直接開放，補課區不提醒。
     await expect(page.getByRole("region", { name: "追加補課日期" }).getByRole("note")).toHaveCount(0);
     // 不擋操作：單場快速開放照樣成功。
