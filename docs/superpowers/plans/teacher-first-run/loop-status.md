@@ -22,7 +22,7 @@
 
 ## 下一步
 
-畫面驗收與 retro 已完成。剩 `handoff.md`「接下來要做的事」第 3 項起：問要不要 commit／push → 清理 worktree／branch／測試資料庫（要先問）→ 下一輪範圍。
+畫面驗收、retro、push 與清理都已完成（2026-10-25）。下面「施工環境」的 worktree、branch 與測試 DB 已刪除，只保留 `freesoar_tfr_int`。剩下一輪範圍（見 `handoff.md` 第 6 項）。
 
 ## 實作中追加的決定
 

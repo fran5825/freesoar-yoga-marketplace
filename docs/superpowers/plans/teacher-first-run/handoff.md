@@ -35,7 +35,7 @@
 
 ## 接下來要做的事（依順序）
 
-> 2026-10-25 進度：第 1 項（畫面驗收）與第 2 項（retro）已完成，見 `loop-status.md` 階段 6、7。第 5 項已改成 `docs/backlog.md` 第 27 項並標 `test.fixme`。驗收建立的測試資料（開發資料庫）列在 `tickets/10-acceptance-and-docs.md`「產品主人畫面驗收紀錄」，清理時一併考慮。
+> 2026-10-25 進度：第 1 項（畫面驗收）與第 2 項（retro）已完成，見 `loop-status.md` 階段 6、7。第 5 項已改成 `docs/backlog.md` 第 27 項並標 `test.fixme`。驗收建立的測試資料（開發資料庫）列在 `tickets/10-acceptance-and-docs.md`「產品主人畫面驗收紀錄」，沒有刪。第 3 項已 commit 並 push（`2b571c9`，CI 通過）。第 4 項已清理（產品主人同意「照清單刪除，但保留 freesoar_tfr_int 當之後的測試資料庫」）：5 個 worktree、4 個 branch、`freesoar_tfr_a`／`_b`／`_c`／`_base`、smoke 紀錄檔都已刪；**保留 `freesoar_tfr_int`**（已套用最新 migration，之後跑 Playwright 用）。剩第 6 項下一輪範圍。
 
 1. **畫面驗收（產品主人親自看）**：票 10 列了 5 項：開始使用卡、建課預設公開與直接開放、收款提醒、老師收到的通知（含請假）、團體需求頁。用 Claude 的瀏覽器面板看 3000 埠，他要自己登入 Google。看到的問題記進票 10 或 `docs/backlog.md`。
 2. **feature-loop 階段 6：retro**。讀 `.claude/skills/retro/SKILL.md` 照做，依嚴重度列建議請產品主人挑；改完再問要不要 commit；在 `loop-status.md` 標「閉環完成」。可以打 `/feature-loop teacher-first-run` 從進度檔接續。
