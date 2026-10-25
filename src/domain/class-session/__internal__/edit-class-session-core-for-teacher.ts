@@ -292,7 +292,12 @@ export async function editClassSessionForTeacher(
     try {
       await notifyUsers(
         "class_session_changed",
-        notice.memberUserIds.map((userId) => ({ userId, role: "affected_member" as const })),
+        // wrong-route-fixes 票 01：學員帶學員端 target，也是團主或老師的學員不會被連到自己的課程管理頁。
+        notice.memberUserIds.map((userId) => ({
+          userId,
+          role: "affected_member" as const,
+          target: { type: "member_class_session" as const, id: classSessionId },
+        })),
         { classSessionTitle: notice.title, changeSummary: buildChangeSummary(notice) },
         undefined,
         // teacher-series-rollup 票 07：帶場次 id，notifyUsers 查出所屬系列寫進通知。

@@ -133,7 +133,8 @@ export async function cancelDemandRequestForOrganizer(
       const recipients: NotificationRecipient[] = [];
 
       if (organizerProfile) {
-        recipients.push({ userId: organizerProfile.userId, role: "self" });
+        // wrong-route-fixes 票 02：團主直達自己的需求，受影響老師連「團體需求」，多重身分帳號不會連錯頁。
+        recipients.push({ userId: organizerProfile.userId, role: "self", target: { type: "organizer_demand_request", id: demandRequestId } });
       }
 
       if (affectedTeacherProfileIds.length > 0) {
@@ -143,7 +144,7 @@ export async function cancelDemandRequestForOrganizer(
         });
 
         for (const teacherProfile of teacherProfiles) {
-          recipients.push({ userId: teacherProfile.userId, role: "affected_responder" });
+          recipients.push({ userId: teacherProfile.userId, role: "affected_responder", target: { type: "teacher_demand_request", id: demandRequestId } });
         }
       }
 

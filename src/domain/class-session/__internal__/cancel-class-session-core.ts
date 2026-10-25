@@ -188,18 +188,19 @@ async function cancelClassSessionCore(
         }),
       ]);
 
+      // wrong-route-fixes 票 01：團主、老師、學員各帶自己身分的單堂 target，多重身分帳號不會連錯頁。
       const recipients: NotificationRecipient[] = [];
 
       if (organizerProfile) {
-        recipients.push({ userId: organizerProfile.userId, role: "self" });
+        recipients.push({ userId: organizerProfile.userId, role: "self", target: { type: "organizer_class_session", id: classSessionId } });
       }
 
       if (teacherProfile) {
-        recipients.push({ userId: teacherProfile.userId, role: "counterpart" });
+        recipients.push({ userId: teacherProfile.userId, role: "counterpart", target: { type: "teacher_class_session", id: classSessionId } });
       }
 
       for (const memberUserId of affectedMemberUserIds) {
-        recipients.push({ userId: memberUserId, role: "affected_member" });
+        recipients.push({ userId: memberUserId, role: "affected_member", target: { type: "member_class_session", id: classSessionId } });
       }
 
       // teacher-series-rollup 票 07：帶場次 id，notifyUsers 查出所屬系列（管理員也可能取消系列場次）。

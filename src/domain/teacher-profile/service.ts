@@ -400,7 +400,8 @@ export async function submitOwnTeacherProfileApplication(
         "teacher_application_submitted",
         [
           { userId: currentUser.id, role: "self" },
-          ...adminIds.map((id) => ({ userId: id, role: "admin" as const })),
+          // wrong-route-fixes 票 02：管理員直達後台這位老師（也是老師的管理員不會被連到自己的老師資料）。
+          ...adminIds.map((id) => ({ userId: id, role: "admin" as const, target: { type: "admin_teacher_application" as const, id: profile.id } })),
         ],
         { actorLabel: currentUser.name ?? currentUser.email ?? undefined },
       );
