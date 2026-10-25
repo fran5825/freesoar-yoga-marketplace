@@ -10,7 +10,7 @@
 | 2 寫 spec | 完成，範圍已確認 | 2026-10-25 | 「請切票」 |
 | 3 切票 | 完成；Codex 審 2 輪通過 | 2026-10-25 | 「票切得對，全部放行（含 HEAVY 01），開始實作」 |
 | 4 實作 | 完成：01–04 done；code-review＋spec-review 修正已套用；完整 smoke 1591 過、33 skip、2 個過時斷言已修 | 2026-10-25 | |
-| 5 收尾（commit 關卡） | 未開始 | | |
+| 5 收尾（commit 關卡） | 完成：合併進 main（`557a034`），未 push；開發資料庫已套用 `20261025120000_notification_role_targets`。產品主人停掉開發伺服器後 `prisma generate` 成功（2026-10-26） | 2026-10-26 | 「把 wrong-route-fixes 合併進 main，並對開發資料庫跑那個 migration；不要 push」 |
 | 6 畫面驗收 | 未開始 | | |
 | 7 回顧（retro） | 未開始 | | |
 
@@ -30,7 +30,7 @@
 
 ## 下一步
 
-收尾關卡：問產品主人要不要把 `wrong-route-fixes` 合併進 main、要不要對開發資料庫跑 migration（只新增 enum 值）。合併後才能做畫面驗收（清單在票 05）。
+產品主人重新 `npm run dev` → 照票 05 的清單做畫面驗收（Claude in Chrome，一個身分一個 Chrome 設定檔）。
 
 ## 施工環境（2026-10-25 建立）
 
