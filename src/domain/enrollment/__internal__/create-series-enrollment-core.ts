@@ -286,9 +286,10 @@ export async function createSeriesEnrollmentForUser(
     if (outcome.status === "pending") {
       await notifyOverride(
         "enrollment_pending_review",
+        // wrong-route-fixes 票 01：老師直達老師系列頁審核；學員不帶 target，照 ADR 0008 連期班頁（email 也是）。
         [
           { userId, role: "self" },
-          { userId: outcome.teacherUserId, role: "counterpart" },
+          { userId: outcome.teacherUserId, role: "counterpart", target: { type: "teacher_class_series", id: recurringClassSeriesId } },
         ],
         { classSessionTitle },
         undefined,

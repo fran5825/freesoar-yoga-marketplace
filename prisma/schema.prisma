@@ -664,6 +664,12 @@ enum NotificationTargetType {
   teacher_class_session
   // teacher-first-run 票 05：整期報名、退出整期通知老師時，直達老師的系列管理頁。
   teacher_class_series
+  // wrong-route-fixes 票 01：多重身分帳號不再依身分猜連結，學員、需求、管理員端各自直達。
+  member_class_session
+  organizer_demand_request
+  teacher_demand_request
+  admin_demand_request
+  admin_teacher_application
 }
 
 enum NotificationChannel {

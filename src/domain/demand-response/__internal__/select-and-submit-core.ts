@@ -129,9 +129,10 @@ export async function submitDemandResponseForTeacher(
         const adminIds = await listAdminUserIds();
         await notifyUsers(
           "demand_response_submitted",
+          // wrong-route-fixes 票 02：團主直達自己的需求，管理員直達後台那筆需求。
           [
-            { userId: detail.demandRequest.organizerProfile.userId, role: "counterpart" },
-            ...adminIds.map((id) => ({ userId: id, role: "admin" as const })),
+            { userId: detail.demandRequest.organizerProfile.userId, role: "counterpart", target: { type: "organizer_demand_request", id: demandRequestId } },
+            ...adminIds.map((id) => ({ userId: id, role: "admin" as const, target: { type: "admin_demand_request" as const, id: demandRequestId } })),
           ],
           {
             actorLabel: detail.teacherProfile.displayName ?? undefined,
@@ -292,9 +293,10 @@ export async function selectDemandResponseForOrganizer(
       if (detail) {
         await notifyUsers(
           "demand_response_selected",
+          // wrong-route-fixes 票 02：團主直達自己的需求；老師連「團體需求」（需求已媒合，老師端詳情看不到）。
           [
-            { userId: detail.demandRequest.organizerProfile.userId, role: "self" },
-            { userId: detail.teacherProfile.userId, role: "counterpart" },
+            { userId: detail.demandRequest.organizerProfile.userId, role: "self", target: { type: "organizer_demand_request", id: result.demandRequestId } },
+            { userId: detail.teacherProfile.userId, role: "counterpart", target: { type: "teacher_demand_request", id: result.demandRequestId } },
           ],
           { demandTitle: detail.demandRequest.title ?? undefined },
         );

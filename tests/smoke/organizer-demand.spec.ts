@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 
 import {
   addAuthSessionCookie,
@@ -17,6 +17,15 @@ const createdEmails: string[] = [];
 test.afterAll(async () => {
   await cleanupOrganizerDemandFixtures(createdEmails);
 });
+
+// 文件順序：first 是否在 second 之前。
+async function isBefore(first: Locator, second: Locator) {
+  const secondHandle = await second.elementHandle();
+  return first.evaluate(
+    (node, other) => Boolean(node.compareDocumentPosition(other as Node) & Node.DOCUMENT_POSITION_FOLLOWING),
+    secondHandle,
+  );
+}
 
 test.describe("organizer demand smoke", () => {
   test("lets a signed-in user sign up as an organizer on one page and land on the new demand form", async ({
@@ -253,9 +262,23 @@ test.describe("organizer demand smoke", () => {
     await page.getByLabel("單堂課程長度（分鐘）").fill("60");
     await page.getByLabel("上課頻率").selectOption("weekly");
 
-    await page.getByRole("button", { name: "送出審核" }).first().click();
-    await expect(page.getByText("確認送出需求").first()).toBeVisible();
-    await page.getByRole("button", { name: "確認送出" }).first().click();
+    // wrong-route-fixes 票 04：確認區只出現在按下的那組「送出審核」旁邊，整頁只有一塊。
+    const submitButtons = page.getByRole("button", { name: "送出審核" });
+    const confirmation = page.getByText("確認送出需求", { exact: true });
+    await submitButtons.first().click();
+    await expect(confirmation).toHaveCount(1);
+    expect(await isBefore(confirmation, page.getByLabel("需求標題"))).toBe(true);
+    // 先回來調整：確認區收起，焦點回到上方那顆「送出審核」。
+    await page.getByRole("button", { name: "先回來調整" }).click();
+    await expect(confirmation).toHaveCount(0);
+    await expect(submitButtons.first()).toBeFocused();
+
+    await submitButtons.last().click();
+    await expect(confirmation).toHaveCount(1);
+    expect(await isBefore(page.getByLabel("預算參考"), confirmation)).toBe(true);
+    // 上方那組照常顯示準備狀態。
+    await expect(page.getByText("必填欄位都填好了，可以送出審核。")).toHaveCount(1);
+    await page.getByRole("button", { name: "確認送出" }).click();
 
     await expect(
       page.getByText("需求已收到，待平台審核後才會公開給合適的老師。").first(),

@@ -18,6 +18,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { notifyUsers } from "@/domain/notification/create";
 import { formatDateRange } from "@/domain/notification/date-range";
+import type { NotificationRecipient } from "@/domain/notification/types";
 import type {
   DemandLockHooks,
   NotifyFn,
@@ -136,11 +137,15 @@ export async function notifyClassSessionCancelledForTeacher(
       select: { userId: true },
     });
 
-    const recipients = [
-      ...(teacherProfile ? [{ userId: teacherProfile.userId, role: "self" as const }] : []),
+    // wrong-route-fixes 票 01：只取消一堂時，老師與學員各帶自己身分的單堂 target（學員那則連「我的報名」）。
+    const recipients: NotificationRecipient[] = [
+      ...(teacherProfile
+        ? [{ userId: teacherProfile.userId, role: "self" as const, target: { type: "teacher_class_session" as const, id: cancelled.classSessionId } }]
+        : []),
       ...cancelled.affectedMemberUserIds.map((userId) => ({
         userId,
         role: "affected_member" as const,
+        target: { type: "member_class_session" as const, id: cancelled.classSessionId },
       })),
     ];
 

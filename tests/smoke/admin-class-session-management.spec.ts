@@ -251,10 +251,12 @@ test.describe("admin class session management smoke", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0].type).toBe("class_session_cancelled");
 
+    // wrong-route-fixes 票 01：每位收件人帶自己身分的單堂 target。
     const recipients = calls[0].recipients as { userId: string; role: string }[];
-    expect(recipients).toContainEqual({ userId: seeded.organizerUserId, role: "self" });
-    expect(recipients).toContainEqual({ userId: seeded.teacherUserId, role: "counterpart" });
-    expect(recipients).toContainEqual({ userId: enrollment.memberUserId, role: "affected_member" });
+    const target = (type: string) => ({ type, id: seeded.classSessionId });
+    expect(recipients).toContainEqual({ userId: seeded.organizerUserId, role: "self", target: target("organizer_class_session") });
+    expect(recipients).toContainEqual({ userId: seeded.teacherUserId, role: "counterpart", target: target("teacher_class_session") });
+    expect(recipients).toContainEqual({ userId: enrollment.memberUserId, role: "affected_member", target: target("member_class_session") });
   });
 
   test("cancelEnrollmentForAdminCore can cancel any user's confirmed enrollment, is blocked once the class has started, and returns explicit not-found", async ({}, testInfo) => {

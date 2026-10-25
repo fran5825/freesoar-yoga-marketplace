@@ -5,8 +5,10 @@ import { prisma } from "@/lib/prisma";
 
 // organizer-usability 票 11（方案 B）：通知沒有記錄「是哪一筆需求／課程」，也沒有記錄收件人是
 // 哪個角色，所以這裡只依「通知類型＋收件人目前擁有的身分」決定要連到哪一個列表頁，
-// 不連到單筆詳情。同一種通知可能給不同角色（例如 enrollment_pending_review 給學員與老師），
+// 不連到單筆詳情（有 target 的通知見下方 targetLinks）。同一種通知可能給不同角色（例如 enrollment_pending_review 給學員與老師），
 // 優先順序在各 case 內註明；找不到合適身分就不顯示連結。
+// wrong-route-fixes：多重身分帳號會被這套猜法連錯頁，所以會送給多種身分的通知，發送時都帶 target；
+// 下面的 switch 只剩舊通知（沒有 target）與只給單一身分的通知會用到。
 export type NotificationRecipientIdentity = {
   isOrganizer: boolean;
   isTeacher: boolean;
@@ -17,13 +19,23 @@ export type NotificationLink = { href: string; label: string };
 
 // organizer-usability-redesign 票 12（spec 13.7）：有 target 的通知直達單筆。網址只從白名單
 // targetType 推導（不存任意網址）；點進去的頁面照原本規則檢查權限，越權或已失效就 not-found。
-const targetLinks: Record<NotificationTargetType, (id: string) => NotificationLink> = {
+const targetLinks: Record<NotificationTargetType, (id: string, type: NotificationType) => NotificationLink> = {
   organizer_class_proposal: (id) => ({ href: `/organizer/class-proposals/${encodeURIComponent(id)}`, label: "查看這份合作邀請" }),
   teacher_class_proposal: (id) => ({ href: `/teacher/class-proposals/${encodeURIComponent(id)}`, label: "查看這份合作邀請" }),
   organizer_class_session: (id) => ({ href: `/organizer/classes/${encodeURIComponent(id)}`, label: "查看這堂課" }),
   teacher_class_session: (id) => ({ href: `/teacher/classes/${encodeURIComponent(id)}`, label: "查看這堂課" }),
   // teacher-first-run 票 05：整期報名、退出整期給老師的通知，直達老師系列管理頁（該頁照既有本人檢查）。
   teacher_class_series: (id) => ({ href: `/teacher/classes/series/${encodeURIComponent(id)}`, label: "前往系列頁" }),
+  // wrong-route-fixes 票 01（spec「通知 target」）：學員端課程。取消後的課程頁學員打不開，取消改連「我的報名」。
+  member_class_session: (id, type) =>
+    type === "class_session_cancelled"
+      ? { href: "/member/enrollments", label: "前往我的報名" }
+      : { href: `/classes/${encodeURIComponent(id)}`, label: "查看這堂課" },
+  organizer_demand_request: (id) => ({ href: `/organizer/demands/${encodeURIComponent(id)}`, label: "查看這筆需求" }),
+  // 老師端的需求詳情只看得到開放中的需求，被選定或取消後打不開，所以連「團體需求」列表。
+  teacher_demand_request: () => ({ href: "/teacher/demands", label: "前往團體需求" }),
+  admin_demand_request: (id) => ({ href: `/admin/demands/${encodeURIComponent(id)}`, label: "前往需求審核" }),
+  admin_teacher_application: (id) => ({ href: `/admin/teachers/${encodeURIComponent(id)}`, label: "前往老師審核" }),
 };
 
 export function getNotificationLink(
@@ -32,7 +44,7 @@ export function getNotificationLink(
   target?: { targetType: NotificationTargetType | null; targetId: string | null },
 ): NotificationLink | null {
   if (target?.targetType && target.targetId) {
-    return targetLinks[target.targetType](target.targetId);
+    return targetLinks[target.targetType](target.targetId, type);
   }
 
   const { isOrganizer, isTeacher, isAdmin } = identity;

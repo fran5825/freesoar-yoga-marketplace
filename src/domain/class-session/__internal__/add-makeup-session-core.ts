@@ -220,7 +220,8 @@ export async function addMakeupSessionForTeacher(
     try {
       await notifyOverride(
         member.status === "confirmed" ? "enrollment_confirmed" : "enrollment_pending_review",
-        [{ userId: member.userId, role: "self" }],
+        // wrong-route-fixes 票 01：直達那堂補課的學員課程頁（待審核時，也是老師的學員不會被連到老師頁）。
+        [{ userId: member.userId, role: "self", target: { type: "member_class_session", id: outcome.created.classSessionId } }],
         { classSessionTitle: outcome.noticeTitle },
       );
     } catch (notifyError) {

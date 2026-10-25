@@ -26,7 +26,7 @@
 - **寄送規則**：`src/domain/notification/email-policy.ts` 是唯一依據，列出 25 種 `NotificationType` 各自要寄給哪些收件角色；目前已接線的「類型 × 角色」都寄，`review_submitted` 寄給授課老師，`class_reminder_basic` 未接線不寄。新增通知類型而沒補這張表時編譯會失敗。
 - **寄送模式** `EMAIL_DELIVERY_MODE`：`disabled`（預設，不寄）／`allowlist`（只寄 `EMAIL_ALLOWED_RECIPIENTS`）／`live`（全部寄，網址須為 https 且不可是 localhost）。設定缺漏一律不寄，只記一次不含值的錯誤 log。
 - **寄信出口**：Resend 官方 HTTPS API＋Node `fetch`（未安裝 SDK），逾時預設 5 秒並中斷請求；`Idempotency-Key` 為 `notification-<Notification.id>`。
-- **信件內容**：沿用站內通知文案，繁中，HTML＋純文字，品牌色票；所有插值 escape。按鈕連到 `/sign-in?callbackUrl=<目標頁>`：已登入直接進目標頁，未登入登入後回到目標頁；目標頁沿用站內通知的連結規則（`link.ts`），進頁面時照原本規則檢查權限。這點取代 plan E5「一律連 `/notifications`」：產品主人選了「按鈕直連目標頁」，而連結規則本來就只用白名單路徑。
+- **信件內容**：沿用站內通知文案，繁中，HTML＋純文字，品牌色票；所有插值 escape。按鈕連到 `/sign-in?callbackUrl=<目標頁>`：已登入直接進目標頁，未登入登入後回到目標頁；目標頁沿用站內通知的連結規則（`link.ts`），進頁面時照原本規則檢查權限。屬於課程系列、又沒帶 target 的通知，email 跟通知頁一樣連系列頁（wrong-route-fixes，2026-10-25；例如整期報名待審核、改整個系列、系列場次的課程完成）。這點取代 plan E5「一律連 `/notifications`」：產品主人選了「按鈕直連目標頁」，而連結規則本來就只用白名單路徑。
 - **失敗處理**：每位收件人獨立；寄信失敗只把該筆 email 標 `failed`，站內通知與原本的操作照常成功，不自動重寄。沒有信箱的使用者略過。
 - **尚未完成**：產品主人還沒有 Resend 帳號與驗證網域，所以目前只以假的寄信出口完成自動化測試（`tests/smoke/transactional-email.spec.ts`），沒有真實寄送。啟用步驟見 plan 的「啟用步驟」。
 
@@ -117,5 +117,6 @@ Organizer 會收到 class created / changed / cancelled 類通知；V1 課前提
 
 - 事件與收件人：邀請送出／重送 → 受邀老師（`class_proposal_invited`）；等待確認中修改內容 → 受邀老師（`class_proposal_revised`）；老師確認／婉拒 → 團主（`class_proposal_confirmed`／`class_proposal_declined`，婉拒附原因）；撤回或換老師 → 曾看到邀請的原老師（`class_proposal_withdrawn`，撤回附說明）；團主開放報名 → 老師（`class_session_created`）。本人授課不寄給自己。
 - 直達單筆：通知帶 `targetType`＋`targetId`，連到團主或老師端的邀請頁／課程頁；舊通知照舊連到列表頁。
+- 多重身分帳號（wrong-route-fixes，2026-10-25）：會送給多種身分的通知，發送時給每位收件人帶自己身分的 target，不再依「收件人有哪些身分」猜連結（團主優先）。新增的 target：學員端課程（課程取消連「我的報名」，其餘連學員課程頁）、團主端需求詳情、老師「團體需求」列表、管理後台需求詳情、管理後台老師詳情。涵蓋課程已建立（團主媒合）、課程異動、課程取消、報名待審核、補課自動報名、需求送審、老師回應、選定老師、需求取消、老師申請送出。對照表見 `docs/specs/wrong-route-fixes-spec.md`。
 - 防重複：`eventKey` 唯一，同一次轉換重試只會有一則；不同步驟（例如送出 → 婉拒 → 不修改重送 → 再婉拒）各自發送。
 - 通知在 domain transaction commit 之後發送，失敗只記 log，不回滾已完成的轉換。仍只寫 in_app，不寄 email、不加未讀數。

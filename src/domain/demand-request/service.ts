@@ -463,9 +463,10 @@ export async function submitOwnDemandRequest(
       const adminIds = await listAdminUserIds();
       await notifyUsers(
         "demand_request_submitted",
+        // wrong-route-fixes 票 02：團主直達自己的需求，管理員直達後台那筆需求（也是團主的管理員不會連錯頁）。
         [
-          { userId: organizerContext.organizerProfile.userId, role: "self" },
-          ...adminIds.map((id) => ({ userId: id, role: "admin" as const })),
+          { userId: organizerContext.organizerProfile.userId, role: "self", target: { type: "organizer_demand_request", id: demandRequest.id } },
+          ...adminIds.map((id) => ({ userId: id, role: "admin" as const, target: { type: "admin_demand_request" as const, id: demandRequest.id } })),
         ],
         { actorLabel: organizerContext.organizerProfile.displayName },
       );

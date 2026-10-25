@@ -15,13 +15,11 @@ import { TeacherJoinExplainer } from "./_components/TeacherJoinExplainer";
 // 2026-09-25：已登入的申請表單頁寬與其他老師頁一致（max-w-4xl）；未登入的行銷導覽維持較寬的 5xl。
 export default async function TeacherJoinPage() {
   const currentUser = await getCurrentUser();
-  let hasTeacherProfile = false;
 
   // 2026-09-25：已通過審核或已暫停的老師不需要再看申請頁（表單只剩唯讀），直接進老師總覽。
   // 草稿、審核中、被退回的人還要在這裡填寫、查看或修正，沒有老師資料的人也留在這頁。
   if (currentUser) {
     const teacherProfile = await getOwnTeacherProfileApplicationSnapshot();
-    hasTeacherProfile = teacherProfile !== null;
 
     if (
       teacherProfile &&
@@ -32,12 +30,13 @@ export default async function TeacherJoinPage() {
     }
   }
 
-  // 2026-09-27 signed-in-navigation 票 05：登入後不再用公開 header。已有老師資料（草稿、審核中、
-  // 被退回）用老師專區導覽列，看得到角色切換；還沒有老師資料的人用學員專區。頁面內容不變。
+  // 2026-09-27 signed-in-navigation 票 05：登入後不再用公開 header。
+  // wrong-route-fixes 票 03：已登入一律用老師專區導覽列，免得還沒送申請的人看到「學員專區」以為登錯身分。
+  // 老師專區對還沒有老師資料的人本來就只顯示總覽、老師資料、通知。頁面內容不變。
   return (
     <SiteShell
       publicMainClassName="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-10 px-5 py-10 sm:px-8 sm:py-14"
-      signedInArea={hasTeacherProfile ? "teacher" : "member"}
+      signedInArea="teacher"
       signedInClassName="flex flex-col gap-10"
     >
       {currentUser ? <TeacherApplicationForm /> : <TeacherJoinExplainer />}

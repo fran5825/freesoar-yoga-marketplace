@@ -86,8 +86,10 @@ export async function deliverEmailChannel(
 
       const copy = buildNotificationCopy(type, recipient.role, payload);
       // teacher-series-rollup 票 07：批次通知（共 N 堂）連到系列頁，與通知頁合併後的一則同一個推導。
+      // wrong-route-fixes 票 01：比照通知頁，屬於系列又沒帶 target 的通知也連系列頁（例如整期報名待審核、
+      // 改整個系列），不再退回依身分猜，多重身分帳號的 email 才不會連錯頁。
       const seriesLink =
-        options.linkToSeries && options.recurringClassSeriesId
+        (options.linkToSeries || !recipient.target) && options.recurringClassSeriesId
           ? await getSeriesNotificationLink(recipient.userId, options.recurringClassSeriesId)
           : null;
       const link = seriesLink ?? getNotificationLink(

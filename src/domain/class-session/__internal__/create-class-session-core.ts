@@ -202,12 +202,13 @@ export async function createClassSessionForOrganizer(
         // ClassSession 現在也可能是老師自建），但這個函式只服務 Organizer 建課路徑，實際上
         // 永遠會有 organizerProfile；仍用條件式排除而非斷言，比照 cancel-class-session-core.ts
         // 的既有修法風格，避免型別放寬之後留下斷言式的隱性假設。
+        // wrong-route-fixes 票 01：各帶自己身分的單堂 target，同時是團主的老師不會被連到團主頁。
         const recipients: Parameters<typeof notifyUsers>[1] = [
-          { userId: detail.teacherProfile.userId, role: "counterpart" },
+          { userId: detail.teacherProfile.userId, role: "counterpart", target: { type: "teacher_class_session", id: classSessionId } },
         ];
 
         if (detail.organizerProfile) {
-          recipients.push({ userId: detail.organizerProfile.userId, role: "self" });
+          recipients.push({ userId: detail.organizerProfile.userId, role: "self", target: { type: "organizer_class_session", id: classSessionId } });
         }
 
         await notifyUsers("class_session_created", recipients, { classSessionTitle: detail.title });

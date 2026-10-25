@@ -547,6 +547,8 @@ Fields:
 
 **已落地（teacher-first-run 票 06，產品主人 2026-10-24 放行）**：`NotificationType` 新增 `demand_request_available`（migration `20261024120100_notification_demand_request_available`，只有 `ALTER TYPE ... ADD VALUE`，不改既有資料）。需求經管理員核准公開（`submitted → published`）的同一個時點，發給所有 `approved` 的老師（角色 `counterpart`，排除發起這筆需求的團主本人），不帶 target，`link.ts` 依類型連到老師的「團體需求」頁 `/teacher/demands`；`EMAIL_POLICY` 為空陣列（只發站內通知）。通知失敗只記 log，不影響需求公開。
 
+**已落地（wrong-route-fixes 票 01、02，產品主人 2026-10-25 放行）**：`NotificationTargetType` 新增 5 個值（migration `20261025120000_notification_role_targets`，只有 `ALTER TYPE ... ADD VALUE`，不改既有資料）：`member_class_session`（學員端課程：課程取消連「我的報名」，其餘連學員課程頁 `/classes/<id>`）、`organizer_demand_request`（`/organizer/demands/<id>`）、`teacher_demand_request`（老師「團體需求」列表 `/teacher/demands`，因為老師端需求詳情只看得到開放中的需求）、`admin_demand_request`（`/admin/demands/<id>`）、`admin_teacher_application`（`/admin/teachers/<老師資料 id>`）。目的是讓同時有多種身分的帳號不再被「依身分猜連結（團主優先）」連錯頁：課程已建立（團主媒合）、課程異動、課程取消、報名待審核、補課自動報名、需求送審、老師回應、選定老師、需求取消、老師申請送出，發送時給每位收件人帶自己身分的 target。屬於系列又沒帶 target 的通知，email 與通知頁一樣連系列頁。舊通知不回填（無法得知當初是哪一筆），沒有 target 時照舊依身分推導。
+
 ## AdminNote
 
 Internal admin note.

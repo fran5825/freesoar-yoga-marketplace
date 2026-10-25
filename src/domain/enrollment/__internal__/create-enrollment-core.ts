@@ -282,10 +282,11 @@ export async function createEnrollmentForUser(
         // 老師也要收到通知才知道有新的 pending 報名需要審核，否則審核機制永遠不會被觸發。
         await notifyOverride(
           "enrollment_pending_review",
+          // wrong-route-fixes 票 01：學員連學員課程頁看報名狀態，老師直達老師端那堂課審核。
           [
-            { userId, role: "self" },
+            { userId, role: "self", target: { type: "member_class_session", id: classSessionId } },
             ...(classSession
-              ? [{ userId: classSession.teacherProfile.userId, role: "counterpart" as const }]
+              ? [{ userId: classSession.teacherProfile.userId, role: "counterpart" as const, target: { type: "teacher_class_session" as const, id: classSessionId } }]
               : []),
           ],
           { classSessionTitle: classSession?.title },
