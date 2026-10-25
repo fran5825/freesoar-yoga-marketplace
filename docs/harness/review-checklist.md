@@ -25,6 +25,7 @@
 - Are duplicate enrollments prevented?
 - Is class capacity respected?
 - Is teacher schedule conflict handled?
+- 新增或修改通知時，收件人是否帶 target（指向那一堂課、那個系列或那份邀請）？沒帶 target 時連結會依「收件人有哪些身分」猜（`src/domain/notification/link.ts`，團主優先），同一帳號同時是老師／團主／學員就會走錯頁（2026-10-25 驗收踩過）。測試至少要有一個多重身分的帳號。
 
 ## Engineering Review
 

@@ -1,6 +1,6 @@
 ---
 name: feature-loop
-description: "一次跑完 Free Soar 功能閉環：grill → spec → tickets → implement → code-review／spec-review → retro。只在需要產品主人的關卡停下來，其餘自動接下一步。用法：/feature-loop <功能的一句話描述或 feature-slug>"
+description: "一次跑完 Free Soar 功能閉環：grill → spec → tickets → implement → code-review／spec-review → 畫面驗收 → retro。只在需要產品主人的關卡停下來，其餘自動接下一步。用法：/feature-loop <功能的一句話描述或 feature-slug>"
 disable-model-invocation: true
 ---
 
@@ -47,7 +47,11 @@ disable-model-invocation: true
    - 🛑 只有這些情況要中途停下來：驗證失敗而且試兩次修不好、需要改 spec 範圍、遇到沒放行的 HEAVY 票、要碰正式環境或刪除資料。
 5. **收尾**：
    - 🛑 全部票做完後，一次回報：改了哪些檔案、驗證結果（typecheck／lint／smoke test 哪些過、哪些沒跑）、兩種審查的重點、累積的產品決定。接著問要不要 commit。產品主人說要才 commit，不要 push。
-6. **回顧**：照 `retro` 做。
+6. **畫面驗收**（有畫面改動才做；純後端或文件可跳過，在進度檔寫明原因）：
+   - 收尾時整理驗收清單：每一項寫出要看的畫面、預期結果，以及**需要的帳號身分與測試資料**（例如「學員帳號」「待審的團體需求」「剛通過審核、沒有課的老師」）。
+   - 照 `docs/harness/visual-acceptance-runbook.md` 準備環境，缺的帳號或資料開始前一次跟產品主人講。
+   - 🛑 產品主人親自看，一個畫面回報一次；結果寫進驗收票（通過、發現、未驗）。全部看完後，列出發現請產品主人決定：這輪修，或記進 `docs/backlog.md`。這輪要修的照 `implement` 的驗證與審查做，修完問要不要 commit。
+7. **回顧**：照 `retro` 做。
    - 🛑 依嚴重度列出建議，請產品主人挑要採用哪幾條。挑完照著改（改 checklist、AGENTS.md 等），改完再問一次要不要 commit。
    - 在進度檔標記「閉環完成」。
 

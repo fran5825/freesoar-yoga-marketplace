@@ -71,6 +71,7 @@ Source of truth map：
 - `docs/harness/codex-self-review-checklist.md`：Codex 修改後的自我檢查。
 - `docs/harness/review-checklist.md`：產品、品牌、工程、RWD、app-readiness review。
 - `docs/harness/security-checklist.md`：Auth、data access、forms、admin、secrets 安全檢查。
+- `docs/harness/visual-acceptance-runbook.md`：產品主人畫面驗收前的準備：測試帳號身分、每個身分一個 Chrome 設定檔、測試資料怎麼建與記錄。
 
 ## 3. 常見任務文件路線
 

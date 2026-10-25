@@ -243,6 +243,27 @@
 - [ ] 團主按「送出審核」後出現兩塊一樣的「確認送出需求」確認區（不屬老師流程）。
 - [ ] 未驗：期班「追加補課」直接開放前的收款提醒；完全沒開過課的老師第一次開系列預設公開；團體需求頁空畫面（只核對過程式文字）。
 
+### 26. 通知連結「依身分猜」會走錯頁：盤點並補 target（2026-10-25，teacher-first-run retro）
+
+- 問題：通知沒有記下是哪一筆資料（沒有 target）時，`src/domain/notification/link.ts` 依收件人身分決定連結，團主排第一。同一帳號有多重身分就會走錯頁。
+- 已知受影響：`class_session_changed`、`class_session_cancelled` 給學員（`affected_member`）與老師本人的通知——學員若也是團主，「課程取消／異動」會連到團主的課程頁。2026-10-25 已修的是老師自己開單堂的 `class_session_created`。
+- 做法：搜尋所有 `notifyUsers(` 呼叫，沒帶 target 又可能給多重身分帳號的，改成帶 target（`teacher_class_session`、`teacher_class_series` 等；學員端可能要新增 target 種類，會動 enum，要產品主人確認）。測試用同時是老師＋團主＋學員的帳號。
+- 舊通知不會自動改連結；要不要回填由產品主人決定。
+
+### 27. 19 個既有 smoke 失敗（已標 `test.fixme`，2026-10-25，teacher-first-run retro）
+
+- 背景：2026-10-24 用未修改的 main 對照，這些測試在 main 上本來就失敗（分類表在 `docs/superpowers/plans/teacher-first-run/tickets/10-acceptance-and-docs.md`「smoke 失敗分類」）。為了讓完整 smoke 出現紅色時一定是新問題，先在測試開頭加 `test.fixme(...)`（Playwright 會略過並標成「已知待修」），只略過會失敗的那種螢幕尺寸。
+- 修好一支就刪掉那行 `test.fixme`，並在這裡打勾。搜尋 `docs/backlog.md 第 27 項` 可找到全部。
+- [ ] `member-journey-acceptance.spec.ts`：keyboard journey（電腦版，團主課與老師課兩種）— 200% 字級時頁面橫向溢出
+- [ ] `member-journey-acceptance.spec.ts`：pending UI enrollment（兩種尺寸，不穩定）— 找不到 pending 報名
+- [ ] `organizer-class-sharing.spec.ts`：unlisted class through the link — 等不到「我要報名」
+- [ ] `organizer-journeys.spec.ts`：direct class、find a teacher 兩支 — 等不到同意勾選框
+- [ ] `teacher-calendar.spec.ts`：month navigation — 月份標題找不到
+- [ ] `teacher-series-class-edit.spec.ts`：併發鎖測試（transaction 逾時）；改這一場和之後（手機版）— 等不到「修改課程」
+- [ ] `term-enrollment.spec.ts`：最後一個名額併發 — `create_failed`
+- [ ] `teacher-class-usability.spec.ts`：未儲存離開提醒（手機版）— 找不到可見的總覽連結
+- [ ] `teacher-initiated-open-classes.spec.ts`：老師開課按鈕（手機版）— 「取消課程」按鈕不可見
+
 ### 4. 新增 LINE 與 Facebook 登入
 
 - 目前只有 Google（`src/auth.ts` 的 `providers`）。

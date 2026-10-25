@@ -10,8 +10,11 @@
 | 2 寫 spec | 完成，範圍已確認 | 2026-10-24 | 「範圍對，接著切票」 |
 | 3 切票 | 完成；Codex 審 2 輪通過 | 2026-10-24 | 「票切得對，02、05、06 全部放行，開始實作」 |
 | 4 實作 | 完成：01–10 done；code-review＋spec-review 修正已套用；smoke 644/676 過，19 個失敗經 main 對照皆為既有問題 | 2026-10-24 | |
-| 5 收尾（commit 關卡） | 等待產品主人：是否合併回 main、是否對開發資料庫跑 migration、開始使用第 3 步入口 | 2026-10-24 | |
-| 6 回顧（retro） | 未開始 | | |
+| 5 收尾（commit 關卡） | 完成：合併進 main（`f76e233`），產品主人說「可以先push」後已 push；開發資料庫已套用兩個 migration | 2026-10-24 | 「合併回 main，照你寫的做法處理 state-machines.md，也對開發資料庫跑那兩個 migration；不要 push。開始使用第 3 步維持現在的做法」 |
+| 6 畫面驗收 | 完成：5 個畫面主要項目通過；發現 7 項，第 1、2 項當場修（commit `80ec9e8`），其餘記進 `docs/backlog.md` 第 25 項 | 2026-10-25 | 「先修第 1、2 項（收款儲存後回總覽、課程已建立通知連結），其他記進 backlog」 |
+| 7 回顧（retro） | 完成：6 項建議全部採用（backlog 第 26、27 項、review-checklist 通知 target 規則、GitHub Actions CI、畫面驗收操作手冊、feature-loop 加畫面驗收階段、Claude memory 兩則） | 2026-10-25 | 「6 項全部照建議做」 |
+
+**閉環完成（2026-10-25）。**
 
 ## 已放行的票
 
@@ -19,7 +22,7 @@
 
 ## 下一步
 
-依 `implement-spec` 執行：integration branch `teacher-first-run`；三條線各自的 worktree、branch、測試 DB、埠見下方「施工環境」。三條線完成後合併、做票 10、跑 code-review 與 spec-review，再到收尾關卡。
+畫面驗收與 retro 已完成。剩 `handoff.md`「接下來要做的事」第 3 項起：問要不要 commit／push → 清理 worktree／branch／測試資料庫（要先問）→ 下一輪範圍。
 
 ## 實作中追加的決定
 
@@ -38,10 +41,9 @@
 - spec、票券與 glossary 已 commit 在 `teacher-first-run`（66363eb）；main 工作區裡的同名檔案是未提交的原稿，合併回 main 前要先處理掉，避免衝突。
 - 本機開發資料庫 `freesoar_yoga_marketplace_dev` 不動；B 線的 migration 只跑在 `freesoar_tfr_b`。合併回 main 時，才對開發資料庫跑新增的 migration（只新增 enum 值），那一步要先問產品主人。
 
-## 產出檔案（尚未 commit）
+## 產出檔案
 
-- `docs/specs/teacher-first-run-spec.md`
-- `docs/context/glossary.md`（新增「團體需求」「開始使用」）
-- `docs/superpowers/plans/teacher-first-run/`（本檔、票券總覽、10 張票）
+- spec、票券、glossary、程式與 migration 都已在 main（`f76e233`）並已 push。
+- `handoff.md` 與本檔的最新更新：尚未 commit。
 
 <!-- codex-peer-reviewed: 2026-10-24T08:10:27Z rounds=2 verdict=approved -->

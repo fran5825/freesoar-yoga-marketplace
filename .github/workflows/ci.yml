@@ -1,0 +1,28 @@
+# teacher-first-run retro（2026-10-25）：每次 push／PR 自動跑型別檢查與 lint。
+# smoke（Playwright）需要資料庫且要跑半小時以上，先不放進來。
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  typecheck-and-lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # prisma generate 只讀 schema，不會連線；給一個假的連線字串避免缺環境變數。
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?schema=public
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      # next-env.d.ts 會 import .next/types/routes.d.ts；乾淨的 checkout 沒有，先產生。
+      - run: npx next typegen
+      - run: npx tsc --noEmit
+      - run: npm run lint
