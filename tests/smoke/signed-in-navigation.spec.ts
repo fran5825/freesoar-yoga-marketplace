@@ -234,7 +234,7 @@ test.describe("signed-in navigation", () => {
     await expect(page).toHaveURL(/\/member\/dashboard$/);
   });
 
-  test("public entry points use the right signed-in area: a teacher under review sees the teacher area on 老師合作, a member sees the member area elsewhere", async ({
+  test("public entry points use the right signed-in area: a teacher under review and a member without a teacher profile see the teacher area on 老師合作, a member sees the member area elsewhere", async ({
     context,
     page,
   }, testInfo) => {
@@ -257,8 +257,14 @@ test.describe("signed-in navigation", () => {
     await context.clearCookies();
     const member = await seedMember(id);
     await addAuthSessionCookie(context, member.sessionToken);
+    // wrong-route-fixes 票 03：還沒有老師資料的人打開老師申請頁也是老師專區，導覽列只有總覽、老師資料、通知。
     await page.goto("/teachers/join");
-    await expectArea(page, "學員專區");
+    await expectArea(page, "老師專區");
+    await expect(
+      page
+        .getByRole("navigation", { name: "老師專區導覽", includeHidden: true })
+        .getByRole("link", { includeHidden: true }),
+    ).toHaveText(["總覽", "老師資料", "通知"]);
     await page.goto("/organizers/request");
     await expectArea(page, "學員專區");
   });

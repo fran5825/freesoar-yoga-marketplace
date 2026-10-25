@@ -69,7 +69,8 @@ export const openClassSessionForTeacherErrorMessages: Record<OpenClassSessionFor
 };
 
 // teacher-first-run 票 02：開放成功後的回饋，單堂課頁的「開放報名」與建立時直接開放共用。
-export const OPENED_FOR_ENROLLMENT_MESSAGE = "已開放報名。下一步：把報名連結傳給學員。";
+// wrong-route-fixes 票 04：只寫「已開放報名。」，下一步交給頁面上的下一步提示，避免「把報名連結傳給學員」出現兩次。
+export const OPENED_FOR_ENROLLMENT_MESSAGE = "已開放報名。";
 
 export type OpenNewlyCreatedClassSessionResult =
   | { opened: true }

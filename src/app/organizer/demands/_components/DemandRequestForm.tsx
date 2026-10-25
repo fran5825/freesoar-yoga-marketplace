@@ -105,6 +105,8 @@ type DemandRequestFormProps = {
   ) => Promise<SubmitDemandRequestActionResult>;
 };
 
+type StatusBarPosition = "top" | "bottom";
+
 const UNSAVED_CHANGES_MESSAGE = "還有尚未儲存的修改，確定要離開這一頁嗎？";
 
 const targetLevelLabels: Record<string, string> = {
@@ -299,6 +301,13 @@ export function DemandRequestForm({
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConfirmingSubmit, setIsConfirmingSubmit] = useState(false);
+  // wrong-route-fixes 票 04：上方、下方各有一組「送出審核」，記住按的是哪一組，確認區只顯示在那一組旁邊。
+  const [submitConfirmationPosition, setSubmitConfirmationPosition] =
+    useState<StatusBarPosition>("top");
+  const submitButtonRefs = useRef<Record<StatusBarPosition, HTMLButtonElement | null>>({
+    top: null,
+    bottom: null,
+  });
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [draftFeedback, setDraftFeedback] = useState<{
     kind: "success" | "error";
@@ -541,13 +550,14 @@ export function DemandRequestForm({
     }
   }
 
-  function handleOpenSubmitConfirmation() {
+  function handleOpenSubmitConfirmation(position: StatusBarPosition) {
     if (isBusy || isLocked || !isReadyForSubmit) {
       return;
     }
 
     setDraftFeedback(null);
     setSubmitFeedback(null);
+    setSubmitConfirmationPosition(position);
     setIsConfirmingSubmit(true);
   }
 
@@ -557,6 +567,8 @@ export function DemandRequestForm({
     }
 
     setIsConfirmingSubmit(false);
+    // wrong-route-fixes 票 04：收起確認區後，鍵盤焦點回到當初按的那顆「送出審核」。
+    submitButtonRefs.current[submitConfirmationPosition]?.focus();
   }
 
   async function handleSubmit() {
@@ -608,7 +620,7 @@ export function DemandRequestForm({
         message: "需求暫時無法送出，請稍後再試。",
       });
     } finally {
-      // 失敗時也要收起確認框：確認框開著時 statusExtras 會把錯誤訊息藏起來。
+      // 失敗時也要收起確認框：確認框開著時 renderStatusExtras 會把錯誤訊息藏起來。
       setIsConfirmingSubmit(false);
       setIsSubmitting(false);
     }
@@ -624,7 +636,7 @@ export function DemandRequestForm({
     </span>
   );
 
-  const statusActionBar = (
+  const renderStatusActionBar = (position: StatusBarPosition) => (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-full border border-ink/12 bg-white px-4 py-2.5">
       {statusPill}
       {isLocked ? (
@@ -644,7 +656,10 @@ export function DemandRequestForm({
           <button
             className="rounded-full bg-pine px-5 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-ink/15 disabled:text-ink-soft"
             disabled={isBusy || !isReadyForSubmit}
-            onClick={handleOpenSubmitConfirmation}
+            onClick={() => handleOpenSubmitConfirmation(position)}
+            ref={(element) => {
+              submitButtonRefs.current[position] = element;
+            }}
             type="button"
           >
             {isSubmitting ? "正在送出..." : "送出審核"}
@@ -755,19 +770,21 @@ export function DemandRequestForm({
 
   // 確認送出時先把準備狀態跟儲存/送出結果收起來，只留確認框，比照老師申請表單的做法，
   // 避免畫面同時疊出好幾個提示框。
-  const statusExtras = isConfirmingSubmit ? (
-    submitConfirmation
-  ) : (
-    <>
-      {readinessSummary}
-      {actionFeedback}
-    </>
-  );
+  // wrong-route-fixes 票 04：確認框只出現在按下的那組按鈕旁；另一組位置照常顯示準備狀態與儲存結果。
+  const renderStatusExtras = (position: StatusBarPosition) =>
+    isConfirmingSubmit && submitConfirmationPosition === position ? (
+      submitConfirmation
+    ) : (
+      <>
+        {readinessSummary}
+        {actionFeedback}
+      </>
+    );
 
   return (
     <div className="grid gap-6">
-      {statusActionBar}
-      {statusExtras}
+      {renderStatusActionBar("top")}
+      {renderStatusExtras("top")}
 
       <FieldSet legend="團體與課程需求">
         <div className="grid gap-3" id="demand-field-organization">
@@ -1013,8 +1030,8 @@ export function DemandRequestForm({
         />
       </FieldSet>
 
-      {statusActionBar}
-      {statusExtras}
+      {renderStatusActionBar("bottom")}
+      {renderStatusExtras("bottom")}
     </div>
   );
 }
