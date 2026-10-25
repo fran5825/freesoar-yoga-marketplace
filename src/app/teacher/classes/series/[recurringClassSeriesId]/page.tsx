@@ -114,6 +114,8 @@ export default async function RecurringClassSeriesPage({
   // teacher-first-run 票 03：開放報名前的收款資訊提醒（全部開放、單場快速開放、生成更多時直接開放、
   // 期班補課直接開放都在按下之前顯示）。
   const paymentReminder = await getOwnPaymentInfoReminder();
+  // wrong-route-fixes F9-1：從這裡的收款提醒去填資料，儲存後回到這個系列頁。
+  const seriesPath = `/teacher/classes/series/${series.id}`;
   const makeupOpensRightAway = isTerm && makeupOpensForEnrollmentFromOccurrences(series.occurrences, now);
 
   return (
@@ -202,7 +204,7 @@ export default async function RecurringClassSeriesPage({
           <p className="text-sm leading-6 text-ink-soft">
             確認內容沒問題後，可以一次把這些草稿全部開放報名，也可以在下方場次清單一場一場開放；已開始或已取消的場次不受影響。
           </p>
-          <PaymentInfoReminderNotice reminder={paymentReminder} />
+          <PaymentInfoReminderNotice reminder={paymentReminder} returnTo={seriesPath} />
           <div>
             <ConfirmActionDialog
               action={openAllDraftOccurrencesAction}
@@ -250,7 +252,7 @@ export default async function RecurringClassSeriesPage({
             補課沿用這一期目前的時間（{series.startTime}–{series.endTime}）、地點與名額。整期學員會自動報上並收到通知；不能來的人可以自行請假。
             這一期已全部開放報名時，補課也直接開放。尚未開始的場次合計最多 26 堂。
           </p>
-          {makeupOpensRightAway ? <PaymentInfoReminderNotice reminder={paymentReminder} /> : null}
+          {makeupOpensRightAway ? <PaymentInfoReminderNotice reminder={paymentReminder} returnTo={seriesPath} /> : null}
           <form action={addMakeupSessionAction} className="flex flex-wrap items-end gap-3">
             <input name="recurringClassSeriesId" type="hidden" value={series.id} />
             <div>
@@ -398,6 +400,7 @@ export default async function RecurringClassSeriesPage({
             dayLabel={dayOfWeekLabels[series.dayOfWeek]}
             paymentReminder={paymentReminder}
             recurringClassSeriesId={series.id}
+            returnTo={seriesPath}
           />
         </section>
       ) : null}

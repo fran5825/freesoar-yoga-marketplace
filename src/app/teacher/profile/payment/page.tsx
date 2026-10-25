@@ -7,13 +7,14 @@ import {
   PAYMENT_ACCOUNT_INFO_MAX_LENGTH,
 } from "@/domain/teacher-profile/payment-settings-limits";
 import { requireUser } from "@/lib/auth/session";
+import { safeTeacherClassReturnPath } from "@/lib/navigation/teacher-return-path";
 
 import { ProfileTabs } from "../_components/ProfileTabs";
 import { updatePaymentSettingsAction } from "./actions";
 import { PaymentRulesField } from "./_components/PaymentRulesField";
 
 type PaymentSettingsPageProps = {
-  searchParams?: Promise<{ result?: string; message?: string; from?: string }>;
+  searchParams?: Promise<{ result?: string; message?: string; from?: string; returnTo?: string }>;
 };
 
 const controlClassName =
@@ -29,6 +30,8 @@ export default async function TeacherPaymentSettingsPage({ searchParams }: Payme
   }
 
   const [view, resolvedSearchParams] = await Promise.all([getOwnPaymentSettings(), searchParams]);
+  // wrong-route-fixes F9-1：從課程頁、系列頁的收款提醒過來的，儲存後回那一頁（只接受白名單路徑）。
+  const returnTo = safeTeacherClassReturnPath(resolvedSearchParams?.returnTo);
 
   const feedback =
     resolvedSearchParams?.result && resolvedSearchParams.message
@@ -82,6 +85,7 @@ export default async function TeacherPaymentSettingsPage({ searchParams }: Payme
           className="grid gap-6 rounded-2xl border border-ink/15 bg-white p-6"
         >
           {resolvedSearchParams?.from === "get-started" ? <input name="from" type="hidden" value="get-started" /> : null}
+          {returnTo ? <input name="returnTo" type="hidden" value={returnTo} /> : null}
           <PaymentRulesField defaultValue={view.settings.paymentRulesText} />
 
           <div>

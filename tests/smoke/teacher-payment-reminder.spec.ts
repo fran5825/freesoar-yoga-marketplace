@@ -80,7 +80,11 @@ test.describe("single class", () => {
     await expect(reminder(page)).toContainText("還沒填收款帳號");
     await expect(reminder(page)).not.toContainText("還沒填繳費與取消規則");
     await expect(reminder(page)).toContainText(SNAPSHOT_NOTE);
-    await expect(reminder(page).getByRole("link", { name: /到「收款與聯絡」填寫/ })).toHaveAttribute("href", "/teacher/profile/payment");
+    // wrong-route-fixes F9-1：連結帶上這一頁，儲存後回來。
+    await expect(reminder(page).getByRole("link", { name: /到「收款與聯絡」填寫/ })).toHaveAttribute(
+      "href",
+      `/teacher/profile/payment?returnTo=${encodeURIComponent(`/teacher/classes/${draft.id}`)}`,
+    );
     await expectBefore(reminder(page), page.getByRole("button", { name: "開放報名", exact: true }));
 
     // 不擋操作：不填也能開放。
@@ -88,6 +92,30 @@ test.describe("single class", () => {
     await expect(page.getByText("已開放報名。")).toBeVisible();
     expect((await prisma.classSession.findUniqueOrThrow({ where: { id: draft.id } })).status).toBe("open_for_enrollment");
     await expect(reminder(page)).toHaveCount(0);
+  });
+
+  // wrong-route-fixes F9-1：從提醒去填收款資訊，儲存後回到原本的課程頁；不在白名單的 returnTo 照舊留在設定頁。
+  test("filling payment info from the class page reminder returns to that class page", async ({ context, page }, testInfo) => {
+    const id = runId(testInfo, "single-return");
+    const teacher = await seedTeacher(id);
+    await setPaymentInfo(teacher.teacherProfileId, { paymentAccountInfo: null, paymentRulesText: "課前三天可退費" });
+    const draft = await seedDraftClass(teacher.teacherProfileId, `回原頁 ${id}`);
+
+    await addAuthSessionCookie(context, teacher.sessionToken);
+    await page.goto(`/teacher/classes/${draft.id}`);
+    await reminder(page).getByRole("link", { name: /到「收款與聯絡」填寫/ }).click();
+    await expect(page).toHaveURL(/\/teacher\/profile\/payment\?returnTo=/);
+    await page.locator("#paymentAccountInfo").fill("台灣銀行 123");
+    await page.getByRole("button", { name: "儲存", exact: true }).click();
+
+    await expect(page).toHaveURL(new RegExp(`/teacher/classes/${draft.id}\\?result=success`));
+    await expect(page.getByText("收款與聯絡資料已儲存。")).toBeVisible();
+    await expect(reminder(page)).toHaveCount(0);
+
+    await page.goto(`/teacher/profile/payment?returnTo=${encodeURIComponent("https://evil.example/x")}`);
+    await page.getByRole("button", { name: "儲存", exact: true }).click();
+    await expect(page).toHaveURL(/\/teacher\/profile\/payment\?result=success/);
+    expect(page.url()).not.toContain("returnTo");
   });
 
   test("a teacher who filled both sees no reminder", async ({ context, page }, testInfo) => {

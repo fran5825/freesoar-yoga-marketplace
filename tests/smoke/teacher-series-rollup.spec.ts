@@ -142,7 +142,9 @@ test("teacher class page: buttons sit in one bar, explanations move into dialogs
   await page.goto(`/teacher/classes/${term.sessions[1].id}`);
   await expect(page.getByRole("link", { name: "期班・第 2 堂／共 3 堂" })).toBeVisible();
   const bar = page.getByRole("group", { name: "課程操作" });
-  await expect(bar.getByRole("button", { name: "複製報名連結" })).toBeVisible();
+  // wrong-route-fixes F8-1：開放中、還沒開始時，複製報名連結移到「下一步」那一列，按鈕那一排留取消課程。
+  await expect(bar.getByRole("button", { name: "複製報名連結" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "下一步" }).getByRole("button", { name: "複製報名連結" })).toBeVisible();
   await expect(bar.getByRole("button", { name: "取消課程" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "分享給學員" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "取消這堂課" })).toHaveCount(0);

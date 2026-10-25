@@ -200,17 +200,20 @@ export default async function TeacherClassSessionDetailPage({
   const seriesBadge = classSession.recurringClassSeriesId ? await getSeriesBadgeInfo(classSession.id) : null;
   const phase = classActionPhase(classSession);
   const notStarted = classSession.startAt.getTime() > new Date().getTime();
+  // wrong-route-fixes F8-1（產品主人 2026-10-26）：開放中、還沒結束時（下一步正好是「把報名連結傳給學員」），
+  // 「複製報名連結」放進下面那一列，不放在按鈕那一排；那一排其餘按鈕都用外框樣式，不可逆的「取消課程」不會變成主要按鈕。
+  const copyLinkInNextStep = classSession.status === "open_for_enrollment" && (phase === "open_before_start" || phase === "in_progress");
   const available: ClassActionKey[] = [
     ...(canOpen ? (["open"] as const) : []),
     ...(canEdit ? (["edit"] as const) : []),
-    ...(classSession.status === "open_for_enrollment" ? (["copyLink"] as const) : []),
+    ...(classSession.status === "open_for_enrollment" && !copyLinkInNextStep ? (["copyLink"] as const) : []),
     ...(canCancel && notStarted ? (["cancel"] as const) : []),
     ...(canComplete && phase === "ended_awaiting_completion" ? (["complete"] as const) : []),
     ...(canCancel && notStarted && series && cancelFromHere.length > 1 ? (["cancelFromHere"] as const) : []),
   ];
   const slots = getClassActionSlots({ phase, available });
   const actionNode = (key: ClassActionKey, place: "primary" | "secondary" | "rest") => {
-    const filled = place === "primary";
+    const filled = place === "primary" && !copyLinkInNextStep;
 
     switch (key) {
       case "open":
@@ -234,18 +237,12 @@ export default async function TeacherClassSessionDetailPage({
           </a>
         );
       case "copyLink":
+        // wrong-route-fixes F8-1：拿掉旁邊的「ⓘ」說明（產品主人：多餘）。
         return (
-          <span className="inline-flex items-start gap-1">
-            <CopyEnrollLinkButton
-              classSessionId={classSession.id}
-              className={filled ? primaryButtonClassName : "min-h-11 rounded-full border border-pine/40 bg-white px-4 py-2 text-sm font-medium text-pine transition hover:bg-pine-tint"}
-            />
-            <InfoTip label="報名連結的說明">
-              {classSession.isPublic
-                ? "這堂課也列在公開課程列表；想直接邀請學員，可以把報名連結傳給他們。"
-                : "這堂課不在公開課程列表，請把報名連結傳給學員。學員需要先登入飛索帳號，才能打開連結並報名。"}
-            </InfoTip>
-          </span>
+          <CopyEnrollLinkButton
+            classSessionId={classSession.id}
+            className={filled ? primaryButtonClassName : "min-h-11 rounded-full border border-pine/40 bg-white px-4 py-2 text-sm font-medium text-pine transition hover:bg-pine-tint"}
+          />
         );
       case "complete":
         return (
@@ -564,7 +561,7 @@ export default async function TeacherClassSessionDetailPage({
           </span>
         </div>
         {/* teacher-first-run 票 03：能按「開放報名」時，在按鈕那一排之前（按下之前）提醒缺少的收款資訊。 */}
-        {canOpen ? <PaymentInfoReminderNotice reminder={paymentReminder} /> : null}
+        {canOpen ? <PaymentInfoReminderNotice reminder={paymentReminder} returnTo={`/teacher/classes/${classSession.id}`} /> : null}
         {/* teacher-series-rollup 票 02（spec 2.2）：按鈕集中在這一排，說明放進確認視窗或「ⓘ」。 */}
         <ActionBar
           primary={slots.primary ? actionNode(slots.primary, "primary") : null}
@@ -613,6 +610,7 @@ export default async function TeacherClassSessionDetailPage({
               前往確認報名
             </a>
           ) : null}
+          {copyLinkInNextStep ? <CopyEnrollLinkButton classSessionId={classSession.id} className={primaryButtonClassName} /> : null}
         </section>
         {/* teacher-showcase-photos 票 08：分享文案收在這裡，需要時才展開。 */}
         {classSession.status === "open_for_enrollment" ? (

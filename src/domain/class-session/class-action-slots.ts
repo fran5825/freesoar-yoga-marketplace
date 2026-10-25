@@ -5,6 +5,8 @@
 //
 // 老師／團主：草稿＝開放報名＋修改課程；開放中且未開始＝複製報名連結＋取消課程（不可逆的放第二顆）；
 // 已結束待完成＝標記完成。管理員只有取消課程，可取消時它是唯一一顆。
+// wrong-route-fixes F8-1：老師單堂頁在開放中、還沒結束時，「複製報名連結」改放在「下一步」那一列，
+// 不傳 copyLink 進來，其餘按鈕都用外框樣式（見 src/app/teacher/classes/[classSessionId]/page.tsx）；團主頁照這裡的規則。
 
 export type ClassActionKey = "open" | "edit" | "copyLink" | "cancel" | "complete" | "cancelFromHere";
 

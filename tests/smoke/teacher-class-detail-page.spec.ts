@@ -397,9 +397,10 @@ test.describe("teacher copies the enrol link", () => {
     await expect(page.getByRole("button", { name: "複製報名連結" })).toHaveCount(0);
 
     await page.goto(`/teacher/classes/${openId}`);
-    // teacher-series-rollup 票 02：說明收在複製按鈕旁的「ⓘ」，點開才顯示。
-    await page.getByLabel("報名連結的說明").click();
-    await expect(page.getByText(/這堂課不在公開課程列表，請把報名連結傳給學員。/)).toBeVisible();
+    // wrong-route-fixes F8-1：開放中、還沒開始時，複製按鈕在「下一步」那一列，旁邊不再有「ⓘ」；整頁只有一顆。
+    await expect(page.getByLabel("報名連結的說明")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "複製報名連結" })).toHaveCount(1);
+    await expect(page.getByRole("region", { name: "下一步" }).getByRole("button", { name: "複製報名連結" })).toBeVisible();
     await page.getByRole("button", { name: "複製報名連結" }).click();
     await expect(page.getByRole("button", { name: "已複製連結" })).toBeVisible();
     const copied = await page.evaluate(() => navigator.clipboard.readText());
