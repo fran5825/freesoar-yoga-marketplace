@@ -2,6 +2,8 @@
 
 建立日期：2026-10-26。來源：[spec](../../../specs/organizer-post-match-handoff-spec.md)（產品主人 2026-10-26 核准 D1＝A、D2＝A、D3＝A）；問題來自[團主第一次發起團課走查](../organizer-first-run-walkthrough/review.md)的 F1、F2。票券見 [ticket-breakdown](ticket-breakdown.md)。
 
+**進度（2026-10-26）**：第 1 批（01、02、03）、第 2 批（04）、第 3 批（05）都已完成，每票測試通過後 commit＋push main。各票的實際命令與結果寫在票檔的進度紀錄。
+
 這份計畫只寫「怎麼分批、每批動哪裡、怎麼驗證」。產品規則（誰看得到什麼、文案寫什麼）以 spec 為準，不在這裡重抄；兩邊不一致時以 spec 為準並回頭修這份。
 
 ## 目標

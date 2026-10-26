@@ -53,16 +53,17 @@ export default async function TeacherDemandDetailPage({
   params,
   searchParams,
 }: TeacherDemandDetailPageProps) {
-  try {
-    await requireUser();
-  } catch {
-    redirect("/sign-in");
-  }
-
   const [{ demandRequestId }, resolvedSearchParams] = await Promise.all([
     params,
     searchParams,
   ]);
+
+  // organizer-post-match-handoff 票 04：「你被選中了」通知直達這一頁，未登入時登入後要回到同一筆。
+  try {
+    await requireUser();
+  } catch {
+    redirect(`/sign-in?callbackUrl=${encodeURIComponent(`/teacher/demands/${demandRequestId}`)}`);
+  }
 
   const feedback =
     resolvedSearchParams?.result && resolvedSearchParams.message
@@ -423,10 +424,19 @@ function SelectedDemandContact({ contact }: { contact: SelectedDemandContactForT
           </div>
         ))}
       </dl>
-      {allMissing ? (
-        <p className="leading-6 text-ink-soft">團主目前沒有留下聯絡方式，請先到老師資料填寫你的聯絡方式，讓團主聯絡你。</p>
+      {/* 兩種缺漏同時發生時只留一段提醒，避免重複叫老師去填。 */}
+      {allMissing && !contact.hasOwnContactInfo ? (
+        <p className="leading-6 text-ink-soft">
+          團主目前沒有留下聯絡方式，請先到老師資料填寫你的聯絡方式，讓團主聯絡你。{" "}
+          <Link className="font-medium text-pine underline underline-offset-4" href="/teacher/profile/payment">
+            填寫聯絡方式
+          </Link>
+        </p>
       ) : null}
-      {contact.hasOwnContactInfo ? null : (
+      {allMissing && contact.hasOwnContactInfo ? (
+        <p className="leading-6 text-ink-soft">團主目前沒有留下聯絡方式，團主可以用你留的聯絡方式聯絡你。</p>
+      ) : null}
+      {contact.hasOwnContactInfo || allMissing ? null : (
         <p className="leading-6 text-ink-soft">
           你還沒有填聯絡方式，團主目前聯絡不到你。{" "}
           <Link className="font-medium text-pine underline underline-offset-4" href="/teacher/profile/payment">

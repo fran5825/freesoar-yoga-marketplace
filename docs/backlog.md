@@ -295,6 +295,12 @@
   - [ ] 加一個自動檢查：會送給多種身分（`EMAIL_POLICY` 裡有兩種以上角色）的通知類型，每次 `notifyUsers` 都要帶 target 或屬於系列；可以是 smoke 裡攔截 `notifyOverride` 的檢查，或 ESLint 自訂規則，選比較便宜的。
 - 相關：code-review 時另記兩項小事（回課程頁後失去它自己的返回來源；`teacher-return-path.ts` 與 `class-return-path.ts` 兩份白名單分開寫），見 `docs/superpowers/plans/wrong-route-fixes/tickets/05-acceptance-and-docs.md`。
 
+### 32. 選定老師之後交接的後續項目（2026-10-26，organizer-post-match-handoff 收尾）
+
+- [ ] **需產品決定**：老師被團主選定後又被管理員暫停，依既有規則 D12（老師一律看得到自己的回應）仍看得到該團體的聯絡窗口。要不要在暫停時隱藏？見 `docs/superpowers/plans/organizer-post-match-handoff/tickets/04-post-selection-contacts.md`。
+- [x] 老師的需求回應頁 `/teacher/demands/[id]` 未登入時轉到 `/sign-in` 沒帶 `callbackUrl`：2026-10-26 code-review 後已補（只修這一頁，因為「你被選中了」通知直達這裡）；老師專區其他頁面仍見入口走查疑點 B。
+- [ ] [團主第一次發起團課走查](superpowers/plans/organizer-first-run-walkthrough/review.md) 的 F3–F13 還沒處理；其中 F9（建課失敗清空欄位）跟這次的「先跟老師確認時間」最相關，建議先做。
+
 ### 4. 新增 LINE 與 Facebook 登入
 
 - 目前只有 Google（`src/auth.ts` 的 `providers`）。

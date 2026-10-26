@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import { getDemandNextStep } from "@/domain/demand-request/next-step";
 import { buildOrganizerClassTodoItems } from "@/domain/class-session/organizer-class-todo";
-import { listOwnClassSessionsForOrganizer } from "@/domain/class-session/read-service";
+import { listOwnOpenableDraftClassSessionsForOrganizer } from "@/domain/class-session/read-service";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import {
   getOwnDemandRequestList,
@@ -63,14 +63,16 @@ export default async function OrganizerDashboardPage() {
     );
   }
 
-  const [notifications, demandRequests, proposals, classSessions] = await Promise.all([
+  // 查詢與待辦判斷共用同一個「現在」，避免剛好跨過開課時間時兩邊結果不同。
+  const now = new Date();
+  const [notifications, demandRequests, proposals, draftClassSessions] = await Promise.all([
     listOwnNotifications(),
     getOwnDemandRequestList(),
     listOwnActiveProposalsForOrganizer(),
-    listOwnClassSessionsForOrganizer(),
+    listOwnOpenableDraftClassSessionsForOrganizer(now),
   ]);
   // organizer-post-match-handoff 票 02：建好但還沒開放報名的課（可開放的草稿）也放進「待你處理」。
-  const classTodos = buildOrganizerClassTodoItems(classSessions);
+  const classTodos = buildOrganizerClassTodoItems(draftClassSessions, now);
   // organizer-usability-redesign 票 12：直接開團的邀請分成「待你處理」與「等待對方回覆」，都連到單筆邀請。
   const proposalItems = buildOrganizerProposalTodoItems(proposals);
   const proposalActions = proposalItems.filter((item) => item.kind === "action");

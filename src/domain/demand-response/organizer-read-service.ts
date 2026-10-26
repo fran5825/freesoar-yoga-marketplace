@@ -75,11 +75,13 @@ export async function listResponsesForOwnDemandRequest(
   });
 
   // 票 04：被選定老師的聯絡方式另外查，條件寫在 WHERE（這筆需求、selected），不放進共用 select，
-  // 避免非 selected 的回應帶出 contactInfo。
-  const selected = await prisma.demandResponse.findFirst({
-    where: { demandRequestId, status: "selected" },
-    select: { id: true, teacherProfile: { select: { contactInfo: true } } },
-  });
+  // 避免非 selected 的回應帶出 contactInfo。還沒選定時不必查。
+  const selected = rows.some((row) => row.status === "selected")
+    ? await prisma.demandResponse.findFirst({
+        where: { demandRequestId, status: "selected" },
+        select: { id: true, teacherProfile: { select: { contactInfo: true } } },
+      })
+    : null;
 
   return rows.map((row) => ({
     ...row,

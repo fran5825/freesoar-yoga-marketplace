@@ -10,6 +10,8 @@
 
 另外要知道：這條路線的兩支自動旅程測試（`tests/smoke/organizer-journeys.spec.ts` 的 direct class、find a teacher）目前標成 `test.fixme` 略過（backlog 第 27 項，等不到同意勾選框）。也就是說，票 14 之後這條路線有沒有被改壞，現在沒有自動測試在把關。
 
+**後續處理（2026-10-26）**：F1、F2 已由 [organizer-post-match-handoff](../organizer-post-match-handoff/ticket-breakdown.md)（[spec](../../../specs/organizer-post-match-handoff-spec.md)）處理：選定後雙方看到聯絡方式、草稿課程在總覽／列表／課程頁／通知都有提醒，並補上 `tests/smoke/organizer-post-match-handoff.spec.ts` 的整段旅程測試。仍**待真人驗證**；F3–F13 尚未處理。
+
 ## Persona
 
 | 代號 | 是誰 | 現在怎麼做 | 最在意 | 容易卡在 |

@@ -363,6 +363,96 @@ test.describe("organizer post-match handoff: class created notice", () => {
   });
 });
 
+// 票 05：整段交接走一次（選定 → 雙方看到聯絡方式 → 建課 → 總覽提醒 → 開放報名 → 提醒消失），
+// 桌機 1280 與手機 390 各跑一次，每一步確認沒有水平捲動並留截圖（.ai-runs/，不進版控）。
+test.describe("organizer post-match handoff: journey", () => {
+  test("select → contacts → create class → dashboard reminder → open → reminder gone", async ({ browser }, testInfo) => {
+    const id = runId(testInfo, "journey");
+    const organizerEmail = `organizer-${id}@${testEmailDomain}`;
+    const teacherEmail = `teacher-${id}@${testEmailDomain}`;
+    createdEmails.push(organizerEmail, teacherEmail);
+    const organizer = await createOrganizerProfileWithOrganization({
+      email: organizerEmail,
+      displayName: `Organizer ${id}`,
+      organizationName: `Journey Org ${id}`,
+      contactName: "一位很長名字的聯絡窗口負責人",
+      contactEmail: `very-long-contact-address-for-journey-${id}@example-company-domain.com`,
+      contactPhone: "0912-345-678 分機 1234",
+    });
+    const teacher = await createTeacherProfileWithSession({ email: teacherEmail, displayName: `Journey Teacher ${id}`, status: "approved" });
+    await prisma.teacherProfile.update({
+      where: { id: teacher.teacherProfileId },
+      data: { contactInfo: `LINE ID：journey-teacher-with-a-very-long-line-id-${id}` },
+    });
+    const demand = await createDemandRequest({
+      organizerProfileId: organizer.organizerProfileId,
+      organizationId: organizer.organizationId,
+      status: "published",
+      data: completeDemandRequestData({ title: `旅程需求 ${id}` }),
+    });
+    await createDemandResponse({ demandRequestId: demand.id, teacherProfileId: teacher.teacherProfileId, proposedTimeSlots: ["平日晚上"] });
+
+    const organizerContext = await browser.newContext();
+    await addAuthSessionCookie(organizerContext, organizer.sessionToken);
+    const page = await organizerContext.newPage();
+    const shot = async (step: string) => {
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+      await page.screenshot({ path: `.ai-runs/organizer-post-match-handoff/${testInfo.project.name}/${step}.png`, fullPage: true });
+    };
+
+    // 1. 團主選定老師（實際操作畫面）。
+    await page.goto(`/organizer/demands/${demand.id}`);
+    await page.getByText("選定這位老師…").click();
+    await page.getByRole("checkbox", { name: "我確認要選定這位老師。" }).check();
+    await page.getByRole("button", { name: "確認選定" }).click();
+    await expect(page.getByText("已選定這位老師。")).toBeVisible();
+
+    // 2. 團主看到老師聯絡方式與建課提醒。
+    await expect(page.getByText(`LINE ID：journey-teacher-with-a-very-long-line-id-${id}`)).toBeVisible();
+    await expect(page.getByText("老師回應時寫的可配合時段：平日晚上")).toBeVisible();
+    await shot("01-organizer-selected");
+
+    // 3. 被選定的老師看到團體聯絡窗口。
+    const teacherContext = await browser.newContext();
+    await addAuthSessionCookie(teacherContext, teacher.sessionToken);
+    const teacherPage = await teacherContext.newPage();
+    await teacherPage.goto(`/teacher/demands/${demand.id}`);
+    await expect(teacherPage.getByText(`very-long-contact-address-for-journey-${id}@example-company-domain.com`)).toBeVisible();
+    expect(await teacherPage.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+    await teacherPage.screenshot({ path: `.ai-runs/organizer-post-match-handoff/${testInfo.project.name}/02-teacher-contact.png`, fullPage: true });
+    await teacherContext.close();
+
+    // 4. 團主建課 → 課程頁說明還沒開放。
+    await page.getByLabel("開始時間").fill(futureDateTime(30, "19:00"));
+    await page.getByLabel("結束時間").fill(futureDateTime(30, "20:00"));
+    await page.getByRole("checkbox", { name: /我確認以上資訊無誤/ }).check();
+    await page.getByRole("button", { name: "建立課程" }).click();
+    await expect(page.getByText("課程已建立，還沒開放報名。")).toBeVisible();
+    await expect(page.getByText("學員還看不到這堂課。確認時間、地點後按「開放報名」，就能複製連結分享給團員。")).toBeVisible();
+    await shot("03-class-draft");
+    const classUrl = page.url().split("?")[0];
+
+    // 5. 離開後總覽提醒。
+    await page.goto("/organizer/dashboard");
+    const todo = page.getByRole("region", { name: "待你處理" }).getByRole("link").filter({ hasText: "還沒開放報名" });
+    await expect(todo).toBeVisible();
+    await shot("04-dashboard-reminder");
+
+    // 6. 點提醒、開放報名，提醒消失。
+    await todo.click();
+    await expect(page).toHaveURL(new RegExp(`${classUrl.replace(/^https?:\/\/[^/]+/, "")}$`));
+    await page.getByRole("button", { name: "開放報名" }).click();
+    await page.getByRole("button", { name: "確定開放報名" }).click();
+    await expect(page.getByText("已開放報名。")).toBeVisible();
+    await expect(page.getByRole("button", { name: "複製報名連結" })).toBeVisible();
+    await shot("05-opened");
+    await page.goto("/organizer/dashboard");
+    await expect(page.getByRole("link").filter({ hasText: "還沒開放報名" })).toHaveCount(0);
+    await shot("06-dashboard-after-open");
+    await organizerContext.close();
+  });
+});
+
 // 票 04：選定後雙方看到聯絡方式（權限變更，重點是誰「看不到」）。
 test.describe("organizer post-match handoff: contacts after selection", () => {
   // 一筆已公開的需求、三位老師回應；每位老師都有自己的 contactInfo（用來檢查沒有外洩）。
@@ -501,7 +591,20 @@ test.describe("organizer post-match handoff: contacts after selection", () => {
     expect(await cancelDemandRequestForOrganizer(organizer.organizerProfileId, demandId)).toMatchObject({ ok: true });
     await selected.page.goto(`/teacher/demands/${demandId}`);
     expect(await selected.page.content()).not.toContain(`window-${id}@example.com`);
+
+    // 需求取消的通知仍連「團體需求」列表（只有選定通知改成連單筆）。
+    await selected.page.goto("/notifications");
+    await expect(
+      selected.page.locator("article").filter({ hasText: `你回應的需求「聯絡需求 ${id}」已經取消。` }).getByRole("link"),
+    ).toHaveAttribute("href", "/teacher/demands");
     await selected.context.close();
+  });
+
+  test("signed-out teacher opening the response page is sent to sign-in with a way back", async ({ page }) => {
+    const demandRequestId = "some-demand-id";
+    await page.goto(`/teacher/demands/${demandRequestId}`);
+    await expect(page).toHaveURL(/\/sign-in\?/);
+    expect(new URL(page.url()).searchParams.get("callbackUrl")).toBe(`/teacher/demands/${demandRequestId}`);
   });
 
   test("teacher without contactInfo: organizer is told the teacher will reach out, teacher is reminded", async ({ browser }, testInfo) => {

@@ -82,6 +82,24 @@ export async function listOwnClassSessionsForOrganizer(): Promise<
   });
 }
 
+// organizer-post-match-handoff 票 02：總覽「待你處理」只需要還沒開始的草稿課，不用撈全部課程。
+// 條件與 getClassDraftKind 的 openable_draft 一致（status = draft、startAt 晚於現在）。
+export async function listOwnOpenableDraftClassSessionsForOrganizer(
+  now: Date = new Date(),
+): Promise<{ id: string; title: string; status: ClassSessionStatus; startAt: Date }[]> {
+  const currentUser = await requireUser();
+
+  return prisma.classSession.findMany({
+    where: {
+      organizerProfile: { userId: currentUser.id },
+      status: "draft",
+      startAt: { gt: now },
+    },
+    select: { id: true, title: true, status: true, startAt: true },
+    orderBy: { startAt: "asc" },
+  });
+}
+
 // 唯讀；ownership 驗證失敗（class session 不存在或非自己的）回傳 null，
 // 與「不存在」語意一致，不洩漏存在性差異。
 export async function getOwnClassSessionDetailForOrganizer(
