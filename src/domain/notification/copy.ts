@@ -117,17 +117,22 @@ const COPY_TABLE: CopyTable = {
     }),
   },
   // teacher-series-rollup 票 07：建立系列、生成更多一人只發一則，內文寫堂數與日期範圍。
+  // organizer-post-match-handoff 票 03：團主媒合建課（notYetOpen）時課程還是草稿，寫明還沒開放報名；
+  // 直接開團、老師自建課不傳 notYetOpen，文字不變。
   class_session_created: {
-    self: ({ classSessionTitle, sessionCount, dateRange }) => ({
+    self: ({ classSessionTitle, sessionCount, dateRange, notYetOpen }) => ({
       title: "課程已建立",
-      body:
-        sessionCount && sessionCount > 1
+      body: notYetOpen
+        ? `課程「${classSessionTitle ?? ""}」已建立，還沒開放報名。到課程頁按「開放報名」後，就能分享連結給團員。`
+        : sessionCount && sessionCount > 1
           ? `課程「${classSessionTitle ?? ""}」共 ${sessionCount} 堂${dateRange ? `（${dateRange}）` : ""}已經建立完成。`
           : `課程「${classSessionTitle ?? ""}」已經建立完成。`,
     }),
-    counterpart: ({ classSessionTitle }) => ({
+    counterpart: ({ classSessionTitle, notYetOpen }) => ({
       title: "課程已建立",
-      body: `你的課程「${classSessionTitle ?? ""}」已經建立完成。`,
+      body: notYetOpen
+        ? `團主建立了課程「${classSessionTitle ?? ""}」。團主開放報名後，學員才能報名。`
+        : `你的課程「${classSessionTitle ?? ""}」已經建立完成。`,
     }),
   },
   // organizer-usability-redesign 票 12：合作邀請。收件人都是對方（counterpart）：邀請、更新、撤回給

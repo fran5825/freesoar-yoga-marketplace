@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
 
+import { createClassSessionForOrganizer } from "../../src/domain/class-session/__internal__/create-class-session-core";
 import { getClassDraftKind } from "../../src/domain/class-session/draft-kind";
+import { validateClassSessionCreate } from "../../src/domain/class-session/validation";
+import { buildNotificationCopy } from "../../src/domain/notification/copy";
+import { openDirectClassFromProposalCore } from "../../src/domain/organizer-class-proposal/__internal__/open-direct-class-core";
+import { futureDateTime } from "./_helpers/future-dates";
 import { createDemandResponse, createTeacherProfileWithSession } from "./_helpers/demand-response-fixtures";
 import {
   addAuthSessionCookie,
@@ -19,6 +24,8 @@ const createdEmails: string[] = [];
 
 test.afterAll(async () => {
   const emails = { in: createdEmails };
+  // 直接開團的合作邀請先刪：它跟課程互相關聯。
+  await prisma.organizerClassProposal.deleteMany({ where: { organizerProfile: { user: { email: emails } } } });
   await prisma.enrollment.deleteMany({ where: { classSession: { teacherProfile: { user: { email: emails } } } } });
   await prisma.classSession.deleteMany({ where: { teacherProfile: { user: { email: emails } } } });
   await prisma.demandResponse.deleteMany({ where: { teacherProfile: { user: { email: emails } } } });
@@ -247,5 +254,109 @@ test.describe("organizer post-match handoff: reminders", () => {
     await page.goto("/organizer/dashboard");
     await expect(page.getByText(todoTitle)).toHaveCount(0);
     await context.close();
+  });
+});
+
+// 票 03：「課程已建立」通知只有團主媒合建課改成「還沒開放報名」，其他兩條路線不變。
+test.describe("organizer post-match handoff: class created notice", () => {
+  async function bodyFor(userId: string, title: string) {
+    const notification = await prisma.notification.findFirst({
+      where: { userId, type: "class_session_created", channel: "in_app", body: { contains: title } },
+      select: { body: true },
+    });
+    return notification?.body ?? null;
+  }
+
+  test("matched-demand class: organizer and teacher are told enrollment is not open yet", async ({}, testInfo) => {
+    const id = runId(testInfo, "notice-matched");
+    const organizerEmail = `organizer-${id}@${testEmailDomain}`;
+    const teacherEmail = `teacher-${id}@${testEmailDomain}`;
+    createdEmails.push(organizerEmail, teacherEmail);
+    const organizer = await createOrganizerProfileWithOrganization({
+      email: organizerEmail,
+      displayName: `Organizer ${id}`,
+      organizationName: `Notice Org ${id}`,
+      contactName: "聯絡人",
+      contactEmail: `contact-${id}@example.com`,
+      contactPhone: "0900000000",
+    });
+    const teacher = await createTeacherProfileWithSession({ email: teacherEmail, displayName: `Notice Teacher ${id}`, status: "approved" });
+    const demand = await createDemandRequest({
+      organizerProfileId: organizer.organizerProfileId,
+      organizationId: organizer.organizationId,
+      status: "matched",
+      data: completeDemandRequestData({ title: `通知需求 ${id}` }),
+    });
+    await createDemandResponse({ demandRequestId: demand.id, teacherProfileId: teacher.teacherProfileId, status: "selected" });
+    const title = `媒合建課 ${id}`;
+    const validation = validateClassSessionCreate({
+      title,
+      description: null,
+      serviceType: "伸展與身體保養",
+      startAt: futureDateTime(40, "14:00"),
+      endAt: futureDateTime(40, "15:00"),
+      location: "Test Studio",
+      capacity: 5,
+      isPublic: false,
+    });
+    if (!validation.valid) throw new Error("fixture");
+    const created = await createClassSessionForOrganizer(organizer.organizerProfileId, demand.id, validation.normalized);
+    expect(created.ok).toBe(true);
+
+    expect(await bodyFor(organizer.userId, title)).toBe(
+      `課程「${title}」已建立，還沒開放報名。到課程頁按「開放報名」後，就能分享連結給團員。`,
+    );
+    expect(await bodyFor(teacher.userId, title)).toBe(`團主建立了課程「${title}」。團主開放報名後，學員才能報名。`);
+  });
+
+  test("direct class: the invited teacher's notice keeps the original wording", async ({}, testInfo) => {
+    const id = runId(testInfo, "notice-direct");
+    const organizerEmail = `organizer-${id}@${testEmailDomain}`;
+    const teacherEmail = `teacher-${id}@${testEmailDomain}`;
+    createdEmails.push(organizerEmail, teacherEmail);
+    const organizer = await createOrganizerProfileWithOrganization({
+      email: organizerEmail,
+      displayName: `Organizer ${id}`,
+      organizationName: `Direct Org ${id}`,
+      contactName: "聯絡人",
+      contactEmail: `contact-${id}@example.com`,
+      contactPhone: "0900000000",
+    });
+    const teacher = await createTeacherProfileWithSession({ email: teacherEmail, displayName: `Direct Teacher ${id}`, status: "approved" });
+    const title = `直接開團 ${id}`;
+    const proposal = await prisma.organizerClassProposal.create({
+      data: {
+        organizerProfileId: organizer.organizerProfileId,
+        organizationId: organizer.organizationId,
+        teacherProfileId: teacher.teacherProfileId,
+        title,
+        description: "直接開團的課程說明。",
+        serviceType: "伸展與身體保養",
+        serviceTypes: ["伸展與身體保養"],
+        ...slot(30),
+        location: "Direct Studio",
+        capacity: 10,
+        isPublic: false,
+        status: "confirmed",
+        submittedAt: new Date(),
+        confirmedVersion: 1,
+        confirmedAt: new Date(),
+        confirmedByUserId: teacher.userId,
+        transitionSeq: 3,
+      },
+    });
+    const opened = await openDirectClassFromProposalCore(organizer.organizerProfileId, proposal.id, 1);
+    expect(opened.ok).toBe(true);
+
+    expect(await bodyFor(teacher.userId, title)).toBe(`你的課程「${title}」已經建立完成。`);
+  });
+
+  test("teacher-created class copy (no notYetOpen) keeps the original wording", () => {
+    expect(buildNotificationCopy("class_session_created", "self", { classSessionTitle: "老師的課" }).body).toBe(
+      "課程「老師的課」已經建立完成。",
+    );
+    expect(
+      buildNotificationCopy("class_session_created", "self", { classSessionTitle: "老師的系列", sessionCount: 3, dateRange: "11/02–11/16" }).body,
+    ).toBe("課程「老師的系列」共 3 堂（11/02–11/16）已經建立完成。");
   });
 });

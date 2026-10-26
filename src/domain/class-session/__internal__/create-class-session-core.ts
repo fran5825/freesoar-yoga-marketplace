@@ -211,7 +211,8 @@ export async function createClassSessionForOrganizer(
           recipients.push({ userId: detail.organizerProfile.userId, role: "self", target: { type: "organizer_class_session", id: classSessionId } });
         }
 
-        await notifyUsers("class_session_created", recipients, { classSessionTitle: detail.title });
+        // organizer-post-match-handoff 票 03：媒合建課的課程一律從草稿開始，通知寫明還沒開放報名。
+        await notifyUsers("class_session_created", recipients, { classSessionTitle: detail.title, notYetOpen: true });
       }
     } catch (notifyError) {
       console.error("[notification] class_session_created trigger failed", notifyError);

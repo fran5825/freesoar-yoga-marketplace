@@ -58,4 +58,7 @@ export type NotificationPayload = {
   termWithdrawal?: boolean;
   // teacher-first-run 票 05（2026-10-24 決定）：給老師的 enrollment_cancelled 是整期學員的單堂請假，值是那一堂的日期時間。
   leaveDate?: string;
+  // organizer-post-match-handoff 票 03：團主媒合建課後課程還是草稿；只有媒合建課會傳，
+  // 直接開團與老師自建課不傳，class_session_created 的文字維持原樣。
+  notYetOpen?: boolean;
 };
