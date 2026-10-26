@@ -32,8 +32,12 @@ const targetLinks: Record<NotificationTargetType, (id: string, type: Notificatio
       ? { href: "/member/enrollments", label: "前往我的報名" }
       : { href: `/classes/${encodeURIComponent(id)}`, label: "查看這堂課" },
   organizer_demand_request: (id) => ({ href: `/organizer/demands/${encodeURIComponent(id)}`, label: "查看這筆需求" }),
-  // 老師端的需求詳情只看得到開放中的需求，被選定或取消後打不開，所以連「團體需求」列表。
-  teacher_demand_request: () => ({ href: "/teacher/demands", label: "前往團體需求" }),
+  // 被選定時連到老師自己的回應頁（看得到團體聯絡窗口，organizer-post-match-handoff 票 04）；
+  // 其他通知（例如需求取消）仍連「團體需求」列表。
+  teacher_demand_request: (id, type) =>
+    type === "demand_response_selected"
+      ? { href: `/teacher/demands/${encodeURIComponent(id)}`, label: "查看你的回應" }
+      : { href: "/teacher/demands", label: "前往團體需求" },
   admin_demand_request: (id) => ({ href: `/admin/demands/${encodeURIComponent(id)}`, label: "前往需求審核" }),
   admin_teacher_application: (id) => ({ href: `/admin/teachers/${encodeURIComponent(id)}`, label: "前往老師審核" }),
 };

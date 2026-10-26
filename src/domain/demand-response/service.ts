@@ -244,6 +244,70 @@ export async function getOwnDemandResponseForDemand(
   });
 }
 
+export type SelectedDemandContactForTeacher = {
+  organizationName: string;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  // 老師自己有沒有填「收款與聯絡」的聯絡方式（團主也看得到），沒填時提醒老師去填。
+  hasOwnContactInfo: boolean;
+};
+
+// organizer-post-match-handoff 票 04（spec「老師看團體」）：被團主選定的老師，看得到該需求團體的聯絡窗口。
+// 條件寫在 WHERE：這位老師在這筆需求有 selected 回應。沒被選上、從沒回應、需求取消後（回應會轉成 declined）
+// 一律回 null。只回團體名稱與聯絡窗口三欄，不含團主個人帳號的 email。
+export async function getSelectedDemandContactForTeacher(
+  demandRequestId: string,
+): Promise<SelectedDemandContactForTeacher | null> {
+  const currentUser = await requireUser();
+
+  const teacherProfile = await prisma.teacherProfile.findUnique({
+    where: { userId: currentUser.id },
+    select: { id: true, contactInfo: true },
+  });
+
+  if (!teacherProfile) {
+    return null;
+  }
+
+  const selected = await prisma.demandResponse.findFirst({
+    where: {
+      demandRequestId,
+      teacherProfileId: teacherProfile.id,
+      status: "selected",
+    },
+    select: {
+      demandRequest: {
+        select: {
+          organization: {
+            select: { name: true, contactName: true, contactEmail: true, contactPhone: true },
+          },
+        },
+      },
+    },
+  });
+
+  if (!selected) {
+    return null;
+  }
+
+  const { organization } = selected.demandRequest;
+
+  return {
+    organizationName: organization.name,
+    contactName: blankToNull(organization.contactName),
+    contactEmail: blankToNull(organization.contactEmail),
+    contactPhone: blankToNull(organization.contactPhone),
+    hasOwnContactInfo: blankToNull(teacherProfile.contactInfo) !== null,
+  };
+}
+
+function blankToNull(value: string | null): string | null {
+  const trimmed = value?.trim();
+
+  return trimmed ? trimmed : null;
+}
+
 function withdrawTransitionBlockedMessage(
   code: DemandResponseWithdrawTransitionErrorCode,
 ): string {

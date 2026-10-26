@@ -6,7 +6,10 @@ import {
   SERVICE_TYPES,
 } from "@/domain/demand-request/service-types";
 import { getOwnDemandRequestDetail } from "@/domain/demand-request/service";
-import { listResponsesForOwnDemandRequest } from "@/domain/demand-response/organizer-read-service";
+import {
+  getOwnDemandOrganizationContactStatus,
+  listResponsesForOwnDemandRequest,
+} from "@/domain/demand-response/organizer-read-service";
 import { requireUser } from "@/lib/auth/session";
 
 import {
@@ -65,7 +68,13 @@ export default async function DemandRequestDetailPage({
     notFound();
   }
 
-  const responses = (await listResponsesForOwnDemandRequest(demandRequestId)) ?? [];
+  const [listedResponses, organizationContact] = await Promise.all([
+    listResponsesForOwnDemandRequest(demandRequestId),
+    getOwnDemandOrganizationContactStatus(demandRequestId),
+  ]);
+  const responses = listedResponses ?? [];
+  // organizer-post-match-handoff 票 04：建課時把被選定老師回應的可配合時段放在時間欄旁邊。
+  const selectedResponse = responses.find((response) => response.status === "selected") ?? null;
   // 票 11：只帶入需求裡確定的欄位；時間、頻率只當參考文字，不猜成開始時間。
   const classPrefill = getClassPrefillFromDemand(demandRequest, {
     formatDate: formatDemandRequestDate,
@@ -133,6 +142,7 @@ export default async function DemandRequestDetailPage({
 
       <ResponseList
         demandRequestId={demandRequestId}
+        organizationContact={organizationContact}
         responses={responses}
         selectDemandResponseAction={selectDemandResponseAction}
       />
@@ -191,6 +201,14 @@ export default async function DemandRequestDetailPage({
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-1 rounded-xl bg-sand px-4 py-3 text-sm leading-6 sm:col-span-2">
+                <p className="font-medium text-ink">請先跟老師確認時間再填。</p>
+                {selectedResponse && selectedResponse.proposedTimeSlots.length > 0 ? (
+                  <p className="text-ink-soft [overflow-wrap:anywhere]">
+                    老師回應時寫的可配合時段：{selectedResponse.proposedTimeSlots.join("、")}
+                  </p>
+                ) : null}
+              </div>
               <div>
                 <label
                   className="text-sm font-medium text-ink"

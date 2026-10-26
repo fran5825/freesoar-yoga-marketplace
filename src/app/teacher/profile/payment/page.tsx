@@ -110,7 +110,7 @@ export default async function TeacherPaymentSettingsPage({ searchParams }: Payme
               聯絡方式（選填）
             </label>
             <p className="mt-1 text-xs leading-5 text-ink-faint">
-              例如 Line ID、Instagram 或電話。學員成功報名後才看得到。
+              例如 Line ID、Instagram 或電話。學員成功報名後才看得到；你被團主選定合作時，那位團主也看得到。
             </p>
             <input
               className={controlClassName}

@@ -3,7 +3,12 @@ import { notFound, redirect } from "next/navigation";
 
 import { requireApprovedTeacher } from "@/domain/teacher-profile/capability";
 import { getPublishedDemandRequestDetailForTeacher } from "@/domain/demand-response/demand-read-service";
-import { getOwnDemandResponseForDemand } from "@/domain/demand-response/service";
+import {
+  getOwnDemandResponseForDemand,
+  getSelectedDemandContactForTeacher,
+  type SelectedDemandContactForTeacher,
+} from "@/domain/demand-response/service";
+import Link from "next/link";
 import { PREFERRED_TIME_SLOTS } from "@/domain/demand-request/service-types";
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
@@ -27,7 +32,8 @@ const responseStatusCopy: Record<string, { label: string; body: string }> = {
   },
   selected: {
     label: "已被選中",
-    body: "恭喜，團主已選擇你的回應！後續合作細節將另行安排。",
+    // organizer-post-match-handoff 票 04：選定後的下一步是跟團主確認時間，團體聯絡窗口在下方。
+    body: "團主選擇了你的回應。請用下方的團體聯絡窗口跟團主確認上課時間；團主建立課程後，你會收到通知。",
   },
   declined: {
     label: "未獲選",
@@ -73,10 +79,14 @@ export default async function TeacherDemandDetailPage({
   const ownResponse = await getOwnDemandResponseForDemand(demandRequestId);
 
   if (ownResponse) {
-    const demand = await prisma.demandRequest.findUnique({
-      where: { id: demandRequestId },
-      select: { title: true, status: true },
-    });
+    const [demand, selectedContact] = await Promise.all([
+      prisma.demandRequest.findUnique({
+        where: { id: demandRequestId },
+        select: { title: true, status: true },
+      }),
+      // 票 04：只有自己這則被選定時才有值（條件在 domain 層的 WHERE）。
+      ownResponse.status === "selected" ? getSelectedDemandContactForTeacher(demandRequestId) : Promise.resolve(null),
+    ]);
     // D9（demand-request-cancellation 修正版）：declined 狀態的既有文案假設是「團主選了
     // 別人」，但這則回應也可能是因為 demand 本身被取消而連帶轉為 declined——那種情況下
     // 既有文案是不實敘述，改用取消專用的文案。
@@ -115,6 +125,8 @@ export default async function TeacherDemandDetailPage({
               {statusCopy?.body ?? "你已對這則需求提交回應。"}
             </p>
           </div>
+
+          {selectedContact ? <SelectedDemandContact contact={selectedContact} /> : null}
 
           <div className="grid gap-3 rounded-2xl border border-ink/10 bg-cream p-4 text-sm">
             <div className="min-w-0">
@@ -384,6 +396,44 @@ export default async function TeacherDemandDetailPage({
           </button>
         </form>
       </section>
+    </div>
+  );
+}
+
+// organizer-post-match-handoff 票 04（spec「老師看團體」）：被選定的老師看到團體聯絡窗口。
+// 缺的欄位寫「團主尚未填寫」；三項都缺時提醒老師先填自己的聯絡方式，讓團主聯絡得到。
+function SelectedDemandContact({ contact }: { contact: SelectedDemandContactForTeacher }) {
+  const rows = [
+    { label: "聯絡窗口", value: contact.contactName },
+    { label: "信箱", value: contact.contactEmail },
+    { label: "電話", value: contact.contactPhone },
+  ];
+  const allMissing = rows.every((row) => row.value === null);
+
+  return (
+    <div className="grid gap-3 rounded-2xl border border-pine/20 bg-pine-tint p-4 text-sm">
+      <p className="font-medium text-ink">
+        團體聯絡窗口：<span className="[overflow-wrap:anywhere]">{contact.organizationName}</span>
+      </p>
+      <dl className="grid gap-2">
+        {rows.map((row) => (
+          <div className="grid gap-1 sm:grid-cols-[6rem_1fr]" key={row.label}>
+            <dt className="text-ink-soft">{row.label}</dt>
+            <dd className="text-ink [overflow-wrap:anywhere]">{row.value ?? "團主尚未填寫"}</dd>
+          </div>
+        ))}
+      </dl>
+      {allMissing ? (
+        <p className="leading-6 text-ink-soft">團主目前沒有留下聯絡方式，請先到老師資料填寫你的聯絡方式，讓團主聯絡你。</p>
+      ) : null}
+      {contact.hasOwnContactInfo ? null : (
+        <p className="leading-6 text-ink-soft">
+          你還沒有填聯絡方式，團主目前聯絡不到你。{" "}
+          <Link className="font-medium text-pine underline underline-offset-4" href="/teacher/profile/payment">
+            填寫聯絡方式
+          </Link>
+        </p>
+      )}
     </div>
   );
 }

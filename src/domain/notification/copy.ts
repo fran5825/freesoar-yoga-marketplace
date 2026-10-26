@@ -106,14 +106,15 @@ const COPY_TABLE: CopyTable = {
       body: "有老師回應了一筆需求，請留意媒合進度。",
     }),
   },
+  // organizer-post-match-handoff 票 04：選定後的下一步是雙方確認上課時間，文案直接講。
   demand_response_selected: {
     self: () => ({
       title: "已選定老師",
-      body: "你已經選定老師，媒合成立。",
+      body: "你已選定老師。請先跟老師確認上課時間，再到這筆需求建立課程。",
     }),
     counterpart: ({ demandTitle }) => ({
       title: "你被選中了",
-      body: `你的回應已被選中，需求「${demandTitle ?? ""}」媒合成立，接下來會由團主建立課程場次。`,
+      body: `你的回應已被選中：需求「${demandTitle ?? ""}」。請跟團主確認上課時間，團體聯絡窗口在回應頁。`,
     }),
   },
   // teacher-series-rollup 票 07：建立系列、生成更多一人只發一則，內文寫堂數與日期範圍。

@@ -222,7 +222,8 @@ export function buildTeacherTodoItems(input: {
     (response) => ({
       kind: "waiting",
       label: "等待團主建立課程",
-      message: `團主已選你合作「${response.demandTitle}」，正在安排課程，建立後會出現在「我的課程」。`,
+      // organizer-post-match-handoff 票 04：選定後要先跟團主確認時間，聯絡窗口在回應頁。
+      message: `團主已選你合作「${response.demandTitle}」。請跟團主確認上課時間，團體聯絡窗口在回應頁；團主建立課程後會出現在「我的課程」。`,
       href: `/teacher/demands/${response.demandRequestId}`,
     }),
   );

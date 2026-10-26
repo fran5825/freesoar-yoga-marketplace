@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import type { OrganizerFacingResponse } from "@/domain/demand-response/organizer-read-service";
 
 const responseStatusLabels: Record<string, string> = {
@@ -12,10 +14,13 @@ const responseStatusLabels: Record<string, string> = {
 export function ResponseList({
   responses,
   demandRequestId,
+  organizationContact,
   selectDemandResponseAction,
 }: {
   responses: OrganizerFacingResponse[];
   demandRequestId: string;
+  // 票 04：需求所屬團體的聯絡資料是否完整，決定老師沒留聯絡方式時要怎麼說。
+  organizationContact: { organizationId: string; isContactComplete: boolean } | null;
   selectDemandResponseAction: (formData: FormData) => Promise<void>;
 }) {
   // D3/D8：demand 一旦有一筆 selected response，select 是終局動作，不再顯示其他選定表單。
@@ -94,6 +99,14 @@ export function ResponseList({
                 </p>
               ) : null}
 
+              {response.teacherContact ? (
+                <SelectedTeacherContact
+                  contactInfo={response.teacherContact.contactInfo}
+                  demandRequestId={demandRequestId}
+                  organizationContact={organizationContact}
+                />
+              ) : null}
+
               {!hasSelectedResponse && response.status === "submitted" ? (
                 <details className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50/60">
                   <summary className="cursor-pointer list-none rounded-full px-4 py-2 text-sm font-medium text-emerald-800 marker:hidden">
@@ -140,5 +153,42 @@ export function ResponseList({
         </ul>
       )}
     </section>
+  );
+}
+
+// 票 04（spec「聯絡方式」「雙方都沒有聯絡方式」）：選定後，被選定那張卡顯示老師的聯絡方式；
+// 老師沒留時依團體聯絡資料是否完整說明，雙方都缺時指出要補團體聯絡資料並回到這筆需求。
+function SelectedTeacherContact({
+  contactInfo,
+  demandRequestId,
+  organizationContact,
+}: {
+  contactInfo: string | null;
+  demandRequestId: string;
+  organizationContact: { organizationId: string; isContactComplete: boolean } | null;
+}) {
+  const bothMissing = !contactInfo && organizationContact !== null && !organizationContact.isContactComplete;
+
+  return (
+    <div className="mt-3 min-w-0 rounded-2xl border border-pine/20 bg-pine-tint p-3">
+      <p className="text-xs font-medium text-pine-deep">老師的聯絡方式</p>
+      {contactInfo ? (
+        <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-ink [overflow-wrap:anywhere]">{contactInfo}</p>
+      ) : bothMissing ? (
+        <p className="mt-1 text-sm leading-6 text-ink-soft">
+          你和老師目前都沒有可用的聯絡方式。請先補齊團體聯絡資料，老師才聯絡得到你。{" "}
+          <Link
+            className="font-medium text-pine underline underline-offset-4"
+            href={`/organizer/organizations/${organizationContact.organizationId}?returnTo=${encodeURIComponent(`/organizer/demands/${demandRequestId}`)}`}
+          >
+            補齊團體聯絡資料
+          </Link>
+        </p>
+      ) : (
+        <p className="mt-1 text-sm leading-6 text-ink-soft">
+          老師還沒留下聯絡方式。老師看得到你團體的聯絡窗口，會主動跟你聯絡確認時間。
+        </p>
+      )}
+    </div>
   );
 }

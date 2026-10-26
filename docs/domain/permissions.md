@@ -59,6 +59,7 @@ Can:
 - View own demand requests
 - Edit own draft/submitted demand requests if allowed
 - View teacher responses to own demand requests
+- **已落地（`organizer-post-match-handoff` 票 04，2026-10-26，產品主人核准 D1＝A、D2＝A）：View selected teacher's contact**：團主在自己的需求詳情看得到**已選定**那位老師的 `TeacherProfile.contactInfo`（老師在「收款與聯絡」填的選填文字），用來確認上課時間。只有 `status = selected` 的那一筆有值，另外查詢、條件寫在 WHERE，其他回應的 DTO 不含這個欄位；選定前看不到任何老師的聯絡方式。不包含老師帳號 email、電話、收款帳號等其他私人欄位。
 - Manage own class roster basics
 - Enroll in class sessions only through the same User's Member capability
 - **已核准・未實作（organizer-usability-redesign，Q18：A）**：建立並管理多個自己擁有的團體（owner 判斷）；為自己的團體建立合作邀請、選平台 approved 老師、修改／撤回尚未轉課的邀請；老師確認後直接開放報名（`organizer_direct`）。本人也是 approved 老師時，可以在團主表單明確確認由自己授課。細節見 `permissions-matrix.md` 的 OrganizerClassProposal 表。
@@ -82,6 +83,7 @@ Can:
 - Set own availability
 - View published/eligible demand requests
 - Respond to eligible demand requests
+- **已落地（`organizer-post-match-handoff` 票 04，2026-10-26，產品主人核准 D1＝A）：View organization contact after being selected**：老師在自己的回應頁（`/teacher/demands/[id]`）看得到該需求團體的名稱與聯絡窗口（`contactName`、`contactEmail`、`contactPhone`），條件是「這位老師在這筆需求有 `selected` 回應」，寫在查詢 WHERE。沒被選上、從沒回應、需求取消後（回應轉成 `declined`）都看不到。不含團主個人帳號 email。範圍與直接開團受邀老師看到的「團體聯絡窗口」相同；老師的單堂課詳情仍維持「Organization 只有名稱」。
 - **Create own class sessions directly（已落地，`teacher-initiated-open-classes` 已確認）**：approved 老師不需要等團主媒合，可以自己開單堂、常規（每週固定星期）或固定期課程；own-scoped 取消/開放報名/標記完成，走平行於既有 Organizer 版本的核心，不共用擁有權過濾邏輯。任何建課路徑（自建或團主媒合）都會檢查是否跟自己其他課程時段衝突。
 - **Optionally require approval for new enrollments on own-created classes（已落地，Gate G2/G3）**：可在建課時選擇「需要我確認才算報名成功」，對應的 `pending` 報名需要老師在 `/teacher/classes` 明確確認或拒絕，受 `startAt` 時間邊界限制。
 - View own class sessions（含團主媒合與自建兩種來源，統一列表顯示來源徽章）
