@@ -11,8 +11,10 @@
 | 3 切票 | 完成；Codex 審 2 輪通過 | 2026-10-25 | 「票切得對，全部放行（含 HEAVY 01），開始實作」 |
 | 4 實作 | 完成：01–04 done；code-review＋spec-review 修正已套用；完整 smoke 1591 過、33 skip、2 個過時斷言已修 | 2026-10-25 | |
 | 5 收尾（commit 關卡） | 完成：合併進 main（`557a034`），未 push；開發資料庫已套用 `20261025120000_notification_role_targets`。產品主人停掉開發伺服器後 `prisma generate` 成功（2026-10-26） | 2026-10-26 | 「把 wrong-route-fixes 合併進 main，並對開發資料庫跑那個 migration；不要 push」 |
-| 6 畫面驗收 | 未開始 | | |
-| 7 回顧（retro） | 未開始 | | |
+| 6 畫面驗收 | 完成：9 個畫面全部通過；發現 10 項，F9-1、F8-1 這輪修（`197345d`）並通過畫面驗收，其餘記進 backlog 第 28～30 項 | 2026-10-26 | 「照建議：F9-1、F8-1 這輪修，其他記進 backlog，F7-6 另開一輪」「F8-1 通過」「F9-1 通過」 |
+| 7 回顧（retro） | 完成：7 項建議全部採用（`playwright.config.ts` 擋開發資料庫、畫面驗收手冊補開發伺服器與 Claude in Chrome 填表、backlog 第 31 項、feature-loop 驗收前先說明發現怎麼處理、spec-review 審查員不准動 git HEAD、Claude memory 補 CRLF） | 2026-10-26 | 「7 條全部照建議做」 |
+
+**閉環完成（2026-10-26）。**
 
 ## 票
 
@@ -22,7 +24,7 @@
 | 02 需求類與管理員類通知直達 | STANDARD | no | 01 | done |
 | 03 申請頁老師專區導覽列（F12） | LIGHT | no | – | done |
 | 04 三個重複提示 | LIGHT | no | – | done |
-| 05 整合驗證、文件與畫面驗收 | STANDARD | no | 01–04 | 驗證與文件完成，等畫面驗收 |
+| 05 整合驗證、文件與畫面驗收 | STANDARD | no | 01–04 | done |
 
 ## 已放行的票
 
@@ -30,7 +32,12 @@
 
 ## 下一步
 
-產品主人重新 `npm run dev` → 照票 05 的清單做畫面驗收（Claude in Chrome，一個身分一個 Chrome 設定檔）。
+閉環完成。剩下的事都要產品主人決定：
+
+- retro 的修改與驗收紀錄 commit（main），以及要不要 push（push 前重查 `git log origin/main..main`）。
+- 清理施工環境（會刪東西，要先問）：worktree `C:\Users\franz\fsy-wrf`、`C:\Users\franz\fsy-wrf-b`，branch `wrong-route-fixes`、`wrong-route-fixes-b`，測試 DB `freesoar_wrf_a`、`freesoar_wrf_b`；`freesoar_tfr_int` 保留。
+- 開發資料庫裡的測試資料（清單在票 05）與 3 個以前 smoke 留下的 `.local` 帳號要不要刪。
+- 下一輪候選：backlog 第 30 項（全站逐頁設計檢視，可先從第 28 項的老師申請表單開始）、第 29 項、第 31 項。
 
 ## 施工環境（2026-10-25 建立）
 

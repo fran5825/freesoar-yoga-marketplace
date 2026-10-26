@@ -287,6 +287,14 @@
 - 做法（另開一輪）：列出所有頁面、排優先順序（老師申請、建課、課程頁等最常用的先），每頁用 `/impeccable` 對照 `DESIGN.md` 評估與修改，產品主人看畫面驗收。跑過兩、三頁、步驟固定後，再考慮包成 skill。`/flow-walkthrough` 看的是流程好不好學，不負責視覺與品牌一致。
 - 第 28 項的申請表單可以當第一頁。
 
+### 31. 通知 target 的自動防呆，以及兩個要登入才能測的通知（2026-10-26，wrong-route-fixes retro）
+
+- 問題：「需求送審」「老師申請送出」的通知寫在要讀登入狀態的函式裡（`submitOwnDemandRequest`、老師申請送審），smoke 沒辦法直接呼叫，這輪只能靠畫面驗收確認管理員那則帶 target。另外，之後新增通知時忘了帶 target，目前只有 `docs/harness/review-checklist.md` 一條人工規則擋。
+- 做法：
+  - [ ] 比照課程取消、需求取消的寫法，把這兩個送審拆成「不需要登入狀態的 core（傳入 id）」加外層登入檢查，再在 `tests/smoke/notification-role-targets.spec.ts` 補這兩種與補課自動報名。
+  - [ ] 加一個自動檢查：會送給多種身分（`EMAIL_POLICY` 裡有兩種以上角色）的通知類型，每次 `notifyUsers` 都要帶 target 或屬於系列；可以是 smoke 裡攔截 `notifyOverride` 的檢查，或 ESLint 自訂規則，選比較便宜的。
+- 相關：code-review 時另記兩項小事（回課程頁後失去它自己的返回來源；`teacher-return-path.ts` 與 `class-return-path.ts` 兩份白名單分開寫），見 `docs/superpowers/plans/wrong-route-fixes/tickets/05-acceptance-and-docs.md`。
+
 ### 4. 新增 LINE 與 Facebook 登入
 
 - 目前只有 Google（`src/auth.ts` 的 `providers`）。

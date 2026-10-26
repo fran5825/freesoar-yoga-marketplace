@@ -30,6 +30,7 @@ description: "Free Soar 版的雙軸審查（改編自 Matt Pocock 的 code-revi
 - **Spec sub-agent** 另外要特別檢查：有沒有超出 V1 scope；有沒有沒寫在 spec 裡的 state machine 變更、權限變更、Prisma schema 變更。命中的話標「需產品主人確認」。
 - 報告用繁體中文、白話寫；每一項都引用違反的規則（檔名＋條目）或 spec 那一行。
 - 只回報、不修改。修不修由 `/implement` 或產品主人決定。不要 commit。
+- 派給 sub-agent 的 prompt 要寫明：只能讀，不能跑會移動 HEAD 或改工作區的 git 指令（`checkout`、`switch`、`reset`、`stash`、`restore`、`merge`、`rebase`），要看別的版本用 `git show <ref>:<path>` 或 `git diff`。審查常在別人正在施工的 worktree 裡跑。
 
 Two-axis review of the diff between `HEAD` and a fixed point the user supplies:
 
