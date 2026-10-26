@@ -108,7 +108,7 @@ test.describe("class session creation smoke", () => {
     await page.getByRole("checkbox", { name: /我確認以上資訊無誤/ }).check();
     await page.getByRole("button", { name: "建立課程" }).click();
 
-    await expect(page.getByText("課程已建立。")).toBeVisible();
+    await expect(page.getByText("課程已建立，還沒開放報名。")).toBeVisible();
     await expect(page.getByText(validInput.location)).toBeVisible();
 
     const demandAfter = await prisma.demandRequest.findUniqueOrThrow({

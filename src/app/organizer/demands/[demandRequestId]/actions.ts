@@ -50,7 +50,7 @@ export async function createClassSessionAction(formData: FormData): Promise<void
 
   revalidatePath("/organizer/classes");
   redirect(
-    `/organizer/classes/${result.classSessionId}?result=success&message=${encodeURIComponent("課程已建立。")}`,
+    `/organizer/classes/${result.classSessionId}?result=success&message=${encodeURIComponent("課程已建立，還沒開放報名。")}`,
   );
 }
 

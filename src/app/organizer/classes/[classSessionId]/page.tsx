@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { getOwnClassSessionDetailForOrganizer } from "@/domain/class-session/read-service";
 import { classOriginLabelsForOrganizer } from "@/domain/class-session/origin-labels";
 import { classActionPhase, getClassActionSlots, type ClassActionKey } from "@/domain/class-session/class-action-slots";
+import { getClassDraftKind } from "@/domain/class-session/draft-kind";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import { listRosterEnrollmentsForClassSession } from "@/domain/enrollment/read-service";
 import { listReviewsForClassSession } from "@/domain/review/read-service";
@@ -80,8 +81,10 @@ export default async function OrganizerClassSessionDetailPage({
   // 可用條件與原本各區塊相同；真正的檢查在 service。
   const now = new Date();
   const phase = classActionPhase({ ...classSession, now });
+  // organizer-post-match-handoff 票 01：開課時間已過的草稿無法開放（service 要求 startAt > now），不顯示「開放報名」。
+  const draftKind = getClassDraftKind(classSession, now);
   const available: ClassActionKey[] = [
-    ...(classSession.status === "draft" ? (["open"] as const) : []),
+    ...(draftKind === "openable_draft" ? (["open"] as const) : []),
     ...(classSession.status === "open_for_enrollment" ? (["copyLink"] as const) : []),
     ...((classSession.status === "draft" || classSession.status === "open_for_enrollment") && classSession.startAt.getTime() > now.getTime()
       ? (["cancel"] as const)
@@ -182,6 +185,25 @@ export default async function OrganizerClassSessionDetailPage({
               查看來源需求
             </Link>
           </p>
+        ) : null}
+        {/* organizer-post-match-handoff 票 01：還沒開放報名時，說清楚學員看不到、下一步是什麼。 */}
+        {draftKind === "openable_draft" ? (
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
+            學員還看不到這堂課。確認時間、地點後按「開放報名」，就能複製連結分享給團員。
+          </p>
+        ) : null}
+        {draftKind === "expired_draft" ? (
+          <div className="mt-3 grid max-w-2xl gap-2 rounded-xl border border-gold/25 bg-gold-tint px-4 py-3 text-sm leading-6 text-gold-deep">
+            <p>開課時間已過，這堂課沒有開放報名，無法再開放。</p>
+            <p className="flex flex-wrap gap-x-4 gap-y-1">
+              <Link className="font-medium underline underline-offset-4" href="/organizer/demands/new">
+                建立新的需求
+              </Link>
+              <Link className="font-medium underline underline-offset-4" href="/organizer/class-proposals/new">
+                直接邀請合作老師開課
+              </Link>
+            </p>
+          </div>
         ) : null}
         {/* teacher-series-rollup 票 05（spec 2.2）：按鈕集中在標題下方一排，說明放進確認視窗或「ⓘ」。 */}
         <div className="mt-4">
