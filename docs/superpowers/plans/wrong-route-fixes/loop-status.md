@@ -34,8 +34,8 @@
 
 閉環完成。剩下的事都要產品主人決定：
 
-- retro 的修改與驗收紀錄 commit（main），以及要不要 push（push 前重查 `git log origin/main..main`）。
-- 清理施工環境（會刪東西，要先問）：worktree `C:\Users\franz\fsy-wrf`、`C:\Users\franz\fsy-wrf-b`，branch `wrong-route-fixes`、`wrong-route-fixes-b`，測試 DB `freesoar_wrf_a`、`freesoar_wrf_b`；`freesoar_tfr_int` 保留。
+- ~~retro 的修改與驗收紀錄 commit 與 push~~：2026-10-26 已 commit（`8a94fb4`）並 push（`532c9df..8a94fb4`，push 前重查 `origin/main..main` 只有本輪 10 個 commit），GitHub Actions CI 通過。
+- ~~清理施工環境~~：2026-10-26 產品主人說「清理施工環境」後已刪：worktree `C:\Users\franz\fsy-wrf`、`C:\Users\franz\fsy-wrf-b`（含殘留的 `.next` 資料夾），branch `wrong-route-fixes`、`wrong-route-fixes-b`（都已合併進 main），測試 DB `freesoar_wrf_a`、`freesoar_wrf_b`；`freesoar_tfr_int` 保留。下面「施工環境」表格只是歷史紀錄。
 - 開發資料庫裡的測試資料（清單在票 05）與 3 個以前 smoke 留下的 `.local` 帳號要不要刪。
 - 下一輪候選：backlog 第 30 項（全站逐頁設計檢視，可先從第 28 項的老師申請表單開始）、第 29 項、第 31 項。
 
