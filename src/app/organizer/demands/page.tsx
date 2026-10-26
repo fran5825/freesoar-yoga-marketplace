@@ -155,6 +155,7 @@ export default async function OrganizerDemandsPage({
                 const nextStep = getDemandNextStep({
                   status: demandRequest.status,
                   effectiveResponseCount: demandRequest.effectiveResponseCount,
+                  classDraftKind: demandRequest.classDraftKind,
                 });
 
                 return (

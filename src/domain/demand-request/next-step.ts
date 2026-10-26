@@ -1,5 +1,7 @@
 import type { DemandRequestStatus } from "@prisma/client";
 
+import type { ClassDraftKind } from "@/domain/class-session/draft-kind";
+
 // organizer-usability 票 08：團主端「下一步」提示的共用文案。
 // 詳情頁、總覽「待你處理」、需求列表卡片都從這裡取文案，避免同一個狀態在不同頁面說法不一樣。
 // 依需求狀態＋有效回應數決定，不改狀態機；`kind` 讓畫面決定要不要放進「待你處理」。
@@ -19,6 +21,9 @@ export type DemandNextStep = {
 export function getDemandNextStep(input: {
   status: DemandRequestStatus;
   effectiveResponseCount?: number;
+  // organizer-post-match-handoff 票 02：轉成課程後，那堂課是不是還沒開放報名（見 getClassDraftKind）。
+  // 列表、總覽、詳情都要傳同一個值；沒傳時維持原本的「課程已建立」說法。
+  classDraftKind?: ClassDraftKind | null;
 }): DemandNextStep {
   const { status } = input;
   const responseCount = input.effectiveResponseCount ?? 0;
@@ -66,6 +71,21 @@ export function getDemandNextStep(input: {
         shortMessage: "已媒合：請建立課程",
       };
     case "converted_to_class":
+      // kind 維持 info：還沒開放的課由總覽的課程待辦提醒，需求這邊不再重複放進「待你處理」。
+      if (input.classDraftKind === "openable_draft") {
+        return {
+          kind: "info",
+          message: "課程已建立，還沒開放報名。到課程頁按「開放報名」後，就能分享連結。",
+          shortMessage: "課程已建立，還沒開放報名",
+        };
+      }
+      if (input.classDraftKind === "expired_draft") {
+        return {
+          kind: "info",
+          message: "課程已建立但沒有開放報名，開課時間已過。",
+          shortMessage: "課程沒有開放報名（開課時間已過）",
+        };
+      }
       return {
         kind: "info",
         message: "課程已建立。到課程頁可以開放報名、分享連結並查看報名狀況。",

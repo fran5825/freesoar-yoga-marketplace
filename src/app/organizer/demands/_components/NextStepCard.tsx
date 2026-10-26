@@ -26,12 +26,13 @@ export function NextStepCard({
 }: {
   demandRequest: Pick<
     OwnDemandRequestSummary,
-    "id" | "status" | "effectiveResponseCount" | "classSessionId"
+    "id" | "status" | "effectiveResponseCount" | "classSessionId" | "classDraftKind"
   >;
 }) {
   const nextStep = getDemandNextStep({
     status: demandRequest.status,
     effectiveResponseCount: demandRequest.effectiveResponseCount,
+    classDraftKind: demandRequest.classDraftKind,
   });
 
   const action = getNextStepAction(demandRequest, nextStep);

@@ -155,3 +155,97 @@ test.describe("organizer post-match handoff", () => {
     await context.close();
   });
 });
+
+// 票 02：總覽待辦、課程列表、需求下一步（需求列表、總覽「我的需求」、需求詳情三處說法一致）。
+test.describe("organizer post-match handoff: reminders", () => {
+  const cases = [
+    {
+      label: "openable",
+      status: "draft" as const,
+      daysFromNow: 10,
+      demandShort: "課程已建立，還沒開放報名",
+      demandLong: "課程已建立，還沒開放報名。到課程頁按「開放報名」後，就能分享連結。",
+      classListLine: "還沒開放報名，學員看不到",
+      inTodo: true,
+    },
+    {
+      label: "expired",
+      status: "draft" as const,
+      daysFromNow: -1,
+      demandShort: "課程沒有開放報名（開課時間已過）",
+      demandLong: "課程已建立但沒有開放報名，開課時間已過。",
+      classListLine: "開課時間已過，沒有開放報名",
+      inTodo: false,
+    },
+    {
+      label: "opened",
+      status: "open_for_enrollment" as const,
+      daysFromNow: 10,
+      demandShort: "課程已建立",
+      demandLong: "課程已建立。到課程頁可以開放報名、分享連結並查看報名狀況。",
+      classListLine: null,
+      inTodo: false,
+    },
+  ];
+
+  for (const testCase of cases) {
+    test(`${testCase.label} class: demand next step, dashboard and class list agree`, async ({ browser }, testInfo) => {
+      const id = runId(testInfo, `remind-${testCase.label}`);
+      const { organizer, demandId, classSessionId } = await setupMatchedClass(id, {
+        status: testCase.status,
+        daysFromNow: testCase.daysFromNow,
+      });
+      const context = await browser.newContext();
+      await addAuthSessionCookie(context, organizer.sessionToken);
+      const page = await context.newPage();
+      const todoTitle = `「交接課程 ${id}」還沒開放報名`;
+
+      // 需求列表卡片
+      await page.goto("/organizer/demands");
+      const listCard = page.getByRole("link").filter({ hasText: `交接需求 ${id}` });
+      await expect(listCard.getByText(testCase.demandShort, { exact: true })).toBeVisible();
+
+      // 需求詳情的下一步卡片
+      await page.goto(`/organizer/demands/${demandId}`);
+      await expect(page.getByLabel("下一步提示").getByText(testCase.demandLong, { exact: true })).toBeVisible();
+
+      // 總覽：「我的需求」卡片與「待你處理」
+      await page.goto("/organizer/dashboard");
+      const dashboardCard = page.getByRole("link").filter({ hasText: `交接需求 ${id}` });
+      await expect(dashboardCard.getByText(testCase.demandShort, { exact: true })).toBeVisible();
+      await expect(page.getByText(todoTitle)).toHaveCount(testCase.inTodo ? 1 : 0);
+
+      // 我的課程列表
+      await page.goto("/organizer/classes");
+      const classCard = page.getByRole("article").filter({ hasText: `交接課程 ${id}` });
+      for (const line of ["還沒開放報名，學員看不到", "開課時間已過，沒有開放報名"]) {
+        await expect(classCard.getByText(line, { exact: true })).toHaveCount(line === testCase.classListLine ? 1 : 0);
+      }
+
+      expect(classSessionId).toBeTruthy();
+      await context.close();
+    });
+  }
+
+  test("dashboard todo links to the class and disappears after 開放報名", async ({ browser }, testInfo) => {
+    const id = runId(testInfo, "remind-open");
+    const { organizer, classSessionId } = await setupMatchedClass(id, { status: "draft", daysFromNow: 10 });
+    const context = await browser.newContext();
+    await addAuthSessionCookie(context, organizer.sessionToken);
+    const page = await context.newPage();
+    const todoTitle = `「交接課程 ${id}」還沒開放報名`;
+
+    await page.goto("/organizer/dashboard");
+    const pending = page.getByRole("region", { name: "待你處理" });
+    await pending.getByRole("link").filter({ hasText: todoTitle }).click();
+    await expect(page).toHaveURL(new RegExp(`/organizer/classes/${classSessionId}`));
+
+    await page.getByRole("button", { name: "開放報名" }).click();
+    await page.getByRole("button", { name: "確定開放報名" }).click();
+    await expect(page.getByText("已開放報名。")).toBeVisible();
+
+    await page.goto("/organizer/dashboard");
+    await expect(page.getByText(todoTitle)).toHaveCount(0);
+    await context.close();
+  });
+});

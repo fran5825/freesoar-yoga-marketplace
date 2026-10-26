@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { getDemandNextStep } from "@/domain/demand-request/next-step";
+import { buildOrganizerClassTodoItems } from "@/domain/class-session/organizer-class-todo";
+import { listOwnClassSessionsForOrganizer } from "@/domain/class-session/read-service";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
 import {
   getOwnDemandRequestList,
@@ -61,11 +63,14 @@ export default async function OrganizerDashboardPage() {
     );
   }
 
-  const [notifications, demandRequests, proposals] = await Promise.all([
+  const [notifications, demandRequests, proposals, classSessions] = await Promise.all([
     listOwnNotifications(),
     getOwnDemandRequestList(),
     listOwnActiveProposalsForOrganizer(),
+    listOwnClassSessionsForOrganizer(),
   ]);
+  // organizer-post-match-handoff 票 02：建好但還沒開放報名的課（可開放的草稿）也放進「待你處理」。
+  const classTodos = buildOrganizerClassTodoItems(classSessions);
   // organizer-usability-redesign 票 12：直接開團的邀請分成「待你處理」與「等待對方回覆」，都連到單筆邀請。
   const proposalItems = buildOrganizerProposalTodoItems(proposals);
   const proposalActions = proposalItems.filter((item) => item.kind === "action");
@@ -77,15 +82,15 @@ export default async function OrganizerDashboardPage() {
 
   // 票 09：「待你處理」＝需要團主動手的需求（草稿未送、老師已回應待選、已媒合待建課程、被退回），
   // 文案與詳情頁共用同一個來源（getDemandNextStep）。
-  const pendingActions = demandRequests
-    .map((demandRequest) => ({
-      demandRequest,
-      nextStep: getDemandNextStep({
-        status: demandRequest.status,
-        effectiveResponseCount: demandRequest.effectiveResponseCount,
-      }),
-    }))
-    .filter(({ nextStep }) => nextStep.kind === "action");
+  const demandSteps = demandRequests.map((demandRequest) => ({
+    demandRequest,
+    nextStep: getDemandNextStep({
+      status: demandRequest.status,
+      effectiveResponseCount: demandRequest.effectiveResponseCount,
+      classDraftKind: demandRequest.classDraftKind,
+    }),
+  }));
+  const pendingActions = demandSteps.filter(({ nextStep }) => nextStep.kind === "action");
   // 草稿可能有好幾筆，而且下方「我的需求」已經逐筆列出，所以這裡只放一行摘要。
   const draftCount = pendingActions.filter(
     ({ demandRequest }) => demandRequest.status === "draft",
@@ -95,10 +100,8 @@ export default async function OrganizerDashboardPage() {
   );
 
   const recentNotifications = notifications.slice(0, RECENT_NOTIFICATIONS_LIMIT);
-  const recentDemandRequests = demandRequests.slice(
-    0,
-    RECENT_DEMAND_REQUESTS_LIMIT,
-  );
+  // 票 02：「我的需求」卡片也顯示下一步短句，跟需求列表、詳情同一個來源。
+  const recentDemandSteps = demandSteps.slice(0, RECENT_DEMAND_REQUESTS_LIMIT);
 
   const statusCounts = new Map<DemandRequestSnapshot["status"], number>();
   for (const demandRequest of demandRequests) {
@@ -150,7 +153,7 @@ export default async function OrganizerDashboardPage() {
       )}
 
       {/* inline-member-actions 票 04：沒有輪到團主處理的事項就整張不出現；有事項時是提示橫幅之後的第一張卡。 */}
-      {pendingActions.length > 0 || proposalActions.length > 0 ? (
+      {pendingActions.length > 0 || proposalActions.length > 0 || classTodos.length > 0 ? (
       <section aria-labelledby="pending-title" className="rounded-2xl border border-ink/15 bg-white p-6">
         <h2 className="text-lg font-semibold text-ink" id="pending-title">待你處理</h2>
 
@@ -169,6 +172,16 @@ export default async function OrganizerDashboardPage() {
                 </p>
               </Link>
             ) : null}
+            {classTodos.map((item) => (
+              <Link
+                className="grid gap-1 rounded-2xl border border-gold/30 bg-gold-tint p-4 transition hover:bg-sand"
+                href={item.href}
+                key={item.href}
+              >
+                <p className="min-w-0 break-words text-sm font-medium text-ink">{item.title}</p>
+                <p className="text-sm text-gold-deep">{item.message}</p>
+              </Link>
+            ))}
             {proposalActions.map((item) => (
               <Link
                 className="grid gap-1 rounded-2xl border border-gold/30 bg-gold-tint p-4 transition hover:bg-sand"
@@ -281,7 +294,7 @@ export default async function OrganizerDashboardPage() {
             </div>
 
             <div className="mt-6 grid gap-3">
-              {recentDemandRequests.map((demandRequest) => (
+              {recentDemandSteps.map(({ demandRequest, nextStep }) => (
                 <Link
                   className="grid gap-2 rounded-2xl border border-ink/10 bg-cream p-4 transition hover:bg-sand"
                   href={`/organizer/demands/${demandRequest.id}`}
@@ -297,6 +310,7 @@ export default async function OrganizerDashboardPage() {
                       {demandRequestStatusLabels[demandRequest.status]}
                     </span>
                   </div>
+                  <p className="text-sm text-ink-soft">{nextStep.shortMessage}</p>
                   <p className="text-xs text-ink-faint">
                     最後更新：{formatDemandRequestDateTime(demandRequest.updatedAt)}
                   </p>

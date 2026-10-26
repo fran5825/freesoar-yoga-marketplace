@@ -1,5 +1,6 @@
-import type { DemandRequestStatus } from "@prisma/client";
+import type { ClassSessionStatus, DemandRequestStatus } from "@prisma/client";
 
+import { getClassDraftKind, type ClassDraftKind } from "@/domain/class-session/draft-kind";
 import { getOwnOrganizerContext } from "@/domain/organizer-profile/service";
 import { listAdminUserIds } from "@/domain/notification/admin-recipients";
 import { notifyUsers } from "@/domain/notification/create";
@@ -68,14 +69,17 @@ const demandRequestSelect = {
 // - effectiveResponseCount：還在等團主選擇的老師回應數＝DemandResponse.status = submitted 且
 //   老師 status = approved（與選師 guard 相同：被暫停老師的回應選不了，不算）。需求狀態不會 persist teacher_responded，下一步提示改依這個數字判斷。
 // - classSessionId：轉成課程後對應的 ClassSession，讓「下一步」直接連到那一堂課。
+// - classDraftKind（organizer-post-match-handoff 票 02）：那堂課還沒開放報名時是哪一種草稿，
+//   列表、總覽、詳情的「下一步」都讀這個值；還沒轉成課程時是 null。
 export type OwnDemandRequestSummary = DemandRequestSnapshot & {
   effectiveResponseCount: number;
   classSessionId: string | null;
+  classDraftKind: ClassDraftKind | null;
 };
 
 const ownDemandRequestSummarySelect = {
   ...demandRequestSelect,
-  classSession: { select: { id: true } },
+  classSession: { select: { id: true, status: true, startAt: true } },
   _count: {
     select: {
       demandResponses: {
@@ -90,7 +94,7 @@ const ownDemandRequestSummarySelect = {
 
 function toOwnDemandRequestSummary<
   T extends DemandRequestSnapshot & {
-    classSession: { id: string } | null;
+    classSession: { id: string; status: ClassSessionStatus; startAt: Date } | null;
     _count: { demandResponses: number };
   },
 >(row: T): OwnDemandRequestSummary {
@@ -100,6 +104,7 @@ function toOwnDemandRequestSummary<
     ...snapshot,
     effectiveResponseCount: _count.demandResponses,
     classSessionId: classSession?.id ?? null,
+    classDraftKind: classSession ? getClassDraftKind(classSession) : null,
   };
 }
 

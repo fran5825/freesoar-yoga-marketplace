@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { getClassDraftKind } from "@/domain/class-session/draft-kind";
 import { listOwnClassSessionsForOrganizer } from "@/domain/class-session/read-service";
 import { classOriginLabelsForOrganizer } from "@/domain/class-session/origin-labels";
 import { formatTaipeiDatetime } from "@/domain/class-session/timezone";
@@ -125,6 +126,13 @@ export default async function OrganizerClassesPage() {
               <p className="text-sm text-ink-faint">
                 {formatTaipeiDatetime(classSession.startAt)} 開始
               </p>
+              {/* organizer-post-match-handoff 票 02：草稿卡片寫明學員看不到，或開課時間已過無法開放。 */}
+              {getClassDraftKind(classSession) === "openable_draft" ? (
+                <p className="text-sm text-gold-deep">還沒開放報名，學員看不到</p>
+              ) : null}
+              {getClassDraftKind(classSession) === "expired_draft" ? (
+                <p className="text-sm text-gold-deep">開課時間已過，沒有開放報名</p>
+              ) : null}
               <div>
                 <Link
                   className="rounded-full border border-ink/25 px-4 py-2 text-center text-sm font-medium text-ink transition hover:bg-cream"
