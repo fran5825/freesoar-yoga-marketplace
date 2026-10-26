@@ -136,6 +136,8 @@ export function buildTeacherTodoItems(input: {
   selectedResponsesAwaitingClass: { demandRequestId: string; demandTitle: string }[];
   seriesNeedingMore?: SeriesNeedingMoreInput[];
   now?: Date;
+  // organizer-post-match-handoff 票 06：老師資格暫停期間看不到團體聯絡窗口，待辦文字不再叫老師去回應頁找。
+  organizationContactHidden?: boolean;
 }): TeacherTodoItem[] {
   const now = input.now ?? new Date();
   const byStart = [...input.classSessions].sort(
@@ -223,7 +225,9 @@ export function buildTeacherTodoItems(input: {
       kind: "waiting",
       label: "等待團主建立課程",
       // organizer-post-match-handoff 票 04：選定後要先跟團主確認時間，聯絡窗口在回應頁。
-      message: `團主已選你合作「${response.demandTitle}」。請跟團主確認上課時間，團體聯絡窗口在回應頁；團主建立課程後會出現在「我的課程」。`,
+      message: input.organizationContactHidden
+        ? `團主已選你合作「${response.demandTitle}」。團主建立課程後會出現在「我的課程」。`
+        : `團主已選你合作「${response.demandTitle}」。請跟團主確認上課時間，團體聯絡窗口在回應頁；團主建立課程後會出現在「我的課程」。`,
       href: `/teacher/demands/${response.demandRequestId}`,
     }),
   );

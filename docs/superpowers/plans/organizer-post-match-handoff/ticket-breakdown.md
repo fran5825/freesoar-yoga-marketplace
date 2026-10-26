@@ -18,6 +18,7 @@
 | 03 | [「課程已建立」通知依路線分文案](tickets/03-class-created-notice-by-origin.md) | 媒合建課後，團主與老師的通知寫明還沒開放報名；直接開團與老師自建課的通知不變 | STANDARD | yes | – | done |
 | 04 | [選定後雙方看到聯絡方式](tickets/04-post-selection-contacts.md) | 團主選定後在同一頁看到老師聯絡方式與可配合時段；被選定的老師從通知直接到回應頁看到團體聯絡窗口；沒被選上的老師看不到；雙方都缺聯絡方式時知道誰要補 | HEAVY | yes | – | done |
 | 05 | [驗收與文件同步](tickets/05-acceptance-and-docs.md) | 手機與桌機走完整段交接；走查報告與權限文件一致 | STANDARD | no | 01–04 | done |
+| 06 | [老師被暫停時不顯示團體聯絡窗口](tickets/06-hide-org-contact-when-teacher-suspended.md) | 被暫停的老師在需求回應頁與合作邀請頁都看不到團體聯絡窗口，恢復後再顯示；團主端不變（產品主人 2026-10-26 追加） | HEAVY | yes | 04 | done |
 
 ```text
 01 ──> 02 ──┐

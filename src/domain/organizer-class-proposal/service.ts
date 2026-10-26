@@ -81,6 +81,9 @@ export type ProposalDetail = {
     contactName: string | null;
     contactEmail: string | null;
     contactPhone: string | null;
+    // organizer-post-match-handoff 票 06：受邀老師資格不是 approved（例如被暫停）時，
+    // 老師端讀到的聯絡欄位一律清空，並用這個值讓畫面說明原因。團主端讀取一律是 false。
+    contactHiddenForTeacher?: boolean;
   };
   teacher: ProposalTeacherCard | null;
   title: string | null;
@@ -308,15 +311,35 @@ export async function getProposalForTeacher(proposalId: string): Promise<Proposa
   if (!currentUser) {
     return null;
   }
-  const row = await prisma.organizerClassProposal.findFirst({
-    where: {
-      id: proposalId,
-      teacherProfile: { userId: currentUser.id },
-      status: { not: "draft" },
-    },
-    select: proposalDetailSelect,
-  });
-  return row ? toDetail(row) : null;
+  const [row, ownTeacherProfile] = await Promise.all([
+    prisma.organizerClassProposal.findFirst({
+      where: {
+        id: proposalId,
+        teacherProfile: { userId: currentUser.id },
+        status: { not: "draft" },
+      },
+      select: proposalDetailSelect,
+    }),
+    prisma.teacherProfile.findUnique({ where: { userId: currentUser.id }, select: { status: true } }),
+  ]);
+  if (!row) {
+    return null;
+  }
+  const detail = toDetail(row);
+  // 票 06（產品主人 2026-10-26）：老師資格暫停期間不顯示團體聯絡窗口，恢復後自動再顯示。
+  if (ownTeacherProfile?.status !== "approved") {
+    return {
+      ...detail,
+      organization: {
+        ...detail.organization,
+        contactName: null,
+        contactEmail: null,
+        contactPhone: null,
+        contactHiddenForTeacher: true,
+      },
+    };
+  }
+  return detail;
 }
 
 // 只查 approved 老師的公開名片欄位，不使用 admin 查詢，不回傳 email、電話或審核資料。

@@ -2,7 +2,7 @@
 
 建立日期：2026-10-26。狀態：**已核准**。產品主人 2026-10-26 回覆：「D1、D2、D3 都選 A，照 spec 現在的內容進下一步，寫 plan 和切票。」實作計畫見 [plan](../superpowers/plans/organizer-post-match-handoff/plan.md)。
 
-**實作狀態（2026-10-26）**：票 01–05 已完成並推上 main（產品主人以長任務確認單放行 03、04）。待辦：真人驗證；被選定後又被暫停的老師是否仍看得到團體聯絡窗口，待產品主人決定（`docs/backlog.md` 第 32 項）。
+**實作狀態（2026-10-26）**：票 01–05 已完成並推上 main（產品主人以長任務確認單放行 03、04）。待辦：真人驗證。產品主人 2026-10-26 追加決定：老師資格暫停期間不顯示團體聯絡窗口（找老師與直接開團兩條路線都套用，團主端照舊看得到老師聯絡方式），由票 06 完成。
 
 來源：[團主第一次發起團課流程走查](../superpowers/plans/organizer-first-run-walkthrough/review.md)（2026-10-26）的 F1、F2，兩項都是高嚴重度、待真人驗證。相關：[團主改版 spec](organizer-usability-redesign-spec.md)（直接開團路線的合作邀請）、[ADR 0008](../adr/0008-notification-series-grouping.md)（通知合併，本 spec 不改）、`docs/domain/permissions.md`（老師與團主互看的欄位）。
 

@@ -297,7 +297,7 @@
 
 ### 32. 選定老師之後交接的後續項目（2026-10-26，organizer-post-match-handoff 收尾）
 
-- [ ] **需產品決定**：老師被團主選定後又被管理員暫停，依既有規則 D12（老師一律看得到自己的回應）仍看得到該團體的聯絡窗口。要不要在暫停時隱藏？見 `docs/superpowers/plans/organizer-post-match-handoff/tickets/04-post-selection-contacts.md`。
+- [x] 老師被暫停時不顯示團體聯絡窗口：產品主人 2026-10-26 決定隱藏，找老師與直接開團兩條路線都套用，團主端照舊看得到老師聯絡方式。已由 `organizer-post-match-handoff` 票 06 完成。
 - [x] 老師的需求回應頁 `/teacher/demands/[id]` 未登入時轉到 `/sign-in` 沒帶 `callbackUrl`：2026-10-26 code-review 後已補（只修這一頁，因為「你被選中了」通知直達這裡）；老師專區其他頁面仍見入口走查疑點 B。
 - [ ] [團主第一次發起團課走查](superpowers/plans/organizer-first-run-walkthrough/review.md) 的 F3–F13 還沒處理；其中 F9（建課失敗清空欄位）跟這次的「先跟老師確認時間」最相關，建議先做。
 

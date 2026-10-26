@@ -28,10 +28,12 @@ export function ProposalSummary({ proposal }: { proposal: ProposalDetail }) {
     },
     {
       label: "團體聯絡窗口",
-      value:
-        [proposal.organization.contactName, proposal.organization.contactEmail, proposal.organization.contactPhone]
-          .filter(Boolean)
-          .join("・") || "尚未填寫",
+      // organizer-post-match-handoff 票 06：受邀老師資格暫停期間，老師端讀到的聯絡欄位已清空。
+      value: proposal.organization.contactHiddenForTeacher
+        ? "老師資格暫停期間不顯示"
+        : [proposal.organization.contactName, proposal.organization.contactEmail, proposal.organization.contactPhone]
+            .filter(Boolean)
+            .join("・") || "尚未填寫",
     },
   ];
 

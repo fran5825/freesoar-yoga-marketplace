@@ -244,6 +244,12 @@ export async function getOwnDemandResponseForDemand(
   });
 }
 
+// 票 06（產品主人 2026-10-26）：老師資格不是 approved（例如被暫停）時不顯示團體聯絡窗口，
+// 改回傳 { hidden: "teacher_not_approved" }，畫面說明原因；恢復資格後自動再顯示。
+export type SelectedDemandContactResult =
+  | ({ hidden: null } & SelectedDemandContactForTeacher)
+  | { hidden: "teacher_not_approved" };
+
 export type SelectedDemandContactForTeacher = {
   organizationName: string;
   contactName: string | null;
@@ -258,12 +264,12 @@ export type SelectedDemandContactForTeacher = {
 // 一律回 null。只回團體名稱與聯絡窗口三欄，不含團主個人帳號的 email。
 export async function getSelectedDemandContactForTeacher(
   demandRequestId: string,
-): Promise<SelectedDemandContactForTeacher | null> {
+): Promise<SelectedDemandContactResult | null> {
   const currentUser = await requireUser();
 
   const teacherProfile = await prisma.teacherProfile.findUnique({
     where: { userId: currentUser.id },
-    select: { id: true, contactInfo: true },
+    select: { id: true, contactInfo: true, status: true },
   });
 
   if (!teacherProfile) {
@@ -291,9 +297,14 @@ export async function getSelectedDemandContactForTeacher(
     return null;
   }
 
+  if (teacherProfile.status !== "approved") {
+    return { hidden: "teacher_not_approved" };
+  }
+
   const { organization } = selected.demandRequest;
 
   return {
+    hidden: null,
     organizationName: organization.name,
     contactName: blankToNull(organization.contactName),
     contactEmail: blankToNull(organization.contactEmail),

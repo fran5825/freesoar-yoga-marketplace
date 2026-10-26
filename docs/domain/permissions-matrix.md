@@ -137,11 +137,11 @@ Organizer 不可查看其他 organizer 的私人 demand request。
 | Select response | No | No | Own | No | Admin |
 | Decline response | No | No | Own | No | Admin |
 | View selected teacher's contactInfo | No | No | Own（只有 selected 那筆） | No | No |
-| View organization contact of a demand | No | No | Own | Own（自己的回應是 selected） | Admin |
+| View organization contact of a demand | No | No | Own | Own（自己的回應是 selected，且老師是 approved） | Admin |
 
 V1 一個 demand request 只能有一個 selected response。
 
-**聯絡方式（`organizer-post-match-handoff` 票 04，2026-10-26）**：上表最後兩列是選定後的交接。團主只看得到被選定老師的 `contactInfo`，其他回應的查詢與 DTO 不選取；老師只有自己的回應是 `selected` 時看得到該需求團體的聯絡窗口三欄。兩者都是 own-scope 寫在 WHERE。Admin 本來就能在後台看團體聯絡資訊（見 `View organization`），本輪沒有新增 Admin 讀取老師 `contactInfo` 的入口。
+**聯絡方式（`organizer-post-match-handoff` 票 04，2026-10-26）**：上表最後兩列是選定後的交接。團主只看得到被選定老師的 `contactInfo`，其他回應的查詢與 DTO 不選取；老師只有自己的回應是 `selected` 時看得到該需求團體的聯絡窗口三欄；老師資格暫停（不是 approved）期間不顯示，直接開團的合作邀請頁同樣不顯示（票 06，2026-10-26）。兩者都是 own-scope 寫在 WHERE。Admin 本來就能在後台看團體聯絡資訊（見 `View organization`），本輪沒有新增 Admin 讀取老師 `contactInfo` 的入口。
 
 **V1 落地範圍**（`demand-response-selection-and-matching`、`teacher-profile-suspension` 已確認）：`Select response` 僅 Organizer own-scoped 可執行，**Admin 不介入**（D2，上表 Admin 欄位為完整未來設計，V1 未開放）；`Decline response` 在 V1 不是獨立的 Organizer 手動動作，而是 select 成功時同一 transaction 內自動處理（D3），沒有對應的手動操作入口；`Shortlist response` 本輪不實作（D1），保留於表中作為未來 slice 參考（對齊上方 `Cancel demand` 的既有註記慣例）。`Select response` 額外要求該 response 所屬的 `TeacherProfile.status = 'approved'`（`teacher-profile-suspension` 已確認）——暫停中的老師既有的 `submitted` response 無法再被選定。
 

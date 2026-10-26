@@ -94,7 +94,10 @@ export default async function TeacherDemandDetailPage({
     const statusCopy =
       ownResponse.status === "declined" && demand?.status === "cancelled"
         ? { label: "需求已取消", body: "團主已取消這則需求，感謝你的回應。" }
-        : responseStatusCopy[ownResponse.status];
+        : selectedContact?.hidden === "teacher_not_approved"
+          ? // 票 06：資格暫停期間看不到團體聯絡窗口，不再叫老師用下方窗口聯絡。
+            { label: "已被選中", body: "團主選擇了你的回應。團主建立課程後，你會收到通知。" }
+          : responseStatusCopy[ownResponse.status];
 
     return (
       <div className="flex flex-col gap-8">
@@ -127,7 +130,14 @@ export default async function TeacherDemandDetailPage({
             </p>
           </div>
 
-          {selectedContact ? <SelectedDemandContact contact={selectedContact} /> : null}
+          {selectedContact?.hidden === "teacher_not_approved" ? (
+            // 票 06：老師資格暫停期間不顯示團體聯絡窗口。
+            <p className="rounded-2xl border border-gold/25 bg-gold-tint p-4 text-sm leading-6 text-gold-deep">
+              你的老師資格目前暫停，暫停期間看不到團體聯絡窗口。
+            </p>
+          ) : selectedContact ? (
+            <SelectedDemandContact contact={selectedContact} />
+          ) : null}
 
           <div className="grid gap-3 rounded-2xl border border-ink/10 bg-cream p-4 text-sm">
             <div className="min-w-0">

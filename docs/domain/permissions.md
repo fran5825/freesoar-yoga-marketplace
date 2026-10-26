@@ -83,7 +83,7 @@ Can:
 - Set own availability
 - View published/eligible demand requests
 - Respond to eligible demand requests
-- **已落地（`organizer-post-match-handoff` 票 04，2026-10-26，產品主人核准 D1＝A）：View organization contact after being selected**：老師在自己的回應頁（`/teacher/demands/[id]`）看得到該需求團體的名稱與聯絡窗口（`contactName`、`contactEmail`、`contactPhone`），條件是「這位老師在這筆需求有 `selected` 回應」，寫在查詢 WHERE。沒被選上、從沒回應、需求取消後（回應轉成 `declined`）都看不到。不含團主個人帳號 email。範圍與直接開團受邀老師看到的「團體聯絡窗口」相同；老師的單堂課詳情仍維持「Organization 只有名稱」。
+- **已落地（`organizer-post-match-handoff` 票 04，2026-10-26，產品主人核准 D1＝A）：View organization contact after being selected**：老師在自己的回應頁（`/teacher/demands/[id]`）看得到該需求團體的名稱與聯絡窗口（`contactName`、`contactEmail`、`contactPhone`），條件是「這位老師在這筆需求有 `selected` 回應」，寫在查詢 WHERE。沒被選上、從沒回應、需求取消後（回應轉成 `declined`）都看不到。不含團主個人帳號 email。範圍與直接開團受邀老師看到的「團體聯絡窗口」相同；老師的單堂課詳情仍維持「Organization 只有名稱」。**老師資格不是 approved（例如被暫停）時，這裡與直接開團的合作邀請頁都不顯示團體聯絡窗口**（`organizer-post-match-handoff` 票 06，產品主人 2026-10-26 決定），恢復資格後自動再顯示；團主端看被選定老師的聯絡方式不受影響。
 - **Create own class sessions directly（已落地，`teacher-initiated-open-classes` 已確認）**：approved 老師不需要等團主媒合，可以自己開單堂、常規（每週固定星期）或固定期課程；own-scoped 取消/開放報名/標記完成，走平行於既有 Organizer 版本的核心，不共用擁有權過濾邏輯。任何建課路徑（自建或團主媒合）都會檢查是否跟自己其他課程時段衝突。
 - **Optionally require approval for new enrollments on own-created classes（已落地，Gate G2/G3）**：可在建課時選擇「需要我確認才算報名成功」，對應的 `pending` 報名需要老師在 `/teacher/classes` 明確確認或拒絕，受 `startAt` 時間邊界限制。
 - View own class sessions（含團主媒合與自建兩種來源，統一列表顯示來源徽章）

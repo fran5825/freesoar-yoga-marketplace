@@ -110,6 +110,8 @@ export default async function TeacherDashboardPage({ searchParams }: TeacherDash
           classSessions: await listOwnClassSessionsForTeacher(),
           selectedResponsesAwaitingClass: await listOwnSelectedResponsesAwaitingClass(),
           seriesNeedingMore: await listOwnWeeklySeriesNeedingMoreForTeacher(),
+          // organizer-post-match-handoff 票 06：暫停中看不到團體聯絡窗口。
+          organizationContactHidden: profile?.status !== "approved",
         }),
       ]
     : [];

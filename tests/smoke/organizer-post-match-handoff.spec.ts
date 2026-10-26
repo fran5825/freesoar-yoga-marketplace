@@ -1,6 +1,7 @@
 import { expect, test, type Browser } from "@playwright/test";
 
 import { createClassSessionForOrganizer } from "../../src/domain/class-session/__internal__/create-class-session-core";
+import { buildTeacherTodoItems } from "../../src/domain/class-session/teacher-next-step";
 import { cancelDemandRequestForOrganizer } from "../../src/domain/demand-request/__internal__/cancel-demand-request-core";
 import { selectDemandResponseForOrganizer } from "../../src/domain/demand-response/__internal__/select-and-submit-core";
 import { getClassDraftKind } from "../../src/domain/class-session/draft-kind";
@@ -598,6 +599,110 @@ test.describe("organizer post-match handoff: contacts after selection", () => {
       selected.page.locator("article").filter({ hasText: `你回應的需求「聯絡需求 ${id}」已經取消。` }).getByRole("link"),
     ).toHaveAttribute("href", "/teacher/demands");
     await selected.context.close();
+  });
+
+  // 票 06：老師被暫停時，兩條路線的老師端都不顯示團體聯絡窗口；恢復後再顯示；團主端不變。
+  test("suspended selected teacher no longer sees the organization contact window, and sees it again once restored", async ({ browser }, testInfo) => {
+    const id = runId(testInfo, "contact-suspended");
+    const { organizer, demandId, teachers } = await setupResponses(id);
+    expect((await selectDemandResponseForOrganizer(organizer.organizerProfileId, teachers[0].responseId)).ok).toBe(true);
+    await prisma.teacherProfile.update({
+      where: { id: teachers[0].teacherProfileId },
+      data: { status: "suspended", suspensionReason: "測試用的暫停原因，超過十個字。" },
+    });
+
+    const teacherSession = await asUser(browser, teachers[0].sessionToken);
+    await teacherSession.page.goto(`/teacher/demands/${demandId}`);
+    await expect(teacherSession.page.getByText("你的老師資格目前暫停，暫停期間看不到團體聯絡窗口。")).toBeVisible();
+    await expect(teacherSession.page.getByText("團主選擇了你的回應。團主建立課程後，你會收到通知。")).toBeVisible();
+    let html = await teacherSession.page.content();
+    expect(html).not.toContain("請用下方的團體聯絡窗口");
+    expect(html).not.toContain(`window-${id}@example.com`);
+    expect(html).not.toContain(`窗口 ${id}`);
+    expect(html).not.toContain("0911222333");
+
+    // 團主端照舊看得到被選定老師的聯絡方式。
+    const organizerSession = await asUser(browser, organizer.sessionToken);
+    await organizerSession.page.goto(`/organizer/demands/${demandId}`);
+    await expect(organizerSession.page.getByText(teachers[0].contactInfo!)).toBeVisible();
+    await organizerSession.context.close();
+
+    await prisma.teacherProfile.update({
+      where: { id: teachers[0].teacherProfileId },
+      data: { status: "approved", suspensionReason: null },
+    });
+    await teacherSession.page.goto(`/teacher/demands/${demandId}`);
+    await expect(teacherSession.page.getByText(`window-${id}@example.com`)).toBeVisible();
+    html = await teacherSession.page.content();
+    expect(html).not.toContain("你的老師資格目前暫停");
+    await teacherSession.context.close();
+  });
+
+  test("suspended invited teacher no longer sees the organization contact on the direct-class proposal; the organizer still does", async ({ browser }, testInfo) => {
+    const id = runId(testInfo, "proposal-suspended");
+    const organizerEmail = `organizer-${id}@${testEmailDomain}`;
+    const teacherEmail = `teacher-${id}@${testEmailDomain}`;
+    createdEmails.push(organizerEmail, teacherEmail);
+    const organizer = await createOrganizerProfileWithOrganization({
+      email: organizerEmail,
+      displayName: `Organizer ${id}`,
+      organizationName: `Proposal Org ${id}`,
+      contactName: `邀請窗口 ${id}`,
+      contactEmail: `invite-${id}@example.com`,
+      contactPhone: "0933444555",
+    });
+    const teacher = await createTeacherProfileWithSession({ email: teacherEmail, displayName: `Proposal Teacher ${id}`, status: "approved" });
+    const proposal = await prisma.organizerClassProposal.create({
+      data: {
+        organizerProfileId: organizer.organizerProfileId,
+        organizationId: organizer.organizationId,
+        teacherProfileId: teacher.teacherProfileId,
+        title: `邀請課程 ${id}`,
+        description: "合作邀請的課程說明。",
+        serviceType: "伸展與身體保養",
+        serviceTypes: ["伸展與身體保養"],
+        ...slot(30),
+        location: "Proposal Studio",
+        capacity: 10,
+        isPublic: false,
+        status: "confirmed",
+        submittedAt: new Date(),
+        confirmedVersion: 1,
+        confirmedAt: new Date(),
+        confirmedByUserId: teacher.userId,
+        transitionSeq: 3,
+      },
+    });
+
+    const teacherSession = await asUser(browser, teacher.sessionToken);
+    await teacherSession.page.goto(`/teacher/class-proposals/${proposal.id}`);
+    await expect(teacherSession.page.getByText(`invite-${id}@example.com`, { exact: false })).toBeVisible();
+
+    await prisma.teacherProfile.update({
+      where: { id: teacher.teacherProfileId },
+      data: { status: "suspended", suspensionReason: "測試用的暫停原因，超過十個字。" },
+    });
+    await teacherSession.page.goto(`/teacher/class-proposals/${proposal.id}`);
+    await expect(teacherSession.page.getByText("老師資格暫停期間不顯示")).toBeVisible();
+    const html = await teacherSession.page.content();
+    expect(html).not.toContain(`invite-${id}@example.com`);
+    expect(html).not.toContain(`邀請窗口 ${id}`);
+    expect(html).not.toContain("0933444555");
+    await teacherSession.context.close();
+
+    const organizerSession = await asUser(browser, organizer.sessionToken);
+    await organizerSession.page.goto(`/organizer/class-proposals/${proposal.id}`);
+    await expect(organizerSession.page.getByText(`invite-${id}@example.com`, { exact: false })).toBeVisible();
+    await expect(organizerSession.page.getByText("老師資格暫停期間不顯示")).toHaveCount(0);
+    await organizerSession.context.close();
+  });
+
+  test("teacher dashboard awaiting-class todo drops the contact hint while the teacher is suspended", () => {
+    const input = { classSessions: [], selectedResponsesAwaitingClass: [{ demandRequestId: "d1", demandTitle: "測試需求" }] };
+    expect(buildTeacherTodoItems(input)[0].message).toContain("團體聯絡窗口在回應頁");
+    const hidden = buildTeacherTodoItems({ ...input, organizationContactHidden: true })[0];
+    expect(hidden.message).toBe("團主已選你合作「測試需求」。團主建立課程後會出現在「我的課程」。");
+    expect(hidden.href).toBe("/teacher/demands/d1");
   });
 
   test("signed-out teacher opening the response page is sent to sign-in with a way back", async ({ page }) => {
